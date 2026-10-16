@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BoostImpact, request received</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#051234">
+<link rel="preload" href="../fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/merci.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/thank-you.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/merci.html"><!-- /legal:alternates --></head><body>
+<header class="entete entete-simple"><div class="wrap"><a class="logo" href="index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><!-- legal:langues --><nav class="langues" aria-label="Language"><a href="../merci.html" hreflang="fr" lang="fr" aria-label="Français">FR</a><span class="langues-sep" aria-hidden="true">/</span><span class="langue-active" aria-current="true">EN</span></nav><!-- /legal:langues --><a class="retour" href="index.html">Back to home</a></div></header>
+<main>
+<section class="wrap simple">
+<h1>You're all set.</h1>
+<p class="chapo">Your request has arrived. Here's what happens next.</p>
+<!-- Steps match how it really works (n8n/build_audit.py): the audit is calculated automatically, but direct sending to the business owner
+     is off by default (RENOM_AUDIT_ENVOI empty): the report is checked before it goes out, hence "within 24 business hours".
+     Follow-ups on days 2, 5 and 10 after the report is sent, stopped by a booked call, a reply or an unsubscribe (schema.sql). -->
+<ol class="suite-etapes">
+<li><strong>We read your Google listing.</strong> From it we draw your 3 priorities and a comparison with 3 nearby competitors. The score out of 100 is our assessment grid, not a Google rating. We don't need access to any of your accounts.</li>
+<li><strong>We check the audit, then it goes out by email, within 24 business hours.</strong> Remember to check your spam folder.</li>
+<li><strong>Then, three follow-up messages at most</strong>, 2, 5 and 10 days after the audit. Each one has a one-click unsubscribe link.</li>
+<li><strong>If you like, a 15-minute call</strong> to go through the audit with you. Nothing else.</li>
+</ol>
+<form class="form carte-form" id="comp" name="complement" method="POST" action="/en/thank-you.html" data-netlify="true" netlify-honeypot="website">
+<input type="hidden" name="form-name" value="complement"><input type="hidden" name="subject" id="c-sujet" value="Complément BoostImpact"><input type="hidden" name="commerce" id="c-commerce"><input type="hidden" name="email" id="c-email"><input type="hidden" name="langue" value="en">
+<p class="perimetre">For businesses established in France.</p>
+<div class="lib">To speed things up, if you like. Both fields are optional.</div>
+<div class="champ"><label for="c-tel">Phone or WhatsApp</label><input id="c-tel" name="telephone" type="tel" autocomplete="tel"></div>
+<div class="champ"><label for="c-fiche">Link to your Google listing</label><input id="c-fiche" name="fiche_google" type="url" inputmode="url"></div>
+<div class="hp" aria-hidden="true"><label>Leave blank<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<button class="btn btn-prim" id="c-envoi" type="submit">Send these details</button>
+<div class="note" id="c-ok" role="status" hidden>Thank you, that's noted.</div>
+<div class="note" id="c-vide" role="alert" hidden>Fill in at least one of the two fields, or simply skip this form.</div>
+</form>
+</section>
+</main>
+<!-- legal:pied-site --><footer class="pied" id="pied"><div class="wrap"><div class="pied-ligne"><span class="pied-copy">&copy; 2026 BoostImpact</span>
+<nav class="pied-liens" aria-label="Legal information"><a href="legal-notice.html">Legal notice</a><a href="terms.html">Terms of sale</a><a href="privacy.html">Privacy policy</a><a href="data-processing.html">Data processing agreement</a></nav>
+<span class="pied-societe">A service of Girlden LTD</span></div></div></footer><!-- /legal:pied-site -->
+<script>
+(function(){var f=document.getElementById('comp'),ok=document.getElementById('c-ok');
+try{var d=JSON.parse(sessionStorage.getItem('renom')||'{}');document.getElementById('c-commerce').value=d.commerce||'';document.getElementById('c-email').value=d.email||'';document.getElementById('c-sujet').value='Complément BoostImpact : '+(d.commerce||'')}catch(x){}
+var vide=document.getElementById('c-vide');
+f.addEventListener('input',function(){vide.hidden=true});
+f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)return;
+if(!f.telephone.value.trim()&&!f.fiche_google.value.trim()){vide.hidden=false;f.telephone.focus();return}
+vide.hidden=true;
+var corps=new URLSearchParams(new FormData(f)).toString(),H={'Content-Type':'application/x-www-form-urlencoded'};
+fetch('/en/thank-you.html',{method:'POST',headers:H,body:corps})
+.then(function(r){if(!r.ok)throw 0;f.querySelectorAll('input:not([type=hidden]),button').forEach(function(x){x.disabled=true});ok.hidden=false})
+.catch(function(){ok.textContent="Sending failed. Please try again.";ok.hidden=false})});})();
+</script>
+</body></html>
