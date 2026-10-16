@@ -185,7 +185,17 @@ h1{font-size:clamp(38px,5.4vw,78px);line-height:.98}
 .prix{display:flex;align-items:baseline;gap:8px}
 .prix-montant{font-family:var(--titre);font-size:52px;line-height:1;color:var(--blanc)}
 .prix-unite{font-size:16px;font-weight:600;color:var(--doux)}
-.prix-semestre{font-size:15px;line-height:1.4;color:var(--doux)}
+.prix-detail{font-size:15px;line-height:1.4;color:var(--doux)}
+.prix-detail strong{color:var(--blanc)}
+.prix-detail[data-rythme="annuel"]+.prix{margin-top:14px}
+/* Sélecteur Annuel / Mensuel (formule annuelle du 16/10/2026) : visible seulement avec JavaScript (attribut hidden retiré par app.js) ; sans lui,
+   les deux rythmes restent affichés. Choix actif en blanc sur marine (pas de vert, réservé aux boutons d'action ; aucun trait coloré). */
+.rythme{display:inline-flex;gap:4px;padding:4px;margin:0 0 20px;border:1px solid var(--filet-fort);border-radius:var(--r-btn);background:var(--carte)}
+.rythme-choix{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border:0;border-radius:7px;background:transparent;color:var(--doux);font-size:16px;font-weight:600;cursor:pointer}
+.rythme-choix:hover{color:var(--blanc)}
+.rythme-choix[aria-pressed="true"]{background:var(--blanc);color:var(--nuit)}
+.rythme-gain{font-size:14px;font-weight:700}
+.offres[data-rythme-actif="annuel"] [data-rythme="mensuel"],.offres[data-rythme-actif="mensuel"] [data-rythme="annuel"]{display:none}
 .inclus{list-style:none;display:flex;flex-direction:column;gap:10px;flex:1}
 .inclus li{font-size:16px;line-height:1.45;padding-top:10px;border-top:1px solid var(--filet)}
 .inclus .inclus-tout{font-weight:700;border-top:0;padding-top:0}

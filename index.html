@@ -3,7 +3,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BoostImpact : vos avis Google et vos réseaux sociaux, gérés pour votre commerce</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="Avis Google et réseaux sociaux gérés pour les commerces indépendants : BoostImpact tient votre fiche Google, traite vos avis et, selon l'offre, fait vivre vos réseaux sociaux. Vous envoyez une photo, vous validez d'un clic. Dès 79 € HT par mois, sans engagement. Audit gratuit : 3 priorités et 3 concurrents comparés.">
+<meta name="description" content="Avis Google et réseaux sociaux gérés pour les commerces indépendants : BoostImpact tient votre fiche Google, traite vos avis et, selon l'offre, fait vivre vos réseaux sociaux. Vous envoyez une photo, vous validez d'un clic. Dès 79 € HT par mois en paiement annuel, 95 € HT au mois sans engagement. Audit gratuit : 3 priorités et 3 concurrents comparés.">
 <meta name="theme-color" content="#051234">
 <link rel="preload" href="fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -36,7 +36,7 @@
 <h1>Faites-vous un nom.</h1>
 <p class="chapo">Vos avis Google et vos réseaux sociaux, gérés pour vous.</p>
 <p class="haut-comment"><strong>Vous envoyez une photo, vous validez d'un clic.</strong></p>
-<p class="haut-prix">Dès <span class="prix-repere">79&nbsp;€ HT/mois</span>, sans engagement.</p>
+<p class="haut-prix">Dès <span class="prix-repere">79&nbsp;€ HT/mois</span> en paiement annuel. Au mois&nbsp;: 95&nbsp;€ HT, sans engagement.</p>
 <div class="actions">
 <a class="btn btn-prim btn-grand" href="#audit">Recevoir mon audit gratuit</a>
 <a class="lien-fort" href="#offres">Voir les trois offres</a>
@@ -99,12 +99,19 @@
 </ol>
 </div></section>
 
-<!-- 6. ACTION : les trois offres côte à côte. Prix : moteur/offres.json ; délais et paiement d'avance : moteur/conditions_offre.json ; frais : site/legal.json.
-     Chaque inclusion porte data-cgv (ligne des CGV, article 3) : égalité testée par moteur/tests/test_legal.py. Aucune remise, aucun prix rayé. -->
+<!-- 6. ACTION : les trois offres côte à côte. Prix : moteur/offres.json ; délais et règle annuelle : moteur/conditions_offre.json ; frais : site/legal.json.
+     Formule annuelle (16/10/2026, modèle fidutrust.eu) : sélecteur Annuel / Mensuel ; prix de base = prix par mois en paiement annuel ; le mensuel vaut
+     ce prix + 20 %, arrondi. Économie affichée EXACTE seulement (17 %, ou X € économisés par an), jamais « -20 % ». Sans JavaScript, les deux rythmes
+     restent visibles (sélecteur masqué). Chaque inclusion porte data-cgv (ligne des CGV, article 3) : égalité testée par moteur/tests/test_legal.py.
+     Aucune remise, aucun prix rayé. -->
 <section id="offres" class="section" aria-labelledby="offres-titre"><div class="wrap">
 <div class="tete">
-<h2 id="offres-titre">Trois offres, sans engagement.</h2>
+<h2 id="offres-titre">Trois offres, à l'année ou au mois.</h2>
 <p class="tete-chapo">Une seule unité&nbsp;: des contenus originaux par mois. Un contenu est un sujet, publié sur chacun des réseaux retenus.</p>
+</div>
+<div class="rythme" role="group" aria-label="Rythme de paiement" hidden>
+<button type="button" class="rythme-choix" data-choix="annuel" aria-pressed="true">Annuel <span class="rythme-gain">17&nbsp;% de moins</span></button>
+<button type="button" class="rythme-choix" data-choix="mensuel" aria-pressed="false">Mensuel</button>
 </div>
 <div class="offres">
 
@@ -112,8 +119,10 @@
 <div class="offre-nom"><h3>Essentiel</h3></div>
 <p class="offre-promesse">Soyez présent. Une fiche Google soignée, à petit budget.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">79&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
-<p class="prix-semestre">ou <strong>395&nbsp;€ HT</strong> pour 6 mois payés d'avance&nbsp;: un mois offert.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">79&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="annuel">en paiement annuel&nbsp;: <strong>948&nbsp;€ HT par an</strong>, payés d'avance. 192&nbsp;€ économisés par an.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">95&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="mensuel">en paiement mensuel, sans engagement.</p>
 </div>
 <ul class="inclus">
 <li data-cgv="Optimisation initiale de la fiche Google|Mise à jour des informations transmises">Votre fiche Google optimisée, puis mise à jour avec ce que vous nous transmettez</li>
@@ -130,8 +139,10 @@
 <div class="offre-nom"><h3>Standard</h3><p class="reco-lib">Le meilleur équilibre</p></div>
 <p class="offre-promesse">Faites vivre votre présence. Le service complet, piloté par l'IA avec vous.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">190&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
-<p class="prix-semestre">ou <strong>950&nbsp;€ HT</strong> pour 6 mois payés d'avance&nbsp;: un mois offert.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">190&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="annuel">en paiement annuel&nbsp;: <strong>2&nbsp;280&nbsp;€ HT par an</strong>, payés d'avance. 456&nbsp;€ économisés par an.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">228&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="mensuel">en paiement mensuel, sans engagement.</p>
 </div>
 <ul class="inclus">
 <li class="inclus-tout">Tout l'Essentiel, et en plus&nbsp;:</li>
@@ -148,8 +159,10 @@
 <div class="offre-nom"><h3>Premium</h3><p class="reco-lib">La délégation complète</p></div>
 <p class="offre-promesse">Confiez-nous votre communication. L'IA et notre équipe gèrent votre présence, vidéos comprises.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">390&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
-<p class="prix-semestre">ou <strong>1&nbsp;950&nbsp;€ HT</strong> pour 6 mois payés d'avance&nbsp;: un mois offert.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">390&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="annuel">en paiement annuel&nbsp;: <strong>4&nbsp;680&nbsp;€ HT par an</strong>, payés d'avance. 936&nbsp;€ économisés par an.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">468&nbsp;€</span><span class="prix-unite">HT/mois</span></p>
+<p class="prix-detail" data-rythme="mensuel">en paiement mensuel, sans engagement.</p>
 </div>
 <ul class="inclus">
 <li class="inclus-tout">Tout le Standard, et en plus&nbsp;:</li>
@@ -213,9 +226,9 @@
 </div>
 
 <div class="offres-pied">
-<p class="garantie">Sans engagement, résiliable chaque mois.</p>
-<!-- Repris des CGV (article 7 : résiliation par email, effet à la fin du mois en cours ; article 17 : droit français) -->
-<p class="contrat">Résiliable par un simple email, effet à la fin du mois en cours. Droit français, tribunaux français. <a href="cgv.html#a7">Conditions de vente, articles 7 et 17</a></p>
+<p class="garantie">Au mois&nbsp;: sans engagement, résiliable chaque mois. À l'année&nbsp;: 12 mois payés d'avance.</p>
+<!-- Repris des CGV (article 7 : résiliation par email, effet à la fin du mois en cours, ou de la période annuelle en cours ; article 17 : droit français) -->
+<p class="contrat">Résiliable par un simple email&nbsp;: au mois, effet à la fin du mois en cours&nbsp;; à l'année, à la fin de la période annuelle payée, sans remboursement au prorata. Droit français, tribunaux français. <a href="cgv.html#a7">Conditions de vente, articles 4, 7 et 17</a></p>
 <p class="note">Prix hors taxes, par commerce. Le tournage sur place n'est compris dans aucune offre&nbsp;: c'est une prestation à part, sur devis. Tout le détail est dans les <a href="cgv.html#a3">conditions de vente</a>.</p>
 </div>
 </div></section>
@@ -244,6 +257,7 @@
 <details class="q"><summary>Une IA va répondre n'importe quoi&nbsp;?</summary><p>Non. Nos contenus reposent sur les informations que vous avez validées. Aucune promesse commerciale (prix, offre, allergènes...) n'est publiée sans votre accord, et un avis grave est toujours traité par une personne.</p></details>
 <details class="q"><summary>Je dois donner mes mots de passe&nbsp;?</summary><p>Jamais. Vous nous ajoutez comme gestionnaire et vous nous retirez quand vous voulez.</p></details>
 <details class="q"><summary>Que veut dire « 8 contenus par mois »&nbsp;?</summary><p>8 sujets différents, chacun publié sur chacun des réseaux que vous avez retenus et repris sur votre fiche Google. Les réseaux se choisissent au démarrage selon votre métier, parmi Instagram, Facebook et TikTok.</p></details>
+<details class="q"><summary>Payer à l'année ou au mois&nbsp;?</summary><p>À l'année, vous payez 12 mois d'avance et chaque mois vous revient moins cher&nbsp;: 79&nbsp;€ HT au lieu de 95&nbsp;€ HT pour l'Essentiel, soit 192&nbsp;€ économisés par an. L'abonnement court 12 mois et se renouvelle sauf résiliation avant l'échéance&nbsp;; les mois non utilisés ne sont pas remboursés. Au mois, vous arrêtez quand vous voulez. Vous pouvez passer du mois à l'année à tout moment.</p></details>
 <details class="q"><summary>Et si vous ne tenez pas les délais&nbsp;?</summary><p>Fiche optimisée sous 7 jours, premier contenu proposé sous 72&nbsp;h (Standard et Premium), chaque nouvel avis traité sous 24&nbsp;h. Si l'un de ces délais n'est pas tenu, le mois suivant vous est offert. Votre note, elle, dépend de vos clients&nbsp;: personne ne peut vous la garantir honnêtement.</p></details>
 <details class="q"><summary>Vous demandez des avis seulement aux clients contents&nbsp;?</summary><p>Non. La demande va à tous vos clients, sans tri, et personne ne fixe de quota d'avis à vos salariés&nbsp;: les règles de Google l'interdisent.</p></details>
 <details class="q"><summary>Combien me rapporte une meilleure note&nbsp;?</summary><p>Nous ne le promettons pas. Une étude de Harvard donne un ordre de grandeur pour les restaurants&nbsp;: <a href="simulateur.html">estimez-le avec notre simulateur</a>, en lisant ses limites.</p></details>

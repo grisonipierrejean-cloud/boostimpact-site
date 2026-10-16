@@ -3,7 +3,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BoostImpact: your Google reviews and social media, handled for your business</title>
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="Google reviews and social media handled for independent local businesses: BoostImpact looks after your Google Business Profile, handles your reviews and, depending on the plan, keeps your social accounts alive. You send a photo, you approve in one click. From €79 excl. VAT a month, no minimum term. Free audit: 3 priorities and 3 competitors compared.">
+<meta name="description" content="Google reviews and social media handled for independent local businesses: BoostImpact looks after your Google Business Profile, handles your reviews and, depending on the plan, keeps your social accounts alive. You send a photo, you approve in one click. From €79 excl. VAT a month billed annually, €95 excl. VAT monthly with no minimum term. Free audit: 3 priorities and 3 competitors compared.">
 <meta name="theme-color" content="#051234">
 <link rel="preload" href="../fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -35,7 +35,7 @@
 <h1>Make a name for yourself.</h1>
 <p class="chapo">Your Google reviews and social media, handled for you.</p>
 <p class="haut-comment"><strong>You send a photo, you approve in one click.</strong></p>
-<p class="haut-prix">From <span class="prix-repere">€79 excl. VAT/month</span>, no minimum term.</p>
+<p class="haut-prix">From <span class="prix-repere">€79 excl. VAT/month</span> billed annually. Monthly: €95 excl. VAT, no minimum term.</p>
 <div class="actions">
 <a class="btn btn-prim btn-grand" href="#audit">Get my free audit</a>
 <a class="lien-fort" href="#offres">See the three plans</a>
@@ -97,13 +97,19 @@
 </ol>
 </div></section>
 
-<!-- 6. ACTION: the three plans side by side. Prices: moteur/offres.json; delays and advance payment: moteur/conditions_offre.json; fee: site/legal.json.
+<!-- 6. ACTION: the three plans side by side. Prices: moteur/offres.json; delays and annual rule: moteur/conditions_offre.json; fee: site/legal.json.
+     Annual billing (16/10/2026): Annual / Monthly selector; base price = monthly price when billed annually; monthly = base + 20 %, rounded.
+     Only the EXACT saving is shown (17 %, or € saved a year), never "-20 %". Without JavaScript both rhythms stay visible (selector hidden).
      Each item carries data-cgv (row of the English terms of sale, section 3): checked by moteur/tests/test_legal.py. No discount, no struck-through price. -->
 <section id="offres" class="section" aria-labelledby="offres-titre"><div class="wrap">
 <div class="tete">
-<h2 id="offres-titre">Three plans, no minimum term.</h2>
+<h2 id="offres-titre">Three plans, yearly or monthly.</h2>
 <p class="perimetre">For businesses established in France.</p>
 <p class="tete-chapo">One single unit: original content per month. A piece of content is one subject, published on each of your chosen accounts.</p>
+</div>
+<div class="rythme" role="group" aria-label="Billing frequency" hidden>
+<button type="button" class="rythme-choix" data-choix="annuel" aria-pressed="true">Annual <span class="rythme-gain">17% less</span></button>
+<button type="button" class="rythme-choix" data-choix="mensuel" aria-pressed="false">Monthly</button>
 </div>
 <div class="offres">
 
@@ -111,8 +117,10 @@
 <div class="offre-nom"><h3>Essential</h3></div>
 <p class="offre-promesse">Be there. A well-kept Google listing, on a small budget.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">€79</span><span class="prix-unite">excl. VAT/month</span></p>
-<p class="prix-semestre">or <strong>€395 excl. VAT</strong> for 6 months paid in advance: one month free.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">€79</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="annuel">billed annually: <strong>€948 excl. VAT a year</strong>, paid in advance. €192 saved a year.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">€95</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="mensuel">billed monthly, no minimum term.</p>
 </div>
 <ul class="inclus">
 <li data-cgv="Initial optimisation of the Google Business Profile|Updates with the information you send">Your Google Business Profile optimised, then updated with what you send us</li>
@@ -129,8 +137,10 @@
 <div class="offre-nom"><h3>Standard</h3><p class="reco-lib">The best balance</p></div>
 <p class="offre-promesse">Bring your presence to life. The full service, run by AI with you.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">€190</span><span class="prix-unite">excl. VAT/month</span></p>
-<p class="prix-semestre">or <strong>€950 excl. VAT</strong> for 6 months paid in advance: one month free.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">€190</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="annuel">billed annually: <strong>€2,280 excl. VAT a year</strong>, paid in advance. €456 saved a year.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">€228</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="mensuel">billed monthly, no minimum term.</p>
 </div>
 <ul class="inclus">
 <li class="inclus-tout">Everything in Essential, plus:</li>
@@ -147,8 +157,10 @@
 <div class="offre-nom"><h3>Premium</h3><p class="reco-lib">Full delegation</p></div>
 <p class="offre-promesse">Hand over your communication. AI and our team run your presence, video included.</p>
 <div class="prix-bloc">
-<p class="prix"><span class="prix-montant">€390</span><span class="prix-unite">excl. VAT/month</span></p>
-<p class="prix-semestre">or <strong>€1,950 excl. VAT</strong> for 6 months paid in advance: one month free.</p>
+<p class="prix" data-rythme="annuel"><span class="prix-montant">€390</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="annuel">billed annually: <strong>€4,680 excl. VAT a year</strong>, paid in advance. €936 saved a year.</p>
+<p class="prix" data-rythme="mensuel"><span class="prix-montant">€468</span><span class="prix-unite">excl. VAT/month</span></p>
+<p class="prix-detail" data-rythme="mensuel">billed monthly, no minimum term.</p>
 </div>
 <ul class="inclus">
 <li class="inclus-tout">Everything in Standard, plus:</li>
@@ -212,9 +224,9 @@
 </div>
 
 <div class="offres-pied">
-<p class="garantie">No minimum term, cancel any month.</p>
+<p class="garantie">Monthly: no minimum term, cancel any month. Yearly: 12 months paid in advance.</p>
 <!-- From the terms of sale (section 7: cancellation by email, effective at the end of the current month; section 17: French law) -->
-<p class="contrat">Cancel with a simple email, effective at the end of the current month. French law, French courts. <a href="terms.html#a7">Terms of sale, sections 7 and 17</a></p>
+<p class="contrat">Cancel with a simple email: monthly, effective at the end of the current month; yearly, at the end of the paid annual period, with no pro rata refund. French law, French courts. <a href="terms.html#a7">Terms of sale, sections 4, 7 and 17</a></p>
 <p class="note">Prices excluding VAT, per business. On-site filming is not included in any plan: it is a separate service, quoted on request. Full details are in the <a href="terms.html#a3">terms of sale</a>.</p>
 </div>
 </div></section>
@@ -243,6 +255,7 @@
 <details class="q"><summary>Will an AI reply with any old thing?</summary><p>No. Our content is based on the information you have approved. No commercial claim (price, offer, allergens...) is published without your consent, and a serious review is always handled by a person.</p></details>
 <details class="q"><summary>Do I have to give you my passwords?</summary><p>Never. You add us as a manager and remove us whenever you like.</p></details>
 <details class="q"><summary>What does "8 pieces of content a month" mean?</summary><p>8 different subjects, each published on each of the accounts you chose and on your Google Business Profile. The accounts are chosen at set-up according to your trade, from Instagram, Facebook and TikTok.</p></details>
+<details class="q"><summary>Pay yearly or monthly?</summary><p>Yearly, you pay 12 months in advance and each month costs you less: €79 excl. VAT instead of €95 excl. VAT for Essential, i.e. €192 saved a year. The subscription runs for 12 months and renews unless cancelled before the end date; unused months are not refunded. Monthly, you stop whenever you like. You can switch from monthly to yearly at any time.</p></details>
 <details class="q"><summary>What if you miss the deadlines?</summary><p>Listing optimised within 7 days, first content proposed within 72 hours (Standard and Premium), every new review handled within 24 hours. If one of these times is missed, the following month is free. Your rating, on the other hand, depends on your customers: nobody can honestly guarantee it.</p></details>
 <details class="q"><summary>Do you only ask happy customers for reviews?</summary><p>No. The request goes to all your customers, without filtering, and nobody sets your staff a review quota: Google's rules forbid it.</p></details>
 <details class="q"><summary>How much is a better rating worth?</summary><p>We don't promise it. A Harvard study gives an order of magnitude for restaurants: <a href="simulator.html">estimate it with our simulator</a>, and read its limits.</p></details>

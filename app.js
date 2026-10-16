@@ -41,6 +41,15 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
 });
 })();
 
+// ---- Offres : sélecteur Annuel / Mensuel (formule annuelle du 16/10/2026). Sans JavaScript, le sélecteur reste masqué et les deux prix sont affichés.
+(function(){
+var g=document.querySelector('.rythme'),o=document.querySelector('.offres');if(!g||!o)return;
+var choix=g.querySelectorAll('.rythme-choix');
+function choisir(r){o.setAttribute('data-rythme-actif',r);for(var i=0;i<choix.length;i++)choix[i].setAttribute('aria-pressed',choix[i].getAttribute('data-choix')===r?'true':'false')}
+g.hidden=false;choisir('annuel');
+g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');if(b)choisir(b.getAttribute('data-choix'))});
+})();
+
 // ---- Simulateur (page secondaire site/simulateur.html, en/simulator.html ; retiré de la page de vente le 16/10/2026). Aucun réseau, rien n'est envoyé ni gardé.
 // Fourchette : une étoile de plus = +5 à +9 % de chiffre d'affaires (Luca, Harvard Business School, working paper 12-016, 2011 :
 // restaurants indépendants de Seattle, notes Yelp). Sources : ordres/SOURCES-PAGE.md.

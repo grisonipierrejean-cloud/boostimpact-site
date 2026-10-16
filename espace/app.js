@@ -866,7 +866,7 @@
       <div class="cartes comptes">${l.map(x => `<article class="carte"><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}</article>`).join("")}</div>`;
   }
 
-  // ---------------- Offre : ce qui est inclus (contenus originaux par mois, réseaux retenus), le prix (mensuel, 6 mois d'avance, frais de mise en route
+  // ---------------- Offre : ce qui est inclus (contenus originaux par mois, réseaux retenus), le prix (annuel, mensuel, frais de mise en route
   // selon l'offre), la règle de publication, la garantie des délais et son suivi, le parcours en 3 étapes et l'abonnement Stripe.
   // Chiffres : window.RENOM_OFFRES et window.RENOM_CONDITIONS (donnees.js, égaux à moteur/ et à la base). L'objectif interne des pilotes n'est jamais montré ici.
   const COND = window.RENOM_CONDITIONS;
@@ -888,7 +888,9 @@
     const o = window.RENOM_OFFRES[k.offre] || {}, mois = new Date(k.mois + "T12:00:00"), mer = COND.mise_en_route, offerts = window.RENOM_MAJ.aujourdhui() <= mer.offerts_jusqu_au;
     const gd = COND.garantie_delais, reseaux = window.RENOM_RESEAUX_AUTORISES(c), sociaux = reseaux.filter(r => r !== "google");
     // Abonnement Stripe : état écrit par le webhook (table abonnements) ; boutons seulement si les liens sont configurés (config.js, stripe).
-    const portail = ab && ab.statut !== "resilie", lien = D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "mensuel") : null, lienS = !portail && D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "semestriel") : null;
+    const portail = ab && ab.statut !== "resilie", lien = D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "mensuel") : null, lienA = !portail && D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "annuel") : null;
+    // Formule annuelle (16/10/2026) : prix de base = prix par mois en paiement annuel ; économie EXACTE affichée (12 x (mensuel - base)), jamais un pourcentage arrondi à 20.
+    const gainAn = o.prix_mensuel_ht && o.prix_ht ? 12 * (o.prix_mensuel_ht - o.prix_ht) : 0;
     const contenus = o.contenus ?? ((+k.publications_plafond || 0) + (+k.videos_plafond || 0));
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre_nom) }))}
       <div class="rangee">
@@ -904,8 +906,9 @@
           <li><span>${t("offre.inc.concurrents")}</span><span class="fort">${t("comprise")}</span></li><li><span>${t("offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
           <p class="note pied">${t("offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
       </div>
-      ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois")}</p>
-        <p class="texte2 lecture" id="offre-semestriel">${t("offre.semestriel", { prix: euros(o.prix_semestriel_ht) })}</p>
+      ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
+        <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
+        <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : offerts ? t("offre.frais.offerts", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) }) : t("offre.frais.factures", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
       <section class="carte" id="offre-regle"><h2>${t("offre.regle.titre")}</h2><p class="texte2 lecture">${t(regleAvis(c))}</p>
@@ -920,7 +923,7 @@
       <section class="carte" id="offre-processus"><h2>${t("offre.processus.titre")}</h2><ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n)}</li>`).join("")}</ol></section>
       <section class="carte" id="offre-abonnement"><div class="carte-tete"><h2>${t("abo.titre")}</h2>${ab ? `<span class="etat${ab.statut === "actif" ? " actif" : ""}" id="abo-statut">${ST_ABO[ab.statut] || e(ab.statut)}</span>` : ""}</div>
         <p class="texte2 lecture">${ab ? t("abo.texte." + ab.statut) : t("abo.aucun")}</p>
-        ${lien ? `<p class="pied actions-abo"><a class="bouton" id="offre-payer" href="${e(lien)}" target="_blank" rel="noopener">${t(portail ? "abo.bouton.portail" : "abo.bouton.mensuel")}</a>${lienS ? `<a class="bouton second" id="offre-payer-semestriel" href="${e(lienS)}" target="_blank" rel="noopener">${t("abo.bouton.semestriel")}</a>` : ""}</p><p class="note">${t(portail ? "abo.note.portail" : "abo.note.paiement")}</p>`
+        ${lien ? `<p class="pied actions-abo"><a class="bouton${lienA ? " second" : ""}" id="offre-payer" href="${e(lien)}" target="_blank" rel="noopener">${t(portail ? "abo.bouton.portail" : "abo.bouton.mensuel")}</a>${lienA ? `<a class="bouton" id="offre-payer-annuel" href="${e(lienA)}" target="_blank" rel="noopener">${t("abo.bouton.annuel", { gain: euros(gainAn) })}</a>` : ""}</p><p class="note">${t(portail ? "abo.note.portail" : "abo.note.paiement")}</p>`
           : D.mode === "demo" ? `<p class="note">${t("abo.demo")}</p>` : ""}</section>
       <section class="carte"><h2>${t("offre.plafond.titre")}</h2><p class="texte2 lecture">${t("offre.plafond.texte")}</p></section>
       <section class="carte"><h2>${t("offre.historique")}</h2>${j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || cap(String(x.type || "").toLowerCase().replace(/_/g, " ")))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`}</section>`;
