@@ -67,7 +67,7 @@
     "demo.chiffres.texte": ["Ces chiffres sont fictifs. En service, ceux de Google sont lus à l'ouverture de cette page, ceux de BoostImpact viennent de votre espace.",
       "These figures are made up. In live use, Google's figures are read when this page opens and BoostImpact's come from your account."],
     // ---- Page de l'espace (index.html) et bandeau de démonstration
-    "titre.espace": ["Renom, votre espace", "Renom, your account"], "titre.console": ["Renom, console", "Renom, console"],
+    "titre.espace": ["BoostImpact, votre espace", "BoostImpact, your account"], "titre.console": ["BoostImpact, console", "BoostImpact, console"],
     "demo.mode": ["Mode démonstration.", "Demo mode."], "demo.long": [" Rien n'est envoyé nulle part, les services sont simulés.", " Nothing is sent anywhere; services are simulated."],
     "demo.court": [" Rien n'est envoyé nulle part.", " Nothing is sent anywhere."],
     "demo.outils": ["Outils de démonstration", "Demo tools"],
