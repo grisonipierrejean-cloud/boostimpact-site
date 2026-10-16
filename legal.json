@@ -13,17 +13,17 @@
   },
   "directeur_publication": "Pierre-Jean Deàk Grisoni",
   "contact": {
-    "email": "ops@gild-tech.com",
-    "telephone": "A_FOURNIR"
+    "email": "info@boostimpact.agency",
+    "telephone": "sur demande, par email"
   },
   "site_url": "https://boostimpact.agency",
   "hebergement": {
-    "pages_production": "netlify",
+    "pages_production": "github_pages",
     "fournisseurs": {
       "github_pages": {
         "nom": "GitHub, Inc. (service GitHub Pages)",
         "adresse": "88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis",
-        "telephone": "A_VERIFIER",
+        "telephone": "non publié (contact : https://support.github.com)",
         "source": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement (lue le 13/10/2026)"
       },
       "netlify": {
