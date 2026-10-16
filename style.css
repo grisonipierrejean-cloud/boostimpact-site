@@ -102,6 +102,7 @@ b,strong{font-weight:700}
 .entete-simple .wrap{flex-wrap:nowrap;min-height:72px;padding-top:0;padding-bottom:0}
 .retour{order:3;display:inline-flex;align-items:center;min-height:44px;font-size:15px;font-weight:600;color:var(--blanc)}
 .entete-simple .wrap{gap:0 12px}
+@media (max-width:480px){.entete-simple .logo{font-size:19px}.entete-simple .retour{font-size:14px}.entete-simple .wrap{gap:0 8px}}
 /* Sélecteur de langue « FR / EN » (bloc legal:langues, outils/legal.py) : texte simple, la langue courante en blanc, l'autre en lien (cible 44 px). */
 .langues{order:2;margin-left:auto;display:flex;align-items:center;font-size:15px;font-weight:600;line-height:1;color:var(--discret)}
 .langues a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--doux);text-decoration:none}
