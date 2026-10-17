@@ -1,5 +1,21 @@
 // Page de vente en deux langues : les textes générés ici suivent <html lang> (fr, ou en pour site/en/).
 var RENOM_EN=document.documentElement.lang==='en';
+
+// ---- Envoi des formulaires (17/10/2026). Le site est servi par GitHub Pages, qui refuse tout POST (405) : aucun hébergeur ne reçoit plus les formulaires.
+// Chaque formulaire envoie DIRECTEMENT au webhook n8n de production écrit dans son attribut action (https://peejay.app.n8n.cloud/webhook/<path>),
+// en JSON. Réussite seulement si n8n répond 2xx ET {"ok":true} (nœud « Respond to Webhook ») ; sinon le formulaire affiche une erreur
+// avec l'adresse de contact. Rien de secret ici : les protections sont côté n8n (origine https://boostimpact.agency, champ piège website,
+// contrôle strict des champs, limite d'audits par email et par jour) : n8n/build_audit.py, n8n/build_formulaires.py.
+var BOOST_CONTACT='info@boostimpact.agency';
+// Champs du formulaire en objet ; un nom répété (cases à cocher) devient une liste.
+function boostDonnees(form){var o={};new FormData(form).forEach(function(v,k){o[k]=(k in o)?[].concat(o[k],v):v});return o}
+function boostEnvoyer(form,donnees){
+  var H={'Content-Type':'application/json'};
+  return fetch(form.getAttribute('action'),{method:'POST',headers:H,body:JSON.stringify(donnees)})
+  .then(function(r){return r.json().catch(function(){return null}).then(function(j){if(!r.ok||!j||j.ok!==true)throw new Error('envoi refusé');return j})});
+}
+function boostEchec(EN){return EN?'Your request didn\u2019t go through. Try again in a moment, or email us at '+BOOST_CONTACT+'.'
+  :"L'envoi n'a pas abouti. Réessayez dans un instant, ou écrivez-nous à "+BOOST_CONTACT+'.'}
 (function(){
 var EN=RENOM_EN;
 // Page de vente : formulaire d'audit (16/10/2026 : nom du commerce, ville, email, lien Google Maps facultatif ; plus de choix du métier).
@@ -8,13 +24,11 @@ var form=$('#form');if(!form)return;
 var T=EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
   maps:'This doesn\u2019t look like a Google Maps link. Leave it empty if you don\u2019t have one.',
-  ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',
-  echec:'Your request didn\u2019t go through. Check your connection and try again.',merci:'thank-you.html'
+  ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
   maps:"Ce lien ne ressemble pas à un lien Google Maps. Laissez le champ vide si vous ne l'avez pas.",
-  ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',
-  echec:"L'envoi n'est pas passé. Vérifiez votre connexion et réessayez.",merci:'merci.html'
+  ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html'
 };
 // Lien Google Maps : facultatif ; même règle que le contrôle de n8n (n8n/build_audit.py), qui l'écarte sinon.
 var MAPS=/^https:\/\/(www\.google\.[a-z.]{2,6}\/maps|maps\.google\.[a-z.]{2,6}|maps\.app\.goo\.gl|goo\.gl\/maps)[^\s"<>]*$/;
@@ -30,14 +44,41 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim()))return erreur(T.email,form.email);
   var m=form.lien_maps.value.trim();if(m&&!MAPS.test(m))return erreur(T.maps,form.lien_maps);
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
-  $('#g-sujet').value='Audit BoostImpact : '+form.commerce.value+', '+form.ville.value;
-  var d=new FormData(form);
-  try{sessionStorage.setItem('renom',JSON.stringify({commerce:d.get('commerce'),email:d.get('email')}))}catch(x){}
+  var d=boostDonnees(form);
+  try{sessionStorage.setItem('renom',JSON.stringify({commerce:d.commerce,email:d.email}))}catch(x){}
   btn.disabled=true;btn.textContent=T.envoi;
-  var corps=new URLSearchParams(d).toString(),H={'Content-Type':'application/x-www-form-urlencoded'};
-  fetch('/',{method:'POST',headers:H,body:corps})
-  .then(function(r){if(!r.ok)throw 0;location.href=T.merci})
-  .catch(function(){btn.disabled=false;btn.textContent=T.bouton;erreur(T.echec)});
+  // Page de remerciement seulement si n8n a accepté la demande ; sinon, message d'erreur avec l'adresse de contact.
+  boostEnvoyer(form,d)
+  .then(function(){location.href=T.merci})
+  .catch(function(){btn.disabled=false;btn.textContent=T.bouton;erreur(boostEchec(EN))});
+});
+})();
+
+// ---- Page de remerciement (merci.html, en/thank-you.html) : complément facultatif (téléphone, fiche Google) -> webhook renom-complement.
+(function(){
+var f=document.forms.complement;if(!f)return;
+var EN=RENOM_EN,ok=document.getElementById('c-ok'),vide=document.getElementById('c-vide'),b=f.querySelector('button'),merci=ok.textContent;
+try{var s=JSON.parse(sessionStorage.getItem('renom')||'{}');f.commerce.value=s.commerce||'';f.email.value=s.email||''}catch(x){}
+f.addEventListener('input',function(){vide.hidden=true});
+f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)return;
+  if(!f.telephone.value.trim()&&!f.fiche_google.value.trim()){vide.hidden=false;f.telephone.focus();return}
+  vide.hidden=true;ok.hidden=true;b.disabled=true;
+  boostEnvoyer(f,boostDonnees(f))
+  .then(function(){f.querySelectorAll('input:not([type=hidden]),button').forEach(function(x){x.disabled=true});ok.textContent=merci;ok.hidden=false})
+  .catch(function(){b.disabled=false;ok.textContent=boostEchec(EN);ok.hidden=false});
+});
+})();
+
+// ---- Fiche de mise en route (mise-en-route.html, en/getting-started.html) -> webhook renom-fiche-client.
+(function(){
+var f=document.forms['fiche-client'];if(!f)return;
+var EN=RENOM_EN,b=f.querySelector('button[type=submit]');
+f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)return;
+  var a=f.querySelector('.envoi-echec');if(a)a.parentNode.removeChild(a);
+  b.disabled=true;
+  boostEnvoyer(f,boostDonnees(f))
+  .then(function(){f.innerHTML='<p>'+(EN?'Form received. We\u2019ll be in touch by email with the folder for your photos.':'Fiche reçue. Nous revenons vers vous par email avec le dossier de dépôt des photos.')+'</p>'})
+  .catch(function(){b.disabled=false;var p=document.createElement('p');p.className='envoi-echec';p.setAttribute('role','alert');p.textContent=boostEchec(EN);f.appendChild(p)});
 });
 })();
 

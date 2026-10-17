@@ -262,15 +262,15 @@
 </div>
 </div></section>
 
-<!-- Audit request (Netlify attributes unchanged; fields: commerce, ville, email, lien_maps optional). Deliverable: 3 priorities and 3 competitors. -->
+<!-- Audit request (fields: commerce, ville, email, lien_maps optional; sent as JSON to the n8n webhook in the action attribute, site/app.js). Deliverable: 3 priorities and 3 competitors. -->
 <section id="audit" class="section audit-section"><div class="wrap"><div class="audit-bloc">
 <div class="audit-texte">
 <h2>Your free audit.</h2>
 <p>Your 3 priorities and a comparison with 3 nearby competitors. Checked by us, sent by email within 24 working hours.</p>
 <p class="audit-note">Your listing also gets a score out of 100: it is our assessment grid, not a Google rating.</p>
 </div>
-<form class="form" id="form" name="audit" method="POST" action="/en/thank-you.html" data-netlify="true" netlify-honeypot="website" novalidate>
-<input type="hidden" name="form-name" value="audit"><input type="hidden" name="subject" id="g-sujet" value="BoostImpact audit"><input type="hidden" name="langue" value="en">
+<form class="form" id="form" name="audit" method="POST" action="https://peejay.app.n8n.cloud/webhook/renom-audit" novalidate>
+<input type="hidden" name="langue" value="en">
 <p class="perimetre">For businesses established in France.</p>
 <div class="champ"><label for="g-nom">Business name</label><input id="g-nom" name="commerce" type="text" autocomplete="organization" required></div>
 <div class="rang">

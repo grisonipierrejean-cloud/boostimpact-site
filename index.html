@@ -264,15 +264,15 @@
 </div>
 </div></section>
 
-<!-- Demande d'audit (attributs Netlify inchangés ; champs : commerce, ville, email, lien_maps facultatif). Livrable : 3 priorités et 3 concurrents. -->
+<!-- Demande d'audit (champs : commerce, ville, email, lien_maps facultatif ; envoi en JSON au webhook n8n de l'attribut action, site/app.js). Livrable : 3 priorités et 3 concurrents. -->
 <section id="audit" class="section audit-section"><div class="wrap"><div class="audit-bloc">
 <div class="audit-texte">
 <h2>Votre audit gratuit.</h2>
 <p>Vos 3 priorités et la comparaison avec 3 concurrents proches. Relu par nous, envoyé par email sous 24&nbsp;h ouvrées.</p>
 <p class="audit-note">Votre fiche reçoit aussi un score sur 100&nbsp;: c'est notre grille d'analyse, pas une note de Google.</p>
 </div>
-<form class="form" id="form" name="audit" method="POST" action="/merci.html" data-netlify="true" netlify-honeypot="website" novalidate>
-<input type="hidden" name="form-name" value="audit"><input type="hidden" name="subject" id="g-sujet" value="Audit BoostImpact"><input type="hidden" name="langue" value="fr">
+<form class="form" id="form" name="audit" method="POST" action="https://peejay.app.n8n.cloud/webhook/renom-audit" novalidate>
+<input type="hidden" name="langue" value="fr">
 <div class="champ"><label for="g-nom">Nom du commerce</label><input id="g-nom" name="commerce" type="text" autocomplete="organization" required></div>
 <div class="rang">
 <div class="champ"><label for="g-ville">Ville</label><input id="g-ville" name="ville" type="text" autocomplete="address-level2" placeholder="Lyon 7e" required></div>
