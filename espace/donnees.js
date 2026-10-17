@@ -361,6 +361,12 @@
   function supabase() {
     const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey);
     let cache = null;
+    // Langue choisie dans l'espace (sélecteur FR / EN) : enregistrée sur le compte (user_metadata.langue), lue par les modèles d'email de
+    // Supabase (.Data.langue). langue_choisie : le choix de la personne prime sur la langue du commerce (déclencheurs de schema.sql).
+    if (window.RENOM_I18N) window.RENOM_I18N.surChoix = async l => {
+      const { data } = await sb.auth.getSession(); if (!data.session) return;
+      await sb.auth.updateUser({ data: { langue: l, langue_choisie: true } });
+    };
     const ok = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
     // Kit de marque d'un commerce (espace du commerçant et console) : photos et logo du seau « photos » par adresses signées d'une heure.
     const signe = async ch => { try { const r = await sb.storage.from("photos").createSignedUrl(ch, 3600); return r.data && r.data.signedUrl; } catch (e) { return null; } };

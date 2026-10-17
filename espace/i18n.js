@@ -1333,10 +1333,17 @@
 
   // ---------------------------------------------------------------- Choix de la langue
   const lien = url => { if (!parametre) return url; const u = new URL(url, location.href); u.searchParams.set("lang", langue); return u.pathname.split("/").pop() + u.search + u.hash; };
+  // Choix FR / EN. Espace connecté : surChoix (posé par donnees.js) enregistre aussi la langue sur le compte (emails de connexion dans cette
+  // langue) AVANT le rechargement, qui couperait la requête ; 3 s au plus, la page se recharge quoi qu'il arrive.
+  let surChoix = null;
   function choisir(l) {
     if (!valide(l)) return; ecrire(CLE, l);
     try { const u = new URL(location.href); u.searchParams.delete("reset"); if (u.searchParams.has("lang")) u.searchParams.set("lang", l); history.replaceState(null, "", u.href); } catch (e) {}
-    if (l !== langue) location.reload();
+    const fin = () => { if (l !== langue) location.reload(); };
+    if (espace && typeof surChoix === "function") {
+      let fait = false; const une = () => { if (!fait) { fait = true; fin(); } };
+      setTimeout(une, 3000); Promise.resolve().then(() => surChoix(l)).catch(() => {}).then(une);
+    } else fin();
   }
   // Langue du commerce connue après coup (connexion à l'espace, chargement d'une page publique). Sans choix explicite, elle s'applique.
   // Espace : rechargement une seule fois (les libellés de l'écran sont calculés au chargement) ; renvoie true si la page se recharge.
@@ -1392,6 +1399,7 @@
     jourMoisCourt: (d, l) => { d = new Date(d); return fr(l) ? (d.getDate() === 1 ? "1er" : d.getDate()) + " " + moisCourt(d.getMonth(), "fr") : d.getDate() + " " + moisCourt(d.getMonth(), "en"); },
     minusculeDebut: s => s.charAt(0).toLowerCase() + s.slice(1),
     lien, choisir, depuisCommerce, selecteur, appliquer,
+    set surChoix(f) { surChoix = typeof f === "function" ? f : null; },
   };
   appliquer();
 })();
