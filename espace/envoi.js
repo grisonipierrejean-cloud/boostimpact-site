@@ -1,6 +1,6 @@
-// Envoi des vidéos filmées par le commerçant (dépôt de vidéos) : contrôles avant envoi et envoi fiable sur téléphone.
-// Règles partagées avec la base (fonction finaliser_depot_video de espace/supabase/schema.sql) : mêmes valeurs, égalité testée par
-// moteur/tests/test_depot_video.py. Aucune compression dans le navigateur : le fichier part tel qu'il a été filmé (une recompression fiable
+// Envoi des vidéos filmées par le commerçant (dépôt de vidéos) ET de ses photos (écran Photos, 17/10/2026 : les photos arrivent SEULEMENT par
+// l'espace, jamais par email) : contrôles avant envoi et envoi fiable sur téléphone. Règles partagées avec la base (fonctions finaliser_depot_video
+// et deposer_photos de espace/supabase/schema.sql) : mêmes valeurs, égalité testée par moteur/tests/test_depot_video.py. Aucune compression dans le navigateur : le fichier part tel qu'il a été filmé (une recompression fiable
 // n'existe pas dans tous les navigateurs de téléphone ; la limite de taille et le conseil « filmez en 1080p » en tiennent lieu).
 //
 // Envoi : protocole résumable TUS, celui que Supabase recommande au-delà de 6 Mo, par la bibliothèque tus-js-client (vendor/tus.min.js), en
@@ -12,7 +12,8 @@
 (function () {
   const cfg = window.RENOM_CONFIG || {};
   const MO = 1024 * 1024;
-  // Valeurs BoostImpact : 1 à 10 vidéos et 10 photos au plus par dépôt, 60 s au plus par vidéo (le guide conseille 5 à 20 s par plan), 50 Mo par photo.
+  // Valeurs BoostImpact : 1 à 10 vidéos et 10 photos au plus par dépôt, 60 s au plus par vidéo (le guide conseille 5 à 20 s par plan), 50 Mo par photo ;
+  // photos seules (écran Photos) : 1 à PHOTOS_MAX photos par envoi (fonction deposer_photos).
   // videoMaxMo : taille maximale d'une vidéo, ÉGALE à la limite du seau « photos » (file_size_limit, storage.sql) : 50 Mo sur le forfait gratuit
   // de Supabase (maximum de ce forfait), à monter dans config.js en même temps que le seau sur le forfait Pro (ordres/BRANCHEMENT.md, étape 41).
   const REGLES = { VIDEOS_MIN: 1, VIDEOS_MAX: 10, PHOTOS_MAX: 10, DUREE_MAX_S: 60, DUREE_MIN_S: 1, NOTE_MAX: 500, PHOTO_MAX_MO: 50,
@@ -60,6 +61,20 @@
     if (nbVideos > REGLES.VIDEOS_MAX) return { code: "trop_videos", n: nbVideos };
     if (nbPhotos > REGLES.PHOTOS_MAX) return { code: "trop_photos", n: nbPhotos };
     return null;
+  }
+  // Envoi de photos seules (écran Photos) : de 1 à PHOTOS_MAX photos par envoi, comme deposer_photos. Rend null ou { code, n }.
+  function controlerPhotos(nbPhotos) {
+    if (nbPhotos < 1) return { code: "aucune_photo", n: nbPhotos };
+    if (nbPhotos > REGLES.PHOTOS_MAX) return { code: "trop_photos", n: nbPhotos };
+    return null;
+  }
+  // Nom d'une photo envoyée seule : directement dans le dossier du commerce (<commerce>/<nom>), 32 caractères aléatoires et l'extension de la
+  // photo (ou celle de son type). Même forme que celle qu'accepte deposer_photos (lettres, chiffres, une extension d'image).
+  function nomPhoto(f) {
+    const x = extension(f), t = String(f.type || "").toLowerCase();
+    const ext = REGLES.EXT_PHOTO.includes(x) ? x : ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic" })[t] || "jpg";
+    const a = new Uint8Array(16); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach((_, i) => { a[i] = Math.floor(Math.random() * 256); });
+    return Array.from(a, b => b.toString(16).padStart(2, "0")).join("") + "." + ext;
   }
   // Nom du fichier dans le dossier du dépôt : rang, nom lisible, extension. Le même fichier donne toujours le même nom (reprise après rechargement).
   function nomDansDepot(rang, f) {
@@ -174,5 +189,5 @@
     return { mode: "demo", deja: false };
   }
 
-  window.RENOM_ENVOI = { REGLES, MO, genre, typeMime, extension, lireDuree, controler, controlerEnsemble, nomDansDepot, adresseTus, envoyer, simuler };
+  window.RENOM_ENVOI = { REGLES, MO, genre, typeMime, extension, lireDuree, controler, controlerEnsemble, controlerPhotos, nomPhoto, nomDansDepot, adresseTus, envoyer, simuler };
 })();

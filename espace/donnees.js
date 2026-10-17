@@ -30,8 +30,7 @@
   const RESEAUX = ["facebook", "instagram", "google", "tiktok"];
   // Même refus que le déclencheur a_reseaux_retenus de schema.sql : un réseau hors de l'offre ou non retenu à la mise en route ne se programme pas.
   const horsOffre = (c, r) => { if (!reseauxAutorises(c).includes(r)) throw new Error("réseau non compris dans l'offre ou non retenu pour ce commerce : " + r); };
-  const TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"], MAX = 50 * 1024 * 1024;
-  const verifierFichier = f => !TYPES.includes(f.type) ? "Format non accepté (JPEG, PNG, WebP ou HEIC)." : f.size > MAX ? "Fichier trop lourd (50 Mo au plus)." : null;
+  // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
   const mois0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
   const REGLES = { programme: "Seul un contenu approuvé se programme.", futur: "La date doit être dans le futur." };
@@ -242,6 +241,38 @@
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : /réservé à l'administrateur/.test(x) ? "Réservé à l'administrateur." : x; };
   // ---- fin des règles communes du dépôt de vidéos
 
+  // ---- Photos déposées dans l'espace (17/10/2026 : SEUL chemin des photos, plus aucune par email) : mêmes règles et mêmes refus que la fonction
+  // deposer_photos (bloc « Photos par l'espace » de schema.sql) dans les deux adaptateurs. Valeurs : RENOM_ENVOI.REGLES (PHOTOS_MAX, EXT_PHOTO).
+  const PHOTOS = {
+    PHRASES: { nb: "Un envoi contient de 1 à 10 photos.", hors: "Photo hors du dossier de votre commerce.", format: "Format non accepté (JPEG, PNG, WebP ou HEIC).",
+      lourde: "Fichier trop lourd (50 Mo au plus).", nom: "Nom de fichier non accepté.", double: "Une même photo est déclarée deux fois.", deja: "Photo déjà enregistrée.",
+      introuvable: "Commerce introuvable pour ce compte.", pause: "Votre commerce est en pause : contactez BoostImpact." },
+    // Contrôle d'un envoi (liste de {chemin, nom, taille}) pour le commerce cid, dans l'ordre de deposer_photos. recu(chemin) : fichier présent dans le
+    // seau ; connu(chemin) : photo déjà enregistrée. Rend la phrase du premier refus, ou null.
+    controler(cid, details, recu, connu) {
+      const P = PHOTOS.PHRASES, R = window.RENOM_ENVOI.REGLES, l = Array.isArray(details) ? details : [], vus = [];
+      if (l.length < 1 || l.length > R.PHOTOS_MAX) return P.nb;
+      for (const x of l) {
+        const ch = x && typeof x.chemin === "string" ? x.chemin : null, fichier = ch && ch.startsWith(cid + "/") ? ch.slice(cid.length + 1) : null;
+        if (!fichier || fichier.includes("/")) return P.hors;
+        const ext = (fichier.toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1];
+        if (!R.EXT_PHOTO.includes(ext)) return P.format;
+        if (!/^[A-Za-z0-9_-]{1,100}\.[A-Za-z]{3,4}$/.test(fichier)) return P.nom;
+        if (vus.includes(ch)) return P.double;
+        if (!recu(ch)) return "Fichier non reçu : " + fichier + ".";
+        if (connu(ch)) return P.deja;
+        vus.push(ch);
+      }
+      return null;
+    },
+  };
+  // Refus de deposer_photos (Supabase) ramenés aux mêmes phrases que la démonstration ; une phrase inconnue reste telle quelle.
+  const phrasePhotos = m => { const P = PHOTOS.PHRASES, x = String(m || "");
+    return /de 1 à 10 photos/.test(x) ? P.nb : /hors du dossier/.test(x) ? P.hors : /format non accepté/.test(x) ? P.format : /nom de fichier non accepté/.test(x) ? P.nom
+      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
+      : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : x; };
+  // ---- fin des règles communes de l'envoi de photos
+
   // ---- Réponses aux commentaires : règles communes aux deux adaptateurs (mêmes valeurs que le bloc « Réponses aux commentaires » de schema.sql)
   const COMMENTAIRES = {
     LIMITE: 1000, CONSERVATION_JOURS: 30,
@@ -298,7 +329,7 @@
     const date = s => { const m = String(s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : String(s || ""); };
     return l.slice(1).map(x => { const c = cellules(x); return { prenom: c[ip] || "", email: String(c[ie] || "").toLowerCase(), date_passage: date(c[id]) }; });
   }
-  const TYPES_ALERTE = { ERREUR_WORKFLOW: "Erreur de workflow", PHOTOS_EMAIL_REFUSEES: "Photos par email refusées", MISE_EN_ROUTE_BLOQUEE: "Mise en route bloquée", ECHEC_RELANCE_PROSPECT: "Relance de prospect en échec",
+  const TYPES_ALERTE = { ERREUR_WORKFLOW: "Erreur de workflow", MISE_EN_ROUTE_BLOQUEE: "Mise en route bloquée", ECHEC_RELANCE_PROSPECT: "Relance de prospect en échec",
     AVIS_SENSIBLE_A_EFFACER: "Avis sensible bientôt effacé (30 jours)", COMMENTAIRE_SENSIBLE_A_EFFACER: "Commentaire sensible bientôt effacé (30 jours)",
     // Paiement Stripe (fonction appliquer_evenement_stripe de schema.sql)
     PAIEMENT_REFUSE: "Paiement refusé", ABONNEMENT_SANS_COMMERCE: "Paiement sans commerce rattaché", REMISE_LANCEMENT_DEJA_UTILISEE: "Remise de lancement utilisée deux fois",
@@ -309,7 +340,6 @@
     OBJECTIF_PILOTE_NON_ATTEINT: "Objectif interne des pilotes : non atteint", VALIDATION_TACITE_A_PROGRAMMER: "Mode délégation : contenu validé, à programmer" };
   const texteAlerte = a => { const d = a.detail || {};
     if (a.type === "ERREUR_WORKFLOW") return `${d.workflow || "Workflow inconnu"}, nœud ${d.noeud || "inconnu"} : ${d.message || ""}`;
-    if (a.type === "PHOTOS_EMAIL_REFUSEES") return `${d.pieces || 0} pièce(s) jointe(s) refusée(s) : ${d.raison || d.statut || ""}. Rien n'a été déposé.`;
     if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => r.point).join(", ")}.`;
     if (a.type === "PAIEMENT_REFUSE") return `Abonnement ${d.abonnement || ""} : appeler le commerçant sous 24 h.${d.test ? " (mode test)" : ""}`;
     if (a.type === "ABONNEMENT_SANS_COMMERCE") return `Abonnement ${d.abonnement || ""} payé sans commerce rattaché : le rattacher dans l'éditeur SQL.${d.test ? " (mode test)" : ""}`;
@@ -409,13 +439,22 @@
       },
       async enregistrer(ch) { const c = await self.commerce(); const m = {}; FICHE.forEach(k => { if (k in ch) m[k] = ch[k]; }); ok(await sb.from("commerces").update(m).eq("id", c.id)); cache = null; },
       async photos() { const c = await self.commerce(); return ok(await sb.from("photos").select("id,nom_fichier,statut,cree_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
-      async deposer(f) {
-        const e = verifierFichier(f); if (e) throw new Error(e);
-        const c = await self.commerce(), ext = (f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-        const chemin = c.id + "/" + uid() + "." + ext;
-        ok(await sb.storage.from("photos").upload(chemin, f, { contentType: f.type }));
-        ok(await sb.from("photos").insert({ commerce_id: c.id, chemin, nom_fichier: f.name }));
+      // ---- Photos (17/10/2026 : SEUL chemin des photos, plus aucune par email). Envoi résumable TUS dans le seau « photos », directement dans le
+      // dossier du commerce (<commerce>/<aléa>.<ext> : espace/web/envoi.js, même envoi que le dépôt de vidéos), puis la fonction deposer_photos
+      // enregistre l'envoi entier : une ligne « photos » par fichier, qui lance la création de contenus (hook_photo -> n8n « RENOM, création de
+      // contenus »), exactement comme une photo reçue par email avant. L'insertion directe dans « photos » n'est plus permise au commerçant.
+      async envoyerPhoto(f, o = {}) {
+        const k = await window.RENOM_ENVOI.controler(f); if (k.genre !== "photo") throw new Error(PHOTOS.PHRASES.format); if (k.raison) throw new Error(PHOTOS.PHRASES.lourde);
+        const c = await self.commerce(), chemin = c.id + "/" + (o.nom || window.RENOM_ENVOI.nomPhoto(f));
+        const jeton = async () => { const { data } = await sb.auth.getSession(); return data && data.session ? data.session.access_token : null; };
+        const r = await window.RENOM_ENVOI.envoyer({ fichier: f, seau: "photos", objet: chemin, url: cfg.supabaseUrl, cle: cfg.publishableKey, jeton, onProgress: o.onProgress, onEtat: o.onEtat, signal: o.signal });
+        return { chemin, deja: r.deja };
       },
+      async deposerPhotos(details) {
+        const c = await self.commerce(), r = await sb.rpc("deposer_photos", { p_commerce: c.id, p_details: details });
+        if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data;
+      },
+      async deposer(f) { const r = await self.envoyerPhoto(f); return self.deposerPhotos([{ chemin: r.chemin, nom: f.name, taille: f.size }]); },
       async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Kit de marque (écran « Votre style ») : colonne commerces.marque ; la base contrôle le kit, pose la version, l'auteur et aligne commerces.couleurs.
       async marque() { return marqueDe(await self.commerce()); },
@@ -525,7 +564,6 @@
       async enregistrerDemarrage(rep) { ok(await sb.rpc("enregistrer_demarrage", { p_reponses: controlerDemarrage(rep) })); cache = null; },
       compterCollecte: (jeton, type, canal) => publicSupabase.compterCollecte(jeton, type, canal),
       // ---- Automatisations de service : uniquement les tables et fonctions du bloc « Automatisations de service » de schema.sql
-      emailPhotos() { return cfg.emailPhotos ? { adresse: cfg.emailPhotos, demo: false } : null; },
       async importerClients(lignes, consentement) { return ok(await sb.rpc("importer_clients", { p_lignes: lignes, p_consentement: consentement === true })); },
       async demandesAvis() { return ok(await sb.rpc("mes_demandes_avis", {})); },
       async ajouterOpposition(email) { ok(await sb.rpc("ajouter_opposition", { p_email: String(email || "") })); },

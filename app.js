@@ -83,7 +83,7 @@ f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)re
   var a=f.querySelector('.envoi-echec');if(a)a.parentNode.removeChild(a);
   b.disabled=true;
   boostEnvoyer(f,boostDonnees(f))
-  .then(function(){f.innerHTML='<p>'+(RENOM_NL?'Formulier ontvangen. We sturen u per e-mail de map voor uw foto\u2019s.':EN?'Form received. We\u2019ll be in touch by email with the folder for your photos.':'Fiche reçue. Nous revenons vers vous par email avec le dossier de dépôt des photos.')+'</p>'})
+  .then(function(){f.innerHTML='<p>'+(RENOM_NL?'Formulier ontvangen. We sturen u per e-mail de inloglink voor uw klantenzone: daar laadt u uw foto\u2019s op.':EN?'Form received. We\u2019ll email you the login link to your client area: that\u2019s where you upload your photos.':'Fiche reçue. Nous vous envoyons par email le lien de connexion à votre espace : c\u2019est là que vous déposerez vos photos.')+'</p>'})
   .catch(function(){b.disabled=false;var p=document.createElement('p');p.className='envoi-echec';p.setAttribute('role','alert');p.textContent=boostEchec(EN);f.appendChild(p)});
 });
 })();

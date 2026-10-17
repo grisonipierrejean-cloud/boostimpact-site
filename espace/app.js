@@ -419,9 +419,15 @@
     };
   }
 
-  // ---------------- Photos
+  // ---------------- Photos. 17/10/2026 (décision de PJ) : les photos arrivent SEULEMENT ici, jamais par email. Envoi résumable TUS (espace/web/envoi.js,
+  // même envoi fiable que le dépôt de vidéos), puis D.deposerPhotos enregistre l'envoi entier (fonction deposer_photos de schema.sql : 1 à 10 photos).
+  // Chaque photo enregistrée suit la chaîne habituelle : création d'un contenu, « à valider » dans Contenus.
+  // État gardé hors de l'écran : le nom donné à chaque fichier (nom, taille, date) est réutilisé à un nouvel essai, pour que l'envoi reprenne au lieu
+  // de repartir de zéro ; il est oublié dès que la photo est enregistrée.
+  const phEnvoi = { encours: false, noms: new Map() };
+  const clePhoto = f => [f.name, f.size, f.lastModified || 0].join(":");
   async function photos() {
-    const [c, l, s] = await Promise.all([D.commerce(), D.photos(), D.session()]), boite = D.emailPhotos ? D.emailPhotos() : null;
+    const [c, l] = await Promise.all([D.commerce(), D.photos()]);
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.creer"), t("photos.titre"), t("photos.chapo"))}
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
@@ -429,24 +435,45 @@
             <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
             <span class="note" id="choisies" aria-live="polite">${t("photos.aucune.choisie")}</span></div>
-          <p class="aide">${t("photos.aide")}</p></div>
-          <button class="bouton" type="submit">${t("envoyer")}</button><p class="msg" id="msg" role="status"></p></form></section>
+          <p class="aide">${t("photos.aide", { max: EN.REGLES.PHOTOS_MAX, mo: nombre(EN.REGLES.PHOTO_MAX_MO) })}</p></div>
+          <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
+          <button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button><p class="msg" id="msg" role="status" aria-live="polite"></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
-          ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}${x.source === "email" ? t("photos.par.email") : ""}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
+          ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
-      ${await blocDepotVideo(c)}
-      ${boite ? `<section class="carte" id="photos-email"><h2>${t("photos.email.titre")}</h2>
-        <p class="texte2">${t("photos.email.texte", { adresse: `<span class="fort casse" id="adresse-photos">${e(boite.adresse)}</span>`, compte: s && s.email ? ` (<span class="casse">${e(s.email)}</span>)` : "" })}</p>
-        ${boite.demo ? `<p class="note">${t("photos.email.demo")}</p>` : ""}</section>` : ""}`;
-    // Deux façons de choisir (appareil photo, galerie) ; l'envoi reste le même pour les deux.
+      ${await blocDepotVideo(c)}`;
+    // Deux façons de choisir (appareil photo, galerie ou fichiers de l'ordinateur) ; l'envoi reste le même pour les deux.
     const choisies = () => [...$("appareil").files, ...$("fichiers").files];
     $("appareil").onchange = $("fichiers").onchange = () => { const fs = choisies(); $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length }); };
     $("f").onsubmit = async ev => {
-      ev.preventDefault(); const fs = choisies();
+      ev.preventDefault(); if (phEnvoi.encours) return;
+      const fs = choisies();
       if (!fs.length) { msg(t("photos.choisir.une")); return; }
-      let ok = 0; const erreurs = [];
-      for (const f of fs) { msg(t("photos.envoi.de", { nom: f.name })); try { await D.deposer(f); ok++; } catch (er) { erreurs.push(f.name + t("deux.points") + ph(er.message)); } }
-      await photos(); msg(t("photos.deposees", { n: ok }) + (erreurs.length ? t("photos.refusees", { l: erreurs.join(" ; ") }) : ""));
+      // Contrôle avant envoi (format, 50 Mo) : un fichier refusé n'empêche pas les autres de partir.
+      const erreurs = [], bonnes = [];
+      for (const f of fs) { const k = await EN.controler(f); if (k.genre !== "photo") erreurs.push(f.name + t("deux.points") + ph("Format non accepté (JPEG, PNG, WebP ou HEIC).")); else if (k.raison) erreurs.push(f.name + t("deux.points") + ph("Fichier trop lourd (50 Mo au plus).")); else bonnes.push(f); }
+      if (!bonnes.length) { msg(t("photos.deposees", { n: 0 }) + t("photos.refusees", { l: erreurs.join(" ; ") })); return; }
+      const ens = EN.controlerPhotos(bonnes.length); if (ens) { msg(t("photos.ens." + ens.code, { n: ens.n, max: EN.REGLES.PHOTOS_MAX })); return; }
+      phEnvoi.encours = true; $("ph-envoyer").disabled = true; $("appareil").disabled = $("fichiers").disabled = true;
+      const jauge = $("ph-jauge"), total = bonnes.reduce((s, f) => s + (f.size || 0), 0) || 1, recus = [], pris = new Set(); let faits = 0, deposees = 0;
+      const avancer = n => { const p = Math.min(100, Math.floor((faits + n) / total * 100)); jauge.hidden = false; jauge.setAttribute("aria-valuenow", p); jauge.firstElementChild.style.width = p + "%"; };
+      try {
+        for (let i = 0; i < bonnes.length; i++) {
+          // Deux fichiers identiques (même nom, taille, date) dans un même envoi reçoivent deux noms : jamais de doublon refusé par la base.
+          const f = bonnes[i], cle = clePhoto(f); let nom = phEnvoi.noms.get(cle); if (!nom || pris.has(nom)) nom = EN.nomPhoto(f); pris.add(nom); phEnvoi.noms.set(cle, nom);
+          msg(t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length }));
+          try {
+            const r = await D.envoyerPhoto(f, { nom, onProgress: a => avancer(a),
+              onEtat: et => msg(et === "hors_ligne" ? t("dv.hors.ligne") : et === "nouvel_essai" ? t("dv.nouvel.essai") : t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length })) });
+            recus.push({ chemin: r.chemin, nom: f.name, taille: f.size, cle });
+          } catch (er) { erreurs.push(f.name + t("deux.points") + (er && er.interrompu ? t("photos.interrompu") : ph(er.message))); }
+          faits += f.size || 0; avancer(0);
+        }
+        // Enregistrement de l'envoi entier : un refus de la base n'enregistre rien (les fichiers reçus restent, un nouvel essai les reprend).
+        if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => ({ chemin, nom, taille }))); deposees = r.nb_photos; recus.forEach(x => phEnvoi.noms.delete(x.cle)); }
+      } catch (er) { erreurs.push(ph(er.message)); }
+      finally { phEnvoi.encours = false; }
+      await photos(); msg(t("photos.deposees", { n: deposees }) + (erreurs.length ? t("photos.refusees", { l: erreurs.join(" ; ") }) : "")); majCompteurs();
     };
     brancherDepotVideo();
   }
@@ -501,7 +528,7 @@
     await Promise.all(dv.fichiers.filter(x => !x.ctrl).map(async x => { x.ctrl = await EN.controler(x.f); }));
     dvDessinerListe();
   }
-  window.addEventListener("beforeunload", ev => { if (dv.envoi) { ev.preventDefault(); ev.returnValue = t("dv.quitter"); return t("dv.quitter"); } });
+  window.addEventListener("beforeunload", ev => { if (dv.envoi || phEnvoi.encours) { ev.preventDefault(); ev.returnValue = t("dv.quitter"); return t("dv.quitter"); } });
   async function envoyerDepot(ouvert) {
     if (dv.envoi) return;
     const ok = valables(), nv = ok.filter(x => x.ctrl.genre === "video").length, np = ok.length - nv;
