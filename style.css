@@ -109,6 +109,11 @@ b,strong{font-weight:700}
 .langues a:hover{color:var(--lien-survol);text-decoration:underline}
 .langue-active{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--blanc);font-weight:700}
 .langues-sep{padding:0 1px}
+/* Trois langues (FR / EN / NL, 17/10/2026) : sur téléphone, cibles de 34 px de large (44 px de haut) pour que l'en-tête simple tienne sans défilement
+   horizontal à 360 px ; logo et lien de retour un peu plus petits sous 400 px. */
+@media (max-width:480px){.langues a,.langue-active{min-width:34px}}
+@media (max-width:400px){.entete-simple .logo{font-size:17px}.entete-simple .retour{font-size:13px}.entete-simple .wrap{gap:0 6px}}
+@media (max-width:380px){.entete-simple .langues a,.entete-simple .langue-active{min-width:30px}}
 
 /* ---------- Premier écran : promesse, fonctionnement, prix de départ, bouton ; photo et aperçu du service (tout visible sans défiler) */
 .haut{padding-top:18px;padding-bottom:28px}

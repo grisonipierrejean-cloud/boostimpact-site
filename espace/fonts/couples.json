@@ -16,14 +16,14 @@
  },
  "textes": ["figtree", "dmsans", "nunito", "karla", "manrope"],
  "couples": [
-  {"id": "franc", "titres": "bricolage", "texte": "figtree", "nom": "Franc", "en": "Bold"},
-  {"id": "elegant", "titres": "playfair", "texte": "dmsans", "nom": "Élégant", "en": "Elegant"},
-  {"id": "chaleureux", "titres": "fraunces", "texte": "nunito", "nom": "Chaleureux", "en": "Warm"},
-  {"id": "energique", "titres": "oswald", "texte": "karla", "nom": "Énergique", "en": "Energetic"},
-  {"id": "raffine", "titres": "dmserif", "texte": "dmsans", "nom": "Raffiné", "en": "Refined"},
-  {"id": "epure", "titres": "manrope", "texte": "manrope", "nom": "Épuré", "en": "Clean"},
-  {"id": "enjoue", "titres": "fredoka", "texte": "nunito", "nom": "Enjoué", "en": "Playful"},
-  {"id": "bistrot", "titres": "zillaslab", "texte": "karla", "nom": "Bistrot", "en": "Bistro"}
+  {"id": "franc", "titres": "bricolage", "texte": "figtree", "nom": "Franc", "en": "Bold", "nl": "Krachtig"},
+  {"id": "elegant", "titres": "playfair", "texte": "dmsans", "nom": "Élégant", "en": "Elegant", "nl": "Elegant"},
+  {"id": "chaleureux", "titres": "fraunces", "texte": "nunito", "nom": "Chaleureux", "en": "Warm", "nl": "Warm"},
+  {"id": "energique", "titres": "oswald", "texte": "karla", "nom": "Énergique", "en": "Energetic", "nl": "Energiek"},
+  {"id": "raffine", "titres": "dmserif", "texte": "dmsans", "nom": "Raffiné", "en": "Refined", "nl": "Verfijnd"},
+  {"id": "epure", "titres": "manrope", "texte": "manrope", "nom": "Épuré", "en": "Clean", "nl": "Strak"},
+  {"id": "enjoue", "titres": "fredoka", "texte": "nunito", "nom": "Enjoué", "en": "Playful", "nl": "Speels"},
+  {"id": "bistrot", "titres": "zillaslab", "texte": "karla", "nom": "Bistrot", "en": "Bistro", "nl": "Bistro"}
  ],
  "propositions": {
   "restaurant": {"chaleureux": "chaleureux", "sobre": "elegant", "enjoue": "bistrot", "_": "franc"},

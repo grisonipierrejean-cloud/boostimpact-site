@@ -5,15 +5,15 @@
 <link rel="preload" href="../fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../style.css">
-<!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/mise-en-route.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/getting-started.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/mise-en-route.html"><!-- /legal:alternates --></head><body>
-<header class="entete entete-simple"><div class="wrap"><a class="logo" href="index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><!-- legal:langues --><nav class="langues" aria-label="Language"><a href="../mise-en-route.html" hreflang="fr" lang="fr" aria-label="Français">FR</a><span class="langues-sep" aria-hidden="true">/</span><span class="langue-active" aria-current="true">EN</span></nav><!-- /legal:langues --><a class="retour" href="index.html">Back to home</a></div></header>
+<!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/mise-en-route.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/getting-started.html"><link rel="alternate" hreflang="nl-BE" href="https://boostimpact.agency/nl/aan-de-slag.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/mise-en-route.html"><!-- /legal:alternates --></head><body>
+<header class="entete entete-simple"><div class="wrap"><a class="logo" href="index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><!-- legal:langues --><nav class="langues" aria-label="Language"><a href="../mise-en-route.html" hreflang="fr" lang="fr" aria-label="Français">FR</a><span class="langues-sep" aria-hidden="true">/</span><span class="langue-active" aria-current="true">EN</span><span class="langues-sep" aria-hidden="true">/</span><a href="../nl/aan-de-slag.html" hreflang="nl-BE" lang="nl-BE" aria-label="Nederlands">NL</a></nav><!-- /legal:langues --><a class="retour" href="index.html">Back to home</a></div></header>
 <main>
 <section class="wrap simple">
 <h1>Your onboarding form.</h1>
 <p class="chapo">Ten minutes, from your phone. We write using this information. In Essential and Standard, you approve every piece of content before it's published; in Premium, you can choose delegation mode.</p>
 <form class="form-fiche carte-form" name="fiche-client" method="POST" action="https://peejay.app.n8n.cloud/webhook/renom-fiche-client">
 <input type="hidden" name="langue" value="en">
-<p class="perimetre">For businesses established in France.</p>
+<p class="perimetre">For businesses established in France or Belgium.</p>
 <div class="champ"><label for="f-nom">Business name</label><input id="f-nom" name="nom_affiche" type="text" required></div>
 <div class="champ demi"><label for="f-metier">Type of business</label><select id="f-metier" name="metier" required><option value="restaurant">Restaurant</option><option value="beaute">Beauty salon</option><option value="sport">Gym or studio</option><option value="autre">Other business</option></select></div>
 <div class="champ demi"><label for="f-offre">Chosen plan</label><select id="f-offre" name="offre" required><option value="essentiel">Essential</option><option value="standard" selected>Standard</option><option value="premium">Premium</option></select></div>

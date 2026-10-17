@@ -309,7 +309,7 @@
     const C4 = ["principale", "secondaire", "fond", "texte"];
     const sty = { pour: null, c: null, kit: null, brut: null, demandes: [], images: [], photo: 0, logo: null, logoImg: null, logoUrl: null, attente: 0, ouvert: false };
     const langueDe = c => I.langueValide(c && c.langue) || "fr";
-    const nomCouple = c => I.langue === "en" ? c.en : c.nom;
+    const nomCouple = c => I.langue === "en" ? c.en : I.langue === "nl" ? (c.nl || c.en) : c.nom;
     const ratio = r => I.nombre(Math.floor(r * 10) / 10, 1);
     const textesApercu = c => {
       const lg = langueDe(c), h = String(c.horaires || "").split("\n")[0].trim();

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="nl-BE"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BoostImpact, aanvraag ontvangen</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#051234">
+<link rel="preload" href="../fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/merci.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/thank-you.html"><link rel="alternate" hreflang="nl-BE" href="https://boostimpact.agency/nl/bedankt.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/merci.html"><!-- /legal:alternates --></head><body>
+<header class="entete entete-simple"><div class="wrap"><a class="logo" href="index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><!-- legal:langues --><nav class="langues" aria-label="Taal"><a href="../merci.html" hreflang="fr" lang="fr" aria-label="Français">FR</a><span class="langues-sep" aria-hidden="true">/</span><a href="../en/thank-you.html" hreflang="en" lang="en" aria-label="English">EN</a><span class="langues-sep" aria-hidden="true">/</span><span class="langue-active" aria-current="true">NL</span></nav><!-- /legal:langues --><a class="retour" href="index.html">Naar de startpagina</a></div></header>
+<main>
+<section class="wrap simple">
+<h1>We zijn vertrokken.</h1>
+<p class="chapo">Uw aanvraag is goed aangekomen. Dit gebeurt er nu.</p>
+<!-- Étapes fidèles au fonctionnement réel (n8n/build_audit.py) : audit calculé automatiquement, envoi direct coupé par défaut (relu avant de partir),
+     relances J+2, J+5, J+10 après l'envoi du rapport, arrêtées par un rendez-vous, une réponse ou une désinscription. -->
+<ol class="suite-etapes">
+<li><strong>We lezen uw Google-bedrijfsprofiel.</strong> Daaruit halen we uw 3 prioriteiten en een vergelijking met 3 concurrenten in de buurt. De score op 100 is ons analyseraster, geen score van Google. We hebben geen toegang tot uw accounts nodig.</li>
+<li><strong>We lezen de audit na en versturen hem per e-mail, binnen 24 werkuren.</strong> Kijk ook even in uw map met ongewenste e-mail.</li>
+<li><strong>Daarna hooguit drie opvolgberichten</strong>, 2, 5 en 10 dagen na de audit. Elk bericht bevat een link om u in één klik uit te schrijven.</li>
+<li><strong>Als u dat wilt, een gesprek van 15 minuten</strong> om de audit samen te overlopen. Meer niet.</li>
+</ol>
+<form class="form carte-form" id="comp" name="complement" method="POST" action="https://peejay.app.n8n.cloud/webhook/renom-complement">
+<input type="hidden" name="commerce" id="c-commerce"><input type="hidden" name="email" id="c-email"><input type="hidden" name="langue" value="nl">
+<p class="perimetre">Voor ondernemingen gevestigd in België of Frankrijk.</p>
+<div class="lib">Om sneller te gaan, als u wilt. Beide velden zijn optioneel.</div>
+<div class="champ"><label for="c-tel">Telefoon of WhatsApp</label><input id="c-tel" name="telephone" type="tel" autocomplete="tel"></div>
+<div class="champ"><label for="c-fiche">Link naar uw Google-bedrijfsprofiel</label><input id="c-fiche" name="fiche_google" type="url" inputmode="url"></div>
+<div class="hp" aria-hidden="true"><label>Niet invullen<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<button class="btn btn-prim" id="c-envoi" type="submit">Deze gegevens versturen</button>
+<div class="note" id="c-ok" role="status" hidden>Bedankt, dat is genoteerd.</div>
+<div class="note" id="c-vide" role="alert" hidden>Vul minstens een van de twee velden in, of sla dit formulier gewoon over.</div>
+</form>
+</section>
+</main>
+<!-- legal:pied-site --><footer class="pied" id="pied"><div class="wrap"><div class="pied-ligne"><span class="pied-copy">&copy; 2026 BoostImpact</span>
+<nav class="pied-liens" aria-label="Juridische informatie"><a href="wettelijke-vermeldingen.html">Wettelijke vermeldingen</a><a href="verkoopvoorwaarden.html">Verkoopvoorwaarden</a><a href="privacy.html">Privacybeleid</a><a href="verwerkersovereenkomst.html">Verwerkersovereenkomst</a></nav>
+<span class="pied-societe">Een dienst van Girlden LTD</span></div></div></footer><!-- /legal:pied-site -->
+<script src="../app.js"></script>
+</body></html>

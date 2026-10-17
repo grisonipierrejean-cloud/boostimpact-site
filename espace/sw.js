@@ -6,8 +6,8 @@
    ni une VIDÉO (requête de plage « Range », destination video ou audio, extension .mp4 .mov .m4v .webm .3gp), même de la même origine.
    Réseau d'abord pour les pages, scripts, styles et données : une mise à jour arrive dès la visite suivante ;
    le cache ne sert que hors connexion. Cache d'abord pour les polices et les icônes, qui ne changent pas. */
-const CACHE = "renom-espace-v7";   // v7 (16/10/2026) : marque BoostImpact (icônes, couleurs) ; v6 (16/10/2026) : bibliothèque Supabase locale (vendor/supabase.js) ; v5 (14/10/2026) : dépôt de vidéos (envoi.js, vendor/tus.min.js) ; v4 : kit de marque (marque.js, polices du kit) ; v3 : textes en français et en anglais
-const RESEAU_DABORD = ["", "index.html", "app.js", "i18n.js", "donnees.js", "config.js", "style.css", "manifest.webmanifest", "manifest-en.webmanifest",
+const CACHE = "renom-espace-v8";   // v8 (17/10/2026) : néerlandais (i18n.js, manifest-nl.webmanifest) ; v7 (16/10/2026) : marque BoostImpact (icônes, couleurs) ; v6 (16/10/2026) : bibliothèque Supabase locale (vendor/supabase.js) ; v5 (14/10/2026) : dépôt de vidéos (envoi.js, vendor/tus.min.js) ; v4 : kit de marque (marque.js, polices du kit) ; v3 : textes en français et en anglais
+const RESEAU_DABORD = ["", "index.html", "app.js", "i18n.js", "donnees.js", "config.js", "style.css", "manifest.webmanifest", "manifest-en.webmanifest", "manifest-nl.webmanifest",
   "vendor/qrcode.js", "vendor/temps-forts.js", "vendor/temps-forts.json", "marque.js", "fonts/couples.json", "envoi.js", "vendor/tus.min.js", "vendor/supabase.js"];
 const CACHE_DABORD = ["fonts/anton-400.woff2", "fonts/figtree-400.woff2", "fonts/figtree-500.woff2", "fonts/figtree-600.woff2", "fonts/figtree-700.woff2",
   "fonts/bricolage.ttf", "fonts/figtree.ttf", "fonts/playfair.ttf", "fonts/dmsans.ttf", "fonts/fraunces.ttf", "fonts/nunito.ttf", "fonts/oswald.ttf",

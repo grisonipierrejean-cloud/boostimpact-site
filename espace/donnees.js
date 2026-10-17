@@ -8,9 +8,9 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
-    standard: { nom: "Standard", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
-    premium: { nom: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    standard: { nom: "Standard", nom_nl: "Standaard", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
+    premium: { nom: "Premium", nom_nl: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
     croissance: { nom: "Croissance", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
@@ -278,8 +278,9 @@
   const dateValide = d => /^\d{4}-\d{2}-\d{2}$/.test(d || "") && !isNaN(Date.parse(d + "T00:00:00Z")) && new Date(d + "T00:00:00Z").toISOString().slice(0, 10) === d;
   // Fichier CSV de clients : une ligne d'en-tête (prénom, email, date de passage, dans n'importe quel ordre), séparateur « ; », « , » ou tabulation,
   // dates AAAA-MM-JJ ou JJ/MM/AAAA. Les erreurs de forme du fichier sont refusées ici ; les règles ligne par ligne sont celles de la base.
-  const COLONNES = { prenom: ["prenom", "prenom du client", "first name", "firstname"], email: ["email", "e mail", "mail", "courriel", "adresse email", "adresse e mail", "adresse mail"],
-    date: ["date", "date de passage", "date passage", "passage", "date de visite", "date visite", "visite"] };
+  // En-têtes acceptés en français, en anglais et en néerlandais (17/10/2026 : voornaam, e-mail, datum van het bezoek ; visit date pour l'anglais).
+  const COLONNES = { prenom: ["prenom", "prenom du client", "first name", "firstname", "voornaam"], email: ["email", "e mail", "mail", "courriel", "adresse email", "adresse e mail", "adresse mail", "e mailadres", "emailadres"],
+    date: ["date", "date de passage", "date passage", "passage", "date de visite", "date visite", "visite", "visit date", "date of visit", "datum", "datum bezoek", "datum van het bezoek", "bezoekdatum", "bezoek"] };
   function lireCsvClients(texte) {
     const l = String(texte || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n").filter(x => x.trim());
     if (!l.length) throw new Error("Le fichier est vide.");
@@ -361,7 +362,7 @@
   function supabase() {
     const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey);
     let cache = null;
-    // Langue choisie dans l'espace (sélecteur FR / EN) : enregistrée sur le compte (user_metadata.langue), lue par les modèles d'email de
+    // Langue choisie dans l'espace (sélecteur FR / EN / NL) : enregistrée sur le compte (user_metadata.langue), lue par les modèles d'email de
     // Supabase (.Data.langue). langue_choisie : le choix de la personne prime sur la langue du commerce (déclencheurs de schema.sql).
     if (window.RENOM_I18N) window.RENOM_I18N.surChoix = async l => {
       const { data } = await sb.auth.getSession(); if (!data.session) return;

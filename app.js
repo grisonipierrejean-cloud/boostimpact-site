@@ -1,5 +1,6 @@
-// Page de vente en deux langues : les textes générés ici suivent <html lang> (fr, ou en pour site/en/).
+// Page de vente en trois langues : les textes générés ici suivent <html lang> (fr ; en pour site/en/ ; nl-BE pour site/nl/, 17/10/2026).
 var RENOM_EN=document.documentElement.lang==='en';
+var RENOM_NL=/^nl\b/.test(document.documentElement.lang);
 
 // ---- Envoi des formulaires (17/10/2026). Le site est servi par GitHub Pages, qui refuse tout POST (405) : aucun hébergeur ne reçoit plus les formulaires.
 // Chaque formulaire envoie DIRECTEMENT au webhook n8n de production écrit dans son attribut action (https://peejay.app.n8n.cloud/webhook/<path>),
@@ -14,14 +15,19 @@ function boostEnvoyer(form,donnees){
   return fetch(form.getAttribute('action'),{method:'POST',headers:H,body:JSON.stringify(donnees)})
   .then(function(r){return r.json().catch(function(){return null}).then(function(j){if(!r.ok||!j||j.ok!==true)throw new Error('envoi refusé');return j})});
 }
-function boostEchec(EN){return EN?'Your request didn\u2019t go through. Try again in a moment, or email us at '+BOOST_CONTACT+'.'
+function boostEchec(EN){return RENOM_NL?'Uw aanvraag is niet verstuurd. Probeer het zo meteen opnieuw, of mail ons op '+BOOST_CONTACT+'.'
+  :EN?'Your request didn\u2019t go through. Try again in a moment, or email us at '+BOOST_CONTACT+'.'
   :"L'envoi n'a pas abouti. Réessayez dans un instant, ou écrivez-nous à "+BOOST_CONTACT+'.'}
 (function(){
 var EN=RENOM_EN;
 // Page de vente : formulaire d'audit (16/10/2026 : nom du commerce, ville, email, lien Google Maps facultatif ; plus de choix du métier).
 var $=function(s,r){return (r||document).querySelector(s)};
 var form=$('#form');if(!form)return;
-var T=EN?{
+var T=RENOM_NL?{
+  commerce:'Vul de naam van uw zaak in.',ville:'Vul uw gemeente in, zodat we het juiste profiel vinden.',email:'Dit e-mailadres lijkt onvolledig.',
+  maps:'Dit lijkt geen Google Maps-link. Laat het veld leeg als u er geen hebt.',
+  ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html'
+}:EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
   maps:'This doesn\u2019t look like a Google Maps link. Leave it empty if you don\u2019t have one.',
   ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html'
@@ -54,7 +60,7 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
 });
 })();
 
-// ---- Page de remerciement (merci.html, en/thank-you.html) : complément facultatif (téléphone, fiche Google) -> webhook renom-complement.
+// ---- Page de remerciement (merci.html, en/thank-you.html, nl/bedankt.html) : complément facultatif (téléphone, fiche Google) -> webhook renom-complement.
 (function(){
 var f=document.forms.complement;if(!f)return;
 var EN=RENOM_EN,ok=document.getElementById('c-ok'),vide=document.getElementById('c-vide'),b=f.querySelector('button'),merci=ok.textContent;
@@ -69,7 +75,7 @@ f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)re
 });
 })();
 
-// ---- Fiche de mise en route (mise-en-route.html, en/getting-started.html) -> webhook renom-fiche-client.
+// ---- Fiche de mise en route (mise-en-route.html, en/getting-started.html, nl/aan-de-slag.html) -> webhook renom-fiche-client.
 (function(){
 var f=document.forms['fiche-client'];if(!f)return;
 var EN=RENOM_EN,b=f.querySelector('button[type=submit]');
@@ -77,7 +83,7 @@ f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)re
   var a=f.querySelector('.envoi-echec');if(a)a.parentNode.removeChild(a);
   b.disabled=true;
   boostEnvoyer(f,boostDonnees(f))
-  .then(function(){f.innerHTML='<p>'+(EN?'Form received. We\u2019ll be in touch by email with the folder for your photos.':'Fiche reçue. Nous revenons vers vous par email avec le dossier de dépôt des photos.')+'</p>'})
+  .then(function(){f.innerHTML='<p>'+(RENOM_NL?'Formulier ontvangen. We sturen u per e-mail de map voor uw foto\u2019s.':EN?'Form received. We\u2019ll be in touch by email with the folder for your photos.':'Fiche reçue. Nous revenons vers vous par email avec le dossier de dépôt des photos.')+'</p>'})
   .catch(function(){b.disabled=false;var p=document.createElement('p');p.className='envoi-echec';p.setAttribute('role','alert');p.textContent=boostEchec(EN);f.appendChild(p)});
 });
 })();
@@ -91,7 +97,7 @@ g.hidden=false;choisir('annuel');
 g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');if(b)choisir(b.getAttribute('data-choix'))});
 })();
 
-// ---- Simulateur (page secondaire site/simulateur.html, en/simulator.html ; retiré de la page de vente le 16/10/2026). Aucun réseau, rien n'est envoyé ni gardé.
+// ---- Simulateur (page secondaire site/simulateur.html, en/simulator.html, nl/simulator.html ; retiré de la page de vente le 16/10/2026). Aucun réseau, rien n'est envoyé ni gardé.
 // Fourchette : une étoile de plus = +5 à +9 % de chiffre d'affaires (Luca, Harvard Business School, working paper 12-016, 2011 :
 // restaurants indépendants de Seattle, notes Yelp). Sources : ordres/SOURCES-PAGE.md.
 // Objectif atteignable (décision du 14/10/2026) : 4,5 si la note est entre 3,5 et 4,4 ; note + 1 sous 3,5 ; à 4,5 ou plus, aucun chiffre.
@@ -99,12 +105,13 @@ g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');i
 // Seuils de note : BrightLocal, Local Consumer Review Survey 2026 (68 % : 4 étoiles ou plus ; 31 % : 4,5 ou plus ; États-Unis).
 (function(){
 var calc=document.getElementById('calc');if(!calc)return;
-var EN=RENOM_EN,LOC=EN?'en-GB':'fr-FR';
+var EN=RENOM_EN,NL=RENOM_NL,LOC=EN?'en-GB':NL?'nl-BE':'fr-FR';
 var BAS=0.05,HAUT=0.09,CIBLE=4.5,PALIER=3.5;
 var el=function(id){return document.getElementById(id)};
 var vide=el('calc-vide'),plein=el('calc-plein'),seuil=el('calc-seuil'),gain=el('calc-gain'),sommet=el('calc-sommet');
 // « 180 000 », « 180000 € », « 4,2 » ou « 4.2 » : espaces, euros et séparateurs de milliers retirés, virgule décimale acceptée.
 // En anglais, la virgule sépare les milliers (« 180,000 ») et le point est décimal (« 4.2 ») ; « 4,2 » reste lu 4,2.
+// En néerlandais de Belgique, comme en français : point des milliers (« 180.000 »), virgule décimale (« 4,1 »).
 function nombre(v){
   v=String(v||'').replace(/[\s\u00a0\u202f€]/g,'');
   v=EN?v.replace(/,(?=\d{3}(\D|$))/g,'').replace(',','.'):v.replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.');
@@ -115,10 +122,21 @@ function nombre(v){
 function euros(n){
   var r=n>=1000?Math.round(n/100)*100:Math.round(n);
   if(EN)return '€'+r.toLocaleString(LOC,{maximumFractionDigits:0});
+  if(NL)return '€\u00a0'+r.toLocaleString(LOC,{maximumFractionDigits:0});
   return r.toLocaleString(LOC,{maximumFractionDigits:0}).replace(/\u202f/g,'\u00a0')+'\u00a0€';
 }
 function noteTexte(n){return n.toLocaleString(LOC,{minimumFractionDigits:1,maximumFractionDigits:1})}
-var C=EN?{
+var C=NL?{
+  videCa:'Vul uw jaaromzet en uw score in: het resultaat verschijnt hier.',
+  videClients:'Vul uw klanten per dag, uw gemiddelde besteding, uw openingsdagen en uw score in: het resultaat verschijnt hier.',
+  videNote:'Vul nu uw huidige Google-score in: het resultaat verschijnt hier.',
+  baseCa:function(x){return 'Voor '+x+' omzet per jaar.'},baseClients:function(x){return 'Uw geschatte omzet: '+x+' per jaar.'},
+  passer:function(a,b){return 'Van '+a+' naar '+b+' gaan, levert op:'},
+  sommet:function(n){return 'Met '+n+' staat u al aan de top: de uitdaging is boven de anderen te blijven.'},
+  sous4:function(n){return 'Met '+n+' zit u onder de grens van 4 sterren. 68% van de consumenten die BrightLocal bevroeg (Verenigde Staten, 2026), kiest alleen een zaak met 4 sterren of meer.'},
+  sous45:function(n){return 'Met '+n+' haalt u de grens van 4 sterren. Maar 31% van de consumenten die BrightLocal bevroeg (Verenigde Staten, 2026), kiest alleen een zaak met 4,5 sterren of meer.'},
+  noteInvalide:'Een score ligt tussen 1 en 5, bijvoorbeeld 4,1.'
+}:EN?{
   videCa:'Enter your annual turnover and your rating: your result appears here.',
   videClients:'Enter your customers per day, average spend, opening days and rating: your result appears here.',
   videNote:'Now enter your current Google rating: your result appears here.',

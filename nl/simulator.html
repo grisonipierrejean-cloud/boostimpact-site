@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="nl-BE"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BoostImpact, simulator: wat een betere score waard is</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#051234">
+<link rel="preload" href="../fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/simulateur.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/simulator.html"><link rel="alternate" hreflang="nl-BE" href="https://boostimpact.agency/nl/simulator.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/simulateur.html"><!-- /legal:alternates --></head><body>
+<header class="entete entete-simple"><div class="wrap"><a class="logo" href="index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><!-- legal:langues --><nav class="langues" aria-label="Taal"><a href="../simulateur.html" hreflang="fr" lang="fr" aria-label="Français">FR</a><span class="langues-sep" aria-hidden="true">/</span><a href="../en/simulator.html" hreflang="en" lang="en" aria-label="English">EN</a><span class="langues-sep" aria-hidden="true">/</span><span class="langue-active" aria-current="true">NL</span></nav><!-- /legal:langues --><a class="retour" href="index.html">Naar de startpagina</a></div></header>
+<main>
+<!-- Simulateur (page secondaire). Calcul : site/app.js, sans réseau, rien n'est envoyé ni gardé. Fourchette de l'étude Luca (ordres/SOURCES-PAGE.md, § 1).
+     Objectif réaliste : 4,5 entre 3,5 et 4,4 ; note + 1 sous 3,5 ; aucun chiffre à 4,5 ou plus. -->
+<section class="wrap simple simu">
+<h1>Wat een betere score waard is.</h1>
+<p class="perimetre">Voor ondernemingen gevestigd in België of Frankrijk.</p>
+<p class="chapo">Een grootteorde, geen belofte. Een studie van de Harvard Business School stelde vast dat één ster meer op Yelp een zelfstandig restaurant 5 tot 9% meer omzet opleverde.</p>
+<p class="calc-limite"><strong>De beperkingen van deze studie:</strong> ze gaat over zelfstandige restaurants in Seattle, beoordeeld op Yelp tussen 2003 en 2009. Ze zegt niets over Google, over België of Frankrijk, of over andere sectoren: voor hen is het een aanwijzing, geen meting. Uw resultaat hangt af van uw zaak, en wij garanderen het niet.</p>
+<form class="calc carte-form" id="calc" novalidate>
+<fieldset class="calc-mode"><legend>Ik vul liever in</legend>
+<label class="calc-radio"><input type="radio" name="calc-mode" value="clients" checked> Mijn klanten en mijn gemiddelde besteding</label>
+<label class="calc-radio"><input type="radio" name="calc-mode" value="ca"> Mijn jaaromzet</label>
+</fieldset>
+<div class="calc-trio" id="calc-clients">
+<div class="champ"><label for="c-clients">Klanten per dag</label><input id="c-clients" type="text" inputmode="numeric" autocomplete="off" placeholder="Bijvoorbeeld: 40"></div>
+<div class="champ"><label for="c-panier">Gemiddelde besteding, in euro</label><input id="c-panier" type="text" inputmode="decimal" autocomplete="off" placeholder="Bijvoorbeeld: 25"></div>
+<div class="champ"><label for="c-jours">Openingsdagen per jaar</label><input id="c-jours" type="text" inputmode="numeric" autocomplete="off" placeholder="Bijvoorbeeld: 300"></div>
+</div>
+<div class="champ" id="calc-ca" hidden><label for="c-ca">Jaaromzet, in euro</label><input id="c-ca" type="text" inputmode="numeric" autocomplete="off" placeholder="Bijvoorbeeld: 180.000"></div>
+<div class="champ"><label for="c-note">Uw huidige Google-score, op 5</label><input id="c-note" type="text" inputmode="decimal" autocomplete="off" placeholder="Bijvoorbeeld: 4,1"></div>
+</form>
+<div class="calc-resultat" aria-live="polite">
+<p class="calc-vide" id="calc-vide">Vul uw klanten per dag, uw gemiddelde besteding, uw openingsdagen en uw score in: het resultaat verschijnt hier.</p>
+<div class="calc-plein" id="calc-plein" hidden>
+<p class="calc-base" id="calc-base"></p>
+<div class="calc-gain" id="calc-gain">
+<p class="calc-lib" id="calc-lib"></p>
+<p class="calc-montant"><span id="calc-bas"></span> tot <span id="calc-haut"></span></p>
+<p class="calc-unite">omzet per jaar, volgens de studie.</p>
+</div>
+<p class="calc-sommet" id="calc-sommet" hidden></p>
+<p class="calc-seuil" id="calc-seuil" hidden></p>
+</div>
+<p class="calc-prudence">Berekening: het verschil tussen uw score en een haalbaar doel (4,5, of uw score plus één ster onder 3,5), vermenigvuldigd met 5 tot 9% van uw omzet. <a href="https://papers.ssrn.com/abstract=1928601" rel="noopener">Lees de studie van Michael Luca</a>. Scoredrempels: BrightLocal, <a href="https://www.brightlocal.com/research/local-consumer-review-survey/" rel="noopener">Local Consumer Review Survey 2026</a> (consumenten in de Verenigde Staten).</p>
+</div>
+<p><a class="btn btn-prim btn-grand" href="index.html#audit">Ontvang mijn gratis audit</a></p>
+</section>
+</main>
+<!-- legal:pied-site --><footer class="pied" id="pied"><div class="wrap"><div class="pied-ligne"><span class="pied-copy">&copy; 2026 BoostImpact</span>
+<nav class="pied-liens" aria-label="Juridische informatie"><a href="wettelijke-vermeldingen.html">Wettelijke vermeldingen</a><a href="verkoopvoorwaarden.html">Verkoopvoorwaarden</a><a href="privacy.html">Privacybeleid</a><a href="verwerkersovereenkomst.html">Verwerkersovereenkomst</a></nav>
+<span class="pied-societe">Een dienst van Girlden LTD</span></div></div></footer><!-- /legal:pied-site -->
+<script src="../app.js"></script>
+</body></html>
