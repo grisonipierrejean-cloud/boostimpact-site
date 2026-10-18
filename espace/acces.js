@@ -14,7 +14,7 @@
 (function (racine) {
   "use strict";
   const METHODES_FORTES = ["password", "totp"];
-  const MIN = 10, MAX_OCTETS = 72;   // 72 : limite de bcrypt, refusée au-delà par Supabase Auth (internal/api/password.go, MaxPasswordLength, en octets)
+  const MIN = 8, MAX_OCTETS = 72;   // 72 : limite de bcrypt, refusée au-delà par Supabase Auth (internal/api/password.go, MaxPasswordLength, en octets)
 
   // Charge utile d'un jeton JWT (sans vérifier la signature : c'est la base qui la vérifie). null si le jeton est illisible.
   function decoderJwt(jeton) {
@@ -36,7 +36,7 @@
   const accesOuvert = charge => methodes(charge).some(m => METHODES_FORTES.includes(m));
   const accesDuJeton = jeton => accesOuvert(decoderJwt(jeton));
 
-  // Règles du mot de passe : 10 caractères au moins, une lettre (a à z, comme le réglage « lettres et chiffres » de Supabase, qui ne compte pas
+  // Règles du mot de passe (8 caractères depuis le 18/10/2026, décision de PJ) : 8 caractères au moins, une lettre (a à z, comme le réglage « lettres et chiffres » de Supabase, qui ne compte pas
   // les lettres accentuées), un chiffre, 72 octets au plus. Les mêmes règles sont à régler dans Supabase (ordres/BRANCHEMENT.md, étape 70).
   const octets = s => new TextEncoder().encode(s).length;
   function controlerMotDePasse(mdp) {

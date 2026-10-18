@@ -180,7 +180,7 @@
     "acc.choix.enregistrer": ["Enregistrer et entrer", "Save and sign in", "Opslaan en aanmelden"], "acc.choix.enregistrement": ["Enregistrement en cours.", "Saving.", "Bezig met opslaan."],
     "acc.choix.enregistre": ["Mot de passe enregistré.", "Password saved.", "Wachtwoord opgeslagen."],
     "acc.choix.annuler": ["Annuler et se déconnecter", "Cancel and sign out", "Annuleren en afmelden"],
-    "acc.regle.longueur": ["10 caractères au moins", "At least 10 characters", "Minstens 10 tekens"],
+    "acc.regle.longueur": ["8 caractères au moins", "At least 8 characters", "Minstens 8 tekens"],
     "acc.regle.lettre": ["Au moins une lettre (de a à z, sans accent)", "At least one letter (a to z)", "Minstens één letter (van a tot z, zonder accent)"],
     "acc.regle.chiffre": ["Au moins un chiffre", "At least one digit", "Minstens één cijfer"],
     "acc.regle.taille": ["Trop long : 72 caractères au plus (une lettre accentuée compte double)", "Too long: 72 characters max. (an accented letter counts double)", "Te lang: max. 72 tekens (een letter met accent telt dubbel)"],
