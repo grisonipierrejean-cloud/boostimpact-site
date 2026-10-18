@@ -23,8 +23,11 @@
   async function decider(decision, texte) {
     const boutons = [...document.querySelectorAll("#decision button")]; boutons.forEach(b => { b.disabled = true; }); msg(t("envoi.en.cours"));
     try {
-      await P.validerParJeton(jeton, decision, texte);
-      const [a, x] = FAIT(decision === "refuse" ? "refuse_" + objet : decision === "valide" && objet === "commentaire" ? "valide_commentaire" : decision);
+      const r = await P.validerParJeton(jeton, decision, texte);
+      const [a, x0] = FAIT(decision === "refuse" ? "refuse_" + objet : decision === "valide" && objet === "commentaire" ? "valide_commentaire" : decision);
+      // Contenu approuvé : la base le programme tout de suite (schema.sql, bloc « Programmation à l'approbation ») et rend la date et les réseaux.
+      const prog = decision === "approuve" && r && r.prevu_le ? r : null, R = RES();
+      const x = prog ? t("val.fait.approuve.programme", { quand: I.dateHeureDans(prog.prevu_le), res: (prog.reseaux || []).map(k => R[k] || k).join(", ") }) : x0;
       $("page").hidden = true; $("fait").hidden = false; $("fait-titre").textContent = a; $("fait-texte").textContent = x;
     } catch (er) {
       const cle = etatDuMessage(er && er.message); if (cle) return erreur(cle);

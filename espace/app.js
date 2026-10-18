@@ -20,7 +20,14 @@
   const ETAPES = I.carte("etape", ["PRODUIT", "PUBLIE", "PROGRAMME", "PROGRAMMATION_ANNULEE", "IDEES", "CONTENU_APPROUVE", "CONTENU_MODIFICATION", "CONTENU_REFUSE", "REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION",
     "AVIS_RECU", "AVIS_A_VALIDER", "AVIS_VALIDE", "AVIS_REFUSE", "AVIS_PUBLIE", "AVIS_SENSIBLE", "MISE_EN_PAUSE", "REPRISE", "OFFRE_CHANGEE", "COMMERCE_CREE", "LEGENDE_MODIFIEE", "EMAIL_VALIDATION",
     "ACTION_FICHE", "ACTION_FICHE_VALIDEE", "ACTION_FICHE_REFUSEE", "ACTION_FICHE_PUBLIEE", "DEMARRAGE", "COMMENTAIRE_VALIDE", "COMMENTAIRE_IGNORE", "COMMENTAIRE_CLOS", "COMMENTAIRE_PUBLIE",
-    "AVIS_EFFACES_30_JOURS", "COMMENTAIRES_EFFACES_30_JOURS", "ABONNEMENT_EN_ATTENTE", "ABONNEMENT_ACTIF", "ABONNEMENT_IMPAYE", "ABONNEMENT_RESILIE"]);
+    "AVIS_EFFACES_30_JOURS", "COMMENTAIRES_EFFACES_30_JOURS", "ABONNEMENT_EN_ATTENTE", "ABONNEMENT_ACTIF", "ABONNEMENT_IMPAYE", "ABONNEMENT_RESILIE",
+    // Types écrits par la base (schema.sql), n8n et le moteur que le commerçant voit dans Offre > Historique (les types internes sont filtrés :
+    // journal_interne() de schema.sql, RENOM_JOURNAL_INTERNE de donnees.js). Un type inconnu s'affiche « Autre étape du service », jamais en code brut.
+    "VALIDATION_TACITE", "PROGRAMMATION_AUTO", "APPROUVE_NON_PROGRAMME", "PHOTOS_DEPOSEES", "VALIDATION_PAR_LIEN", "NOTIFICATION_VALIDATION", "BIENVENUE",
+    "BILAN_ENVOYE", "AVIS_TRAITE", "AVIS_PROPOSE", "AVIS_RELANCE", "AVIS_EQUIPE", "AVIS_ESCALADE", "ACTION_FICHE_CREEE", "ACTION_FICHE_A_PUBLIER", "ACTION_FICHE_REFUSE",
+    "IDEE_SEMAINE", "IDEE_RETENUE", "IDEE_ECARTEE", "CLIENTS_IMPORTES", "OPPOSITION_AJOUTEE", "DESINSCRIPTION", "MISE_EN_ROUTE", "MISE_EN_ROUTE_DECLAREE",
+    "EMAIL_MISE_EN_ROUTE", "EMAIL_RELANCE_VALIDATION", "EMAIL_RELANCE_PHOTOS", "EMAIL_OFFRE_SUPERIEURE", "DELEGATION_SIGNEE", "DELEGATION_RETIREE", "RESEAUX_RETENUS",
+    "GARANTIE_MANQUEMENT", "MOIS_OFFERT_APPLIQUE", "RELEVE_MENSUEL"]);
   const ST_ABO = I.carte("abo.st", ["en_attente", "actif", "impaye", "resilie"]);
   const M = window.RENOM_MAJ;
   const nombre = I.nombre;
@@ -61,7 +68,12 @@
   const decisions = (x, refus) => `<div class="actions" data-choix><button type="button" class="bouton" data-a="approuve">${t("dec.approuver")}</button><button type="button" class="bouton second" data-a="modif">${t("dec.modif")}</button><button type="button" class="lien" data-a="refuse">${refus}</button></div>
     <div class="f" data-zone hidden><label for="mot-${e(x.id)}">${t("dec.mot")}</label><textarea id="mot-${e(x.id)}" data-mot></textarea>
       <div class="actions"><button type="button" class="bouton" data-a="envoyer-modif">${t("dec.envoyer")}</button><button type="button" class="lien" data-a="fermer-modif">${t("annuler")}</button></div></div>`;
-  let approuveRecent = null;   // dernier contenu approuvé : on propose de le programmer au meilleur créneau
+  // Dernier contenu approuvé : {id, p}. La base le programme à l'approbation (schema.sql, bloc « Programmation à l'approbation ») ; p est sa
+  // publication, relue dans le calendrier : on affiche la date. Rien de programmé (aucun réseau connecté, commerce en pause…) : p est nul et
+  // l'écran propose de le programmer au meilleur créneau.
+  let approuveRecent = null;
+  const texteProgramme = p => t("auto.programme", { quand: I.dateHeureDans(p.prevu_le), res: (p.reseaux || []).map(r => RES[r]).join(", ") });
+  const publicationDe = async id => { try { return (await D.calendrier()).find(x => x.contenu_id === id && x.statut === "programme") || null; } catch (er) { return null; } };
   function brancherDecisions(racine, apres) {
     racine.querySelectorAll("[data-contenu]").forEach(a => a.addEventListener("click", async ev => {
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = a.dataset.contenu, act = b.dataset.a, zone = a.querySelector("[data-zone]"), choix = a.querySelector("[data-choix]");
@@ -71,8 +83,9 @@
         if (act === "fermer-modif") { zone.hidden = true; choix.hidden = false; return; }
         if (act === "envoyer-modif") await D.valider(id, "modification", a.querySelector("[data-mot]").value);
         else await D.valider(id, act);
-        approuveRecent = act === "approuve" ? id : null;
-        await apres(); msg(t("enregistre")); majCompteurs();
+        approuveRecent = act === "approuve" ? { id, p: await publicationDe(id) } : null;
+        const p = approuveRecent && approuveRecent.p;
+        await apres(); msg(p ? t("enregistre") + " " + texteProgramme(p) : t("enregistre")); majCompteurs();
       } catch (er) { msg(ph(er.message)); }
     }));
   }
@@ -141,7 +154,12 @@
   const boutonsAuto = (id, metier) => `<div class="actions"><button type="button" class="bouton" data-auto="${e(id)}">${t("auto.bouton")}</button><a class="bouton second" href="#/calendrier">${t("auto.moi")}</a></div>
     <p class="note">${t("auto.creneaux", { h: creneauxTexte(metier) })}</p>`;
   async function proposition(c) {
-    if (!approuveRecent) return ""; const x = (await D.contenus()).find(y => y.id === approuveRecent);
+    if (!approuveRecent) return "";
+    // Programmé à l'approbation : la date et les réseaux, une fois, à la place du bouton.
+    if (approuveRecent.p) { const p = approuveRecent.p; approuveRecent = null;
+      return `<section class="carte proposition" id="proposition" data-programme><div><p class="fort">${t("prop.programme.titre")}</p><p class="texte2">${texteProgramme(p)}</p></div>
+        <div class="actions"><a class="bouton second" href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></div></section>`; }
+    const x = (await D.contenus()).find(y => y.id === approuveRecent.id);
     if (!x || x.statut !== "approuve") { approuveRecent = null; return ""; }
     return `<section class="carte proposition" id="proposition"><div><p class="fort">${t("prop.titre")}</p><p class="texte2">${t("prop.texte")}</p></div>${boutonsAuto(x.id, c.metier)}</section>`;
   }
@@ -313,15 +331,9 @@
     const phrase = nv ? t("acc.validations", { n: nv, m: Math.max(1, Math.round(nv * 40 / 60)) }) : na ? t("acc.choses", { n: na }) : t(mr && mr.faits < mr.total ? "acc.reste.mer" : "acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
     const ficheRemplie = c.specialites || c.ton || c.horaires;
-    vue.innerHTML = `${pauseBandeau(c)}
-      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
-        <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
-      <p class="msg" id="msg" role="status"></p>
-      ${blocMiseEnRoute(mr)}
-      ${!c.demarrage_fini ? `<section class="alerte"><div><p class="fort">${t("acc.dem.titre")}</p><p>${t("acc.dem.texte")}</p></div><a class="bouton second" href="#/demarrage">${t("acc.dem.reprendre")}</a></section>` : ""}
-      ${bilanBloc(bilan)}
-      ${carteStyle(c)}
-      <section class="carte a-valider"${premier ? ` data-contenu="${e(premier.id)}"` : ""}>
+    // Ordre de l'accueil (mobile d'abord, 18/10/2026) : 1. alertes (avis sensible, commentaire délicat) tout en haut ; 2. ce qui attend une décision
+    // (contenu, idée de la semaine, réponse d'avis, réponse de commentaire, démarrage et mise en route) ; 3. le reste (bilan, style, publications, fiche, offre).
+    const carteContenu = `<section class="carte a-valider"${premier ? ` data-contenu="${e(premier.id)}"` : ""}>
           <div class="carte-tete"><h2>${t(premier ? "acc.contenu.un" : "acc.contenu.aucun")}</h2>${aValider.length > 1 ? `<a href="#/contenus">${t("voir.les", { n: aValider.length })}</a>` : `<a href="#/contenus">${t("acc.ouvrir.contenus")}</a>`}</div>
           ${premier ? `<div class="apercu-reseaux">${blocReseaux(premier, u1, v1, u91)}<div class="apercu-texte">
             <p class="meta">${FORMAT_LIB[M.formatDe(premier)]}</p>
@@ -330,15 +342,33 @@
             <p class="meta">${t("acc.dernier", { type: t(dernier.type === "video" ? "type.video.courte" : "type.publication"), quand: I.minusculeDebut(jourRelatif(dernier.cree_le)) })}</p><p class="legende"${lc()}>${e(dernier.legende || "")}</p>
             <p class="etat">${ST_CONTENU[dernier.statut] || e(dernier.statut)}</p></div></div>`
           : `<p class="texte2">${t("acc.contenus.vide")}</p>`}
-        </section>
-      ${blocIdeeSemaine(idee)}
-      ${await proposition(c)}
-      <div class="rangee">
-        <section class="carte moitie"${avis1 ? ` data-avis="${e(avis1.id)}"` : ""}>
+        </section>`;
+    const carteAvis = `<section class="carte moitie"${avis1 ? ` data-avis="${e(avis1.id)}"` : ""}>
           <div class="carte-tete"><h2>${t(avis1 ? "acc.avis.un" : "acc.avis.aucun")}</h2>${avis1 ? `<span class="note">${etoiles(avis1.note)}</span>` : ""}</div>
           ${avis1 ? `${citation(avis1)}${avis1.auteur && !avis1.efface_le ? `<p class="note">${e(avis1.auteur)}</p>` : ""}${reponseAValider(avis1)}${reponses.length > 1 ? `<p class="note pied"><a href="#/avis">${t("acc.avis.voir", { n: reponses.length })}</a></p>` : ""}`
           : `<p class="texte2">${t(regleAvis(c))}</p><p class="pied"><a href="#/avis">${t("acc.ouvrir.avis")}</a></p>`}
-        </section>
+        </section>`;
+    vue.innerHTML = `${pauseBandeau(c)}
+      ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
+        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t("acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
+      ${cmHumains.length ? `<section class="alerte" id="alerte-commentaires"><div><p class="fort">${t("acc.cm.titre", { n: cmHumains.length })}</p>
+        <p>${t("acc.cm.texte")}</p></div><a class="bouton second" href="#/commentaires">${t("acc.cm.lire", { n: cmHumains.length })}</a></section>` : ""}
+      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
+        <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
+      <p class="msg" id="msg" role="status"></p>
+      ${await proposition(c)}
+      ${premier ? carteContenu : ""}
+      ${blocIdeeSemaine(idee)}
+      ${avis1 ? `<div class="rangee">${carteAvis}</div>` : ""}
+      ${cmValider.length ? `<section class="carte" data-commentaire="${e(cmValider[0].id)}" id="accueil-commentaire"><div class="carte-tete"><h2>${t("acc.cm.un")}</h2>${cmValider.length > 1 ? `<a href="#/commentaires">${t("voir.les", { n: cmValider.length })}</a>` : `<a href="#/commentaires">${t("acc.ouvrir.commentaires")}</a>`}</div>
+        ${corpsCommentaire(cmValider[0])}</section>` : ""}
+      ${!c.demarrage_fini ? `<section class="alerte"><div><p class="fort">${t("acc.dem.titre")}</p><p>${t("acc.dem.texte")}</p></div><a class="bouton second" href="#/demarrage">${t("acc.dem.reprendre")}</a></section>` : ""}
+      ${blocMiseEnRoute(mr)}
+      ${bilanBloc(bilan)}
+      ${carteStyle(c)}
+      ${premier ? "" : carteContenu}
+      <div class="rangee">
+        ${avis1 ? "" : carteAvis}
         <section class="carte moitie">
           <div class="carte-tete"><h2>${t("acc.prochaines")}</h2></div>
           ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${x.reseaux.map(r => RES[r]).join(", ")}</p></div></li>`).join("")}</ul>`
@@ -346,12 +376,6 @@
           <p class="pied"><a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>
         </section>
       </div>
-      ${humains.length ? `<section class="alerte"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
-        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t("acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      ${cmHumains.length ? `<section class="alerte" id="alerte-commentaires"><div><p class="fort">${t("acc.cm.titre", { n: cmHumains.length })}</p>
-        <p>${t("acc.cm.texte")}</p></div><a class="bouton second" href="#/commentaires">${t("acc.cm.lire", { n: cmHumains.length })}</a></section>` : ""}
-      ${cmValider.length ? `<section class="carte" data-commentaire="${e(cmValider[0].id)}" id="accueil-commentaire"><div class="carte-tete"><h2>${t("acc.cm.un")}</h2>${cmValider.length > 1 ? `<a href="#/commentaires">${t("voir.les", { n: cmValider.length })}</a>` : `<a href="#/commentaires">${t("acc.ouvrir.commentaires")}</a>`}</div>
-        ${corpsCommentaire(cmValider[0])}</section>` : ""}
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("acc.ou")}</h2></div>
           <ul class="liste"><li><a href="#/contenus">${t("acc.ou.contenus")}</a><span class="fort">${aValider.length}</span></li>
@@ -432,7 +456,7 @@
             <span class="note" id="choisies" aria-live="polite">${t("photos.aucune.choisie")}</span></div>
           <p class="aide">${t("photos.aide", { max: EN.REGLES.PHOTOS_MAX, mo: nombre(EN.REGLES.PHOTO_MAX_MO) })}</p></div>
           <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
-          <button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button><p class="msg" id="msg" role="status" aria-live="polite"></p></form></section>
+          <button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
           ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
@@ -447,7 +471,7 @@
       // Contrôle avant envoi (format, 50 Mo) : un fichier refusé n'empêche pas les autres de partir.
       const erreurs = [], bonnes = [];
       for (const f of fs) { const k = await EN.controler(f); if (k.genre !== "photo") erreurs.push(f.name + t("deux.points") + ph("Format non accepté (JPEG, PNG, WebP ou HEIC).")); else if (k.raison) erreurs.push(f.name + t("deux.points") + ph("Fichier trop lourd (50 Mo au plus).")); else bonnes.push(f); }
-      if (!bonnes.length) { msg(t("photos.deposees", { n: 0 }) + t("photos.refusees", { l: erreurs.join(" ; ") })); return; }
+      if (!bonnes.length) { msg(t("photos.aucune.envoyee") + t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") })); return; }
       const ens = EN.controlerPhotos(bonnes.length); if (ens) { msg(t("photos.ens." + ens.code, { n: ens.n, max: EN.REGLES.PHOTOS_MAX })); return; }
       phEnvoi.encours = true; $("ph-envoyer").disabled = true; $("appareil").disabled = $("fichiers").disabled = true;
       const jauge = $("ph-jauge"), total = bonnes.reduce((s, f) => s + (f.size || 0), 0) || 1, recus = [], pris = new Set(); let faits = 0, deposees = 0;
@@ -468,9 +492,19 @@
         if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => ({ chemin, nom, taille }))); deposees = r.nb_photos; recus.forEach(x => phEnvoi.noms.delete(x.cle)); }
       } catch (er) { erreurs.push(ph(er.message)); }
       finally { phEnvoi.encours = false; }
-      await photos(); msg(t("photos.deposees", { n: deposees }) + (erreurs.length ? t("photos.refusees", { l: erreurs.join(" ; ") }) : "")); majCompteurs();
+      await photos(); msg((deposees ? t("photos.deposees", { n: deposees }) : t("photos.aucune.enregistree")) + (erreurs.length ? t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") }) : ""));
+      if (deposees) await suitePhotos(c);
+      majCompteurs();
     };
     brancherDepotVideo();
+  }
+  // Après un envoi réussi : la suite en une phrase, avec le lien vers Contenus. Délai : seulement celui que l'offre promet (« Premier contenu proposé
+  // sous 72 h », Standard et Premium, site/index.html #offres ; COND = moteur/conditions_offre.json), et seulement tant qu'aucun contenu n'existe.
+  async function suitePhotos(c) {
+    const s = $("ph-suite"); if (!s) return;
+    const premier = !!offreDe(c).reseaux_sociaux && !(await D.contenus().catch(() => [null])).length;
+    s.innerHTML = t("photos.suite", { lien: `<a href="#/contenus">${e(ECRANS.contenus)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
+    s.hidden = false;
   }
 
   // ---------------- Dépôt de vidéos (écran Photos et vidéos). Règles et envoi : espace/web/envoi.js ; base : bloc « Dépôt de vidéos » de schema.sql.
@@ -948,7 +982,7 @@
         ${lien ? `<p class="pied actions-abo"><a class="bouton${lienA ? " second" : ""}" id="offre-payer" href="${e(lien)}" target="_blank" rel="noopener">${t(portail ? "abo.bouton.portail" : "abo.bouton.mensuel")}</a>${lienA ? `<a class="bouton" id="offre-payer-annuel" href="${e(lienA)}" target="_blank" rel="noopener">${t("abo.bouton.annuel", { gain: euros(gainAn) })}</a>` : ""}</p><p class="note">${t(portail ? "abo.note.portail" : "abo.note.paiement")}</p>`
           : D.mode === "demo" ? `<p class="note">${t("abo.demo")}</p>` : ""}</section>
       <section class="carte"><h2>${t("offre.plafond.titre")}</h2><p class="texte2 lecture">${t("offre.plafond.texte")}</p></section>
-      <section class="carte"><h2>${t("offre.historique")}</h2>${j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || cap(String(x.type || "").toLowerCase().replace(/_/g, " ")))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`}</section>`;
+      <section class="carte"><h2>${t("offre.historique")}</h2>${j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`}</section>`;
   }
 
   // ---------------- Résultats : ce que BoostImpact rapporte, mois par mois. Aucun chiffre inventé : la portée attend les statistiques des réseaux.
@@ -1396,6 +1430,8 @@
     // Ancienne adresse (par exemple #/idees) : remplacée par la nouvelle, sans ajouter d'étape dans l'historique.
     if (ANCIENNES[r]) { if (r === "idees") ideesOuvertes = true; history.replaceState(null, "", "#/" + ANCIENNES[r]); return rendre(); }
     if (!s) { connecte = false; derniere = null; dessinerNav(); return connexion(); }
+    // Lien d'email ouvert ici par un compte à double authentification (l'administrateur seul en a une, 18/10/2026) : la console demande le code.
+    if (s.codeRequis) { location.href = I.lien("console.html"); return; }
     if (s.motDePasseRequis) { connecte = false; derniere = null; dessinerNav(); return choixMotDePasse(s); }
     if (s.role === "administrateur" && D.mode === "demo" && !/(\?|&)voir\b/.test(location.search)) { location.href = I.lien("console.html"); return; }
     // Langue : sans choix explicite (?lang= ou sélecteur), l'espace prend celle du commerce (la page se recharge une fois si elle change).

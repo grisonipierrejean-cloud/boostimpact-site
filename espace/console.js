@@ -51,6 +51,12 @@
     connecte = false; dessinerNav();
     window.RENOM_ACCES.choixMotDePasse({ vue, I, D, email: s.email, apres: rendre, annuler: async () => { await D.quitter(); location.hash = ""; rendre(); } });
   }
+  // Double authentification de l'administrateur (18/10/2026, décision de PJ) : après le mot de passe, « Activez la double authentification »
+  // (aucun facteur : QR code) ou « Code de votre application » ; la console ne s'ouvre qu'au niveau aal2 (password + totp), la base non plus.
+  function doubleAuth(s, mode) {
+    connecte = false; dessinerNav();
+    window.RENOM_ACCES.doubleAuthentification({ vue, I, D, mode, email: s.email, apres: rendre, annuler: async () => { await D.quitter(); location.hash = ""; rendre(); } });
+  }
 
   // Score de santé (automatisations de service) : niveau en toutes lettres et raisons en clair. Règles : fonction SQL sante_de (schema.sql), les mêmes en démonstration.
   const NIVEAUX = I.carte("con.niveau", ["vert", "orange", "rouge"]), RANG = { rouge: 0, orange: 1, vert: 2 };
@@ -305,8 +311,10 @@
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
-    if (s.motDePasseRequis) return choixMotDePasse(s);
+    if (s.codeRequis) return doubleAuth(s, "code");   // lien d'email d'un compte à double authentification : le code avant le mot de passe (exigé par Supabase)
+    if (s.motDePasseRequis || s.doubleAuth === "mot_de_passe") return choixMotDePasse(s);
     if (s.role !== "administrateur") return refuse();
+    if (s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
     const [r, param] = location.hash.replace("#/", "").split("/"); const ecran = ROUTES[r] ? r : "commerces";
     route = ecran === "style" ? "commerces" : ecran; connecte = true; dessinerNav();   // le panneau « Style du commerce » dépend de l'entrée Commerces
     const cle = ecran + "/" + (param || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;

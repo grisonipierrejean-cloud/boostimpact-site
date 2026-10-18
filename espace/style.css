@@ -309,6 +309,13 @@ video.visuel{object-fit:contain;background:#000}
 .regles li[data-regle="taille"]{color:var(--encre);font-weight:600}
 .acces-bascule{margin:-8px 0 0}
 .acces-bascule .lien{padding-left:0;text-align:left}
+/* Double authentification de la console (18/10/2026, acces.js) : étapes numérotées, QR code de Supabase sur fond blanc (marge de lecture
+   des scanners ; l'image rendue par Supabase n'est pas faite pour un fond sombre), clé en chasse fixe, champ du code en gros chiffres. */
+.etapes-2fa{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;color:var(--texte2)}
+.qr-2fa{align-self:center;background:#FFFFFF;border-radius:var(--r-image);padding:14px;width:228px;max-width:100%}
+.qr-2fa img{display:block;width:100%;height:auto}
+.cle-2fa{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:16px;letter-spacing:.06em;color:var(--encre);background:var(--creux);border:1px solid var(--bord);border-radius:var(--r);padding:10px 14px;overflow-wrap:anywhere;user-select:all}
+input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
 .pied-legal{display:none}
 .hors-session .pied-legal{display:flex;flex-direction:column;gap:2px;max-width:460px;margin:0 auto;padding:0 16px 32px;font-size:12px;line-height:1.5;color:var(--discret);text-align:center}
 .pied-legal .liens-legaux{display:flex;flex-wrap:wrap;justify-content:center;gap:0 16px}

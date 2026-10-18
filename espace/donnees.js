@@ -30,6 +30,14 @@
   const RESEAUX = ["facebook", "instagram", "google", "tiktok"];
   // Même refus que le déclencheur a_reseaux_retenus de schema.sql : un réseau hors de l'offre ou non retenu à la mise en route ne se programme pas.
   const horsOffre = (c, r) => { if (!reseauxAutorises(c).includes(r)) throw new Error("réseau non compris dans l'offre ou non retenu pour ce commerce : " + r); };
+  // Journal : types INTERNES, jamais montrés au commerçant (objectif interne des pilotes, ancienne garantie « 10 avis », saisies et décisions de
+  // l'équipe, alertes et emails de l'exploitant). Même liste que journal_interne() de schema.sql (bloc « Programmation à l'approbation »), qui les
+  // refuse déjà au commerçant (règle journal_lecture) ; ce filtre couvre la démonstration et une base pas encore à jour. Égalité testée par rls.test.mjs.
+  const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
+    "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_"] };
+  const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
+  const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
   const mois0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -81,7 +89,8 @@
       if (r.commentaire) { const m = r.commentaire; return { ...base, reseau: m.reseau, categorie: m.categorie, texte: m.texte || "", auteur: m.auteur || "", reponse_proposee: m.reponse_proposee || "", recu_le: m.recu_le }; }
       return r;
     },
-    async validerParJeton(jeton, decision, texte) { await rpcPublic("valider_par_jeton", { p_jeton: String(jeton || ""), p_decision: decision, p_texte: texte == null ? null : String(texte) }); },
+    // Réponse : {objet, id, statut, prevu_le, reseaux} ; prevu_le et reseaux : la programmation faite à l'approbation (bloc « Programmation à l'approbation »).
+    async validerParJeton(jeton, decision, texte) { return premierDe(await rpcPublic("valider_par_jeton", { p_jeton: String(jeton || ""), p_decision: decision, p_texte: texte == null ? null : String(texte) })); },
     // ---- Tournée du jour (bloc « Prospection quotidienne » de schema.sql) : lien « résultat » de l'email de PJ (resultat.html#<jeton>), sans connexion
     async prospectParJeton(jeton) { return premierDe(await rpcPublic("prospect_par_jeton", { p_jeton: String(jeton || "") })); },
     async resultatParJeton(jeton, resultat, note) { return premierDe(await rpcPublic("resultat_par_jeton", { p_jeton: String(jeton || ""), p_resultat: resultat, p_note: note == null ? null : String(note) })); },
@@ -406,9 +415,14 @@
     const parMotDePasse = s => !!s && ACC.accesDuJeton(s.access_token);
     // Erreurs de Supabase Auth (champ code, https://supabase.com/docs/guides/auth/debugging/error-codes) -> code affiché par acces.js (acc.err.<code>).
     // Réseau coupé : AuthRetryableFetchError, statut 0 (supabase-js). Jamais le texte brut de Supabase (anglais, parfois révélateur).
+    // Double authentification (18/10/2026) : codes de Supabase Auth (internal/api/apierrors/errorcode.go, commit ce9a8ee) : code faux
+    // (mfa_verification_failed, « Invalid TOTP code entered ») ou défi expiré -> « code » ; facteur retiré -> « facteur » ; TOTP désactivé dans le
+    // tableau de bord (mfa_totp_enroll_not_enabled, mfa_totp_verify_not_enabled) -> « desactive ».
     const erreurAuth = er => {
       const c = (er && er.code) || "", st = er && er.status, reseau = (er && er.name === "AuthRetryableFetchError") || st === 0 || st >= 500;
-      const code = reseau ? "service" : ["invalid_credentials", "email_not_confirmed", "user_banned", "user_not_found"].includes(c) ? "identifiants"
+      const code = reseau ? "service" : ["mfa_verification_failed", "mfa_challenge_expired"].includes(c) ? "code" : c === "mfa_factor_not_found" ? "facteur"
+        : ["mfa_totp_enroll_not_enabled", "mfa_totp_verify_not_enabled"].includes(c) ? "desactive"
+        : ["invalid_credentials", "email_not_confirmed", "user_banned", "user_not_found"].includes(c) ? "identifiants"
         : c === "weak_password" ? "faible" : st === 429 || /rate_limit/.test(c) ? "trop"
         : ["reauthentication_needed", "session_not_found", "session_expired", "bad_jwt", "no_authorization"].includes(c) || st === 401 ? "session" : "autre";
       return Object.assign(new Error((er && er.message) || code), { code, codeSupabase: c });
@@ -446,10 +460,39 @@
     }
     const self = {
       mode: "supabase",
+      // Double authentification de l'administrateur (18/10/2026, acces.js) : doubleAuth = étape de la console (« ok », « code », « activer »,
+      // « mot_de_passe ») ; la base n'ouvre rien à l'administrateur avant « ok » (est_admin(), bloc SQL du 18/10/2026). codeRequis : session née
+      // d'un lien d'email sur un compte qui a déjà un facteur : Supabase exige le code avant de changer le mot de passe (internal/api/user.go :
+      // « AAL2 session is required to update email or password when MFA is enabled. »). Rien ne change pour un commerçant (aucun facteur).
       async session() {
         const s = await lireSession(); if (!s) return null;
-        if (!parMotDePasse(s)) return { email: s.user.email, role: null, motDePasseRequis: true };
-        return { email: s.user.email, role: (await self.estAdmin()) ? "administrateur" : "commerçant" };
+        const charge = ACC.decoderJwt(s.access_token), facteur = ACC.facteurTotpVerifie(s.user);
+        if (!parMotDePasse(s)) return { email: s.user.email, role: null, motDePasseRequis: true, codeRequis: facteur && !(charge && charge.aal === "aal2") };
+        if (!(await self.estAdmin())) return { email: s.user.email, role: "commerçant" };
+        return { email: s.user.email, role: "administrateur", doubleAuth: ACC.etapeAdmin(charge, facteur) };
+      },
+      // Écran de la double authentification. « activer » : un éventuel facteur non vérifié (activation interrompue) est retiré, sinon Supabase
+      // refuse le même nom (mfa_factor_name_conflict, internal/api/mfa.go, validateFactors), puis enroll rend le QR code (SVG en adresse data:,
+      // posée par supabase-js) et la clé. « code » : le facteur vérifié. listFactors relit le compte (getUser) : un facteur retiré depuis le
+      // tableau de bord n'y est plus. Rend { mode } si l'étape a changé entre-temps.
+      async doubleAuthPreparer(mode) {
+        const l = await sb.auth.mfa.listFactors(); if (l.error) throw erreurAuth(l.error);
+        const verifies = l.data.totp || [];
+        if (verifies.length) return mode === "code" ? { factorId: verifies[0].id } : { mode: "code" };
+        if (mode === "code") return { mode: "activer" };
+        for (const x of (l.data.all || []).filter(x => x.factor_type === "totp" && x.status !== "verified")) {
+          const u = await sb.auth.mfa.unenroll({ factorId: x.id }); if (u.error) throw erreurAuth(u.error);
+        }
+        const r = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "BoostImpact console", issuer: "BoostImpact" });
+        if (r.error) throw erreurAuth(r.error);
+        return { factorId: r.data.id, qr: r.data.totp && r.data.totp.qr_code, secret: r.data.totp && r.data.totp.secret };
+      },
+      // Code de l'application : défi puis vérification (challengeAndVerify) ; la session passe en aal2 avec amr [totp, password].
+      async doubleAuthVerifier(factorId, code) {
+        if (!ACC.codeValide(code)) throw Object.assign(new Error("code à 6 chiffres"), { code: "format" });
+        const r = await sb.auth.mfa.challengeAndVerify({ factorId, code: ACC.codeSaisi(code) });
+        if (r.error) throw erreurAuth(r.error);
+        cache = null;
       },
       // Connexion : adresse + mot de passe. Le lien magique n'est plus une façon d'entrer (plus aucun appel au lien magique de Supabase Auth).
       async connecter(email, mdp) { await entrerParMotDePasse(String(email || "").trim(), String(mdp || "")); },
@@ -533,7 +576,7 @@
       // Abonnement Stripe du commerce (lecture seule : la table n'est écrite que par le webhook, schema.sql, bloc « abonnements Stripe »).
       async abonnement() { const c = await self.commerce(); const l = ok(await sb.from("abonnements").select("offre,statut,stripe_customer,remise_lancement_fin,maj_le").eq("commerce_id", c.id).order("maj_le", { ascending: false }).limit(1)); return l[0] || null; },
       lienAbonnement,
-      async journal() { const c = await self.commerce(); return ok(await sb.from("journal").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      async journal() { const c = await self.commerce(); return journalCommercant(ok(await sb.from("journal").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100))); },
       // ---- Collecte : page publique et retours privés
       async jetonAvis() { return (await self.commerce()).jeton_avis; },
       avisPublic: jeton => publicSupabase.avisPublic(jeton),
