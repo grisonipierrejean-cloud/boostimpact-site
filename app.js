@@ -20,31 +20,39 @@ function boostEchec(EN){return RENOM_NL?'Uw aanvraag is niet verstuurd. Probeer 
   :"L'envoi n'a pas abouti. Réessayez dans un instant, ou écrivez-nous à "+BOOST_CONTACT+'.'}
 (function(){
 var EN=RENOM_EN;
-// Page de vente : formulaire d'audit (16/10/2026 : nom du commerce, ville, email, lien Google Maps facultatif ; plus de choix du métier).
+// Page de vente : formulaire d'audit (16/10/2026 : nom du commerce, ville, email ; plus de choix du métier ; 18/10/2026 : lien de la fiche Google obligatoire).
 // 18/10/2026 : téléphone ou WhatsApp facultatif dans ce formulaire ; la page de remerciement ne demande plus rien.
 var $=function(s,r){return (r||document).querySelector(s)};
 var form=$('#form');if(!form)return;
 var T=RENOM_NL?{
   commerce:'Vul de naam van uw zaak in.',ville:'Vul uw gemeente in, zodat we het juiste profiel vinden.',email:'Dit e-mailadres lijkt onvolledig.',
   tel:'Dit telefoonnummer lijkt niet te kloppen: alleen cijfers, spaties en + ( ) . / -, bijvoorbeeld +32 470 12 34 56. Laat het veld leeg als u dat liever hebt.',
-  maps:'Dit lijkt geen Google Maps-link. Laat het veld leeg als u er geen hebt.',
+  maps:'Plak de link die u kopieerde via Google of Google Maps (knop Delen).',
+  mapsVide:'Plak de link naar uw Google-bedrijfsprofiel: zoek uw zaak op Google, tik op Delen en kopieer de link.',
   ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html'
 }:EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
   tel:'This phone number doesn\u2019t look right: digits, spaces and + ( ) . / - only, for example +33 6 12 34 56 78. Leave it empty if you prefer.',
-  maps:'This doesn\u2019t look like a Google Maps link. Leave it empty if you don\u2019t have one.',
+  maps:'Paste the link copied from Google or Google Maps (Share button).',
+  mapsVide:'Paste the link to your Google listing: search for your business on Google, tap Share, then copy the link.',
   ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
   tel:'Ce numéro ne semble pas valide : chiffres, espaces et + ( ) . / - seulement, par exemple 06 12 34 56 78. Laissez le champ vide si vous préférez.',
-  maps:"Ce lien ne ressemble pas à un lien Google Maps. Laissez le champ vide si vous ne l'avez pas.",
+  maps:'Collez le lien copié depuis Google ou Google Maps (bouton Partager).',
+  mapsVide:'Collez le lien de votre fiche Google : sur Google, cherchez votre commerce, touchez Partager, puis copiez le lien.',
   ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html'
 };
 // Téléphone ou WhatsApp : facultatif ; même règle que tel() de n8n (n8n/build_formulaires.py, reprise dans n8n/build_audit.py) :
 // espaces regroupés, puis 6 à 40 caractères parmi chiffres, espaces et + ( ) . / -. Côté n8n, un numéro invalide est ignoré, la demande passe.
 var TEL=/^[0-9 +().\/-]{6,40}$/;
-// Lien Google Maps : facultatif ; même règle que le contrôle de n8n (n8n/build_audit.py), qui l'écarte sinon.
-var MAPS=/^https:\/\/(www\.google\.[a-z.]{2,6}\/maps|maps\.google\.[a-z.]{2,6}|maps\.app\.goo\.gl|goo\.gl\/maps)[^\s"<>]*$/;
+// Lien de la fiche Google (18/10/2026) : OBLIGATOIRE (un nom seul est trop imprécis). Tous les liens Google sont acceptés :
+// share.google/…, g.co/…, maps.app.goo.gl/…, goo.gl/maps…, google.<tld>/maps…, maps.google.<tld>…, google.<tld>/search?…, g.page/…,
+// business.google.com/…. Même expression que le contrôle de n8n (JS_GOOGLE, n8n/build_audit.py) et que moteur/audit/lien_google.py (FORMAT).
+// Texte autour du lien ou « https:// » oublié : nettoyés ici comme dans n8n ; 500 caractères au plus. Le moteur suit le lien pour trouver LA fiche.
+var GOOGLE=/^https?:\/\/(?:(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})\/(?:maps|search)(?:[\/?#]|$)|maps\.google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})(?:[\/?#]|$)|(?:share\.google|g\.co|maps\.app\.goo\.gl|g\.page|business\.google\.com)\/|goo\.gl\/maps(?:[\/?#]|$))[^\s"<>]*$/i;
+function lienGoogle(v){var t=String(v||'').replace(/\s+/g,' ').trim(),m=t.match(/https?:\/\/[^\s"<>]+/i);
+  return (m?m[0]:/^(?:share\.google|g\.co|maps\.app\.goo\.gl|goo\.gl|g\.page|business\.google\.com|(?:www\.|maps\.)?google\.)/i.test(t)?'https://'+t.split(' ')[0]:'').slice(0,500)}
 var err=$('#err'),btn=$('#envoi');
 function erreur(m,champ){err.textContent=m;err.hidden=false;if(champ)champ.focus()}
 // Le message d'erreur disparaît dès que le visiteur corrige : il ne reste pas affiché à tort.
@@ -56,9 +64,11 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   if(!form.ville.value.trim())return erreur(T.ville,form.ville);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim()))return erreur(T.email,form.email);
   var t=form.telephone?form.telephone.value.replace(/\s+/g,' ').trim():'';if(t&&!TEL.test(t))return erreur(T.tel,form.telephone);
-  var m=form.lien_maps.value.trim();if(m&&!MAPS.test(m))return erreur(T.maps,form.lien_maps);
+  var brut=form.lien_maps.value.trim(),m=lienGoogle(brut);
+  if(!brut)return erreur(T.mapsVide,form.lien_maps);
+  if(!GOOGLE.test(m))return erreur(T.maps,form.lien_maps);
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
-  var d=boostDonnees(form);
+  var d=boostDonnees(form);d.lien_maps=m;
   btn.disabled=true;btn.textContent=T.envoi;
   // Page de remerciement seulement si n8n a accepté la demande ; sinon, message d'erreur avec l'adresse de contact.
   boostEnvoyer(form,d)

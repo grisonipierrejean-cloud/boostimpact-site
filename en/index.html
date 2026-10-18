@@ -246,7 +246,7 @@
 </div>
 </div></section>
 
-<!-- Audit request (fields: commerce, ville, email, lien_maps optional; sent as JSON to the n8n webhook in the action attribute, site/app.js). Deliverable: 3 priorities and 3 competitors. -->
+<!-- Audit request (fields: commerce, ville, email, lien_maps required (link to the Google listing, 18/10/2026); sent as JSON to the n8n webhook in the action attribute, site/app.js). Deliverable: 3 priorities and 3 competitors. -->
 <section id="audit" class="section audit-section"><div class="wrap"><div class="audit-bloc">
 <div class="audit-texte">
 <h2>Your free audit.</h2>
@@ -262,7 +262,7 @@
 <div class="champ"><label for="g-email">Email</label><input id="g-email" name="email" type="email" autocomplete="email" required></div>
 </div>
 <div class="champ"><label for="g-tel">Phone or WhatsApp (optional)</label><input id="g-tel" name="telephone" type="tel" autocomplete="tel"></div>
-<div class="champ"><label for="g-maps">Google Maps link to your business (optional)</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" aria-describedby="aide-maps"><p class="aide" id="aide-maps">It helps us find the right listing.</p></div>
+<div class="champ"><label for="g-maps">Link to your Google listing</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" required aria-describedby="aide-maps"><p class="aide" id="aide-maps">On Google, search for your business, tap Share, then copy the link.</p></div>
 <div class="hp" aria-hidden="true"><label>Do not fill in<input name="website" tabindex="-1" autocomplete="off"></label></div>
 <div class="ok"><input id="g-ok" name="consentement" value="oui" type="checkbox" required><label for="g-ok">I agree to receive my audit and a few follow-up messages, with one-click unsubscribe. <a href="privacy.html">Privacy policy</a></label></div>
 <button class="btn btn-prim btn-grand" id="envoi" type="submit">Get my free audit</button>
