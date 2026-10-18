@@ -34,7 +34,7 @@
 <h1>Make a name for yourself.</h1>
 <p class="chapo">Your Google reviews and social media, handled for you.</p>
 <p class="haut-comment"><strong>You send a photo, you approve in one click.</strong></p>
-<p class="haut-prix">From <span class="prix-repere">€79 excl. VAT/month</span> billed annually. Monthly: €95 excl. VAT, no minimum term.</p>
+<p class="haut-prix">From <span class="prix-repere">€79 excl. VAT/month</span> for your Google listing and reviews (billed annually; €95 excl. VAT monthly, no minimum term). Social media from €190 excl. VAT/month billed annually.</p>
 <div class="actions">
 <a class="btn btn-prim btn-grand" href="#audit">Get my free audit</a>
 <a class="lien-fort" href="#offres">See the three plans</a>
@@ -74,17 +74,16 @@
 <p class="mention">Fictitious example: business and post made up for the demonstration.</p>
 </div></section>
 
-<!-- 3. DESIRE: three services. Statement we can stand by about what the AI writes (16/10/2026). -->
+<!-- 3. DESIRE: three services. The statement we can stand by about what the AI writes (16/10/2026) is in the FAQ ("Will an AI reply with any old thing?"), once only (18/10/2026). -->
 <section id="services" class="section fond-clair" aria-labelledby="services-titre"><div class="wrap">
 <div class="tete">
 <h2 id="services-titre">Three services, one contact.</h2>
 </div>
 <ul class="services">
-<li class="service"><h3>Your Google Business Profile</h3><p>Optimised within 7 days, then kept up to date: opening hours, photos, updates. Apple Maps listing included.</p></li>
+<li class="service"><h3>Your Google Business Profile</h3><p>Optimised within 7 days, then kept up to date: opening hours, photos, updates.</p></li>
 <li class="service"><h3>Your reputation</h3><p>Every new review handled within 24 hours. QR and NFC cards to ask every customer for a review, without filtering.</p></li>
 <li class="service"><h3>Your social media</h3><p>Original content on Instagram, Facebook or TikTok, the ones that suit your trade, chosen with you at set-up.</p></li>
 </ul>
-<p class="regle-ia">Our content is based on the information you have approved. No commercial claim (price, offer, allergens...) is published without your consent.</p>
 </div></section>
 
 <!-- 4. TRUST: "documented real case" slot, HIDDEN until a pilot is published (dated screenshots, the owner's written consent). Never fill it with a made-up example. -->
@@ -113,7 +112,7 @@
 <div class="tete">
 <h2 id="offres-titre">Three plans, yearly or monthly.</h2>
 <p class="perimetre">For businesses established in France or Belgium.</p>
-<p class="tete-chapo">One single unit: original content per month. A piece of content is one subject, published on each of your chosen accounts.</p>
+<p class="tete-chapo">A piece of content is one subject: it is published on each of your social accounts and on your Google listing.</p>
 </div>
 <div class="rythme" role="group" aria-label="Billing frequency" hidden>
 <button type="button" class="rythme-choix" data-choix="annuel" aria-pressed="true">Annual <span class="rythme-gain">17% less</span></button>
@@ -135,7 +134,7 @@
 <li data-cgv="Replies to Google reviews=Prepared, approved by you">Replies to your reviews prepared by AI, published after you approve them</li>
 <li data-cgv="Link and QR code to ask for reviews">A link and a QR code to ask for reviews</li>
 <li data-cgv="Original content per month=2|Where content is published=Google Business Profile">2 posts a month on your Google Business Profile</li>
-<li data-cgv="Monthly report=Automatic summary">The monthly summary, automatic</li>
+<li data-cgv="Monthly report=Automatic summary">The monthly summary, by email</li>
 </ul>
 <p class="offre-sans">No social media, no video.</p>
 <a class="btn btn-contour" href="#audit">Get my free audit</a>
@@ -153,7 +152,7 @@
 <ul class="inclus">
 <li class="inclus-tout">Everything in Essential, plus:</li>
 <li data-cgv="Replies to Google reviews=4 and 5 stars automatic, the others approved by you">Replies to 4- and 5-star reviews published under the rules approved at set-up; negative reviews are submitted to you</li>
-<li data-cgv="Original content per month=8|Where content is published=Google Business Profile and chosen accounts">8 pieces of original content a month, on your chosen accounts and your Google listing, scheduled after you approve</li>
+<li data-cgv="Original content per month=8|Where content is published=Google Business Profile and chosen accounts">8 pieces of original content a month, on your social accounts and your Google listing, scheduled after you approve</li>
 <li data-cgv="Replies to comments=Prepared, sensitive cases approved by you">Replies to comments prepared, sensitive cases approved by you</li>
 <li data-cgv="Monthly report=Full report and recommendations">The full monthly report, with our recommendations</li>
 </ul>
@@ -173,7 +172,7 @@
 <ul class="inclus">
 <li class="inclus-tout">Everything in Standard, plus:</li>
 <li data-cgv="Original content per month=16|Of which short edited videos (60 s max)=4|Editorial calendar run by us">16 pieces of original content a month, including 4 short edited videos (60 s max), on a calendar we run</li>
-<li data-cgv="How content is published=Delegation mode">Delegation mode: your approval becomes optional, publication 48 hours after sending if you haven't replied</li>
+<li data-cgv="How content is published=Delegation mode">Your approval becomes optional: if you haven't replied 48 hours after we send it, we publish</li>
 <li data-cgv="Replies to Google reviews=4 and 5 stars automatic, the others handled by the team|Replies to comments=Handled within the agreed scope">Negative reviews and comments handled by our team, you are consulted when needed</li>
 <li data-cgv="Monthly report=Annotated report and 30-min call">The annotated report and a monthly 30-minute call with the team</li>
 </ul>
@@ -183,52 +182,29 @@
 
 </div>
 
-<!-- One single comparison table: each row is copied word for word from the row of the same name in the terms of sale (section 3). -->
+<!-- One single comparison table: each row is the row of the same name in the terms of sale (section 3), word for word or in its plain wording
+     (18/10/2026: "your social accounts" = "chosen accounts", "No reply within 48 hours: we publish" = "Delegation mode",
+     "We reply for you, as agreed with you" = "Handled within the agreed scope"): EQUIV table in moteur/tests/test_legal.py. -->
 <div class="compare-cadre">
 <table class="compare"><caption class="hp">The three plans at a glance</caption>
 <thead><tr><td></td><th scope="col">Essential</th><th scope="col" class="reco">Standard</th><th scope="col">Premium</th></tr></thead>
 <tbody>
 <tr><th scope="row">Original content per month</th><td>2</td><td class="reco">8</td><td>16</td></tr>
 <tr><th scope="row">Of which short edited videos (60 s max)</th><td>0</td><td class="reco">0</td><td>4</td></tr>
-<tr><th scope="row">Where content is published</th><td>Google Business Profile</td><td class="reco">Google Business Profile and chosen accounts</td><td>Google Business Profile and chosen accounts</td></tr>
-<tr><th scope="row">How content is published</th><td>After your approval</td><td class="reco">After your approval</td><td>Delegation mode</td></tr>
+<tr><th scope="row">Where content is published</th><td>Google Business Profile</td><td class="reco">Google Business Profile and your social accounts</td><td>Google Business Profile and your social accounts</td></tr>
+<tr><th scope="row">How content is published</th><td>After your approval</td><td class="reco">After your approval</td><td>No reply within 48 hours: we publish</td></tr>
 <tr><th scope="row">Replies to Google reviews</th><td>Prepared, approved by you</td><td class="reco">4 and 5 stars automatic, the others approved by you</td><td>4 and 5 stars automatic, the others handled by the team</td></tr>
-<tr><th scope="row">Replies to comments</th><td>No</td><td class="reco">Prepared, sensitive cases approved by you</td><td>Handled within the agreed scope</td></tr>
+<tr><th scope="row">Replies to comments</th><td>No</td><td class="reco">Prepared, sensitive cases approved by you</td><td>We reply for you, as agreed with you</td></tr>
 <tr><th scope="row">First content proposed within 72 hours</th><td>Not applicable</td><td class="reco">Yes</td><td>Yes</td></tr>
 </tbody></table>
 </div>
 
-<!-- One single publishing rule: the same on the page, in the FAQ, the terms (section 8), the client area and the emails. -->
-<div class="regle" aria-labelledby="regle-titre">
-<h3 id="regle-titre">Who publishes what</h3>
-<p><strong>Essential and Standard:</strong> nothing is published without your approval, except, in Standard, replies to 4- and 5-star reviews, published under the rules you approve at set-up.</p>
-<p><strong>Premium:</strong> you choose and sign delegation mode at set-up. Your approval becomes optional: a piece of content goes out 48 hours after sending if you haven't replied.</p>
-<p><strong>All plans:</strong> a sensitive review (health, accident, threat, accusation) is never published automatically, whatever its rating.</p>
-</div>
-
-<!-- Guarantee on response times (16/10/2026): replaces the "10 reviews in 60 days" guarantee (now an internal pilot target, never shown). -->
-<div id="garantie" class="garantie-delais" aria-labelledby="garantie-titre">
-<h3 id="garantie-titre">Our guarantee on response times</h3>
-<p class="garantie-promesse">Listing optimised within 7 days. First content proposed within 72 hours (Standard and Premium). Every new review handled within 24 hours: reply published, or submitted for your approval. Otherwise, the following month is free.</p>
-<p class="note">Times run from when you hand over access and your first photos. Details: <a href="terms.html#a10">terms of sale, section 10</a>.</p>
-</div>
-
-<!-- What the client actually gets (replaces the "agency around €900" anchor). Real bonuses, no made-up euro value. -->
-<div class="recoit" aria-labelledby="recoit-titre">
-<h3 id="recoit-titre">What you get</h3>
-<ul class="recoit-liste">
-<li><strong>Set-up</strong>Listing optimised, social accounts set up, reply rules approved with you.</li>
-<li><strong>Tailored content</strong>Written for your business, from your photos and your information.</li>
-<li><strong>Review handling</strong>Every review handled within 24 hours, according to your plan.</li>
-<li><strong>Follow-up</strong>A report every month and a console where nothing gets lost.</li>
-<li><strong>One contact</strong>A person who knows your business and answers your questions.</li>
-</ul>
-<p class="bonus"><strong>Included at set-up:</strong> QR and NFC review cards, your Apple Maps listing (Apple Business Connect), and in Standard and Premium your Instagram and Facebook profiles optimised.</p>
-</div>
-
+<!-- Below the plans, one single box (18/10/2026): set-up (fee waived, real bonuses with no made-up euro value).
+     "Who publishes what" and the guarantee on response times are in the FAQ (#questions, #garantie); "What you get" is removed (duplicate of the services, steps and team). -->
 <div class="urgence">
 <p class="urgence-titre">Set-up fee waived until 30 November 2026 inclusive.</p>
-<p>Standard and Premium: €190 excl. VAT, once, waived for any subscription taken out up to and including 30 November 2026. Essential: no set-up fee.</p>
+<p>Standard and Premium: €190 excl. VAT, once, waived for any subscription taken out by that date. Essential: no set-up fee.</p>
+<p class="bonus">Also included at set-up: QR and NFC review cards, your Apple Maps listing (Apple Business Connect), and in Standard and Premium your Instagram and Facebook profiles optimised.</p>
 </div>
 
 <div class="offres-pied">
@@ -239,19 +215,18 @@
 </div>
 </div></section>
 
-<!-- 7. Team and responsibilities (16/10/2026, 10:41): no photo, no avatar, no icon. Contact: site/legal.json (contact.email).
-     The second slot stays HIDDEN until Pascal's role is confirmed: no made-up role. -->
+<!-- 7. Team and responsibilities: "our team" (PJ's decision, 18/10/2026): no first name, no photo, no head count or made-up role.
+     Contact: site/legal.json (contact.email). -->
 <section id="equipe" class="section fond-blanc" aria-labelledby="equipe-titre"><div class="wrap">
 <div class="tete">
 <h2 id="equipe-titre">Who looks after you.</h2>
 </div>
 <div class="equipe">
-<div class="personne"><h3>Pierre-Jean</h3><p>Your contact: set-up, account follow-up, sensitive reviews.</p></div>
-<div class="personne" hidden><h3>Pascal</h3><p>Role to be confirmed.</p></div>
+<div class="personne"><h3>A dedicated contact</h3><p>Someone on our team who knows your business: set-up, account follow-up, sensitive reviews.</p></div>
 </div>
 <div class="responsabilite">
 <h3>When something goes wrong</h3>
-<p>Write to <a href="mailto:info@boostimpact.agency"><span data-legal="contact.email">info@boostimpact.agency</span></a>. Pierre-Jean replies within 24 hours and steps in himself. A sensitive review is never handled by a machine: he takes it on, within the guaranteed time.</p>
+<p>Write to <a href="mailto:info@boostimpact.agency"><span data-legal="contact.email">info@boostimpact.agency</span></a>. We reply within 24 hours and step in ourselves. A sensitive review is never handled by a machine: someone on our team takes it on, within the guaranteed time.</p>
 </div>
 </div></section>
 
@@ -259,12 +234,13 @@
 <section id="questions" class="section fond-clair"><div class="wrap faq">
 <h2>Your questions.</h2>
 <div class="questions">
-<details class="q"><summary>What is published without me?</summary><p>In Essential and Standard, nothing without your approval, except in Standard replies to 4- and 5-star reviews, under the rules approved at set-up. In Premium, you choose delegation mode: a piece of content goes out 48 hours after sending if you haven't replied. A sensitive review is never published automatically.</p></details>
-<details class="q"><summary>Will an AI reply with any old thing?</summary><p>No. Our content is based on the information you have approved. No commercial claim (price, offer, allergens...) is published without your consent, and a serious review is always handled by a person.</p></details>
+<!-- Guarantee on response times (16/10/2026, in the FAQ since 18/10/2026): replaces the "10 reviews in 60 days" guarantee (internal pilot target, never shown).
+     One single publishing rule: the same here, in the terms (section 8), the client area and the emails. -->
+<details class="q" id="garantie"><summary>Are your response times guaranteed?</summary><p>Yes. Listing optimised within 7 days. First content proposed within 72 hours (Standard and Premium). Every new review handled within 24 hours: reply published, or submitted for your approval. Otherwise, the following month is free. Times run from when you hand over access and your first photos (<a href="terms.html#a10">terms of sale, section 10</a>). Your rating, on the other hand, depends on your customers: nobody can honestly guarantee it.</p></details>
+<details class="q"><summary>What is published without me?</summary><p>In Essential and Standard, nothing without your approval, except in Standard replies to 4- and 5-star reviews, under the rules approved at set-up. In Premium, you agree in writing at set-up that we may publish without your reply: content you haven't replied to 48 hours after we send it is published. You can decline it before then, and stop this by simple email. In every plan, a sensitive review (health, accident, threat, accusation) is never published automatically.</p></details>
+<details class="q"><summary>Will an AI reply with any old thing?</summary><p>No. Our content is based on the information you have approved. No commercial claim (price, offer, allergens...) is published without your consent.</p></details>
 <details class="q"><summary>Do I have to give you my passwords?</summary><p>Never. You add us as a manager and remove us whenever you like.</p></details>
-<details class="q"><summary>What does "8 pieces of content a month" mean?</summary><p>8 different subjects, each published on each of the accounts you chose and on your Google Business Profile. The accounts are chosen at set-up according to your trade, from Instagram, Facebook and TikTok.</p></details>
-<details class="q"><summary>Pay yearly or monthly?</summary><p>Yearly, you pay 12 months in advance and each month costs you less: €79 excl. VAT instead of €95 excl. VAT for Essential, i.e. €192 saved a year. The subscription runs for 12 months and renews unless cancelled before the end date; unused months are not refunded. Monthly, you stop whenever you like. You can switch from monthly to yearly at any time.</p></details>
-<details class="q"><summary>What if you miss the deadlines?</summary><p>Listing optimised within 7 days, first content proposed within 72 hours (Standard and Premium), every new review handled within 24 hours. If one of these times is missed, the following month is free. Your rating, on the other hand, depends on your customers: nobody can honestly guarantee it.</p></details>
+<details class="q"><summary>Pay yearly or monthly?</summary><p>Yearly, each month costs you less: €79 excl. VAT instead of €95 excl. VAT for Essential, i.e. €192 saved a year. The subscription renews unless cancelled before the end date. Monthly, you stop whenever you like. You can switch from monthly to yearly at any time.</p></details>
 <details class="q"><summary>Do you only ask happy customers for reviews?</summary><p>No. The request goes to all your customers, without filtering, and nobody sets your staff a review quota: Google's rules forbid it.</p></details>
 <details class="q"><summary>How much is a better rating worth?</summary><p>We don't promise it. A Harvard study gives an order of magnitude for restaurants: <a href="simulator.html">estimate it with our simulator</a>, and read its limits.</p></details>
 </div>

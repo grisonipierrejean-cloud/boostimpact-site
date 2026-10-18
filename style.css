@@ -211,7 +211,6 @@ h1{font-size:clamp(52px,6.6vw,100px);line-height:.95}
 .services{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .service{border-top:1px solid var(--trait-fort);padding:18px 0 4px;display:flex;flex-direction:column;gap:8px}
 .service p{font-size:17px;line-height:1.5;color:var(--texte-doux)}
-.regle-ia{margin-top:22px;font-size:16px;line-height:1.5;color:var(--texte);max-width:720px}
 
 /* ---------- Fonctionnement en 3 étapes */
 .etapes{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
@@ -259,13 +258,7 @@ h1{font-size:clamp(52px,6.6vw,100px);line-height:.95}
 .compare td{color:var(--texte-doux)}
 .compare .reco{background:rgba(5,18,52,.05)}
 .compare thead .reco{background:var(--nuit);color:var(--blanc)}
-.regle,.garantie-delais,.recoit,.urgence{margin-top:28px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte);padding:22px 20px;display:flex;flex-direction:column;gap:12px}
-.regle p,.recoit p{font-size:16px;line-height:1.5;color:var(--texte-doux)}
-.regle strong,.recoit strong{color:var(--texte)}
-.garantie-promesse{font-size:19px;line-height:1.45;font-weight:700}
-.recoit-liste{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-.recoit-liste li{display:flex;flex-direction:column;gap:2px;font-size:16px;line-height:1.45;color:var(--texte-doux)}
-.recoit-liste strong{color:var(--texte)}
+.urgence{margin-top:28px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte);padding:22px 20px;display:flex;flex-direction:column;gap:12px}
 .urgence-titre{font-size:19px;font-weight:700}
 .urgence p:not(.urgence-titre){font-size:16px;color:var(--texte-doux)}
 .offres-pied{margin-top:24px;display:flex;flex-direction:column;gap:8px}
@@ -415,8 +408,6 @@ body.clair main :focus-visible{outline-color:var(--nuit)}
   .demo{grid-template-columns:repeat(3,minmax(0,1fr))}
   .services{grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
   .etapes{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .recoit-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 28px}
-  .equipe{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
   .audit-bloc{padding:56px 48px;border-radius:28px}
   .rang{grid-template-columns:repeat(2,minmax(0,1fr))}
   .calc-trio{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -446,7 +437,7 @@ body.clair main :focus-visible{outline-color:var(--nuit)}
   .apercu .mention{margin-top:8px}
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
   .offre{padding:30px 26px}
-  .regle,.garantie-delais,.recoit,.urgence{padding:30px 32px}
+  .urgence{padding:30px 32px}
   .audit-bloc{grid-template-columns:repeat(2,minmax(0,1fr));gap:48px;padding:72px}
   .rang{grid-template-columns:minmax(0,1fr)}
 }

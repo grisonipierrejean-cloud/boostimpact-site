@@ -1,5 +1,5 @@
 {
-  "_lisez_moi": "Source unique des mentions légales (pages de site/, pieds de page de site/ et de espace/web/, pieds légaux des emails du moteur et de n8n). A_FOURNIR : donnée que le fondateur doit fournir. A_DECIDER : choix du fondateur. A_VERIFIER : point non confirmé. Après toute modification : python3 outils/legal.py (réécrit les pages), puis python3 n8n/build_automatisations.py, build_maj_membre.py, build_ordre10.py, build_audit.py et python3 moteur/avis/build_workflow.py (régénèrent les emails). Le test moteur/tests/test_legal.py refuse toute page en retard sur ce fichier.",
+  "_lisez_moi": "Source unique des mentions légales (pages de site/, pieds de page de site/ et de espace/web/, pieds légaux des emails du moteur et de n8n). Une valeur encore à compléter commence par l'un des marqueurs de outils/legal.py (MARQUES) et s'affiche en gras sur les pages. Après toute modification : python3 outils/legal.py (réécrit les pages), puis python3 n8n/build_automatisations.py, build_maj_membre.py, build_ordre10.py, build_audit.py et python3 moteur/avis/build_workflow.py (régénèrent les emails). Le test moteur/tests/test_legal.py refuse toute page en retard sur ce fichier.",
   "nom_commercial": "BoostImpact",
   "societe": {
     "denomination": "Girlden LTD",
@@ -29,13 +29,13 @@
       "supabase": {
         "nom": "Supabase Pte. Ltd.",
         "adresse": "65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513",
-        "telephone": "A_VERIFIER",
+        "telephone": "non publié (contact : legal@supabase.com)",
         "source": "https://supabase.com/terms (lue le 13/10/2026, adresse présentée comme « place of business »)"
       }
     }
   },
   "documents": {
-    "version": "17 octobre 2026"
+    "version": "18 octobre 2026"
   },
   "facturation": {
     "premier_mois": "en entier ; l'abonnement court ensuite de date à date, chaque mois ou chaque année selon le rythme de paiement choisi",
@@ -52,7 +52,6 @@
     ]
   },
   "droit_applicable": "francais",
-  "representant_ue": "A_DECIDER",
   "fournisseur_email": "Google Workspace (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irlande)",
   "pied_email": "{nom_commercial} est un nom commercial de {denomination}, société immatriculée en {pays_immatriculation} ({registre}) sous le numéro {numero}. Siège : {siege}."
 }
