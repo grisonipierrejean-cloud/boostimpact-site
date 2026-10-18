@@ -55,8 +55,8 @@ Photos de démonstration, Pexels, même licence. Elles servent uniquement d'« e
 
 ## Polices
 
-Polices de la page de vente (site/style.css) : Anton (titres) et Figtree (texte), licence SIL OFL 1.1, paquets Fontsource @fontsource/anton et @fontsource/figtree 5.3.0 (voir l'en-tête de site/style.css), en WOFF2 : fonts/anton-400.woff2, fonts/figtree-400.woff2 à fonts/figtree-700.woff2 ; licences fonts/OFL-anton.txt et fonts/OFL-figtree.txt.
+Polices de la page de vente (site/style.css, 18/10/2026) : Instrument Serif 400 (titres, sous-ensemble latin) et Figtree (texte), licence SIL OFL 1.1 (Figtree : paquet Fontsource @fontsource/figtree 5.3.0), en WOFF2 : fonts/instrument-serif-latin.woff2, fonts/figtree-400.woff2 à fonts/figtree-700.woff2 ; licences fonts/OFL-instrument-serif.txt et fonts/OFL-figtree.txt. Anton (ancien titrage) est retiré du site.
 
 Fichiers plus utilisés par la page, gardés dans fonts/ :
 - Source Serif 4 et Schibsted Grotesk (ancienne direction), licence SIL OFL 1.1 : fonts/OFL-source-serif-4.txt, fonts/OFL-schibsted-grotesk.txt.
-- Instrument Serif et Instrument Sans (le rapport d'audit, moteur/audit/rapport.py, les embarque encore).
+- Instrument Sans (le rapport d'audit, moteur/audit/rapport.py, l'embarque avec Instrument Serif).

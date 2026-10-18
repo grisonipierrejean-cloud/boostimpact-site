@@ -193,3 +193,33 @@ calc.addEventListener('input',maj);calc.addEventListener('change',maj);
 calc.addEventListener('submit',function(e){e.preventDefault();maj()});
 maj();
 })();
+
+// ---- Premier écran : carrousel de photos (18/10/2026). Fondu enchaîné toutes les 5 s ; pause au survol, au focus et par le bouton.
+// prefers-reduced-motion : aucun défilement automatique (points cliquables seulement). Sans JavaScript : la première photo seule.
+// Les photos 2 à 5 (loading="lazy") ne sont affichées, donc chargées, qu'après le chargement de la page (classe .pret).
+(function(){
+var c=document.querySelector('.carrousel');if(!c)return;
+var diapos=c.querySelectorAll('.diapo'),points=c.querySelectorAll('.carrousel-point'),pause=c.querySelector('.carrousel-pause'),liste=c.querySelector('.diapos');
+var n=diapos.length,i=0,minuteur=null,arret=false,survol=false;
+var calme=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+if(calme&&calme.matches)arret=true;
+function montrer(k){i=(k+n)%n;
+  for(var j=0;j<n;j++){var a=(j===i);diapos[j].classList.toggle('est-active',a);
+    if(a){diapos[j].removeAttribute('aria-hidden');points[j].setAttribute('aria-current','true')}
+    else{diapos[j].setAttribute('aria-hidden','true');points[j].removeAttribute('aria-current')}}}
+function regler(){clearInterval(minuteur);minuteur=null;
+  var tourne=!arret&&!survol&&!document.hidden;
+  if(tourne)minuteur=setInterval(function(){montrer(i+1)},5000);
+  liste.setAttribute('aria-live',tourne?'off':'polite');
+  c.classList.toggle('en-pause',arret);pause.setAttribute('aria-label',pause.getAttribute(arret?'data-lecture':'data-pause'))}
+function demarrer(){c.classList.add('pret');c.querySelector('.carrousel-ctrl').hidden=false;regler()}
+if(document.readyState==='complete')demarrer();else window.addEventListener('load',demarrer);
+pause.addEventListener('click',function(){arret=!arret;regler()});
+Array.prototype.forEach.call(points,function(b,j){b.addEventListener('click',function(){montrer(j);regler()})});
+c.addEventListener('mouseenter',function(){survol=true;regler()});
+c.addEventListener('mouseleave',function(){survol=false;regler()});
+c.addEventListener('focusin',function(){survol=true;regler()});
+c.addEventListener('focusout',function(e){if(!c.contains(e.relatedTarget)){survol=false;regler()}});
+document.addEventListener('visibilitychange',regler);
+if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(e.matches){arret=true;regler()}});
+})();

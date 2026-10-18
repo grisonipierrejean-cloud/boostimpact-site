@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="description" content="Avis Google et réseaux sociaux gérés pour les commerces indépendants : BoostImpact tient votre fiche Google, traite vos avis et, selon l'offre, fait vivre vos réseaux sociaux. Vous envoyez une photo, vous validez d'un clic. Dès 79 € HT par mois en paiement annuel, 95 € HT au mois sans engagement. Audit gratuit : 3 priorités et 3 concurrents comparés.">
 <meta name="theme-color" content="#051234">
-<link rel="preload" href="fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/figtree-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="img/renom-chef.webp" as="image" fetchpriority="high">
@@ -32,7 +32,6 @@
      publication préparée, bilan). Tout tient dans le premier écran à 1440 x 900 et à 390 x 844 (preuves/trois-offres/). Exemples fictifs. -->
 <section id="haut" class="haut"><div class="wrap haut-grille">
 <div class="haut-texte">
-<p class="marque-symbole" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>
 <h1>Faites-vous un nom.</h1>
 <p class="chapo">Vos avis Google et vos réseaux sociaux, gérés pour vous.</p>
 <p class="haut-comment"><strong>Vous envoyez une photo, vous validez d'un clic.</strong></p>
@@ -43,10 +42,19 @@
 </div>
 </div>
 <figure class="apercu">
-<img class="apercu-photo" src="img/renom-chef.webp" width="1920" height="1280" alt="Un chef dépose les dernières herbes sur son assiette (photo d'illustration)" fetchpriority="high">
+<div class="carrousel" role="region" aria-roledescription="carrousel" aria-label="Photos d'illustration de cinq commerces">
+<ul class="diapos" aria-live="off">
+<li class="diapo est-active"><img src="img/renom-chef.webp" width="1920" height="1280" alt="Un chef dépose les dernières herbes sur son assiette (photo d'illustration)" fetchpriority="high"><span class="diapo-metier">Restaurant</span></li>
+<li class="diapo" aria-hidden="true"><img src="img/renom-coiffure.webp" width="1200" height="800" alt="Une coiffeuse s'occupe d'une cliente dans son salon (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Coiffure</span></li>
+<li class="diapo" aria-hidden="true"><img src="img/renom-esthetique.webp" width="1200" height="800" alt="Une esthéticienne réalise un soin du visage (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Institut</span></li>
+<li class="diapo" aria-hidden="true"><img src="img/renom-fleuriste.webp" width="1200" height="800" alt="Une fleuriste sourit dans sa boutique (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Fleuriste</span></li>
+<li class="diapo" aria-hidden="true"><img src="img/renom-dressage.webp" width="1080" height="1350" alt="Un chef dresse une assiette (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Gastronomie</span></li>
+</ul>
+<div class="carrousel-ctrl" hidden><button type="button" class="carrousel-pause" aria-label="Mettre les photos en pause" data-pause="Mettre les photos en pause" data-lecture="Relancer les photos"></button><div class="carrousel-points"><button type="button" class="carrousel-point" aria-label="Photo 1&nbsp;: Restaurant" aria-current="true"></button><button type="button" class="carrousel-point" aria-label="Photo 2&nbsp;: Coiffure"></button><button type="button" class="carrousel-point" aria-label="Photo 3&nbsp;: Institut"></button><button type="button" class="carrousel-point" aria-label="Photo 4&nbsp;: Fleuriste"></button><button type="button" class="carrousel-point" aria-label="Photo 5&nbsp;: Gastronomie"></button></div></div>
+</div>
 <ol class="apercu-fil" aria-label="Ce que vous voyez passer dans le mois (exemple fictif)">
-<li class="apercu-carte"><p class="apercu-quoi">Avis traité</p><p class="apercu-ligne"><strong>Julie M.</strong> <span class="etoiles" role="img" aria-label="5 étoiles sur 5"></span></p><p class="apercu-texte">« Merci Julie, ravis que les pâtes vous aient plu.&nbsp;»</p></li>
-<li class="apercu-carte"><p class="apercu-quoi">Publication préparée</p><p class="apercu-texte">Dernières touches avant le service. On vous garde une table&nbsp;?</p><p class="apercu-action">À valider d'un clic</p></li>
+<li class="apercu-carte"><p class="apercu-quoi">Avis traité</p><p class="apercu-ligne"><strong>Julie M.</strong> <span class="etoiles" role="img" aria-label="5 étoiles sur 5"></span></p><p class="apercu-texte">« Merci Julie, au plaisir de vous revoir très vite.&nbsp;»</p></li>
+<li class="apercu-carte"><p class="apercu-quoi">Publication préparée</p><p class="apercu-texte">Nouveauté de la semaine, à découvrir sur place. On vous attend&nbsp;?</p><p class="apercu-action">À valider d'un clic</p></li>
 <li class="apercu-carte"><p class="apercu-quoi">Bilan du mois</p><p class="apercu-texte">Ce que nous avons fait, ce qui évolue, ce que nous améliorons.</p></li>
 </ol>
 <figcaption class="mention">Exemple fictif. Photo d'illustration.</figcaption>
@@ -54,7 +62,7 @@
 </div></section>
 
 <!-- 2. INTÉRÊT : promesse commerciale (h2, ancien titre de la page) puis démonstration photo -> publication -> résultat. Un seul exemple « peur ». -->
-<section id="demonstration" class="section" aria-labelledby="demo-titre"><div class="wrap">
+<section id="demonstration" class="section fond-blanc" aria-labelledby="demo-titre"><div class="wrap">
 <div class="tete">
 <h2 id="demo-titre">Plus d'avis Google. Plus de clients.</h2>
 <p class="tete-chapo">Une photo, un clic, c'est en ligne. Ce soir, un client compare votre fiche à celle d'en face. Voici ce qu'il trouve chez vous quand nous nous en occupons.</p>
@@ -68,7 +76,7 @@
 </div></section>
 
 <!-- 3. DÉSIR : trois services. Formule tenable sur ce que l'IA écrit (16/10/2026). -->
-<section id="services" class="section" aria-labelledby="services-titre"><div class="wrap">
+<section id="services" class="section fond-clair" aria-labelledby="services-titre"><div class="wrap">
 <div class="tete">
 <h2 id="services-titre">Trois services, un seul interlocuteur.</h2>
 </div>
@@ -82,13 +90,13 @@
 
 <!-- 4. CONFIANCE : emplacement « cas réel documenté », MASQUÉ tant qu'aucun pilote n'est publié (captures datées, accord écrit du commerçant).
      Ne jamais le remplir avec un exemple inventé. -->
-<section id="cas-reel" class="section" aria-labelledby="cas-titre" hidden><div class="wrap">
+<section id="cas-reel" class="section fond-blanc" aria-labelledby="cas-titre" hidden><div class="wrap">
 <h2 id="cas-titre">Un cas réel, documenté.</h2>
 <p class="tete-chapo">À publier avec l'accord écrit du commerçant&nbsp;: captures datées avant et après, chiffres tels quels.</p>
 </div></section>
 
 <!-- 5. Fonctionnement en 3 étapes. L'étape 1, l'audit gratuit, est l'échantillon offert (méthode Lévi). -->
-<section id="fonctionnement" class="section" aria-labelledby="fonct-titre"><div class="wrap">
+<section id="fonctionnement" class="section fond-blanc" aria-labelledby="fonct-titre"><div class="wrap">
 <div class="tete">
 <h2 id="fonct-titre">Comment ça marche.</h2>
 </div>
@@ -104,7 +112,7 @@
      ce prix + 20 %, arrondi. Économie affichée EXACTE seulement (17 %, ou X € économisés par an), jamais « -20 % ». Sans JavaScript, les deux rythmes
      restent visibles (sélecteur masqué). Chaque inclusion porte data-cgv (ligne des CGV, article 3) : égalité testée par moteur/tests/test_legal.py.
      Aucune remise, aucun prix rayé. -->
-<section id="offres" class="section" aria-labelledby="offres-titre"><div class="wrap">
+<section id="offres" class="section fond-clair" aria-labelledby="offres-titre"><div class="wrap">
 <div class="tete">
 <h2 id="offres-titre">Trois offres, à l'année ou au mois.</h2>
 <p class="tete-chapo">Une seule unité&nbsp;: des contenus originaux par mois. Un contenu est un sujet, publié sur chacun des réseaux retenus.</p>
@@ -235,7 +243,7 @@
 
 <!-- 7. Équipe et responsabilités (complément du 16/10/2026, 10 h 41) : sans photo, sans avatar, sans icône. Contact : site/legal.json (contact.email).
      Le second emplacement reste MASQUÉ tant que le rôle de Pascal n'est pas confirmé : aucun rôle inventé. -->
-<section id="equipe" class="section" aria-labelledby="equipe-titre"><div class="wrap">
+<section id="equipe" class="section fond-blanc" aria-labelledby="equipe-titre"><div class="wrap">
 <div class="tete">
 <h2 id="equipe-titre">Qui s'occupe de vous.</h2>
 </div>
@@ -250,7 +258,7 @@
 </div></section>
 
 <!-- 8. Objections : FAQ courte, puis la demande d'audit -->
-<section id="questions" class="section"><div class="wrap faq">
+<section id="questions" class="section fond-clair"><div class="wrap faq">
 <h2>Vos questions.</h2>
 <div class="questions">
 <details class="q"><summary>Qu'est-ce qui est publié sans moi&nbsp;?</summary><p>En Essentiel et en Standard, rien sans votre validation, sauf en Standard les réponses aux avis de 4 et 5 étoiles, selon les règles approuvées au démarrage. En Premium, vous choisissez le mode délégation&nbsp;: un contenu part 48&nbsp;h après l'envoi sans réponse. Un avis sensible n'est jamais publié automatiquement.</p></details>
