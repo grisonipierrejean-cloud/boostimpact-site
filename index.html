@@ -272,7 +272,7 @@
 </div>
 </div></section>
 
-<!-- Demande d'audit (champs : commerce, ville, email, lien_maps facultatif ; envoi en JSON au webhook n8n de l'attribut action, site/app.js). Livrable : 3 priorités et 3 concurrents. -->
+<!-- Demande d'audit (champs : commerce, ville, email, telephone facultatif (18/10/2026), lien_maps facultatif ; envoi en JSON au webhook n8n de l'attribut action, site/app.js). Livrable : 3 priorités et 3 concurrents. -->
 <section id="audit" class="section audit-section"><div class="wrap"><div class="audit-bloc">
 <div class="audit-texte">
 <h2>Votre audit gratuit.</h2>
@@ -286,7 +286,8 @@
 <div class="champ"><label for="g-ville">Ville</label><input id="g-ville" name="ville" type="text" autocomplete="address-level2" placeholder="Lyon 7e" required></div>
 <div class="champ"><label for="g-email">Email</label><input id="g-email" name="email" type="email" autocomplete="email" required></div>
 </div>
-<div class="champ"><label for="g-maps">Lien Google Maps de votre commerce (facultatif)</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" aria-describedby="aide-maps"><p class="aide" id="aide-maps">Il nous aide à trouver la bonne fiche. Aucun numéro de téléphone demandé.</p></div>
+<div class="champ"><label for="g-tel">Téléphone ou WhatsApp (facultatif)</label><input id="g-tel" name="telephone" type="tel" autocomplete="tel"></div>
+<div class="champ"><label for="g-maps">Lien Google Maps de votre commerce (facultatif)</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" aria-describedby="aide-maps"><p class="aide" id="aide-maps">Il nous aide à trouver la bonne fiche.</p></div>
 <div class="hp" aria-hidden="true"><label>Ne pas remplir<input name="website" tabindex="-1" autocomplete="off"></label></div>
 <div class="ok"><input id="g-ok" name="consentement" value="oui" type="checkbox" required><label for="g-ok">J'accepte de recevoir mon audit et quelques messages de suivi, désinscription en un clic. <a href="confidentialite.html">Confidentialité</a></label></div>
 <button class="btn btn-prim btn-grand" id="envoi" type="submit">Recevoir mon audit gratuit</button>

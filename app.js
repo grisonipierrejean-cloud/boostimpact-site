@@ -21,21 +21,28 @@ function boostEchec(EN){return RENOM_NL?'Uw aanvraag is niet verstuurd. Probeer 
 (function(){
 var EN=RENOM_EN;
 // Page de vente : formulaire d'audit (16/10/2026 : nom du commerce, ville, email, lien Google Maps facultatif ; plus de choix du métier).
+// 18/10/2026 : téléphone ou WhatsApp facultatif dans ce formulaire ; la page de remerciement ne demande plus rien.
 var $=function(s,r){return (r||document).querySelector(s)};
 var form=$('#form');if(!form)return;
 var T=RENOM_NL?{
   commerce:'Vul de naam van uw zaak in.',ville:'Vul uw gemeente in, zodat we het juiste profiel vinden.',email:'Dit e-mailadres lijkt onvolledig.',
+  tel:'Dit telefoonnummer lijkt niet te kloppen: alleen cijfers, spaties en + ( ) . / -, bijvoorbeeld +32 470 12 34 56. Laat het veld leeg als u dat liever hebt.',
   maps:'Dit lijkt geen Google Maps-link. Laat het veld leeg als u er geen hebt.',
   ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html'
 }:EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
+  tel:'This phone number doesn\u2019t look right: digits, spaces and + ( ) . / - only, for example +33 6 12 34 56 78. Leave it empty if you prefer.',
   maps:'This doesn\u2019t look like a Google Maps link. Leave it empty if you don\u2019t have one.',
   ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
+  tel:'Ce numéro ne semble pas valide : chiffres, espaces et + ( ) . / - seulement, par exemple 06 12 34 56 78. Laissez le champ vide si vous préférez.',
   maps:"Ce lien ne ressemble pas à un lien Google Maps. Laissez le champ vide si vous ne l'avez pas.",
   ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html'
 };
+// Téléphone ou WhatsApp : facultatif ; même règle que tel() de n8n (n8n/build_formulaires.py, reprise dans n8n/build_audit.py) :
+// espaces regroupés, puis 6 à 40 caractères parmi chiffres, espaces et + ( ) . / -. Côté n8n, un numéro invalide est ignoré, la demande passe.
+var TEL=/^[0-9 +().\/-]{6,40}$/;
 // Lien Google Maps : facultatif ; même règle que le contrôle de n8n (n8n/build_audit.py), qui l'écarte sinon.
 var MAPS=/^https:\/\/(www\.google\.[a-z.]{2,6}\/maps|maps\.google\.[a-z.]{2,6}|maps\.app\.goo\.gl|goo\.gl\/maps)[^\s"<>]*$/;
 var err=$('#err'),btn=$('#envoi');
@@ -48,30 +55,15 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   if(!form.commerce.value.trim())return erreur(T.commerce,form.commerce);
   if(!form.ville.value.trim())return erreur(T.ville,form.ville);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim()))return erreur(T.email,form.email);
+  var t=form.telephone?form.telephone.value.replace(/\s+/g,' ').trim():'';if(t&&!TEL.test(t))return erreur(T.tel,form.telephone);
   var m=form.lien_maps.value.trim();if(m&&!MAPS.test(m))return erreur(T.maps,form.lien_maps);
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
   var d=boostDonnees(form);
-  try{sessionStorage.setItem('renom',JSON.stringify({commerce:d.commerce,email:d.email}))}catch(x){}
   btn.disabled=true;btn.textContent=T.envoi;
   // Page de remerciement seulement si n8n a accepté la demande ; sinon, message d'erreur avec l'adresse de contact.
   boostEnvoyer(form,d)
   .then(function(){location.href=T.merci})
   .catch(function(){btn.disabled=false;btn.textContent=T.bouton;erreur(boostEchec(EN))});
-});
-})();
-
-// ---- Page de remerciement (merci.html, en/thank-you.html, nl/bedankt.html) : complément facultatif (téléphone, fiche Google) -> webhook renom-complement.
-(function(){
-var f=document.forms.complement;if(!f)return;
-var EN=RENOM_EN,ok=document.getElementById('c-ok'),vide=document.getElementById('c-vide'),b=f.querySelector('button'),merci=ok.textContent;
-try{var s=JSON.parse(sessionStorage.getItem('renom')||'{}');f.commerce.value=s.commerce||'';f.email.value=s.email||''}catch(x){}
-f.addEventListener('input',function(){vide.hidden=true});
-f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)return;
-  if(!f.telephone.value.trim()&&!f.fiche_google.value.trim()){vide.hidden=false;f.telephone.focus();return}
-  vide.hidden=true;ok.hidden=true;b.disabled=true;
-  boostEnvoyer(f,boostDonnees(f))
-  .then(function(){f.querySelectorAll('input:not([type=hidden]),button').forEach(function(x){x.disabled=true});ok.textContent=merci;ok.hidden=false})
-  .catch(function(){b.disabled=false;ok.textContent=boostEchec(EN);ok.hidden=false});
 });
 })();
 
