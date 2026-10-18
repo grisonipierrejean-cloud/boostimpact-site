@@ -41,10 +41,15 @@
     connecte = false; dessinerNav();
     // Démonstration : l'adresse de l'administrateur vient de la graine chargée (parcours ou graine publique).
     const admins = D.mode === "demo" && D.comptesDemo ? (await D.comptesDemo()).filter(x => x.role === "administrateur").map(x => x.email) : [];
-    vue.innerHTML = `<div class="connexion"><div class="carte"><div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div><div class="entete"><h1>${t("con.titre")}</h1><p class="chapo">${t("con.connexion")}</p></div>
-      <form id="f"><div class="f"><label for="email">${t("cx.email")}</label><input id="email" type="email" autocomplete="email" required></div><button class="bouton plein" type="submit">${t("cx.recevoir")}</button><p class="msg" id="msg" role="status"></p></form>
-      ${admins.length ? `<p class='note'>${t("con.demo", { l: e(admins.join(", ")) })}</p>` : ""}</div><p class="retour"><a href="${I.lien("index.html")}">${t("con.retour")}</a></p></div>`;
-    $("f").onsubmit = async ev => { ev.preventDefault(); try { const r = await D.envoyerLien($("email").value); if (D.mode === "demo") { await D.ouvrirLien(r.lien); rendre(); } else msg(t("con.envoye")); } catch (er) { msg(ph(er.message)); } };
+    // Accès par mot de passe (17/10/2026) : même écran que l'espace (acces.js).
+    window.RENOM_ACCES.connexion({ vue, I, D, titre: t("con.titre"), chapo: t("con.connexion"), apres: rendre,
+      extra: admins.length ? `<p class='note' id="comptes-demo">${t("con.demo", { l: e(admins.join(", ")) })}</p>` : "",
+      pied: `<p class="retour"><a href="${I.lien("index.html")}">${t("con.retour")}</a></p>` });
+  }
+  // Session ouverte par un lien d'email : seulement le choix du mot de passe (la base refuse tout le reste à une telle session).
+  function choixMotDePasse(s) {
+    connecte = false; dessinerNav();
+    window.RENOM_ACCES.choixMotDePasse({ vue, I, D, email: s.email, apres: rendre, annuler: async () => { await D.quitter(); location.hash = ""; rendre(); } });
   }
 
   // Score de santé (automatisations de service) : niveau en toutes lettres et raisons en clair. Règles : fonction SQL sante_de (schema.sql), les mêmes en démonstration.
@@ -300,6 +305,7 @@
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
+    if (s.motDePasseRequis) return choixMotDePasse(s);
     if (s.role !== "administrateur") return refuse();
     const [r, param] = location.hash.replace("#/", "").split("/"); const ecran = ROUTES[r] ? r : "commerces";
     route = ecran === "style" ? "commerces" : ecran; connecte = true; dessinerNav();   // le panneau « Style du commerce » dépend de l'entrée Commerces

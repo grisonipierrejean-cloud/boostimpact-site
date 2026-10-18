@@ -232,27 +232,22 @@
   // ---------------- Connexion
   // Démonstration : les comptes affichés sont ceux de la graine chargée (parcours ou graine publique), jamais écrits en dur.
   const comptesTexte = l => I.liste(l.map(x => `${x.email} (${x.role === "administrateur" ? t("cx.console") : x.commerce || t("cx.commercant")})`), "ou");
+  // Accès par mot de passe (17/10/2026) : écrans communs à l'espace et à la console, dans acces.js (connexion, choix du mot de passe).
+  const ACC = window.RENOM_ACCES;
+  // Après l'entrée (mot de passe, lien de démonstration) : la console pour l'administrateur, l'accueil pour le commerçant. Une session encore sans
+  // mot de passe revient ici et rendre() montre le choix du mot de passe.
+  const apresEntree = async () => { if (await D.estAdmin()) location.href = I.lien("console.html"); else aller("accueil"); };
   async function connexion() {
     const comptesDemo = D.mode === "demo" && D.comptesDemo ? await D.comptesDemo() : [];
-    vue.innerHTML = `<div class="connexion"><div class="carte">
-      <div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div>
-      <div class="entete"><h1>${t("cx.titre")}</h1><p class="chapo">${t("cx.chapo")}</p></div>
-      <form id="f"><div class="f"><label for="email">${t("cx.email")}</label><input id="email" name="email" type="email" autocomplete="email" required></div>
-      <button class="bouton plein" type="submit">${t("cx.recevoir")}</button><p class="msg" id="msg" role="status"></p></form>
-      ${comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
-      <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : ""}</div>
-      <p class="retour"><a href="https://boostimpact.agency/">${t("cx.retour.site")}</a></p></div>`;
-    const entrer = async em => { await D.ouvrirLien(em); if (await D.estAdmin()) location.href = I.lien("console.html"); else aller("accueil"); };
-    document.querySelectorAll("[data-entrer]").forEach(b => { b.onclick = () => entrer(b.dataset.entrer); });
-    $("f").onsubmit = async ev => {
-      ev.preventDefault(); msg(t("envoi.en.cours"));
-      try {
-        const r = await D.envoyerLien($("email").value);
-        if (D.mode === "demo") { $("msg").innerHTML = `${t("cx.lien.pret")} <button type="button" class="lien" id="ouvrir">${t("cx.ouvrir.lien")}</button>`; $("ouvrir").onclick = async () => { await D.ouvrirLien(r.lien); const adm = await D.estAdmin(); if (adm) location.href = I.lien("console.html"); else aller("accueil"); }; }
-        else msg(t("cx.envoye"));
-      } catch (er) { msg(ph(er.message)); }
-    };
+    ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t("cx.chapo"), apres: apresEntree,
+      extra: comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
+      <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "",
+      pied: `<p class="retour"><a href="https://boostimpact.agency/">${t("cx.retour.site")}</a></p>` });
   }
+  // Visite directe de la démonstration (boutons sous le formulaire, redessinés quand on passe d'un mode de l'écran à l'autre).
+  vue.addEventListener("click", async ev => { const b = ev.target.closest && ev.target.closest("[data-entrer]"); if (b && D.mode === "demo") { await D.ouvrirLien(b.dataset.entrer); await apresEntree(); } });
+  // Session ouverte par un lien d'email (invitation, mot de passe oublié) : seulement le choix du mot de passe, jamais l'espace.
+  const choixMotDePasse = s => ACC.choixMotDePasse({ vue, I, D, email: s.email, apres: apresEntree, annuler: async () => { await D.quitter(); aller("accueil"); } });
 
   // ---------------- Automatisations de service : mise en route (4 étapes) et idée de la semaine
   const AU = window.RENOM_AUTO;
@@ -1401,6 +1396,7 @@
     // Ancienne adresse (par exemple #/idees) : remplacée par la nouvelle, sans ajouter d'étape dans l'historique.
     if (ANCIENNES[r]) { if (r === "idees") ideesOuvertes = true; history.replaceState(null, "", "#/" + ANCIENNES[r]); return rendre(); }
     if (!s) { connecte = false; derniere = null; dessinerNav(); return connexion(); }
+    if (s.motDePasseRequis) { connecte = false; derniere = null; dessinerNav(); return choixMotDePasse(s); }
     if (s.role === "administrateur" && D.mode === "demo" && !/(\?|&)voir\b/.test(location.search)) { location.href = I.lien("console.html"); return; }
     // Langue : sans choix explicite (?lang= ou sélecteur), l'espace prend celle du commerce (la page se recharge une fois si elle change).
     if (s.role !== "administrateur" && langueLue !== s.email) {

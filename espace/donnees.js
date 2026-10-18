@@ -378,7 +378,7 @@
   function demo() { throw new Error("Configuration absente : config.js doit donner supabaseUrl et publishableKey."); }
 
   // =============================================================== SUPABASE
-  // Adresse de retour du lien de connexion : la page ouverte (index.html ou console.html), dans son dossier, sans fragment ni « ?reset ».
+  // Adresse de retour du lien reçu par email (choix du mot de passe : invitation, mot de passe oublié) : la page ouverte (index.html ou console.html), dans son dossier, sans fragment ni « ?reset ».
   // Jamais une origine écrite en dur : marche sous un sous-dossier (https://hote/dossier/) comme à la racine d'un domaine.
   // Elle doit figurer dans Supabase, Authentication, URL Configuration, Redirect URLs (sinon Supabase renvoie vers la Site URL).
   function retourConnexion() { const u = new URL(location.href); u.hash = ""; u.searchParams.delete("reset"); return u.href; }
@@ -399,6 +399,26 @@
       await sb.auth.updateUser({ data: { langue: l, langue_choisie: true } });
     };
     const ok = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
+    // ---- Accès par mot de passe (17/10/2026, acces.js). Une session dont le jeton n'a pas « password » (ou « totp ») dans amr est née d'un lien
+    // d'email : elle n'ouvre que le choix du mot de passe, et la base lui refuse tout (schema.sql, session_par_mot_de_passe()).
+    const ACC = window.RENOM_ACCES;
+    const lireSession = async () => { const { data } = await sb.auth.getSession(); return (data && data.session) || null; };
+    const parMotDePasse = s => !!s && ACC.accesDuJeton(s.access_token);
+    // Erreurs de Supabase Auth (champ code, https://supabase.com/docs/guides/auth/debugging/error-codes) -> code affiché par acces.js (acc.err.<code>).
+    // Réseau coupé : AuthRetryableFetchError, statut 0 (supabase-js). Jamais le texte brut de Supabase (anglais, parfois révélateur).
+    const erreurAuth = er => {
+      const c = (er && er.code) || "", st = er && er.status, reseau = (er && er.name === "AuthRetryableFetchError") || st === 0 || st >= 500;
+      const code = reseau ? "service" : ["invalid_credentials", "email_not_confirmed", "user_banned", "user_not_found"].includes(c) ? "identifiants"
+        : c === "weak_password" ? "faible" : st === 429 || /rate_limit/.test(c) ? "trop"
+        : ["reauthentication_needed", "session_not_found", "session_expired", "bad_jwt", "no_authorization"].includes(c) || st === 401 ? "session" : "autre";
+      return Object.assign(new Error((er && er.message) || code), { code, codeSupabase: c });
+    };
+    const entrerParMotDePasse = async (email, mdp) => {
+      const r = await sb.auth.signInWithPassword({ email, password: mdp });
+      if (r.error) throw erreurAuth(r.error);
+      if (!parMotDePasse(r.data && r.data.session)) { await sb.auth.signOut({ scope: "local" }); throw Object.assign(new Error("jeton sans mot de passe"), { code: "autre" }); }
+      cache = null;
+    };
     // Kit de marque d'un commerce (espace du commerçant et console) : photos et logo du seau « photos » par adresses signées d'une heure.
     const signe = async ch => { try { const r = await sb.storage.from("photos").createSignedUrl(ch, 3600); return r.data && r.data.signedUrl; } catch (e) { return null; } };
     async function marqueDe(c) {
@@ -426,11 +446,33 @@
     }
     const self = {
       mode: "supabase",
-      async session() { const { data } = await sb.auth.getSession(); if (!data.session) return null; return { email: data.session.user.email, role: (await self.estAdmin()) ? "administrateur" : "commerçant" }; },
-      async envoyerLien(e) { ok(await sb.auth.signInWithOtp({ email: e.trim(), options: { shouldCreateUser: false, emailRedirectTo: retourConnexion() } })); return {}; },
-      async ouvrirLien() {},
+      async session() {
+        const s = await lireSession(); if (!s) return null;
+        if (!parMotDePasse(s)) return { email: s.user.email, role: null, motDePasseRequis: true };
+        return { email: s.user.email, role: (await self.estAdmin()) ? "administrateur" : "commerçant" };
+      },
+      // Connexion : adresse + mot de passe. Le lien magique n'est plus une façon d'entrer (plus aucun appel au lien magique de Supabase Auth).
+      async connecter(email, mdp) { await entrerParMotDePasse(String(email || "").trim(), String(mdp || "")); },
+      // « Première connexion ou mot de passe oublié ? » : lien de récupération, qui revient sur la page ouverte. Même réponse que l'adresse ait un
+      // compte ou non (Supabase répond 200 pour une adresse inconnue ; son 429 « déjà envoyé » ne vise qu'un compte existant : il est tu lui
+      // aussi, sinon il trahirait l'existence du compte). Seule une panne du réseau est dite.
+      async demanderLienMotDePasse(email) {
+        const r = await sb.auth.resetPasswordForEmail(String(email || "").trim(), { redirectTo: retourConnexion() });
+        if (r.error && erreurAuth(r.error).code === "service") throw erreurAuth(r.error);
+        return {};
+      },
+      // Choix du mot de passe depuis la session d'un lien d'email : updateUser, puis la session du lien est fermée (révoquée côté Supabase) et une
+      // nouvelle s'ouvre par signInWithPassword : son jeton porte amr « password » (updateUser ne change pas l'amr de la session en cours).
+      async choisirMotDePasse(mdp) {
+        mdp = String(mdp || ""); if (!ACC.controlerMotDePasse(mdp).ok) throw Object.assign(new Error("règles du mot de passe"), { code: "regles" });
+        const s = await lireSession(); if (!s) throw Object.assign(new Error("session absente"), { code: "session" });
+        const email = s.user.email, u = await sb.auth.updateUser({ password: mdp });
+        if (u.error && u.error.code !== "same_password") throw erreurAuth(u.error);   // same_password : c'est déjà son mot de passe, il ouvre donc la session
+        await sb.auth.signOut({ scope: "local" });
+        await entrerParMotDePasse(email, mdp);
+      },
       async quitter() { cache = null; await sb.auth.signOut(); },
-      async estAdmin() { const { data } = await sb.auth.getSession(); if (!data.session) return false; const r = ok(await sb.from("admins").select("user_id").eq("user_id", data.session.user.id).maybeSingle()); return !!r; },
+      async estAdmin() { const s = await lireSession(); if (!parMotDePasse(s)) return false; const r = ok(await sb.from("admins").select("user_id").eq("user_id", s.user.id).maybeSingle()); return !!r; },
       async commerce() {
         if (cache) return cache;
         const m = ok(await sb.from("membres").select("commerce_id").limit(1).maybeSingle());
