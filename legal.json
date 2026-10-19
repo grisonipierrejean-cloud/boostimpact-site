@@ -39,7 +39,7 @@
   },
   "facturation": {
     "premier_mois": "en entier ; l'abonnement court ensuite de date à date, chaque mois ou chaque année selon le rythme de paiement choisi",
-    "moyen_paiement": "carte bancaire ou prélèvement SEPA, par Stripe",
+    "moyen_paiement": "carte bancaire, par Stripe",
     "taux_penalites": "taux de refinancement le plus récent de la Banque centrale européenne, majoré de 10 points"
   },
   "frais_mise_en_route": {
