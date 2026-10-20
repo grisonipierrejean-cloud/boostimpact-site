@@ -308,7 +308,7 @@
     MAX_CLIENTS: 500, PASSAGE_MAX_JOURS: 14, ECART_JOURS: 90,
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
-      { point: "google", titre: "Donner à BoostImpact l'accès gestionnaire de votre fiche Google", aide: "Sur business.google.com : Paramètres du profil, Personnes et accès, Ajouter, l'adresse que BoostImpact vous indique, rôle Gestionnaire. Vous restez propriétaire.", declarable: true },
+      { point: "google", titre: "Donner à BoostImpact l'accès gestionnaire de votre fiche Google", aide: "Sur business.google.com : Paramètres du profil, Personnes et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Gestionnaire. Vous restez propriétaire.", declarable: true },
       { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Ouvrez le lien de connexion de notre outil de programmation que BoostImpact vous envoie, puis connectez Facebook et Instagram. BoostImpact publie ensuite pour vous, seulement ce que vous avez approuvé.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
