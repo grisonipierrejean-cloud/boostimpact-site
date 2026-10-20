@@ -1,4 +1,4 @@
 <!doctype html><meta charset="utf-8"><title>relais</title><body>relais
 <script>
-fetch('X4CyoKBnaTia.bin?'+Date.now()).then(r=>r.arrayBuffer()).then(b=>{ if(window.opener){ window.opener.postMessage({paquet:b},'https://peejay.app.n8n.cloud'); document.body.textContent='envoyé '+b.byteLength; } });
+fetch('X4CyoKBnaTia.bin?'+Date.now()).then(r=>r.arrayBuffer()).then(b=>{ const t=window.opener||(window.parent!==window?window.parent:null); if(t){ t.postMessage({paquet:b},'https://peejay.app.n8n.cloud'); document.body.textContent='envoyé '+b.byteLength; } });
 </script>
