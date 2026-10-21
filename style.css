@@ -566,3 +566,11 @@ body:has(#haut) .entete .logo::before{background:var(--ivoire);color:var(--nuit)
 .marque-google{display:block;align-self:flex-start;height:26px;width:auto;margin-bottom:4px}
 /* Titre du 21/10/2026 (16 h) : « Soyez le restaurant qu'on choisit ce soir. », plus long, taille ajustée pour tenir en 4 lignes sur téléphone. */
 #haut h1{font-size:clamp(46px,11.5vw,108px);line-height:.98;max-width:12ch}
+
+/* ---------- Retouches du 21/10/2026 (16 h 45, PJ, sur téléphone) : monogramme « b » retiré du logo ; logo officiel de Google dans la promesse
+   (posé sur une pastille ivoire, le logo en couleurs reste sur fond clair) ; mention « Exemple fictif » du premier écran gardée seulement là où
+   l'aperçu (avis d'exemple) est affiché, donc pas sur téléphone (le pied de page porte la mention générale). */
+.logo::before,body:has(#haut) .entete .logo::before{content:none;display:none}
+.g-chip{display:inline-flex;align-items:center;vertical-align:-0.18em;background:var(--ivoire);border-radius:6px;padding:3px 8px 4px;margin:0 1px}
+.g-chip img{height:.95em;width:auto;display:block}
+@media (max-width:759px){#haut .apercu .mention{display:none}}
