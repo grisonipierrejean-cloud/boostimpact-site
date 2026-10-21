@@ -94,7 +94,12 @@ f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)re
 (function(){
 var g=document.querySelector('.rythme'),o=document.querySelector('.offres');if(!g||!o)return;
 var choix=g.querySelectorAll('.rythme-choix');
-function choisir(r){o.setAttribute('data-rythme-actif',r);for(var i=0;i<choix.length;i++)choix[i].setAttribute('aria-pressed',choix[i].getAttribute('data-choix')===r?'true':'false')}
+// Boutons « Choisir … » (21/10/2026, décision de PJ : paiement Stripe direct) : lien du rythme choisi ; frais de mise en route offerts jusqu'à la
+// date de .offres (heure de Paris, incluse), facturés ensuite ; Essentiel : un seul lien, sans frais. Sans JavaScript : lien annuel, frais offerts.
+var jusqu=o.getAttribute('data-frais-offerts-jusqu')||'',auj='';try{auj=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Paris'})}catch(e){}
+var cas=(auj&&jusqu&&auj>jusqu)?'factures':'offerts',boutons=o.querySelectorAll('.offre-choisir');
+function liens(r){for(var i=0;i<boutons.length;i++){var b=boutons[i],u=b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais');if(u)b.setAttribute('href',u)}}
+function choisir(r){o.setAttribute('data-rythme-actif',r);for(var i=0;i<choix.length;i++)choix[i].setAttribute('aria-pressed',choix[i].getAttribute('data-choix')===r?'true':'false');liens(r)}
 g.hidden=false;choisir('annuel');
 g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');if(b)choisir(b.getAttribute('data-choix'))});
 })();
