@@ -7,7 +7,7 @@
   const ST_PHOTO = I.carte("st.photo", ["a_traiter", "en_cours", "traitee", "refusee"]);
   const ST_CONTENU = I.carte("st.contenu", ["a_valider", "approuve", "modification", "programme", "publie", "refuse"]);
   const ST_PUB = I.carte("st.pub", ["programme", "envoye", "publie", "echec", "annule"]);
-  const ST_AVIS = I.carte("st.avis", ["nouveau", "a_valider", "valide", "publie", "humain", "refuse", "escalade"]);
+  const ST_AVIS = I.carte("st.avis", ["nouveau", "a_valider", "valide", "publie", "humain", "refuse", "escalade", "a_publier_main"]);
   const METIERS = I.carte("metier", ["restaurant", "beaute", "sport", "autre"]);
   const RES = I.carte("res", ["facebook", "instagram", "google", "tiktok"]);
   // Règle de publication des réponses aux avis, selon l'offre (moteur/avis/regles.js ; CGV article 8). Essentiel : tout est validé par le commerçant ;
@@ -745,6 +745,12 @@
   }
 
   // ---------------- Avis
+  // Libellé de la réponse : « Réponse publiée… » seulement quand elle l'est réellement. Mode de secours des avis (20/10/2026) : une réponse prête,
+  // publiée à la main par l'équipe tant que l'API de Google n'est pas ouverte, reste « en cours de publication » ; une fois collée sur la fiche,
+  // elle est « publiée » (jamais « publiée automatiquement » : elle ne l'a pas été). Même promesse qu'avant pour le commerçant.
+  const etiquetteReponse = x => x.statut === "a_publier_main" ? "avis.rep.encours" : x.escalade_le ? "avis.rep.renomia"
+    : x.statut === "publie" && x.publie_par === "equipe" && x.decision === "publication_automatique" ? "avis.rep.publiee"
+    : x.decision === "publication_automatique" ? "avis.rep.auto" : "avis.rep.validee";
   async function avis() {
     const [c, l0] = await Promise.all([D.commerce(), D.avis()]);
     const rang = x => x.statut === "a_valider" && !x.sensible ? 0 : x.sensible || x.statut === "humain" ? 1 : 2, l = l0.map((x, i) => [x, i]).sort((a, b) => rang(a[0]) - rang(b[0]) || a[1] - b[1]).map(x => x[0]);
@@ -756,7 +762,7 @@
           ${x.sensible ? `<div class="encart" role="alert"><p class="fort">${t("avis.sensible", { r: e(raisonsTexte(x.raisons)) })}</p><p>${t("avis.sensible.texte")}</p></div>` : ""}
           ${x.statut === "a_valider" && !x.sensible ? reponseAValider(x) : ""}
           ${x.statut === "escalade" ? `<p class="note">${t(offreDe(c).delegation ? "avis.equipe.texte" : "avis.escalade.texte")}</p>` : ""}
-          ${x.statut === "publie" || x.statut === "valide" ? `<p class="reponse"><span class="fort">${t(x.escalade_le ? "avis.rep.renomia" : x.decision === "publication_automatique" ? "avis.rep.auto" : "avis.rep.validee")}</span> <span${lc()}>${e(x.reponse || x.reponse_proposee || "")}</span></p>` : ""}</article>`).join("")
+          ${x.statut === "publie" || x.statut === "valide" || x.statut === "a_publier_main" ? `<p class="reponse"><span class="fort">${t(etiquetteReponse(x))}</span> <span${lc()}>${e(x.reponse || x.reponse_proposee || "")}</span></p>` : ""}</article>`).join("")
           : `<section class="carte"><h2>${t("avis.vide.titre")}</h2><p class="texte2">${t("avis.vide.texte")}</p></section>`}
           <p class="msg" id="msg" role="status"></p></div>
         <section class="carte" id="avis-regle"><h2>${t("reglage")}</h2><p class="texte2">${t(regleAvis(c))}</p>

@@ -144,10 +144,28 @@
   // ---------------- File « à publier à la main » : réponses aux commentaires validées par le commerçant, tant que l'accès de Meta n'est pas accordé
   // (ou si l'API a refusé). Texte prêt à copier, lien vers la publication ; « Publiée » une fois la réponse collée sous le commentaire, sous le compte du commerce.
   const RESEAUX_CM = { instagram: "Instagram", facebook: "Facebook" };
+  // ---------------- Mode de secours des avis (20/10/2026) : file « À publier sur Google ». Tant que l'accès à l'API Google Business Profile n'est pas
+  // ouvert (variable n8n RENOM_GBP_API), une réponse prête (automatique selon l'offre, ou validée par le commerçant) arrive ici au lieu d'échouer.
+  // L'équipe, connectée à Google avec son accès gestionnaire, colle la réponse sous l'avis, puis « Marquer comme publiée » : la base note l'heure
+  // (publication, et garantie des 24 h d'une réponse automatique). Échéance des 24 h d'abord ; après SECOURS_ALERTE_HEURES (4 h), la carte est en évidence.
+  const etoilesAvis = n => n == null ? t("note.effacee") : t("con.etoiles", { n });
+  const fileGoogle = l => `<section class="carte" aria-labelledby="gbp-titre"><h2 id="gbp-titre">${t("con.gbp.titre")}</h2><p class="texte2">${t("con.gbp.chapo", { h: window.RENOM_SECOURS.ALERTE_HEURES })}</p></section>
+      ${l.length ? `<div class="pile" id="avis-a-publier">${l.map(x => `<article class="carte${x.en_retard || x.attente_longue ? " attention" : ""}" data-avis-pub="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2>
+          <span class="etat${x.en_retard ? "" : " actif"}">${x.echeance ? t(x.en_retard ? "con.file.retard" : "con.file.avant", { d: dh(x.echeance) }) : t("con.gbp.tenue")}</span></div>
+          <p class="fort">${etoilesAvis(x.note)} · ${t(x.decision === "publication_automatique" ? "con.gbp.auto" : "con.gbp.validee")}</p>
+          ${x.texte ? `<p class="texte2 casse" translate="no">${e(x.texte)}</p>` : `<p class="note">${t("con.gbp.texte.efface")}</p>`}
+          <p class="note">${x.auteur ? `<span translate="no">${e(x.auteur)}</span> · ` : ""}${t("con.file.recu", { d: dh(x.recu_le) })} · ${t("con.gbp.depuis", { d: dh(x.a_publier_le) })}</p>
+          ${x.attente_longue ? `<p class="note fort">${t("con.gbp.attente", { h: window.RENOM_SECOURS.ALERTE_HEURES })}</p>` : ""}
+          <div class="f"><label for="gbp-${e(x.id)}">${t("con.rep.coller")}</label><textarea id="gbp-${e(x.id)}" readonly data-rep-gbp translate="no">${e(x.reponse || "")}</textarea></div>
+          <div class="actions"><button type="button" class="bouton second petit" data-copier-gbp>${t("con.copier")}</button>${x.lien ? `<a class="bouton second petit" href="${e(x.lien)}" target="_blank" rel="noopener" data-ouvrir-gbp>${t("con.gbp.ouvrir")}</a>` : ""}<button type="button" class="bouton petit" data-publie-gbp>${t("con.gbp.marquer")}</button></div>
+          ${x.lien ? "" : `<p class="note">${t("con.gbp.sans.lien")}</p>`}</article>`).join("")}</div>`
+        : `<section class="carte"><p class="texte2">${t("con.gbp.vide")}</p></section>`}`;
   async function apublier() {
-    const l = await D.adminCommentairesAPublier();
+    const [avisG, l] = await Promise.all([D.adminAvisAPublier(), D.adminCommentairesAPublier()]);
     vue.innerHTML = `${entete(t("con.apublier.titre"), t("con.apublier.chapo"))}
-      <p class="msg" id="msg" role="status"></p>${l.length ? `<div class="pile">${l.map(x => `<article class="carte" data-id="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.validee.le", { res: RESEAUX_CM[x.reseau] || e(x.reseau), d: dh(x.decide_le || x.cree_le) })}</span></div>
+      <p class="msg" id="msg" role="status"></p>${fileGoogle(avisG)}
+      <section class="carte" aria-labelledby="cm-pub-titre"><h2 id="cm-pub-titre">${t("con.cm.titre")}</h2><p class="texte2">${t("con.cm.chapo")}</p></section>
+      ${l.length ? `<div class="pile">${l.map(x => `<article class="carte" data-id="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.validee.le", { res: RESEAUX_CM[x.reseau] || e(x.reseau), d: dh(x.decide_le || x.cree_le) })}</span></div>
           ${x.texte ? `<p class="note">${t("con.commentaire.de", { de: x.auteur ? t("con.de", { a: e(x.auteur) }) : "", x: `<span translate="no">${e(x.texte)}</span>` })}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}
           <div class="f"><label for="rep-${e(x.id)}">${t("con.rep.coller")}</label><textarea id="rep-${e(x.id)}" readonly data-rep translate="no">${e(x.reponse_proposee || "")}</textarea></div>
           ${x.erreur ? `<p class="note">${e(ph(x.erreur))}</p>` : ""}
@@ -155,6 +173,8 @@
       : `<section class="carte"><p class="texte2">${t("con.rien.apublier")}</p></section>`}`;
     vue.querySelectorAll("[data-copier]").forEach(b => b.onclick = async () => { const x = b.closest("article").querySelector("[data-rep]"); try { await navigator.clipboard.writeText(x.value); msg(t("con.copiee")); } catch (er) { x.select(); msg(t("con.selectionnee")); } });
     vue.querySelectorAll("[data-publie]").forEach(b => b.onclick = async () => { try { await D.adminCommentairePublie(b.closest("article").dataset.id); await apublier(); msg(t("con.publiee.equipe")); } catch (er) { msg(ph(er.message)); } });
+    vue.querySelectorAll("[data-copier-gbp]").forEach(b => b.onclick = async () => { const x = b.closest("article").querySelector("[data-rep-gbp]"); try { await navigator.clipboard.writeText(x.value); msg(t("con.copiee")); } catch (er) { x.select(); msg(t("con.selectionnee")); } });
+    vue.querySelectorAll("[data-publie-gbp]").forEach(b => b.onclick = async () => { b.disabled = true; try { await D.adminAvisMarquerPubliee(b.closest("article").dataset.avisPub); await apublier(); msg(t("con.gbp.publiee")); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     // Son de plateforme des vidéos programmées : l'API Metricool ne documente aucun champ pour le poser (moteur/metricool_api.py) ; l'équipe
     // l'ajoute dans l'interface web de Metricool avant l'heure de publication, puis le marque ici (fonction SQL admin_musique_posee).
     const sons = await D.adminMusiquesAPoser(), RS = { instagram: "Instagram", tiktok: "TikTok", facebook: "Facebook" };
