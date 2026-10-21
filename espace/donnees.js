@@ -345,7 +345,7 @@
     AVIS_SENSIBLE_A_EFFACER: "Avis sensible bientôt effacé (30 jours)", COMMENTAIRE_SENSIBLE_A_EFFACER: "Commentaire sensible bientôt effacé (30 jours)",
     // Paiement Stripe (fonction appliquer_evenement_stripe de schema.sql)
     PAIEMENT_REFUSE: "Paiement refusé", ABONNEMENT_SANS_COMMERCE: "Paiement sans commerce rattaché", REMISE_LANCEMENT_DEJA_UTILISEE: "Remise de lancement utilisée deux fois",
-    ABONNEMENT_RESILIE: "Abonnement résilié",
+    ABONNEMENT_RESILIE: "Abonnement résilié", NOUVEAU_CLIENT_EN_LIGNE: "Nouveau client en ligne", ABONNEMENT_CLIENT_EXISTANT: "Paiement d'un client déjà connu",
     // Trois offres (bloc « Trois offres » de schema.sql) : garantie des délais, mode délégation, objectif interne des pilotes
     DELAI_FICHE_BIENTOT: "Garantie : fiche à optimiser bientôt", DELAI_CONTENU_BIENTOT: "Garantie : premier contenu à proposer bientôt", DELAI_AVIS_BIENTOT: "Garantie : avis à traiter bientôt",
     MOIS_OFFERT_A_APPLIQUER: "Garantie manquée : mois offert à appliquer", OBJECTIF_PILOTE_J45: "Objectif interne des pilotes : J+45, pas en vue",
@@ -358,6 +358,9 @@
     if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => r.point).join(", ")}.`;
     if (a.type === "PAIEMENT_REFUSE") return `Abonnement ${d.abonnement || ""} : appeler le commerçant sous 24 h.${d.test ? " (mode test)" : ""}`;
     if (a.type === "ABONNEMENT_SANS_COMMERCE") return `Abonnement ${d.abonnement || ""} payé sans commerce rattaché : le rattacher dans l'éditeur SQL.${d.test ? " (mode test)" : ""}`;
+    // Client en ligne (21/10/2026, client_en_ligne de schema.sql) : information seulement, ou cas d'une adresse déjà connue à vérifier.
+    if (a.type === "NOUVEAU_CLIENT_EN_LIGNE") return `Abonnement ${d.abonnement || ""} (${d.offre || "offre inconnue"}) : commerce créé et invitation lancée automatiquement. Information, rien à faire.${d.test ? " (mode test)" : ""}`;
+    if (a.type === "ABONNEMENT_CLIENT_EXISTANT") return `Abonnement ${d.abonnement || ""} (${d.offre || "offre inconnue"}) rattaché au commerce de cette adresse, sans nouvelle invitation : vérifier paiement en double, changement d'offre ou accès à rouvrir.${d.test ? " (mode test)" : ""}`;
     if (a.type === "REMISE_LANCEMENT_DEJA_UTILISEE") return `Abonnement ${d.abonnement || ""} : retirer la remise dans Stripe (une fois par commerce).${d.test ? " (mode test)" : ""}`;
     if (a.type === "OBJECTIF_PILOTE_J45") return `${d.gagnes} nouveau(x) avis sur ${d.objectif} au jour ${d.jour} (seuil en vue : ${d.seuil_en_vue}). Objectif interne, aucune conséquence de facturation.`;
     if (a.type === "OBJECTIF_PILOTE_NON_ATTEINT") return `${d.gagnes} nouveau(x) avis sur ${d.objectif} à l'échéance du ${d.echeance}. Objectif interne, aucune conséquence de facturation.`;
