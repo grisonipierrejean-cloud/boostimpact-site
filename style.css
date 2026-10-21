@@ -310,10 +310,11 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .champ label,.lib-champ,.lib{font-size:14px;font-weight:600}
 .aide{font-size:14px;line-height:1.45;color:var(--texte-discret)}
 .rang{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
-input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],select{font:inherit;font-size:17px;color:var(--nuit);background:var(--blanc);border:1px solid var(--filet-clair-fort);border-radius:var(--r-btn);padding:10px 14px;min-height:52px;width:100%}
+input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],select,textarea{font:inherit;font-size:17px;color:var(--nuit);background:var(--blanc);border:1px solid var(--filet-clair-fort);border-radius:var(--r-btn);padding:10px 14px;min-height:52px;width:100%}
 .audit-section input[type=text],.audit-section input[type=email],.audit-section input[type=tel],.audit-section input[type=url],.audit-section select{border-color:var(--blanc)}
 input::placeholder{color:#767A86}
-input:focus-visible,select:focus-visible{outline:2px solid var(--ardoise);outline-offset:1px}
+textarea{min-height:112px;line-height:1.45;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ardoise);outline-offset:1px}
 .audit-section input:focus-visible,.audit-section select:focus-visible{outline:2px solid var(--ivoire)}
 .choix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .choix .m-choix{min-height:48px;padding:8px 12px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:transparent;color:var(--texte);font:inherit;font-size:15px;font-weight:500;line-height:1.25;text-align:left;cursor:pointer}
