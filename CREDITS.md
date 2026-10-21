@@ -46,6 +46,32 @@ Photos de démonstration, Pexels, même licence. Elles servent uniquement d'« e
 | Salle ou studio | tapis-panier | cottonbro studio | https://www.pexels.com/photo/black-round-plastic-tool-on-brown-plastic-basket-4325462/ |
 | Salle ou studio | halteres | Ivan S | https://www.pexels.com/photo/reflection-of-dumbbells-on-a-mirror-4164765/ |
 
+## Photos de la page de vente (direction « sobre et classe », 21/10/2026)
+
+Source : Pexels (https://www.pexels.com), licence Pexels : utilisation gratuite, y compris commerciale, sans attribution obligatoire
+(https://www.pexels.com/fr-fr/licence/). Sélection du 21/10/2026, centrée sur les restaurants ; aucune enseigne de commerce réel lisible.
+Fichiers d'origine téléchargés en 2400 px, convertis en WebP (1920 x 1280 ; démonstration 1080 x 1350, recadrage seul, aucune retouche).
+
+| Fichier | Photo Pexels | Usage |
+|---|---|---|
+| img/resto-brasserie.webp | https://www.pexels.com/fr-fr/photo/39604990/ | premier écran, première photo (préchargée) |
+| img/resto-service.webp | https://www.pexels.com/fr-fr/photo/262978/ | premier écran, carrousel |
+| img/resto-dressage.webp | https://www.pexels.com/fr-fr/photo/30047126/ | premier écran, carrousel |
+| img/resto-bistrot.webp | https://www.pexels.com/fr-fr/photo/15790872/ | premier écran, carrousel |
+| img/resto-salle.webp | https://www.pexels.com/fr-fr/photo/9198282/ | premier écran, carrousel |
+| img/resto-assiette.webp | https://www.pexels.com/fr-fr/photo/30488328/ | démonstration : « Votre photo » et la publication préparée |
+
+Aucune photo n'est présentée comme celle d'un client de BoostImpact (mention en bas de page). Les anciennes photos (img/renom-*.webp, sections
+plus bas) ne sont plus affichées par la page de vente.
+
+## Logo de Google (21/10/2026)
+
+img/google-logo.svg : logo officiel de Google (mot-symbole en couleurs), fichier d'origine servi par Google
+(https://www.gstatic.com/images/branding/googlelogo/svg/googlelogo_clr_74x24px.svg, 1 660 octets, non modifié), affiché devant
+« Votre fiche Google ». Règles de Google pour parler de ses avis (https://partnermarketinghub.withgoogle.com/brands/google/use-cases/customer-reviews/,
+lues le 21/10/2026) : un logo officiel seulement (le « G » ou le mot-symbole), aucun logo, badge ou assemblage non officiel, jamais d'étoiles à côté
+du nom ou du logo de Google, une note s'écrit « sur Google » avec sa date.
+
 ## Usages sur la page de vente (refonte photos, 13/10/2026)
 
 - Premier écran : img/renom-chef.webp, voile sombre en aplat (opacité .60, contraste du texte au moins 4,5:1 même sur un fond blanc pur).
@@ -54,6 +80,8 @@ Photos de démonstration, Pexels, même licence. Elles servent uniquement d'« e
 - Aucune photo n'est présentée comme celle d'un client de BoostImpact.
 
 ## Polices
+
+Depuis le 21/10/2026 (site/style.css) : Source Serif 4 (titres, axe optique au plus grand) et Schibsted Grotesk (texte), licence SIL OFL 1.1 : fonts/OFL-source-serif-4.txt, fonts/OFL-schibsted-grotesk.txt. Instrument Serif et Figtree ne sont plus chargées par la page de vente.
 
 Polices de la page de vente (site/style.css, 18/10/2026) : Instrument Serif 400 (titres, sous-ensemble latin) et Figtree (texte), licence SIL OFL 1.1 (Figtree : paquet Fontsource @fontsource/figtree 5.3.0), en WOFF2 : fonts/instrument-serif-latin.woff2, fonts/figtree-400.woff2 à fonts/figtree-700.woff2 ; licences fonts/OFL-instrument-serif.txt et fonts/OFL-figtree.txt. Anton (ancien titrage) est retiré du site.
 
