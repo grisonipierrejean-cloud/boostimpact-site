@@ -102,10 +102,29 @@
   const ligneAcces = c => `<div class="pile serre acces-ligne">${window.RENOM_RESEAUX_AUTORISES(c).map(r => { const k = (c.comptes || {})[r] || {}, on = k.etat === "connecte";
     return `<div class="pile serre" data-acces-res="${e(r)}"><p class="note${on ? " fort" : ""}">${on ? (k.maj ? t("con.acces.etat.on", { res: NOM_RESEAU[r] || e(r), d: dh(k.maj) }) : t("con.acces.etat.connecte", { res: NOM_RESEAU[r] || e(r) })) : t("con.acces.etat.off", { res: NOM_RESEAU[r] || e(r) })}</p>
       <button type="button" class="bouton ${on ? "second " : ""}petit" data-acces="${e(r)}" data-oui="${on ? 0 : 1}">${t(on ? "con.acces.retirer" : "con.acces.verifier")}</button></div>`; }).join("")}</div>`;
+  // Options commandées (22/10/2026, bloc « Options commandées » de schema.sql) : Visibilité IA et Site du restaurant payés par leur lien Stripe,
+  // enregistrés par le webhook (n8n). Une carte par commande à livrer (puis par second test de la Visibilité IA), triées par échéance, en évidence
+  // passé l'échéance. Livraison : délai de l'option après le paiement et la réception des éléments du client, la plus tardive des deux dates (CGV,
+  // article 3 bis) : tant que la réception n'est pas notée, l'échéance affichée est « au plus tôt ». Bloc absent quand rien n'est à livrer.
+  const jourParis = x => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(x));
+  const nomOption = k => { const o = (window.RENOM_OPTIONS || {})[k] || {}; return (I.langue === "en" ? o.nom_en : I.langue === "nl" ? o.nom_nl : o.nom) || o.nom || k; };
+  const etatOption = x => t(x.etape === "second_test" ? (x.en_retard ? "con.opt.st.retard" : "con.opt.st.prevu") : x.en_retard ? "con.opt.retard" : x.elements_recus_le ? "con.opt.prevue" : "con.opt.plus.tot", { d: I.dateLongue(x.echeance) });
+  const blocOptions = (l, cs) => l === null ? `<section class="carte" id="options-commandees"><h2>${t("con.opt.titre")}</h2><p class="texte2">${t("con.opt.erreur")}</p></section>`
+    : !l.length ? "" : `<section class="carte" id="options-commandees" aria-labelledby="opt-titre"><h2 id="opt-titre">${t("con.opt.titre")}</h2><p class="texte2">${t("con.opt.chapo")}</p></section>
+      <div class="pile" id="options-liste">${l.map((x, i) => `<article class="carte${x.en_retard ? " attention" : ""}" data-opt="${e(x.id)}" data-opt-etape="${e(x.etape)}">
+        <div class="carte-tete"><h2>${e(nomOption(x.option))}</h2><span class="etat${x.en_retard ? "" : " actif"}">${etatOption(x)}</span></div>
+        <p class="fort">${x.commerce ? e(x.commerce) : t("con.opt.sans.commerce")}${x.test ? ` · ${t("con.opt.test")}` : ""}</p>
+        ${x.email ? `<p class="note casse" translate="no">${e(x.email)}</p>` : ""}
+        <p class="note">${t("con.opt.payee", { d: dh(x.paye_le) })} · ${x.etape === "second_test" ? t("con.opt.livree.le", { d: dh(x.livree_le) }) : x.elements_recus_le ? t("con.opt.elements.le", { d: I.dateLongue(jourParis(x.elements_recus_le)) }) : t("con.opt.elements.attente")}</p>
+        ${x.etape === "livraison" && !x.commerce_id ? `<div class="f"><label for="opt-c-${i}">${t("con.opt.rattacher.lib")}</label><select id="opt-c-${i}" data-opt-commerce><option value="">${t("con.opt.choisir")}</option>${cs.map(c => `<option value="${e(c.id)}">${e(c.nom)}</option>`).join("")}</select></div>` : ""}
+        ${x.etape === "livraison" && !x.elements_recus_le ? `<div class="f"><label for="opt-d-${i}">${t("con.opt.elements.lib")}</label><input id="opt-d-${i}" type="date" data-opt-date value="${jourParis(Date.now())}" max="${jourParis(Date.now())}"></div>` : ""}
+        <div class="actions">${x.etape === "second_test" ? `<button type="button" class="bouton petit" data-opt-second>${t("con.opt.second")}</button>`
+          : `${!x.commerce_id ? `<button type="button" class="bouton second petit" data-opt-rattacher>${t("con.opt.rattacher")}</button>` : ""}${!x.elements_recus_le ? `<button type="button" class="bouton second petit" data-opt-elements>${t("con.opt.elements.bouton")}</button>` : ""}${x.commerce_id ? `<button type="button" class="bouton petit" data-opt-livree>${t("con.opt.livree")}</button>` : ""}`}</div></article>`).join("")}</div>`;
   async function commerces() {
-    const l = (await D.adminCommerces()).sort((a, b) => (RANG[(a.sante || {}).niveau] ?? 3) - (RANG[(b.sante || {}).niveau] ?? 3) || a.nom.localeCompare(b.nom));
+    const [l0, opts] = await Promise.all([D.adminCommerces(), D.adminCommandesOptions ? D.adminCommandesOptions().catch(() => null) : []]);
+    const l = l0.sort((a, b) => (RANG[(a.sante || {}).niveau] ?? 3) - (RANG[(b.sante || {}).niveau] ?? 3) || a.nom.localeCompare(b.nom));
     const C = k => t("con.col." + k);
-    vue.innerHTML = `${entete(t("con.entree.commerces"), t("con.commerces.chapo"))}<p class="msg" id="msg" role="status"></p><section class="carte tableau"><table class="tab"><thead><tr><th>${C("commerce")}</th><th>${C("sante")}</th><th>${C("mer")}</th><th>${C("offre")}</th><th>${C("mois")}</th><th>${C("comptes")}</th><th>${C("alertes")}</th><th>${C("etat")}</th></tr></thead><tbody>${l.map(c => {
+    vue.innerHTML = `${entete(t("con.entree.commerces"), t("con.commerces.chapo"))}<p class="msg" id="msg" role="status"></p>${blocOptions(opts, [...l].sort((a, b) => a.nom.localeCompare(b.nom)))}<section class="carte tableau"><table class="tab"><thead><tr><th>${C("commerce")}</th><th>${C("sante")}</th><th>${C("mer")}</th><th>${C("offre")}</th><th>${C("mois")}</th><th>${C("comptes")}</th><th>${C("alertes")}</th><th>${C("etat")}</th></tr></thead><tbody>${l.map(c => {
       const k = c.compteur || {}, cc = Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length;
       return `<tr data-id="${e(c.id)}"><td data-l="${C("commerce")}"><p class="fort">${e(c.nom)}</p><p class="note">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""}</p>${ligneStyle(c)}</td>
         <td data-l="${C("sante")}">${sante(c.sante)}</td><td data-l="${C("mer")}">${miseEnRoute(c.sante)}</td>
@@ -120,6 +139,15 @@
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
       try { const x = await D.adminAccesReseau(id, r, oui); await commerces(); msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 })); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     vue.querySelectorAll("[data-mer]").forEach(b => b.onclick = async () => { try { await D.adminMiseEnRoute(b.closest("tr").dataset.id, b.dataset.mer, "fait"); await commerces(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } });
+    // Options commandées : chaque bouton appelle la fonction de la base, puis l'écran est redessiné et le message dit ce qui a été noté.
+    const opt = (sel, faire) => vue.querySelectorAll(sel).forEach(b => b.onclick = async () => { const a = b.closest("article"); b.disabled = true;
+      try { const m = await faire(a); if (m === null) { b.disabled = false; return; } await commerces(); msg(m); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
+    opt("[data-opt-elements]", async a => { const r = await D.adminCommandeOptionElements(a.dataset.opt, a.querySelector("[data-opt-date]").value); return t("con.opt.elements.ok", { d: I.dateLongue(r.livraison_prevue_le) }); });
+    opt("[data-opt-livree]", async a => { if (!window.confirm(t("con.opt.livree.confirmer"))) return null; const r = await D.adminCommandeOptionLivree(a.dataset.opt);
+      return r.second_test_prevu_le ? t("con.opt.livree.ok.second", { d: I.dateLongue(r.second_test_prevu_le) }) : t("con.opt.livree.ok"); });
+    opt("[data-opt-second]", async a => { await D.adminCommandeOptionSecondTest(a.dataset.opt); return t("con.opt.second.ok"); });
+    opt("[data-opt-rattacher]", async a => { const s_ = a.querySelector("[data-opt-commerce]"), cid = s_ && s_.value; if (!cid) return t("con.opt.choisir.dabord");
+      await D.adminCommandeOptionRattacher(a.dataset.opt, cid); return t("con.opt.rattacher.ok", { c: (l.find(c => c.id === cid) || {}).nom || "" }); });
   }
   // ---------------- Prospects (audit gratuit de la page de vente) : relances J+2, J+5, J+10 envoyées par le service du jour
   const ECHEANCES = [2, 5, 10], JOUR = 86400000;
@@ -265,6 +293,12 @@
     const [file, dl, gs, cs, cms] = await Promise.all([D.adminFileAvis(), D.adminGarantieDelais(), D.adminGaranties(), D.adminCommerces(), D.adminCommentairesEquipe().catch(() => [])]), C = k => t("con.col." + k);
     const sansObj = cs.filter(c => !gs.some(g => g.commerce_id === c.id)), sansDelais = cs.filter(c => !dl.some(g => g.commerce_id === c.id));
     const manquements = dl.flatMap(g => (g.manquements || []).map(m => ({ ...m, commerce: g.commerce, commerce_id: g.commerce_id })));
+    // Cohérence des informations (22/10/2026, CGV article 10) : à vérifier avant de noter « Fiche optimisée le » (la base le refuse sinon) ; écarts
+    // relevés, un par ligne, et message au client dans SA langue (commerces.langue), prêt à copier et à envoyer depuis team@.
+    const coherenceEtat = f => { const c = (f || {}).coherence || {}; return c.verifiee_le ? `<p class="note">${t("con.coh.faite", { d: I.date(jourDe(c.verifiee_le)) })}${c.ecarts ? " · " + t("con.coh.ecarts.n", { n: c.ecarts.split("\n").filter(x => x.trim()).length }) : " · " + t("con.coh.aucun.ecart")}</p>`
+      : (f || {}).fait_le ? "" : `<p class="note fort">${t("con.coh.a.faire")}</p>`; };
+    const messageCoherence = (g, ecarts) => { const lg = ["fr", "en", "nl"].includes(g.langue) ? g.langue : "fr", l = String(ecarts || "").split("\n").map(x => x.trim()).filter(Boolean);
+      return t("con.coh.objet", { commerce: g.commerce || "" }, lg) + "\n\n" + t("con.coh.message", { commerce: g.commerce || "", ecarts: l.length ? l.map(x => "- " + x).join("\n") : "- …" }, lg); };
     const delai = (d, cle) => !d ? `<p class="note">${t("con.delais.sans.objet")}</p>` : `<p><span class="etat${d.etat === "tenu" ? " actif" : ""}">${ETAT_DELAI[d.etat] || e(d.etat)}</span></p>${d.echeance ? `<p class="note">${t(d.fait_le ? "con.delais.fait" : "con.delais.avant", { d: dh(d.fait_le || d.echeance) })}</p>` : ""}`;
     vue.innerHTML = `${entete(t("con.entree.garanties"), t("con.gar.chapo"))}<p class="msg" id="msg" role="status"></p>
       <section class="carte" aria-labelledby="file-titre"><h2 id="file-titre">${t("con.file.titre")}</h2><p class="texte2">${t("con.file.chapo")}</p></section>
@@ -285,14 +319,18 @@
         ${dl.length ? `<table class="tab" id="garantie-delais"><thead><tr><th>${C("commerce")}</th><th>${C("delais.depart")}</th><th>${C("delais.fiche")}</th><th>${C("delais.contenu")}</th><th>${C("delais.avis")}</th><th>${C("actions")}</th></tr></thead><tbody>${dl.map(g => `<tr data-delais="${e(g.commerce_id)}">
           <td data-l="${C("commerce")}"><p class="fort">${e(g.commerce || "")}</p><p class="note">${e((OFFRES[g.offre] || {}).nom || g.offre || "")}</p></td>
           <td data-l="${C("delais.depart")}">${g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`}<p class="note">${t("con.delais.acces", { d: g.acces_remis_le ? I.date(jourDe(g.acces_remis_le)) : "?" })} · ${t("con.delais.photos", { d: g.photos_recues_le ? I.date(jourDe(g.photos_recues_le)) : "?" })}</p></td>
-          <td data-l="${C("delais.fiche")}">${delai(g.fiche)}</td>
+          <td data-l="${C("delais.fiche")}">${delai(g.fiche)}${coherenceEtat(g.fiche)}</td>
           <td data-l="${C("delais.contenu")}">${delai(g.premier_contenu)}</td>
           <td data-l="${C("delais.avis")}"><p class="fort">${(g.avis_en_cours || []).length}</p>${(g.avis_en_cours || []).filter(a => a.en_retard).length ? `<p class="note fort">${t("con.delais.avis.retard", { n: g.avis_en_cours.filter(a => a.en_retard).length })}</p>` : ""}</td>
           <td data-l="${C("actions")}"><div class="pile serre">
             <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.acces_remis_le))}" data-d="acces_remis_le"></div>
             <div class="f etroit"><label for="pho-${e(g.commerce_id)}">${t("con.delais.photos.lib")}</label><input id="pho-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.photos_recues_le))}" data-d="photos_recues_le"></div>
+            <div class="f etroit"><label for="coh-${e(g.commerce_id)}">${t("con.coh.lib")}</label><input id="coh-${e(g.commerce_id)}" type="date" value="${e(jourDe(((g.fiche || {}).coherence || {}).verifiee_le))}" data-d="coherence_verifiee_le"></div>
+            <div class="f etroit"><label for="eca-${e(g.commerce_id)}">${t("con.coh.ecarts.lib")}</label><textarea id="eca-${e(g.commerce_id)}" rows="3" maxlength="2000" data-d="coherence_ecarts" data-coh-ecarts translate="no">${e(((g.fiche || {}).coherence || {}).ecarts || "")}</textarea><p class="aide">${t("con.coh.ecarts.aide")}</p></div>
             <div class="f etroit"><label for="fic-${e(g.commerce_id)}">${t("con.delais.fiche.lib")}</label><input id="fic-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.fiche.fait_le))}" data-d="fiche_optimisee_le"></div>
-            <button type="button" class="bouton second petit" data-delais-enregistrer>${t("enregistrer")}</button></div></td></tr>`).join("")}</tbody></table>` : `<p class="texte2">${t("con.delais.aucun")}</p>`}</section>
+            <button type="button" class="bouton second petit" data-delais-enregistrer>${t("enregistrer")}</button>
+            <button type="button" class="bouton second petit" data-coh-copier>${t("con.coh.copier")}</button>
+            <div class="f etroit"><label for="msg-coh-${e(g.commerce_id)}">${t("con.coh.message.lib", { l: (g.langue || "fr").toUpperCase() })}</label><textarea id="msg-coh-${e(g.commerce_id)}" rows="6" readonly data-coh-message translate="no">${e(messageCoherence(g, ((g.fiche || {}).coherence || {}).ecarts))}</textarea></div></div></td></tr>`).join("")}</tbody></table>` : `<p class="texte2">${t("con.delais.aucun")}</p>`}</section>
       ${sansDelais.length ? `<section class="carte formulaire" aria-labelledby="delais-dep-titre"><h2 id="delais-dep-titre">${t("con.delais.demarrer")}</h2><form id="f-delais">
         <div class="champs deux"><div class="f"><label for="dl-commerce">${C("commerce")}</label><select id="dl-commerce">${sansDelais.map(c => `<option value="${e(c.id)}">${e(c.nom)}</option>`).join("")}</select></div>
         <div class="f"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="date" required></div></div>
@@ -330,6 +368,9 @@
     vue.querySelectorAll("[data-avis-publie]").forEach(b => b.onclick = () => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"); agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
     vue.querySelectorAll("[data-cm-d]").forEach(b => b.onclick = () => { const a = b.closest("article"); agir(() => D.adminCommentaireDecider(a.dataset.cm, b.dataset.cmD, b.dataset.cmD === "valide" ? a.querySelector("[data-cm-texte]").value : null)); });
     vue.querySelectorAll("[data-delais-enregistrer]").forEach(b => b.onclick = () => { const tr = b.closest("tr"), p = {}; tr.querySelectorAll("[data-d]").forEach(i => { p[i.dataset.d] = i.value || null; }); agir(() => D.adminDelais(tr.dataset.delais, p)); });
+    vue.querySelectorAll("[data-coh-copier]").forEach(b => b.onclick = async () => { const tr = b.closest("tr"), g = dl.find(x => x.commerce_id === tr.dataset.delais) || {}, m = tr.querySelector("[data-coh-message]");
+      m.value = messageCoherence(g, tr.querySelector("[data-coh-ecarts]").value);
+      try { await navigator.clipboard.writeText(m.value); msg(t("con.coh.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); } });
     vue.querySelectorAll("[data-mq-d]").forEach(b => b.onclick = () => { const tr = b.closest("tr"), m = tr.querySelector("[data-mq-motif]"); agir(() => D.adminManquement(tr.dataset.mq, b.dataset.mqD, m ? m.value : null)); });
     vue.querySelectorAll("[data-ret-enregistrer]").forEach(b => b.onclick = () => { const tr = b.closest("tr"); agir(() => D.adminReseaux(tr.dataset.ret, [...tr.querySelectorAll("[data-ret-res]:checked")].map(i => i.value))); });
     vue.querySelectorAll("[data-delegation]").forEach(i => i.onchange = () => agir(() => D.adminDelegation(i.closest("tr").dataset.ret, i.checked)));
