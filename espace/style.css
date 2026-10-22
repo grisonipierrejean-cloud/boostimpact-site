@@ -1,36 +1,38 @@
-/* Espace et console BoostImpact. Charte du logo boostimpact.agency (16/10/2026) : fond marine #051234, surfaces marine plus claires
-   à filet clair, texte blanc et gris clair ; le vert #7CCE12 en touches seulement : point du mot-symbole, focus, boutons d'action
-   (texte marine sur vert, 9,4:1), états importants, chiffres clés du bilan, cadre de la carte « à valider ». Jamais de texte blanc sur vert (1,96:1).
-   (Les noms --marque et --citron sont gardés : mêmes rôles, valeurs de la nouvelle charte.)
-   Titres d'écran (h1) en Anton, majuscules par text-transform, interlettrage léger ; tout le reste en Figtree 400 à 700.
-   Polices hébergées ici (Fontsource, npm @fontsource/anton et @fontsource/figtree 5.3.0, licence SIL OFL 1.1 : fonts/OFL-*.txt).
-   Ni dégradé, ni forme pilule (boutons et onglets à 12 px au plus), ni trait coloré devant un libellé, aucune couleur orangée.
-   Barre latérale à partir de 900 px, onglets du bas en dessous. */
+/* Espace et console BoostImpact. Charte du site (site/style.css, direction « sobre et classe » validée par PJ le 21/10/2026), alignée le
+   22/10/2026 : fond bleu nuit #0F1C3A (comme le premier écran, le bloc d'audit et le pied du site), surfaces #18284B, texte ivoire #F6F4EF,
+   ivoire doux #E3E1DA et gris #AEB2BE ; action principale ivoire, texte bleu nuit (15,3:1), comme les boutons du site sur bleu nuit ; un seul
+   accent discret, le bleu ardoise clair #B9C6DD (point du mot-symbole, liens survolés). Plus aucun vert.
+   Contrastes (au pire) : ivoire sur #22355E 11:1, gris #AEB2BE sur #22355E 5,7:1 ; filet des champs #7C8396 sur #18284B 3,8:1 (WCAG 1.4.11).
+   (Les noms --marque, --citron et --vert sont gardés : mêmes rôles, valeurs de la charte du site.)
+   Titres d'écran (h1) en Source Serif 4 (graisse 400, axe optique au plus grand, casse normale, jamais de majuscules forcées) ; tout le reste en
+   Schibsted Grotesk 400 à 700 : les deux polices du site, copiées de site/fonts (licence SIL OFL 1.1 : fonts/OFL-source-serif-4.txt,
+   fonts/OFL-schibsted-grotesk.txt). Boutons : coins de 6 px, cartes de 8 px, comme le site.
+   Interdits (charte du site) : dégradé, pilule, ombre portée, trait coloré devant un libellé, orange ou terracotta, vert vif, majuscules
+   d'étiquette. Barre latérale à partir de 900 px, onglets du bas en dessous. */
 :root{
   color-scheme:dark;
-  --fond:#051234;--surface:#0C1D45;--releve:#142757;--creux:#08183D;
-  --encre:#FFFFFF;--texte2:#E4E6F2;--discret:#A9ADBF;--groupe:#A9ADBF;
-  --filet:rgba(255,255,255,.12);--bord:#6B6F82;--bord-fort:rgba(255,255,255,.6);
-  --marque:#7CCE12;--marque-survol:#6AB80C;--sur-marque:#051234;--vert:#7CCE12;--bleu-texte:#B7C4E6;--teinte:#18306A;--citron:#7CCE12;--sur-citron:#051234;
-  --focus:#7CCE12;
-  --r-carte:18px;--r-grande:22px;--r:10px;--r-image:12px;
-  --titre:'Anton','Arial Narrow',Impact,system-ui,sans-serif;--sans:'Figtree',system-ui,sans-serif;
+  --fond:#0F1C3A;--surface:#18284B;--releve:#22355E;--creux:#0B1631;--nuit-fonce:#0B1631;
+  --encre:#F6F4EF;--texte2:#E3E1DA;--discret:#AEB2BE;--groupe:#AEB2BE;
+  --filet:rgba(255,255,255,.14);--bord:#7C8396;--bord-fort:rgba(246,244,239,.6);
+  --marque:#F6F4EF;--marque-survol:#FFFFFF;--sur-marque:#0F1C3A;--vert:#B9C6DD;--bleu-texte:#B9C6DD;--teinte:#1B2D55;--citron:#F6F4EF;--sur-citron:#0F1C3A;
+  --focus:#F6F4EF;
+  --r-carte:8px;--r-grande:10px;--r:6px;--r-image:8px;
+  --titre:'Source Serif 4',Georgia,'Times New Roman',serif;--sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
   --serif:var(--titre);
 }
-@font-face{font-family:'Anton';font-weight:400;font-display:swap;src:url(fonts/anton-400.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:400;font-display:swap;src:url(fonts/figtree-400.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:500;font-display:swap;src:url(fonts/figtree-500.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:600;font-display:swap;src:url(fonts/figtree-600.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:700;font-display:swap;src:url(fonts/figtree-700.woff2) format('woff2')}
+@font-face{font-family:'Source Serif 4';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/source-serif-4.woff2) format('woff2')}
+@font-face{font-family:'Schibsted Grotesk';font-weight:400 700;font-style:normal;font-display:swap;src:url(fonts/schibsted-grotesk.woff2) format('woff2')}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%;background:var(--fond);font-synthesis-weight:none}
-body{margin:0;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--encre);background:var(--fond)}
+body{margin:0;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--encre);background:var(--fond);font-variant-numeric:lining-nums}
 h1,h2,h3,p,ul,figure{margin:0}
-h1{font-family:var(--titre);font-weight:400;text-transform:uppercase;font-size:clamp(28px,8vw,34px);line-height:1.08;letter-spacing:.012em;overflow-wrap:break-word}
-h2{font-family:var(--sans);font-size:19px;font-weight:700;line-height:1.2;overflow-wrap:break-word}
+h1{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 48;font-size:clamp(32px,8.6vw,38px);line-height:1.08;letter-spacing:-.018em;overflow-wrap:break-word;text-wrap:balance}
+h2{font-family:var(--sans);font-size:19px;font-weight:600;line-height:1.25;letter-spacing:-.005em;overflow-wrap:break-word}
 a{color:var(--encre);text-underline-offset:3px}
 a:hover{color:var(--bleu-texte)}
+::selection{background:var(--encre);color:var(--fond)}
+html{accent-color:var(--encre);caret-color:var(--encre)}
 strong,.fort{font-weight:700}
 sup{font-size:.62em;line-height:0;vertical-align:.55em}
 .vh{position:absolute!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;border:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -40,10 +42,11 @@ sup{font-size:.62em;line-height:0;vertical-align:.55em}
 /* ---------- Structure */
 .app{min-height:100vh;min-height:100dvh}
 .lat{display:none}
-/* Mot-symbole « boostimpact.agency » en texte : minuscules, Figtree 700, point vert, « agency » en 400. */
-.logo{font-family:var(--sans);font-size:21px;font-weight:700;text-transform:none;line-height:1.2;letter-spacing:-.02em;text-decoration:none;color:var(--encre);white-space:nowrap}
+/* Mot-symbole « boostimpact.agency » en texte, comme l'en-tête bleu nuit du site : minuscules, Schibsted Grotesk 700, point ardoise clair,
+   « agency » en 400, en retrait. */
+.logo{font-family:var(--sans);font-size:21px;font-weight:700;text-transform:none;line-height:1.2;letter-spacing:-.03em;text-decoration:none;color:var(--encre);white-space:nowrap}
 .logo-point{color:var(--vert)}
-.logo-suffixe{font-weight:400;letter-spacing:0}
+.logo-suffixe{font-weight:400;letter-spacing:-.01em;opacity:.62}
 /* Barre du haut sur téléphone : « boostimpact. » seul, pour laisser la place à l'offre, à la langue et à « Se déconnecter ». */
 @media (max-width:599px){.haut .logo-suffixe{display:none}}
 a.logo{display:inline-flex;align-items:center;min-height:44px}
@@ -77,10 +80,10 @@ details.carte>summary{min-height:44px;padding:10px 0;cursor:pointer}
 .connexion-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-6px -6px -6px 0}
 .lat-pied{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 0 12px}
 .lat-pied .quitter{margin-top:0;padding:0 4px}
-.nb{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:var(--citron);color:var(--sur-citron);font-size:12px;font-weight:700;line-height:1}
+.nb{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:4px;background:var(--citron);color:var(--sur-citron);font-size:12px;font-weight:700;line-height:1}
 .nb[hidden]{display:none}
 #vue{display:flex;flex-direction:column;gap:16px;padding:16px 16px calc(104px + env(safe-area-inset-bottom));min-width:0}
-.onglets{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#061538;border-top:1px solid var(--filet);padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;font-size:12px;font-weight:600}
+.onglets{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--nuit-fonce);border-top:1px solid var(--filet);padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;font-size:12px;font-weight:600}
 .onglets a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 0;min-height:54px;text-decoration:none;color:var(--discret);border-radius:var(--r)}
 .onglets a:hover{color:var(--encre)}
 .onglets a[aria-current]{color:var(--encre);background:var(--releve);font-weight:700}
@@ -139,10 +142,11 @@ h2 .etat{font-size:inherit;font-weight:700}
 .encart .fort{color:var(--encre)}
 
 /* ---------- Boutons et liens d'action */
-.bouton{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:inherit;font-weight:700;line-height:1.3;text-align:center;text-decoration:none;background:var(--marque);color:var(--sur-marque);border:1.5px solid var(--marque);border-radius:var(--r);padding:11px 20px;min-height:48px;cursor:pointer}
+.bouton{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:inherit;font-weight:600;line-height:1.25;letter-spacing:.005em;text-align:center;text-decoration:none;background:var(--marque);color:var(--sur-marque);border:1px solid var(--marque);border-radius:var(--r);padding:11px 22px;min-height:48px;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+@media (prefers-reduced-motion:reduce){.bouton{transition:none}}
 .bouton:hover{background:var(--marque-survol);border-color:var(--marque-survol);color:var(--sur-marque)}
 .bouton.second{background:transparent;color:var(--encre);border-color:var(--bord-fort)}
-.bouton.second:hover{background:var(--releve);border-color:var(--encre);color:var(--encre)}
+.bouton.second:hover{background:var(--encre);border-color:var(--encre);color:var(--fond)}
 .bouton.second[aria-pressed=true]{background:var(--teinte);border-color:var(--bleu-texte);color:var(--encre)}
 .bouton.petit{padding:8px 14px;min-height:44px;font-size:15px}
 .bouton.plein{width:100%}
@@ -267,7 +271,7 @@ video.visuel{object-fit:contain;background:#000}
 .zone-a6{display:none}
 .apercu-a6{display:inline-block;align-self:flex-start;max-width:100%;overflow:hidden;border:1px solid var(--filet);border-radius:4px}
 .a6{width:105mm;height:148mm;padding:9mm;display:flex;flex-direction:column;justify-content:space-between}
-.a6 h3{font-family:var(--titre);font-weight:400;text-transform:uppercase;letter-spacing:.012em;font-size:22pt;line-height:1.05}
+.a6 h3{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 48;letter-spacing:-.015em;font-size:22pt;line-height:1.05}
 .a6 p{font-size:10.5pt;line-height:1.4}
 .a6 .a6-nom{font-size:10pt;font-weight:700;margin:0 0 4mm}
 .a6 .qr{width:48mm;height:48mm;background:#fff;padding:2mm}
@@ -290,6 +294,8 @@ video.visuel{object-fit:contain;background:#000}
 .tab td::before{content:attr(data-l);grid-column:1;grid-row:1/span 4;font-size:13px;font-weight:700;color:var(--discret);padding-top:2px}
 .tab td>*{grid-column:2}
 .tab .bouton{white-space:nowrap}
+/* Téléphone : un bouton long (« Déposer des photos pour ce client ») passe à la ligne au lieu de sortir de la fiche (vu à 390 px le 22/10/2026). */
+@media (max-width:899px){.tab .bouton{white-space:normal;max-width:100%;text-align:center}}
 .tab select{min-width:0}
 
 /* ---------- Connexion */
@@ -305,7 +311,7 @@ video.visuel{object-fit:contain;background:#000}
 .regles li[hidden]{display:none}
 .regles li::before{content:"";flex:0 0 auto;width:18px;height:18px;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--bord)}
 .regles li[data-ok="1"]{color:var(--encre)}
-.regles li[data-ok="1"]::before{border-color:var(--marque);background:var(--marque) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23051234' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/12px no-repeat}
+.regles li[data-ok="1"]::before{border-color:var(--marque);background:var(--marque) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F1C3A' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/12px no-repeat}
 .regles li[data-regle="taille"]{color:var(--encre);font-weight:600}
 .acces-bascule{margin:-8px 0 0}
 .acces-bascule .lien{padding-left:0;text-align:left}
@@ -328,7 +334,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
   .app{display:grid;grid-template-columns:264px minmax(0,1fr);grid-template-rows:auto 1fr}
   .hors-session .app{display:block}
   .haut,.sous,.onglets{display:none}
-  .lat{display:block;grid-column:1;grid-row:1/-1;background:#04102E;border-right:1px solid var(--filet)}
+  .lat{display:block;grid-column:1;grid-row:1/-1;background:var(--nuit-fonce);border-right:1px solid var(--filet)}
   .lat-in{position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;padding:28px 16px 20px;display:flex;flex-direction:column;gap:28px}
   .hors-session .lat{display:none}
   .lat .logo{font-size:21px;padding:0 12px}
@@ -337,7 +343,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
   .menu a:hover{background:var(--releve);color:var(--encre)}
   .menu a[aria-current=page]{background:var(--releve);color:var(--encre);font-weight:700;box-shadow:inset 0 0 0 1px var(--filet)}
   .groupe{display:flex;flex-direction:column;gap:2px}
-  .groupe-lib{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--groupe);padding:0 12px 6px}
+  .groupe-lib{font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--groupe);padding:0 12px 6px}
   .lat-pied .quitter{padding:0 4px}
   .demo{grid-column:2;grid-row:1;padding:0 40px}
   .demo-long{display:inline}
@@ -581,15 +587,15 @@ details.dernieres summary{cursor:pointer;font-weight:700;min-height:44px;padding
 .bilan .bilan-chiffre .chiffre{font-size:36px;color:var(--encre)}
 .bilan .bilan-chiffre .chiffre a{color:var(--encre)}
 .carte.a-valider{border-radius:var(--r-grande);padding:20px 16px;gap:16px}
-.carte.a-valider[data-contenu]{background:var(--teinte);border:2px solid var(--marque);color:#fff;
-  --encre:#FFFFFF;--texte2:#FFFFFF;--discret:#E4E6F2;--bleu-texte:#FFFFFF;--filet:rgba(255,255,255,.35);--bord-fort:rgba(255,255,255,.85)}
+.carte.a-valider[data-contenu]{background:var(--teinte);border:2px solid var(--marque);color:#F6F4EF;
+  --encre:#F6F4EF;--texte2:#F6F4EF;--discret:#E3E1DA;--bleu-texte:#F6F4EF;--filet:rgba(255,255,255,.35);--bord-fort:rgba(255,255,255,.85)}
 .a-valider .carte-tete h2{font-size:28px;line-height:1.1}
 .a-valider .apercu-texte .meta{font-size:14px}
-.a-valider[data-contenu] .apercu-texte .meta{font-size:15px;color:#fff}
+.a-valider[data-contenu] .apercu-texte .meta{font-size:15px;color:var(--encre)}
 .a-valider [data-choix] .bouton{min-height:54px;font-size:17px}
 .a-valider[data-contenu] .bouton.second:hover{background:rgba(255,255,255,.14)}
-.a-valider[data-contenu] .cadre{background:var(--creux);border-color:rgba(255,255,255,.2);--texte2:#E4E6F2;--discret:#A9ADBF}
-.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:#fff;text-decoration-thickness:2px}
+.a-valider[data-contenu] .cadre{background:var(--creux);border-color:rgba(255,255,255,.2);--texte2:#E3E1DA;--discret:#AEB2BE}
+.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:#FFFFFF;text-decoration-thickness:2px}
 .groupe-lib,.carte-tete h2,.entete h1{text-wrap:balance}
 @media (min-width:900px){
   .carte.a-valider{padding:34px;gap:22px}

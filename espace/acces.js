@@ -1,8 +1,8 @@
 // Accès par mot de passe (17/10/2026, décision de PJ) : avoir accès à la boîte mail ne suffit plus pour entrer dans l'espace ni dans la console.
 // - Connexion = adresse email + mot de passe (signInWithPassword). Le lien magique n'est plus une façon d'entrer.
 // - Toute session née d'un lien reçu par email (invitation, récupération, lien magique, code) n'ouvre QUE l'écran « Choisissez votre mot de passe ».
-// - Critère : la revendication amr du jeton d'accès contient « password » (ou « totp » : double authentification, exigée de l'administrateur
-//   depuis le 18/10/2026, en plus de « password » : voir plus bas « Double authentification de l'administrateur »).
+// - Critère : la revendication amr du jeton d'accès contient « password » (ou « totp » : double authentification de l'administrateur, exigée
+//   du 18/10/2026 au 22/10/2026 en plus de « password », retirée depuis et gardée derrière DOUBLE_AUTH_ADMIN : voir plus bas).
 //   Format, lu dans le code source officiel de Supabase Auth (github.com/supabase/auth, commit ce9a8ee du 22/09/2026) :
 //   internal/models/sessions.go, type AMREntry { Method string `json:"method"`; Timestamp int64 `json:"timestamp"`; Provider string `json:"provider,omitempty"` } ;
 //   internal/tokens/service.go, AccessTokenClaims.AuthenticationMethodReference `json:"amr"` = liste d'AMREntry ; noms des méthodes :
@@ -63,12 +63,19 @@
   // (amr = toutes les méthodes de la session, la plus récente en tête ; aal2 dès qu'une méthode MFA y figure, internal/models/amr.go, IsAAL2Claim) ;
   // internal/api/token.go, updateMFASessionAndClaims (le code vérifié AJOUTE « totp » à la session ouverte par mot de passe) ; revendication
   // « aal » : internal/tokens/service.go. Doc : supabase.com/docs/guides/auth/auth-mfa (exemple amr [{totp}, {password}], la plus récente en tête).
+  // INTERRUPTEUR (22/10/2026, décision de PJ : « enlève la double authentification pour l'instant » ; le compte de la console est partagé par
+  // deux personnes) : false = la console s'ouvre à l'adresse + mot de passe seuls, comme avant le 18/10/2026 ; aucun écran d'activation ni de code.
+  // Risque accepté : le mot de passe partagé suffit à ouvrir toutes les données de la console. Pour REMETTRE le code : passer à true ET recoller
+  // dans l'éditeur SQL le bloc « Double authentification de l'administrateur (18/10/2026) » de schema.sql APRÈS le bloc « Administrateur sans
+  // double authentification (22/10/2026) » (ordres/BRANCHEMENT.md, étape 81). L'un sans l'autre : console fermée (base) ou code décoratif (écran).
+  const DOUBLE_AUTH_ADMIN = false;
   const forteAdmin = charge => { const m = methodes(charge); return !!charge && charge.aal === "aal2" && m.includes("password") && m.includes("totp"); };
   // Étape de la console pour un administrateur dont la session porte « password » ou « totp » : « ok » (console ouverte), « code » (facteur
   // déjà activé : code de l'application), « activer » (aucun facteur : QR code), « mot_de_passe » (session née d'un lien + code : choisir le mot de passe).
-  function etapeAdmin(charge, facteurVerifie) {
+  // exiger : la double authentification est-elle demandée (DOUBLE_AUTH_ADMIN par défaut) ? Sans elle, le mot de passe suffit : « ok ».
+  function etapeAdmin(charge, facteurVerifie, exiger = DOUBLE_AUTH_ADMIN) {
     if (!methodes(charge).includes("password")) return "mot_de_passe";
-    if (forteAdmin(charge)) return "ok";
+    if (!exiger || forteAdmin(charge)) return "ok";
     return facteurVerifie ? "code" : "activer";
   }
   // Facteur TOTP vérifié sur le compte (user.factors de Supabase Auth : { factor_type, status }).
@@ -101,7 +108,7 @@
   const secretTotp = () => base32(crypto.getRandomValues(new Uint8Array(20)));
   const uriTotp = (secret, compte, emetteur) => `otpauth://totp/${encodeURIComponent(emetteur)}:${encodeURIComponent(compte)}?algorithm=SHA1&digits=6&issuer=${encodeURIComponent(emetteur)}&period=30&secret=${secret}`;
 
-  const A = { METHODES_FORTES, MIN, MAX_OCTETS, decoderJwt, methodes, accesOuvert, accesDuJeton, controlerMotDePasse, lienRecu,
+  const A = { DOUBLE_AUTH_ADMIN, METHODES_FORTES, MIN, MAX_OCTETS, decoderJwt, methodes, accesOuvert, accesDuJeton, controlerMotDePasse, lienRecu,
     forteAdmin, etapeAdmin, facteurTotpVerifie, codeSaisi, codeValide, cleGroupee, base32, debase32, totp, verifierTotp, secretTotp, uriTotp };
   if (typeof module === "object" && module.exports) module.exports = A;
   if (!racine || !racine.document) return;
@@ -207,7 +214,8 @@
     m1.focus();
   }
 
-  // Double authentification de l'administrateur (console seulement). o : { vue, I, D, mode (« activer » ou « code »), email, apres() : après le
+  // Double authentification de l'administrateur (console seulement ; montrée seulement si DOUBLE_AUTH_ADMIN, ou si Supabase exige le code :
+  // lien d'email d'un compte qui a encore un facteur, voir console.js). o : { vue, I, D, mode (« activer » ou « code »), email, apres() : après le
   // code accepté, annuler() : déconnexion }. « activer » : QR code rendu par Supabase (enroll, image SVG en adresse data:, aucune bibliothèque),
   // clé en texte, puis le premier code ; « code » : le code du moment. La base n'ouvre rien à l'administrateur sans ce code (est_admin()).
   function doubleAuthentification(o) {

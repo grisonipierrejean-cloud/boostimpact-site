@@ -15,7 +15,11 @@
   const offreDe = c => (window.RENOM_OFFRES || {})[(c || {}).offre_id] || {};
   // Mode délégation : Premium ET accepté par écrit par le commerçant (commerces.delegation_signee_le, saisi dans la console).
   const delegationActive = c => !!(offreDe(c).delegation && (c || {}).delegation_signee_le);
-  const regleAvis = c => { const o = offreDe(c); return o.delegation ? "avis.regle.premium" : o.avis_auto ? "avis.regle.standard" : "avis.regle.essentiel"; };
+  // Avis : l'équipe répond et publie elle-même (avis de 1 à 3 étoiles et avis sensibles) en Standard et en Premium (offres.avis_equipe, 22/10/2026).
+  const equipeRepond = c => !!(offreDe(c).avis_equipe || offreDe(c).delegation);
+  // Règle des avis par offre : Premium ; Standard (avis_equipe, 22/10/2026) ; ancienne offre retirée (Croissance, Signature : 4 et 5 étoiles
+  // automatiques, 1 à 3 étoiles proposées au commerçant, inchangée tant que son abonnement court) ; Essentiel.
+  const regleAvis = c => { const o = offreDe(c); return o.delegation ? "avis.regle.premium" : o.avis_equipe ? "avis.regle.standard" : o.avis_auto ? "avis.regle.retiree" : "avis.regle.essentiel"; };
   const ETAT = I.carte("etat", ["non_connecte", "en_attente", "connecte", "erreur"]);
   const ETAPES = I.carte("etape", ["ACCES_RESEAU_VERIFIE", "ACCES_RESEAU_RETIRE", "PRODUIT", "PUBLIE", "PROGRAMME", "PROGRAMMATION_ANNULEE", "IDEES", "CONTENU_APPROUVE", "CONTENU_MODIFICATION", "CONTENU_REFUSE", "REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION",
     "AVIS_RECU", "AVIS_A_VALIDER", "AVIS_VALIDE", "AVIS_REFUSE", "AVIS_PUBLIE", "AVIS_SENSIBLE", "MISE_EN_PAUSE", "REPRISE", "OFFRE_CHANGEE", "COMMERCE_CREE", "LEGENDE_MODIFIEE", "EMAIL_VALIDATION",
@@ -352,7 +356,7 @@
         </section>`;
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
-        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(offreDe(c).delegation ? "acc.humains.texte.equipe" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
+        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       ${cmHumains.length ? `<section class="alerte" id="alerte-commentaires"><div><p class="fort">${t("acc.cm.titre", { n: cmHumains.length })}</p>
         <p>${t("acc.cm.texte")}</p></div><a class="bouton second" href="#/commentaires">${t("acc.cm.lire", { n: cmHumains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
@@ -774,7 +778,7 @@
   // l'offre (Premium : l'équipe répond ; sinon la réponse lui est envoyée par email pour accord) ; réponse proposée (propose_le) : la date de l'email ;
   // réponse publiée : « Notre équipe s'en est chargée. »
   const texteSensible = (x, c) => x.statut === "publie" ? t("avis.sensible.fait") : x.statut !== "humain" ? ""
-    : x.propose_le && !offreDe(c).delegation ? t("avis.sensible.propose", { d: date(x.propose_le) }) : t(offreDe(c).delegation ? "avis.sensible.texte.equipe" : "avis.sensible.texte");
+    : x.propose_le && !equipeRepond(c) ? t("avis.sensible.propose", { d: date(x.propose_le) }) : t(equipeRepond(c) ? "avis.sensible.texte.equipe" : "avis.sensible.texte");
   async function avis() {
     const [c, l0] = await Promise.all([D.commerce(), D.avis()]);
     const rang = x => x.statut === "a_valider" && !x.sensible ? 0 : x.sensible || x.statut === "humain" ? 1 : 2, l = l0.map((x, i) => [x, i]).sort((a, b) => rang(a[0]) - rang(b[0]) || a[1] - b[1]).map(x => x[0]);
@@ -1180,7 +1184,7 @@
     const i = invitationInstall; invitationInstall = null; ev.target.closest("#installer-maintenant").hidden = true; i.prompt(); try { await i.userChoice; } catch (er) {}
   });
 
-  // ---------------- Notifications : email de validation (lien à usage unique, 7 jours). WhatsApp : pas maintenant.
+  // ---------------- Notifications : email de validation (lien à usage unique, 7 jours) ; alertes WhatsApp (22/10/2026) avec accord explicite.
   async function notifications() {
     const [c, s] = await Promise.all([D.commerce(), D.session()]), n = c.notifications || { email: true, whatsapp: false };
     const adresse = c.email_validation || (s && s.email) || "";
@@ -1189,8 +1193,8 @@
         <section class="carte moitie" aria-labelledby="n-titre"><h2 id="n-titre">${t("notif.comment")}</h2><form id="f-notif">
           <fieldset><legend>${t("notif.canaux")}</legend>
             <label class="option"><input type="checkbox" id="notif-email"${n.email !== false ? " checked" : ""}><span>${t("notif.email")}${adresse ? t("notif.a", { adresse: `<span class="casse">${e(adresse)}</span>` }) : ""}</span></label>
-            <label class="option"><input type="checkbox" id="notif-whatsapp" disabled><span>${t("notif.whatsapp")}</span></label>
-            <p class="aide">${t("notif.whatsapp.aide")}</p></fieldset>
+            </fieldset>
+          <fieldset><legend>${t("notif.whatsapp")}</legend>${champsWhatsapp(c)}<p class="aide">${t("notif.whatsapp.aide")}</p></fieldset>
           <div class="actions"><button class="bouton" type="submit">${t("enregistrer")}</button></div><p class="msg" id="msg" role="status"></p></form></section>
         <section class="carte moitie"><h2>${t("notif.lien.titre")}</h2>
           <ul class="liste"><li>${t("notif.lien.1")}</li><li>${t("notif.lien.2")}</li><li>${t("notif.lien.3")}</li><li>${t("notif.lien.4")}</li></ul>
@@ -1199,7 +1203,10 @@
       ${blocInstaller()}
       ${D.mode === "demo" ? `<section class="carte" aria-labelledby="n-demo"><h2 id="n-demo">${t("demonstration")}</h2><p class="texte2">${t("notif.demo")}</p>
         <div class="actions"><button type="button" class="bouton second" id="voir-email" aria-expanded="false" aria-controls="apercu-email">${t("notif.voir.email")}</button></div><div id="apercu-email" class="pile" hidden></div></section>` : ""}`;
-    $("f-notif").onsubmit = async ev => { ev.preventDefault(); try { await D.enregistrer({ notifications: { email: $("notif-email").checked, whatsapp: false } }); msg(t("reglage.enregistre")); } catch (er) { msg(ph(er.message)); } };
+    brancherEchoWhatsapp();
+    $("f-notif").onsubmit = async ev => { ev.preventDefault();
+      try { const w = await enregistrerWhatsapp(c); if (w === null) return; await D.enregistrer({ notifications: { email: $("notif-email").checked, whatsapp: w } }); await notifications(); msg(t("reglage.enregistre")); }
+      catch (er) { msg(ph(er.message)); } };
     if ($("voir-email")) $("voir-email").onclick = async () => {
       const z = $("apercu-email"), ouvrir = z.hidden; z.hidden = !ouvrir; $("voir-email").setAttribute("aria-expanded", String(ouvrir)); if (!ouvrir) return;
       const l = await D.outilsDemo.emailsValidation();
@@ -1212,6 +1219,33 @@
             <p class="note">${tc("email.lien.note", { d: I.date(m.expire_le, lgc) })}</p></div></article>`).join("")
         : `<p class="texte2">${t("email.rien")}</p>`;
     };
+  }
+
+  // ---------------- Alertes WhatsApp (décision de PJ du 22/10/2026) : numéro au format international et case d'accord, au démarrage (premier accès,
+  // tant que l'accord n'est pas donné) et dans Notifications. La case reprend le numéro saisi, mot pour mot : « Je souhaite recevoir les alertes de
+  // BoostImpact sur WhatsApp au numéro … ». Sans case cochée, aucun WhatsApp (regler_whatsapp de schema.sql : heure de l'accord, journal).
+  const whatsappActif = c => !!((c.notifications || {}).whatsapp && c.whatsapp_numero);
+  const champsWhatsapp = c => `<div class="f"><label for="awa-numero">${t("awa.numero")}</label><input id="awa-numero" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(c.whatsapp_numero || "")}" placeholder="+33 6 12 34 56 78" aria-describedby="awa-exemple"><p class="aide" id="awa-exemple">${t("awa.exemple")}</p></div>
+      <label class="option consentement"><input type="checkbox" id="awa-case"${whatsappActif(c) ? " checked" : ""}><span>${t("awa.case", { n: `<span id="awa-echo" class="casse" translate="no">${e(c.whatsapp_numero || t("awa.vide"))}</span>` })}</span></label>
+      ${whatsappActif(c) ? `<p class="note" id="awa-etat">${t("awa.actif", { n: `<span class="casse" translate="no">${e(c.whatsapp_numero)}</span>`, d: date(c.whatsapp_accord_le) })}</p>` : ""}`;
+  function brancherEchoWhatsapp() { const i = $("awa-numero"); if (i) i.oninput = () => { $("awa-echo").textContent = i.value.trim() || t("awa.vide"); }; }
+  // Rend l'état WhatsApp enregistré (vrai ou faux), ou null si la saisie est incomplète (message affiché).
+  async function enregistrerWhatsapp(c) {
+    const coche = $("awa-case").checked, num = $("awa-numero").value.trim();
+    if (coche && !num) { msg(t("awa.cocher")); $("awa-numero").focus(); return null; }
+    if (coche && whatsappActif(c) && window.RENOM_WHATSAPP.numero(num) === c.whatsapp_numero) return true;
+    if (!coche && !whatsappActif(c) && !c.whatsapp_numero) return false;
+    const r = await D.reglerWhatsapp(num, coche); return !!(r && r.whatsapp);
+  }
+  const carteWhatsapp = c => whatsappActif(c) ? "" : `<section class="carte alertes-whatsapp" id="alertes-whatsapp" aria-labelledby="awa-titre">
+      <h2 id="awa-titre">${t("awa.titre")}</h2><p class="texte2">${t("awa.chapo")}</p>
+      <form id="awa-f" novalidate>${champsWhatsapp(c)}<div class="actions"><button type="submit" class="bouton second" id="awa-ok">${t("awa.enregistrer")}</button></div><p class="msg" id="awa-msg" role="status"></p></form></section>`;
+  function brancherWhatsapp(c, apres) {
+    const f = $("awa-f"); if (!f) return; brancherEchoWhatsapp();
+    f.onsubmit = async ev => { ev.preventDefault();
+      if (!$("awa-case").checked) { $("awa-msg").textContent = t("awa.cocher"); $("awa-case").focus(); return; }
+      try { const w = await enregistrerWhatsapp(c); if (w === null) { $("awa-msg").textContent = t("awa.cocher"); return; } await apres(); const m = $("msg-aut") || $("msg"); if (m) m.textContent = t("awa.merci"); }
+      catch (er) { $("awa-msg").textContent = ph(er.message); } };
   }
 
   // ---------------- Démarrage en 5 questions (premier accès). Chaque question peut être passée ; la fiche complète reste accessible.
@@ -1239,7 +1273,7 @@
     }
     const q = QUESTIONS[dem.i], v = dem.rep[q.cle] || "";
     vue.innerHTML = `${entete(t("dem5.titre"), e(c.nom), t("dem5.chapo"))}
-      ${carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
+      ${carteAutorisation(c)}${carteWhatsapp(c)}<p class="msg" id="msg-aut" role="status"></p>
       <section class="carte demarrage">
         <div class="mesure"><div class="mesure-tete"><span class="fort">${t("dem5.question", { n: dem.i + 1 })}</span></div>${jauge(dem.i + 1, 5)}</div>
         <form id="dem-f" novalidate>
@@ -1266,6 +1300,7 @@
     $("dem-passer").onclick = async () => { await avancer(); };
     if ($("dem-precedent")) $("dem-precedent").onclick = async () => { lire(); dem.i--; await demarrage(); };
     brancherAutorisation(async () => { lire(); await demarrage(); });
+    brancherWhatsapp(c, async () => { lire(); await demarrage(); });
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
 

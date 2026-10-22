@@ -8,11 +8,11 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
-    standard: { nom: "Standard", nom_nl: "Standaard", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
-    premium: { nom: "Premium", nom_nl: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
-    croissance: { nom: "Croissance", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, retiree: true },
-    signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, retiree: true } };
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    standard: { nom: "Standard", nom_nl: "Standaard", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
+    premium: { nom: "Premium", nom_nl: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
+    croissance: { nom: "Croissance", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
+    signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   const MSG_OFFRES = "Offres en vente : Essentiel, Standard, Premium.";
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
@@ -40,9 +40,16 @@
   // Mode de secours des avis (20/10/2026) : une réponse « à publier sur Google » qui attend depuis 4 h déclenche une alerte à l'équipe (même valeur
   // que secours_alerte_heures() de schema.sql, égalité testée par rls.test.mjs) ; la console met la carte en évidence à partir de là.
   const SECOURS_ALERTE_HEURES = 4;
+  // Numéro WhatsApp au format international E.164 (même règle que regler_whatsapp de schema.sql) : espaces, points, tirets et parenthèses retirés,
+  // « 00 » lu comme « + ». Sans indicatif du pays : refusé (aucun pays deviné).
+  const numeroWhatsapp = v => { let n = String(v == null ? "" : v).replace(/[\s().-]/g, ""); if (n.startsWith("00")) n = "+" + n.slice(2); return /^\+[1-9]\d{7,14}$/.test(n) ? n : null; };
+  const PHRASES_MARQUE = { invalide: "Identifiant de marque Metricool invalide : des chiffres seulement (blogId, lu dans l'adresse de la marque sur Metricool).",
+    prise: "Cette marque Metricool est déjà celle d'un autre commerce." };
+  const PHRASE_WHATSAPP = "Numéro WhatsApp invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.";
+  window.RENOM_WHATSAPP = { numero: numeroWhatsapp };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
-    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "EFFACEMENT_AUTOMATIQUE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026)
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
   const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
   const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
@@ -320,7 +327,7 @@
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
       { point: "google", titre: "Donner à BoostImpact l'accès administrateur à votre fiche Google", aide: "Sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire.", declarable: true },
-      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Ouvrez le lien de connexion de notre outil de programmation que BoostImpact vous envoie, puis connectez Facebook et Instagram. BoostImpact publie ensuite pour vous, seulement ce que vous avez approuvé.", declarable: true },
+      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "BoostImpact crée votre espace dans notre outil de programmation et vous envoie un lien de connexion. Ce lien est valable 3 jours (71 heures précisément) : passé ce délai, demandez-en un nouveau. Ouvrez-le, puis connectez Facebook et Instagram. BoostImpact publie ensuite pour vous, seulement ce que vous avez approuvé.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
     ETATS: { a_faire: "À faire", declare: "Fait selon vous, BoostImpact vérifie", fait: "Fait" },
@@ -488,6 +495,8 @@
       // « mot_de_passe ») ; la base n'ouvre rien à l'administrateur avant « ok » (est_admin(), bloc SQL du 18/10/2026). codeRequis : session née
       // d'un lien d'email sur un compte qui a déjà un facteur : Supabase exige le code avant de changer le mot de passe (internal/api/user.go :
       // « AAL2 session is required to update email or password when MFA is enabled. »). Rien ne change pour un commerçant (aucun facteur).
+      // Depuis le 22/10/2026 (DOUBLE_AUTH_ADMIN = false, acces.js) : etapeAdmin rend « ok » dès le mot de passe ; codeRequis reste (contrainte
+      // de Supabase, tant qu'un facteur vérifié existe sur le compte).
       async session() {
         const s = await lireSession(); if (!s) return null;
         const charge = ACC.decoderJwt(s.access_token), facteur = ACC.facteurTotpVerifie(s.user);
@@ -568,6 +577,12 @@
       // et « Déposer des photos pour ce client » : envoi TUS dans le dossier du commerce (règle photos_seau_depot de storage.sql, administrateur et
       // autorisation), puis admin_deposer_photos (mêmes contrôles que deposer_photos, source « equipe »).
       async autoriserPhotos() { const c = await self.commerce(), r = await sb.rpc("autoriser_photos", { p_commerce: c.id }); if (r.error) throw new Error(phrasePhotos(r.error.message)); cache = null; return r.data; },
+      // ---- Alertes WhatsApp (22/10/2026) : la case du commerçant (regler_whatsapp : numéro E.164, heure de l'accord, journal WHATSAPP_ACCORD).
+      async reglerWhatsapp(numero, accord) {
+        const c = await self.commerce(), n = accord ? numeroWhatsapp(numero) : null; if (accord && !n) throw new Error(PHRASE_WHATSAPP);
+        const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });
+        if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? PHRASE_WHATSAPP : r.error.message); cache = null; return r.data;
+      },
       async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
       async adminEnvoyerPhoto(cid, f, o = {}) {
         const k = await window.RENOM_ENVOI.controler(f); if (k.genre !== "photo") throw new Error(PHOTOS.PHRASES.format); if (k.raison) throw new Error(PHOTOS.PHRASES.lourde);
@@ -706,6 +721,7 @@
       async adminMiseEnRoute(cid, point, etat) { return ok(await sb.rpc("admin_mise_en_route", { p_commerce: cid, p_point: point, p_etat: etat })); },
       objetParJeton: jeton => publicSupabase.objetParJeton(jeton),
       validerParJeton: (jeton, decision, texte) => publicSupabase.validerParJeton(jeton, decision, texte),
+      async adminMetricoolMarque(cid, blog) { return ok(await sb.rpc("admin_metricool_marque", { p_commerce: cid, p_blog_id: String(blog == null ? "" : blog).trim() || null })); },
       async adminCommerces() {
         const cs = ok(await sb.from("commerces").select("*")), ks = ok(await sb.from("compteur").select("*")), cc = ok(await sb.from("comptes_connectes").select("*")), av = ok(await sb.from("avis").select("commerce_id,statut,sensible"));
         const sa = ok(await sb.rpc("admin_sante_clients", {})) || [], ds = ok(await sb.from("demandes_style").select("commerce_id").is("traitee_le", null));

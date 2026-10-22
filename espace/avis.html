@@ -3,28 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#051234">
+<meta name="theme-color" content="#0F1C3A">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title data-i18n-titre="avis.pub.titre.page">Votre avis</title>
-<link rel="preload" href="fonts/anton-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/figtree-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/source-serif-4.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Page publique de dépôt d'avis. La même pour tous les clients : rien ici ne dépend de la note choisie, sauf le dessin des étoiles
    et la phrase « Votre note ». Le bouton Google est dans la page dès l'affichage et n'est jamais masqué, déplacé ni restylé.
-   Charte « nuit et bleu » de l'espace (Anton pour le titre, en majuscules, Figtree pour le reste, coins 10 à 18 px, aucune pilule) ;
+   Charte du site, comme l'espace (22/10/2026 : bleu nuit et ivoire, Source Serif 4 pour le titre, Schibsted Grotesk pour le reste, coins de 6 à 8 px, aucune pilule) ;
    couleurs du commerce (fond, texte, accent) quand il les a choisies : les cartes et les textes secondaires en découlent,
    ce qui garde le contraste vérifié par avis.js (texte sur fond au moins 4,5:1). */
-:root{color-scheme:dark;--fond:#051234;--texte:#FFFFFF;--accent:#7CCE12;--sur-accent:#051234;--etoile:#7CCE12;
-  --surface:#0C1D45;--discret:#B4B8C8;--bord:#6B6F82;--filet:rgba(255,255,255,.14);
-  --titre:'Anton','Arial Narrow',Impact,system-ui,sans-serif;--sans:'Figtree',system-ui,sans-serif}
+:root{color-scheme:dark;--fond:#0F1C3A;--texte:#F6F4EF;--accent:#F6F4EF;--sur-accent:#0F1C3A;--etoile:#F6F4EF;
+  --surface:#18284B;--discret:#AEB2BE;--bord:#7C8396;--filet:rgba(255,255,255,.14);
+  --titre:'Source Serif 4',Georgia,'Times New Roman',serif;--sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
 @supports (color:color-mix(in srgb,red 50%,blue)){:root{--surface:color-mix(in srgb,var(--texte) 7%,var(--fond));--discret:color-mix(in srgb,var(--texte) 74%,var(--fond));
   --bord:color-mix(in srgb,var(--texte) 45%,var(--fond));--filet:color-mix(in srgb,var(--texte) 14%,var(--fond))}}
-@font-face{font-family:'Anton';font-weight:400;font-display:swap;src:url(fonts/anton-400.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:400;font-display:swap;src:url(fonts/figtree-400.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:500;font-display:swap;src:url(fonts/figtree-500.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:600;font-display:swap;src:url(fonts/figtree-600.woff2) format('woff2')}
-@font-face{font-family:'Figtree';font-weight:700;font-display:swap;src:url(fonts/figtree-700.woff2) format('woff2')}
+@font-face{font-family:'Source Serif 4';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/source-serif-4.woff2) format('woff2')}
+@font-face{font-family:'Schibsted Grotesk';font-weight:400 700;font-style:normal;font-display:swap;src:url(fonts/schibsted-grotesk.woff2) format('woff2')}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -34,8 +31,8 @@ main{max-width:480px;margin:0 auto;padding:28px 16px calc(32px + env(safe-area-i
 #page,#erreur{display:flex;flex-direction:column;gap:14px}
 .tete{display:flex;flex-direction:column;gap:10px;padding:0 2px 4px}
 .commerce{font-size:17px;font-weight:700;overflow-wrap:anywhere}
-h1{font-family:var(--titre);font-weight:400;text-transform:uppercase;font-size:32px;line-height:1.08;letter-spacing:.012em;text-wrap:balance}
-.carte{background:var(--surface);color:var(--texte);border:1px solid var(--filet);border-radius:18px;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+h1{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 48;font-size:34px;line-height:1.08;letter-spacing:-.018em;text-wrap:balance}
+.carte{background:var(--surface);color:var(--texte);border:1px solid var(--filet);border-radius:8px;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
 h2{font-family:var(--sans);font-size:19px;font-weight:700;line-height:1.25}
 .note{font-size:15px;color:var(--discret)}
 .etoiles{display:flex;justify-content:space-between;gap:4px;max-width:340px;width:100%;margin:0 auto}
@@ -44,7 +41,7 @@ h2{font-family:var(--sans);font-size:19px;font-weight:700;line-height:1.25}
 .etoile.pleine{color:var(--etoile)}
 .etoile.pleine svg{fill:currentColor;stroke:var(--etoile)}
 #etat-note{text-align:center;font-size:16px;font-weight:600;color:var(--texte);min-height:1.5em}
-.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:700;line-height:1.3;text-align:center;text-decoration:none;background:var(--accent);color:var(--sur-accent);border:1.5px solid var(--accent);border-radius:10px;padding:14px 18px;min-height:58px;cursor:pointer}
+.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:600;line-height:1.25;text-align:center;text-decoration:none;background:var(--accent);color:var(--sur-accent);border:1px solid var(--accent);border-radius:6px;padding:14px 14px;min-height:58px;cursor:pointer}
 .bouton.second{background:transparent;color:var(--texte);border-color:var(--bord)}
 .bouton:disabled{opacity:.55;cursor:default}
 :focus-visible{outline:2px solid var(--texte);outline-offset:2px}

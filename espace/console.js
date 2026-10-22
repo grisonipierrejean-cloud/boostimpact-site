@@ -52,7 +52,8 @@
     window.RENOM_ACCES.choixMotDePasse({ vue, I, D, email: s.email, apres: rendre, annuler: async () => { await D.quitter(); location.hash = ""; rendre(); } });
   }
   // Double authentification de l'administrateur (18/10/2026, décision de PJ) : après le mot de passe, « Activez la double authentification »
-  // (aucun facteur : QR code) ou « Code de votre application » ; la console ne s'ouvre qu'au niveau aal2 (password + totp), la base non plus.
+  // (aucun facteur : QR code) ou « Code de votre application ». RETIRÉE le 22/10/2026 (décision de PJ) : gardée derrière DOUBLE_AUTH_ADMIN
+  // (acces.js, false) ; la console s'ouvre à l'adresse + mot de passe, la base aussi (bloc « Administrateur sans double authentification »).
   function doubleAuth(s, mode) {
     connecte = false; dessinerNav();
     window.RENOM_ACCES.doubleAuthentification({ vue, I, D, mode, email: s.email, apres: rendre, annuler: async () => { await D.quitter(); location.hash = ""; rendre(); } });
@@ -102,6 +103,11 @@
   const ligneAcces = c => `<div class="pile serre acces-ligne">${window.RENOM_RESEAUX_AUTORISES(c).map(r => { const k = (c.comptes || {})[r] || {}, on = k.etat === "connecte";
     return `<div class="pile serre" data-acces-res="${e(r)}"><p class="note${on ? " fort" : ""}">${on ? (k.maj ? t("con.acces.etat.on", { res: NOM_RESEAU[r] || e(r), d: dh(k.maj) }) : t("con.acces.etat.connecte", { res: NOM_RESEAU[r] || e(r) })) : t("con.acces.etat.off", { res: NOM_RESEAU[r] || e(r) })}</p>
       <button type="button" class="bouton ${on ? "second " : ""}petit" data-acces="${e(r)}" data-oui="${on ? 0 : 1}">${t(on ? "con.acces.retirer" : "con.acces.verifier")}</button></div>`; }).join("")}</div>`;
+  // Marque Metricool du commerce (22/10/2026, bloc « Marque Metricool par commerce » de schema.sql) : un blogId par commerce, jamais une marque commune.
+  // Sans blogId, ses publications vont dans la file « À publier à la main ». Standard et Premium seulement (l'Essentiel ne publie que sur la fiche Google).
+  const ligneMarque = c => !(OFFRES[c.offre_id] || {}).reseaux_sociaux ? "" : `<div class="pile serre marque-metricool"><div class="f etroit"><label for="mc-${e(c.id)}">${t("con.mc.lib")}</label>
+      <input id="mc-${e(c.id)}" type="text" inputmode="numeric" maxlength="20" autocomplete="off" value="${e(c.metricool_blog_id || "")}" data-mc></div>
+      <button type="button" class="bouton second petit" data-mc-enregistrer>${t("enregistrer")}</button>${c.metricool_blog_id ? "" : `<p class="note fort">${t("con.mc.manque")}</p>`}</div>`;
   // Options commandées (22/10/2026, bloc « Options commandées » de schema.sql) : Visibilité IA et Site du restaurant payés par leur lien Stripe,
   // enregistrés par le webhook (n8n). Une carte par commande à livrer (puis par second test de la Visibilité IA), triées par échéance, en évidence
   // passé l'échéance. Livraison : délai de l'option après le paiement et la réception des éléments du client, la plus tardive des deux dates (CGV,
@@ -129,7 +135,7 @@
       return `<tr data-id="${e(c.id)}"><td data-l="${C("commerce")}"><p class="fort">${e(c.nom)}</p><p class="note">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""}</p>${ligneStyle(c)}</td>
         <td data-l="${C("sante")}">${sante(c.sante)}</td><td data-l="${C("mer")}">${miseEnRoute(c.sante)}</td>
         <td data-l="${C("offre")}"><div class="pile serre"><select data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, o]) => !o.retiree || c.offre_id === k2).map(([k2, o]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${o.nom}${o.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div></td>
-        <td data-l="${C("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p><p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></td><td data-l="${C("comptes")}"><p>${t("con.connectes", { n: cc })}</p>${ligneAcces(c)}</td><td data-l="${C("alertes")}"><span class="${c.alertes ? "fort" : ""}">${c.alertes}</span></td>
+        <td data-l="${C("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p><p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></td><td data-l="${C("comptes")}"><p>${t("con.connectes", { n: cc })}</p>${ligneAcces(c)}${ligneMarque(c)}</td><td data-l="${C("alertes")}"><span class="${c.alertes ? "fort" : ""}">${c.alertes}</span></td>
         <td data-l="${C("etat")}"><div class="pile serre"><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div></td></tr>`; }).join("")}</tbody></table></section>`;
     vue.querySelectorAll("tr[data-id]").forEach(tr => tr.addEventListener("click", async ev => {
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = tr.dataset.id, c = l.find(x => x.id === id);
@@ -138,6 +144,8 @@
     vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async ev => { ev.stopPropagation(); const id = b.closest("tr").dataset.id, r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
       try { const x = await D.adminAccesReseau(id, r, oui); await commerces(); msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 })); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
+    vue.querySelectorAll("[data-mc-enregistrer]").forEach(b => b.onclick = async ev => { ev.stopPropagation(); const tr = b.closest("tr");
+      try { await D.adminMetricoolMarque(tr.dataset.id, tr.querySelector("[data-mc]").value); await commerces(); msg(t("con.mc.ok")); } catch (er) { msg(ph(er.message)); } });
     vue.querySelectorAll("[data-mer]").forEach(b => b.onclick = async () => { try { await D.adminMiseEnRoute(b.closest("tr").dataset.id, b.dataset.mer, "fait"); await commerces(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } });
     // Options commandées : chaque bouton appelle la fonction de la base, puis l'écran est redessiné et le message dit ce qui a été noté.
     const opt = (sel, faire) => vue.querySelectorAll(sel).forEach(b => b.onclick = async () => { const a = b.closest("article"); b.disabled = true;
@@ -277,8 +285,9 @@
     vue.querySelectorAll("[data-son-pose]").forEach(b => b.onclick = async () => { try { await D.adminMusiquePosee(b.closest("article").dataset.pub); await apublier(); msg(t("con.son.enregistre")); } catch (er) { msg(ph(er.message)); } });
   }
   // ---------------- Avis et garanties (trois offres, 16/10/2026 ; bloc « Trois offres » de schema.sql).
-  // 1. File des avis de BoostImpact : Premium, avis 1 à 3 étoiles traités par l'équipe (« Réponse publiée ») ; avis sensibles de toutes les offres :
-  //    hors Premium, la réponse est PROPOSÉE au commerçant (admin_avis_proposer), publiée seulement avec son accord (admin_avis_publie, accord coché).
+  // 1. File des avis de BoostImpact : Standard et Premium (22/10/2026), avis 1 à 3 étoiles et avis sensibles traités et publiés par l'équipe
+  //    (« Réponse publiée », commerçant prévenu) ; Essentiel, avis sensibles : la réponse est PROPOSÉE au commerçant (admin_avis_proposer),
+  //    publiée seulement avec son accord (admin_avis_publie, accord coché).
   //    Tant que l'accès à l'API Google n'est pas ouvert, la réponse est publiée à la main sur la fiche, puis notée ici.
   // 2. Commentaires des commerces Premium (gestion par l'équipe). 3. Garantie des délais : départ (accès et premières photos), fiche sous 7 jours,
   //    premier contenu sous 72 h, avis sous 24 h ; manquements → mois offert, appliqué À LA MAIN dans Stripe puis noté ici (ordres/BRANCHEMENT.md).
@@ -432,10 +441,12 @@
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
-    if (s.codeRequis) return doubleAuth(s, "code");   // lien d'email d'un compte à double authentification : le code avant le mot de passe (exigé par Supabase)
+    // Lien d'email d'un compte qui a ENCORE un facteur TOTP vérifié : Supabase exige le code avant de changer le mot de passe, interrupteur ou
+    // non (« AAL2 session is required to update email or password when MFA is enabled ») ; retirer le facteur l'évite (BRANCHEMENT, étape 81).
+    if (s.codeRequis) return doubleAuth(s, "code");
     if (s.motDePasseRequis || s.doubleAuth === "mot_de_passe") return choixMotDePasse(s);
     if (s.role !== "administrateur") return refuse();
-    if (s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
+    if (window.RENOM_ACCES.DOUBLE_AUTH_ADMIN && s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
     const [r, param] = location.hash.replace("#/", "").split("/"); const ecran = ROUTES[r] ? r : "commerces";
     route = ["style", "photos"].includes(ecran) ? "commerces" : ecran; connecte = true; dessinerNav();   // panneaux « Style du commerce » et « Déposer des photos » : entrée Commerces
     const cle = ecran + "/" + (param || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
