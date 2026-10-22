@@ -266,6 +266,20 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .urgence p:not(.urgence-titre){font-size:15px;color:var(--texte-doux)}
 .offres-pied{margin-top:28px;display:flex;flex-direction:column;gap:8px}
 .offres-pied .garantie{font-size:17px;font-weight:600}
+/* Options ponctuelles (22/10/2026) : deux encarts sobres sous les offres, mêmes jetons que les cartes ; aucun trait coloré, aucune couleur en dur. */
+.options{margin-top:48px;padding-top:32px;border-top:1px solid var(--trait);display:flex;flex-direction:column;gap:12px}
+.options-titre{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:400;font-size:28px;line-height:1.15;letter-spacing:-.01em}
+.options-chapo{font-size:16px;line-height:1.55;color:var(--texte-doux)}
+.options-liste{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:8px}
+.option{background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.option-tete{display:flex;flex-direction:column;gap:4px}
+.option-tete h4{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:400;font-size:26px;line-height:1.1}
+.option-prix{font-size:16px;font-weight:600;color:var(--texte)}
+.option-limite{font-size:14px;line-height:1.5;color:var(--texte-discret)}
+.option .btn{width:100%}
+.option .btn-contour{border-color:var(--trait-fort)}
+.option .btn-contour:hover{border-color:var(--nuit)}
+.options-note{margin-top:4px}
 .contrat{font-size:14px;color:var(--texte-doux)}
 
 /* ---------- Équipe et responsabilités (sans photo, sans avatar, sans icône) */
@@ -433,6 +447,7 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
   .apercu-carte{flex-direction:column;align-items:flex-start;gap:3px;padding:12px 0 0;border-bottom:0;border-top:1px solid var(--filet-clair)}
   .apercu-quoi{min-width:0}
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+  .options-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
   .offre{padding:32px 28px}
   .offre.reco{padding:31px 27px}
   .urgence{padding:30px 32px}
