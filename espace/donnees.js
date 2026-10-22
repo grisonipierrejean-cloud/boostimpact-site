@@ -38,7 +38,7 @@
   const SECOURS_ALERTE_HEURES = 4;
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
-    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "EFFACEMENT_AUTOMATIQUE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_"] };   // SECOURS_ : mode de secours des avis (20/10/2026)
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "EFFACEMENT_AUTOMATIQUE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026)
   const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
   const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
@@ -253,12 +253,16 @@
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : /réservé à l'administrateur/.test(x) ? "Réservé à l'administrateur." : x; };
   // ---- fin des règles communes du dépôt de vidéos
 
+  // Demande d'idées : hors plafond depuis le 22/10/2026, une par 24 heures au plus (verifier_plafond, schema.sql). Même phrase dans les deux adaptateurs.
+  const PHRASE_IDEES_JOUR = "Vous avez déjà demandé des idées aujourd'hui. Réessayez demain.";
   // ---- Photos déposées dans l'espace (17/10/2026 : SEUL chemin des photos, plus aucune par email) : mêmes règles et mêmes refus que la fonction
   // deposer_photos (bloc « Photos par l'espace » de schema.sql) dans les deux adaptateurs. Valeurs : RENOM_ENVOI.REGLES (PHOTOS_MAX, EXT_PHOTO).
   const PHOTOS = {
     PHRASES: { nb: "Un envoi contient de 1 à 10 photos.", hors: "Photo hors du dossier de votre commerce.", format: "Format non accepté (JPEG, PNG, WebP ou HEIC).",
       lourde: "Fichier trop lourd (50 Mo au plus).", nom: "Nom de fichier non accepté.", double: "Une même photo est déclarée deux fois.", deja: "Photo déjà enregistrée.",
-      introuvable: "Commerce introuvable pour ce compte.", pause: "Votre commerce est en pause : contactez BoostImpact." },
+      introuvable: "Commerce introuvable pour ce compte.", pause: "Votre commerce est en pause : contactez BoostImpact.",
+      // Console (22/10/2026) : « Déposer des photos pour ce client », refusé sans l'autorisation photos du commerçant (admin_deposer_photos).
+      sans_autorisation: "Ce client n'a pas coché l'autorisation photos dans son espace (ou l'a retirée) : impossible de déposer ses photos." },
     // Contrôle d'un envoi (liste de {chemin, nom, taille}) pour le commerce cid, dans l'ordre de deposer_photos. recu(chemin) : fichier présent dans le
     // seau ; connu(chemin) : photo déjà enregistrée. Rend la phrase du premier refus, ou null.
     controler(cid, details, recu, connu) {
@@ -281,7 +285,7 @@
   // Refus de deposer_photos (Supabase) ramenés aux mêmes phrases que la démonstration ; une phrase inconnue reste telle quelle.
   const phrasePhotos = m => { const P = PHOTOS.PHRASES, x = String(m || "");
     return /de 1 à 10 photos/.test(x) ? P.nb : /hors du dossier/.test(x) ? P.hors : /format non accepté/.test(x) ? P.format : /nom de fichier non accepté/.test(x) ? P.nom
-      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
+      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /autorisation photos absente/.test(x) ? P.sans_autorisation : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : x; };
   // ---- fin des règles communes de l'envoi de photos
 
@@ -311,7 +315,7 @@
     MAX_CLIENTS: 500, PASSAGE_MAX_JOURS: 14, ECART_JOURS: 90,
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
-      { point: "google", titre: "Donner à BoostImpact l'accès gestionnaire de votre fiche Google", aide: "Sur business.google.com : Paramètres du profil, Personnes et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Gestionnaire. Vous restez propriétaire.", declarable: true },
+      { point: "google", titre: "Donner à BoostImpact l'accès administrateur à votre fiche Google", aide: "Sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire.", declarable: true },
       { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Ouvrez le lien de connexion de notre outil de programmation que BoostImpact vous envoie, puis connectez Facebook et Instagram. BoostImpact publie ensuite pour vous, seulement ce que vous avez approuvé.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
@@ -552,6 +556,19 @@
         if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data;
       },
       async deposer(f) { const r = await self.envoyerPhoto(f); return self.deposerPhotos([{ chemin: r.chemin, nom: f.name, taille: f.size }]); },
+      // ---- Autorisation photos (22/10/2026, CGV article 11) : la case du commerçant (autoriser_photos) ; côté console, le retrait demandé par email
+      // et « Déposer des photos pour ce client » : envoi TUS dans le dossier du commerce (règle photos_seau_depot de storage.sql, administrateur et
+      // autorisation), puis admin_deposer_photos (mêmes contrôles que deposer_photos, source « equipe »).
+      async autoriserPhotos() { const c = await self.commerce(), r = await sb.rpc("autoriser_photos", { p_commerce: c.id }); if (r.error) throw new Error(phrasePhotos(r.error.message)); cache = null; return r.data; },
+      async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
+      async adminEnvoyerPhoto(cid, f, o = {}) {
+        const k = await window.RENOM_ENVOI.controler(f); if (k.genre !== "photo") throw new Error(PHOTOS.PHRASES.format); if (k.raison) throw new Error(PHOTOS.PHRASES.lourde);
+        const chemin = cid + "/" + (o.nom || window.RENOM_ENVOI.nomPhoto(f));
+        const jeton = async () => { const { data } = await sb.auth.getSession(); return data && data.session ? data.session.access_token : null; };
+        const r = await window.RENOM_ENVOI.envoyer({ fichier: f, seau: "photos", objet: chemin, url: cfg.supabaseUrl, cle: cfg.publishableKey, jeton, onProgress: o.onProgress, onEtat: o.onEtat, signal: o.signal });
+        return { chemin, deja: r.deja };
+      },
+      async adminDeposerPhotos(cid, details) { const r = await sb.rpc("admin_deposer_photos", { p_commerce: cid, p_details: details }); if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data; },
       async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Kit de marque (écran « Votre style ») : colonne commerces.marque ; la base contrôle le kit, pose la version, l'auteur et aligne commerces.couleurs.
       async marque() { return marqueDe(await self.commerce()); },
@@ -576,12 +593,15 @@
         if (!r.length) throw new Error("Ce contenu est déjà traité.");
       },
       async idees() { const c = await self.commerce(); return ok(await sb.from("idees").select("id,titre,texte,cree_le,origine,statut,semaine,motif").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
-      async demanderIdees() { const c = await self.commerce(); ok(await sb.from("idees_demandes").insert({ commerce_id: c.id })); },
+      async demanderIdees() { const c = await self.commerce(), r = await sb.from("idees_demandes").insert({ commerce_id: c.id });
+        if (r.error) throw new Error(/une demande d'idées par jour/.test(r.error.message || "") ? PHRASE_IDEES_JOUR : r.error.message); },
       async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut)").eq("commerce_id", c.id).order("prevu_le")); },
       async programmer({ contenu_id, reseaux, prevu_le }) { const c = await self.commerce(); ok(await sb.from("publications").insert({ commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString() })); },
       async deplacer(id, prevu_le) { ok(await sb.from("publications").update({ prevu_le: new Date(prevu_le).toISOString() }).eq("id", id)); },
       async annuler(id) { ok(await sb.from("publications").update({ statut: "annule" }).eq("id", id)); },
-      async avis() { const c = await self.commerce(); return ok(await sb.from("avis").select("id,note,texte,reponse,reponse_proposee,statut,sensible,raisons,decision,cree_le,repondu_le,efface_le,escalade_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      // Toutes les colonnes (22/10/2026) : propose_le (réponse d'un avis sensible envoyée par email) et publie_par (mode de secours) sont lues si la base
+      // les a, sans casser l'écran si un bloc n'est pas encore collé. Le commerçant lit déjà toute la ligne de ses avis (règle avis_lecture).
+      async avis() { const c = await self.commerce(); return ok(await sb.from("avis").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       async validerAvis(id, statut, texte) { const m = { statut }; if (texte != null) m.reponse_proposee = texte; const r = ok(await sb.from("avis").update(m).eq("id", id).select()); if (!r.length) throw new Error("Cet avis ne se valide pas ici."); },
       async comptes() { const c = await self.commerce(); const l = ok(await sb.from("comptes_connectes").select("reseau,etat,detail").eq("commerce_id", c.id)); return RESEAUX.map(r => l.find(x => x.reseau === r) || { reseau: r, etat: "non_connecte", detail: "" }); },
       async compteur() { const c = await self.commerce(); return ok(await sb.from("compteur").select("*").eq("commerce_id", c.id).single()); },
@@ -702,6 +722,16 @@
       // Mode de secours des avis (20/10/2026) : file « À publier sur Google » et « Marquer comme publiée » (bloc « Mode de secours des avis » de schema.sql).
       async adminAvisAPublier() { return ok(await sb.rpc("admin_avis_a_publier", {})) || []; },
       async adminAvisMarquerPubliee(id) { return ok(await sb.rpc("admin_avis_marquer_publie", { p_id: id })); },
+      // Publication à la main, sans Metricool (22/10/2026) : file et « Marquer comme publiée » (schema.sql) ; lien de téléchargement signé au clic, valable
+      // une heure, dans le seau « contenus » (règle contenus_seau_lecture de storage.sql, ouverte à l'administrateur), nom de fichier lisible.
+      async adminPublicationsAPublier() { return ok(await sb.rpc("admin_publications_a_publier", {})) || []; },
+      async adminAccesReseau(cid, reseau, acces) { return ok(await sb.rpc("admin_acces_reseau", { p_commerce: cid, p_reseau: reseau, p_acces: !!acces })); },
+      async adminPublicationPubliee(id, reseau) { return ok(await sb.rpc("admin_publication_publiee", { p_id: id, p_reseau: reseau })); },
+      async adminLienMedia(x) {
+        if (!x.chemin) return null; const ext = (x.chemin.match(/\.([a-z0-9]{2,4})$/i) || [, "jpg"])[1].toLowerCase();
+        const nom = [String(x.commerce || "commerce").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40), x.reseau, String(x.prevu_le || "").slice(0, 10)].filter(Boolean).join("-") + "." + ext;
+        const r = ok(await sb.storage.from("contenus").createSignedUrl(x.chemin, 3600, { download: nom })); return r.signedUrl;
+      },
       async adminAvisPublie(id, reponse, accord) { ok(await sb.rpc("admin_avis_publie", { p_id: id, p_reponse: reponse, p_accord_client: !!accord })); },
       async adminAvisProposer(id, reponse) { return ok(await sb.rpc("admin_avis_proposer", { p_id: id, p_reponse: reponse })); },
       async adminGarantieDelais() { return ok(await sb.rpc("admin_garantie_delais", {})) || []; },

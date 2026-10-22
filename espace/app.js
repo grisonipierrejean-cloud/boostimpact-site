@@ -17,7 +17,7 @@
   const delegationActive = c => !!(offreDe(c).delegation && (c || {}).delegation_signee_le);
   const regleAvis = c => { const o = offreDe(c); return o.delegation ? "avis.regle.premium" : o.avis_auto ? "avis.regle.standard" : "avis.regle.essentiel"; };
   const ETAT = I.carte("etat", ["non_connecte", "en_attente", "connecte", "erreur"]);
-  const ETAPES = I.carte("etape", ["PRODUIT", "PUBLIE", "PROGRAMME", "PROGRAMMATION_ANNULEE", "IDEES", "CONTENU_APPROUVE", "CONTENU_MODIFICATION", "CONTENU_REFUSE", "REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION",
+  const ETAPES = I.carte("etape", ["ACCES_RESEAU_VERIFIE", "ACCES_RESEAU_RETIRE", "PRODUIT", "PUBLIE", "PROGRAMME", "PROGRAMMATION_ANNULEE", "IDEES", "CONTENU_APPROUVE", "CONTENU_MODIFICATION", "CONTENU_REFUSE", "REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION",
     "AVIS_RECU", "AVIS_A_VALIDER", "AVIS_VALIDE", "AVIS_REFUSE", "AVIS_PUBLIE", "AVIS_SENSIBLE", "MISE_EN_PAUSE", "REPRISE", "OFFRE_CHANGEE", "COMMERCE_CREE", "LEGENDE_MODIFIEE", "EMAIL_VALIDATION",
     "ACTION_FICHE", "ACTION_FICHE_VALIDEE", "ACTION_FICHE_REFUSEE", "ACTION_FICHE_PUBLIEE", "DEMARRAGE", "COMMENTAIRE_VALIDE", "COMMENTAIRE_IGNORE", "COMMENTAIRE_CLOS", "COMMENTAIRE_PUBLIE",
     "AVIS_EFFACES_30_JOURS", "COMMENTAIRES_EFFACES_30_JOURS", "ABONNEMENT_EN_ATTENTE", "ABONNEMENT_ACTIF", "ABONNEMENT_IMPAYE", "ABONNEMENT_RESILIE",
@@ -100,7 +100,8 @@
   const etoiles = n => n == null ? t("note.effacee") : t("etoiles", { n });
   // Avis de plus de 30 jours : texte, note et auteur effacés (règle « Content storage » de l'API Google Business Profile) ; notre réponse reste.
   const citation = x => x.efface_le ? `<p class="note efface">${t("avis.efface")}</p>` : x.texte ? `<p class="citation"${lc()}>${t("guillemets", { x: e(x.texte) })}</p>` : `<p class="citation">${t("avis.sans.texte")}</p>`;
-  const raisonsTexte = l => (l || []).map(r => ph(r)).join(", ");
+  // Motifs d'un avis sensible : la base écrit « sante » (moteur/avis/regles.js) ; le commerçant lit « santé » (22/10/2026 : pas d'étiquette technique).
+  const raisonsTexte = l => (l || []).map(r => ph(r === "sante" ? "santé" : r)).join(", ");
 
   // ---------------- Aperçu au format du réseau et légende par réseau (Contenus et Accueil)
   // Un cadre sobre qui rappelle la publication sur chaque réseau. Aucun logo de marque : le nom du réseau suffit.
@@ -327,7 +328,8 @@
     const [u1, v1, u91, ...vign] = await Promise.all([urlSure(premier || dernier), videoSure(premier || dernier), premier ? url916(premier) : null, ...prochaines.map(x => urlSure(x.contenu))]);
     // Sous-titre aligné sur « une photo, un clic » : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires), le même
     // que le bilan du mois et les jetons de validation, et leur durée (environ 40 secondes chacune). Les alertes ont leur propre bandeau.
-    const mois = new Date(k.mois + "T12:00:00"), nv = aValider.length + reponses.length + cmValider.length, na = humains.length + cmHumains.length + (idee ? 1 : 0);
+    // Un avis sensible n'en fait plus partie (décision de PJ du 22/10/2026) : l'équipe s'en charge, le commerçant n'a rien à faire.
+    const mois = new Date(k.mois + "T12:00:00"), nv = aValider.length + reponses.length + cmValider.length, na = cmHumains.length + (idee ? 1 : 0);
     const phrase = nv ? t("acc.validations", { n: nv, m: Math.max(1, Math.round(nv * 40 / 60)) }) : na ? t("acc.choses", { n: na }) : t(mr && mr.faits < mr.total ? "acc.reste.mer" : "acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
     const ficheRemplie = c.specialites || c.ton || c.horaires;
@@ -350,12 +352,13 @@
         </section>`;
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
-        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t("acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
+        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(offreDe(c).delegation ? "acc.humains.texte.equipe" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       ${cmHumains.length ? `<section class="alerte" id="alerte-commentaires"><div><p class="fort">${t("acc.cm.titre", { n: cmHumains.length })}</p>
         <p>${t("acc.cm.texte")}</p></div><a class="bouton second" href="#/commentaires">${t("acc.cm.lire", { n: cmHumains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
         <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
       <p class="msg" id="msg" role="status"></p>
+      ${carteAutorisation(c)}
       ${await proposition(c)}
       ${premier ? carteContenu : ""}
       ${blocIdeeSemaine(idee)}
@@ -393,7 +396,7 @@
           <div class="pied"><p class="note">${t("acc.compteur.zero", { mois: (mois.getMonth() + 1) % 12 })}</p><a href="#/offre">${t("acc.voir.offre")}</a></div>
         </section>
       </div>`;
-    brancherDecisions(vue, accueil); brancherAvis(vue, accueil); brancherAutomatisations(vue, accueil); brancherCommentaires(vue, accueil);
+    brancherDecisions(vue, accueil); brancherAvis(vue, accueil); brancherAutomatisations(vue, accueil); brancherCommentaires(vue, accueil); brancherAutorisation(accueil);
   }
 
   // ---------------- Fiche
@@ -448,6 +451,7 @@
   async function photos() {
     const [c, l] = await Promise.all([D.commerce(), D.photos()]);
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.creer"), t("photos.titre"), t("photos.chapo"))}
+      ${c.photos_autorisees_le ? `<p class="note" id="autorisation-donnee">${t("aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
           <form id="f"><div class="f"><div class="depot">
@@ -461,6 +465,7 @@
           ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
       ${await blocDepotVideo(c)}`;
+    brancherAutorisation(photos);
     // Deux façons de choisir (appareil photo, galerie ou fichiers de l'ordinateur) ; l'envoi reste le même pour les deux.
     const choisies = () => [...$("appareil").files, ...$("fichiers").files];
     $("appareil").onchange = $("fichiers").onchange = () => { const fs = choisies(); $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length }); };
@@ -659,10 +664,11 @@
   // Les idées sont fusionnées dans Contenus : bouton « Proposer des idées », qui ouvre le panneau des idées.
   let ideesOuvertes = false;
   async function panneauIdees(c) {
-    const [k, l] = await Promise.all([D.compteur(), D.idees()]), plein = k.publications_utilisees >= k.publications_plafond;
+    // Hors plafond depuis le 22/10/2026 (décision de PJ) : une demande ne consomme plus de publication ; la base en accepte une par 24 heures.
+    const [k, l] = await Promise.all([D.compteur(), D.idees()]);
     return `<section class="carte" id="idees" aria-labelledby="idees-titre"><div class="carte-tete"><h2 id="idees-titre">${t("idees.titre")}</h2><button type="button" class="lien" id="fermer-idees">${t("fermer")}</button></div>
-        <p class="texte2">${t("idees.texte", { a: k.publications_utilisees, b: k.publications_plafond })}</p>
-        <div class="actions"><button type="button" class="bouton" id="demande"${plein || c.en_pause ? " disabled" : ""}>${t("idees.demander")}</button><p class="msg" id="msg-idees" role="status">${plein ? t("idees.plafond") : ""}</p></div>
+        <p class="texte2">${t("idees.texte")}</p>
+        <div class="actions"><button type="button" class="bouton" id="demande"${c.en_pause ? " disabled" : ""}>${t("idees.demander")}</button><p class="msg" id="msg-idees" role="status"></p></div>
         ${l.length ? `<ul class="liste idees">${l.map(x => `<li${x.semaine ? ` data-idee="${e(x.id)}"` : ""}><div><p class="fort"${lc()}>${e(x.titre)}</p><p class="texte2"${lc()}>${e(x.texte)}</p>
           ${x.semaine ? `<p class="note">${t("idee.semaine")}${x.motif ? `. <span${lc()}>${e(x.motif)}</span>` : ""}</p>${x.statut === "a_valider" ? `<div class="actions"><button type="button" class="bouton second petit" data-decider-idee="retenue">${t("idee.retenir")}</button><button type="button" class="lien" data-decider-idee="ecartee">${t("idee.ecarter")}</button></div>` : ""}` : ""}</div>
           <span class="note">${x.semaine && x.statut !== "a_valider" ? t(x.statut === "retenue" ? "idee.retenue" : "idee.ecartee") + ", " : ""}${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("idees.vide")}</p>`}</section>`;
@@ -744,6 +750,19 @@
     }));
   }
 
+  // ---------------- Autorisation photos (décision de PJ du 22/10/2026, CGV article 11) : case au premier écran (démarrage, et accueil tant qu'elle
+  // n'est pas cochée), état dans l'écran Photos. Fonction autoriser_photos (schema.sql) ; le retrait se fait par email (noté par l'équipe).
+  const carteAutorisation = c => c.photos_autorisees_le ? "" : `<section class="carte autorisation-photos" id="autorisation-photos" aria-labelledby="aut-titre">
+      <h2 id="aut-titre">${t("aut.titre")}</h2><p class="texte2">${t("aut.chapo")}</p>
+      <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t("aut.case")}</span></label>
+      <div class="actions"><button type="submit" class="bouton second" id="aut-ok">${t("aut.enregistrer")}</button></div><p class="msg" id="aut-msg" role="status"></p></form></section>`;
+  function brancherAutorisation(apres) {
+    const f = $("aut-f"); if (!f) return;
+    f.onsubmit = async ev => { ev.preventDefault();
+      if (!$("aut-case").checked) { $("aut-msg").textContent = t("aut.cocher"); $("aut-case").focus(); return; }
+      try { await D.autoriserPhotos(); await apres(); const m = $("msg-aut") || $("msg"); if (m) m.textContent = t("aut.merci"); } catch (er) { $("aut-msg").textContent = ph(er.message); } };
+  }
+
   // ---------------- Avis
   // Libellé de la réponse : « Réponse publiée… » seulement quand elle l'est réellement. Mode de secours des avis (20/10/2026) : une réponse prête,
   // publiée à la main par l'équipe tant que l'API de Google n'est pas ouverte, reste « en cours de publication » ; une fois collée sur la fiche,
@@ -751,6 +770,11 @@
   const etiquetteReponse = x => x.statut === "a_publier_main" ? "avis.rep.encours" : x.escalade_le ? "avis.rep.renomia"
     : x.statut === "publie" && x.publie_par === "equipe" && x.decision === "publication_automatique" ? "avis.rep.publiee"
     : x.decision === "publication_automatique" ? "avis.rep.auto" : "avis.rep.validee";
+  // Avis sensible (décision de PJ du 22/10/2026) : notre équipe s'en charge, le commerçant est prévenu et n'a rien à faire. En attente : texte de
+  // l'offre (Premium : l'équipe répond ; sinon la réponse lui est envoyée par email pour accord) ; réponse proposée (propose_le) : la date de l'email ;
+  // réponse publiée : « Notre équipe s'en est chargée. »
+  const texteSensible = (x, c) => x.statut === "publie" ? t("avis.sensible.fait") : x.statut !== "humain" ? ""
+    : x.propose_le && !offreDe(c).delegation ? t("avis.sensible.propose", { d: date(x.propose_le) }) : t(offreDe(c).delegation ? "avis.sensible.texte.equipe" : "avis.sensible.texte");
   async function avis() {
     const [c, l0] = await Promise.all([D.commerce(), D.avis()]);
     const rang = x => x.statut === "a_valider" && !x.sensible ? 0 : x.sensible || x.statut === "humain" ? 1 : 2, l = l0.map((x, i) => [x, i]).sort((a, b) => rang(a[0]) - rang(b[0]) || a[1] - b[1]).map(x => x[0]);
@@ -759,7 +783,7 @@
         <div class="pile">${l.length ? l.map(x => `<article class="carte avis${x.sensible ? " attention" : ""}" data-avis="${e(x.id)}">
           <div class="carte-tete"><p class="fort">${etoiles(x.note)}</p><p class="etat${x.statut === "a_valider" && !x.sensible ? " actif" : ""}">${ST_AVIS[x.statut] || e(x.statut)}</p></div>
           ${citation(x)}<p class="note">${x.auteur && !x.efface_le ? e(x.auteur) + " · " : ""}${t("recu.le", { d: date(x.cree_le) })}</p>
-          ${x.sensible ? `<div class="encart" role="alert"><p class="fort">${t("avis.sensible", { r: e(raisonsTexte(x.raisons)) })}</p><p>${t("avis.sensible.texte")}</p></div>` : ""}
+          ${x.sensible ? `<div class="encart" role="alert"><p class="fort">${t("avis.sensible", { r: e(raisonsTexte(x.raisons)) })}</p>${texteSensible(x, c) ? `<p>${texteSensible(x, c)}</p>` : ""}</div>` : ""}
           ${x.statut === "a_valider" && !x.sensible ? reponseAValider(x) : ""}
           ${x.statut === "escalade" ? `<p class="note">${t(offreDe(c).delegation ? "avis.equipe.texte" : "avis.escalade.texte")}</p>` : ""}
           ${x.statut === "publie" || x.statut === "valide" || x.statut === "a_publier_main" ? `<p class="reponse"><span class="fort">${t(etiquetteReponse(x))}</span> <span${lc()}>${e(x.reponse || x.reponse_proposee || "")}</span></p>` : ""}</article>`).join("")
@@ -1205,6 +1229,7 @@
     }
     const q = QUESTIONS[dem.i], v = dem.rep[q.cle] || "";
     vue.innerHTML = `${entete(t("dem5.titre"), e(c.nom), t("dem5.chapo"))}
+      ${carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <section class="carte demarrage">
         <div class="mesure"><div class="mesure-tete"><span class="fort">${t("dem5.question", { n: dem.i + 1 })}</span></div>${jauge(dem.i + 1, 5)}</div>
         <form id="dem-f" novalidate>
@@ -1230,6 +1255,7 @@
     $("dem-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
     $("dem-passer").onclick = async () => { await avancer(); };
     if ($("dem-precedent")) $("dem-precedent").onclick = async () => { lire(); dem.i--; await demarrage(); };
+    brancherAutorisation(async () => { lire(); await demarrage(); });
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
 

@@ -67,7 +67,41 @@
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
     const etat = m && m.verrouille ? t("con.sty.ligne." + (m.valide_par === "renom" ? "renom" : "commercant"), { d: I.date(m.verrouille_le || m.maj) }) : t(m ? "con.sty.ligne.attente" : "con.sty.ligne.aucun");
-    return `<div class="pile serre style-ligne"><p class="note">${etat}</p>${n ? `<p class="note fort">${t("con.sty.ligne.demandes", { n })}</p>` : ""}<a class="bouton second petit" href="${I.lien("console.html")}#/style/${encodeURIComponent(c.id)}" data-style="${e(c.id)}">${t("con.sty.ouvrir")}</a></div>`; };
+    return `<div class="pile serre style-ligne"><p class="note">${etat}</p>${n ? `<p class="note fort">${t("con.sty.ligne.demandes", { n })}</p>` : ""}<a class="bouton second petit" href="${I.lien("console.html")}#/style/${encodeURIComponent(c.id)}" data-style="${e(c.id)}">${t("con.sty.ouvrir")}</a></div>`
+      + lignePhotos(c); };
+  // Autorisation photos (décision de PJ du 22/10/2026, CGV article 11) : son état, et « Déposer des photos pour ce client » (panneau #/photos/<commerce>).
+  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? t("con.ph.autorise", { d: I.date(c.photos_autorisees_le) }) : t("con.ph.non")}</p>
+    <a class="bouton second petit" href="${I.lien("console.html")}#/photos/${encodeURIComponent(c.id)}" data-photos="${e(c.id)}">${t("con.ph.bouton")}</a></div>`;
+  // Panneau « Déposer des photos pour ce client » : fermé sans l'autorisation du commerçant (la base le refuse aussi : admin_deposer_photos et la règle du
+  // seau). Envoi de chaque photo dans le dossier du commerce (même envoi que l'espace), puis un seul enregistrement (1 à 10 photos), source « equipe ».
+  async function photosClient(cid) {
+    const c = cid && (await D.adminCommerces()).find(x => x.id === cid); if (!c) { location.hash = "#/commerces"; return; }
+    const ouvert = !!c.photos_autorisees_le;
+    vue.innerHTML = `<div class="entete"><p class="sur">${t("con.ph.bouton")}</p><h1>${e(c.nom)}</h1><p class="chapo">${t("con.ph.chapo")}</p></div><p class="retour-liste"><a href="#/commerces">${t("con.sty.retour")}</a></p>
+      <section class="carte" id="ph-client"><p class="fort">${ouvert ? t("con.ph.autorise", { d: I.date(c.photos_autorisees_le) }) : t("con.ph.non")}</p>
+      ${ouvert ? `<form id="ph-f"><div class="f"><label for="ph-fichiers">${t("con.ph.choisir")}</label><input id="ph-fichiers" type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple></div>
+        <div class="actions"><button class="bouton" type="submit" id="ph-ok">${t("con.ph.deposer")}</button><button type="button" class="lien" id="ph-retirer">${t("con.ph.retirer")}</button></div></form>`
+      : `<p class="texte2" id="ph-ferme">${t("con.ph.sans")}</p>`}<p class="msg" id="msg" role="status"></p></section>`;
+    if (!ouvert) return;
+    $("ph-f").onsubmit = async ev => {
+      ev.preventDefault(); const fs = [...$("ph-fichiers").files];
+      if (!fs.length) return msg(t("con.ph.aucune")); if (fs.length > 10) return msg(t("con.ph.trop"));
+      $("ph-ok").disabled = true;
+      try {
+        const recus = [];
+        for (const [i, f] of fs.entries()) { msg(t("con.ph.envoi", { i: i + 1, n: fs.length })); const r = await D.adminEnvoyerPhoto(cid, f); recus.push({ chemin: r.chemin, nom: f.name, taille: f.size }); }
+        const r = await D.adminDeposerPhotos(cid, recus); $("ph-fichiers").value = ""; msg(t("con.ph.ok", { n: r.nb_photos }));
+      } catch (er) { msg(ph(er.message)); } finally { $("ph-ok").disabled = false; }
+    };
+    $("ph-retirer").onclick = async () => { if (!window.confirm(t("con.ph.retirer") + " ?")) return;
+      try { await D.adminRetirerAutorisationPhotos(cid); await photosClient(cid); msg(t("con.ph.retire")); } catch (er) { msg(ph(er.message)); } };
+  }
+  // Accès vérifié (22/10/2026, admin_acces_reseau) : par réseau compris dans l'offre (et retenu), l'état réel et le bouton « Accès vérifié » (l'équipe a
+  // accepté l'invitation : fiche Google, Meta Business Suite, TikTok) ou « Accès retiré » (le client a retiré l'accès). Sans réseau « connecté »,
+  // la base ne programme rien et la file « Contenus à publier » reste vide.
+  const ligneAcces = c => `<div class="pile serre acces-ligne">${window.RENOM_RESEAUX_AUTORISES(c).map(r => { const k = (c.comptes || {})[r] || {}, on = k.etat === "connecte";
+    return `<div class="pile serre" data-acces-res="${e(r)}"><p class="note${on ? " fort" : ""}">${on ? (k.maj ? t("con.acces.etat.on", { res: NOM_RESEAU[r] || e(r), d: dh(k.maj) }) : t("con.acces.etat.connecte", { res: NOM_RESEAU[r] || e(r) })) : t("con.acces.etat.off", { res: NOM_RESEAU[r] || e(r) })}</p>
+      <button type="button" class="bouton ${on ? "second " : ""}petit" data-acces="${e(r)}" data-oui="${on ? 0 : 1}">${t(on ? "con.acces.retirer" : "con.acces.verifier")}</button></div>`; }).join("")}</div>`;
   async function commerces() {
     const l = (await D.adminCommerces()).sort((a, b) => (RANG[(a.sante || {}).niveau] ?? 3) - (RANG[(b.sante || {}).niveau] ?? 3) || a.nom.localeCompare(b.nom));
     const C = k => t("con.col." + k);
@@ -76,12 +110,15 @@
       return `<tr data-id="${e(c.id)}"><td data-l="${C("commerce")}"><p class="fort">${e(c.nom)}</p><p class="note">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""}</p>${ligneStyle(c)}</td>
         <td data-l="${C("sante")}">${sante(c.sante)}</td><td data-l="${C("mer")}">${miseEnRoute(c.sante)}</td>
         <td data-l="${C("offre")}"><div class="pile serre"><select data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, o]) => !o.retiree || c.offre_id === k2).map(([k2, o]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${o.nom}${o.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div></td>
-        <td data-l="${C("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p><p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></td><td data-l="${C("comptes")}">${t("con.connectes", { n: cc })}</td><td data-l="${C("alertes")}"><span class="${c.alertes ? "fort" : ""}">${c.alertes}</span></td>
+        <td data-l="${C("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p><p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></td><td data-l="${C("comptes")}"><p>${t("con.connectes", { n: cc })}</p>${ligneAcces(c)}</td><td data-l="${C("alertes")}"><span class="${c.alertes ? "fort" : ""}">${c.alertes}</span></td>
         <td data-l="${C("etat")}"><div class="pile serre"><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div></td></tr>`; }).join("")}</tbody></table></section>`;
     vue.querySelectorAll("tr[data-id]").forEach(tr => tr.addEventListener("click", async ev => {
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = tr.dataset.id, c = l.find(x => x.id === id);
       try { if (b.dataset.a === "offre") await D.adminOffre(id, tr.querySelector("[data-offre]").value); else await D.adminPause(id, !c.en_pause); await commerces(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); }
     }));
+    vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async ev => { ev.stopPropagation(); const id = b.closest("tr").dataset.id, r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
+      if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
+      try { const x = await D.adminAccesReseau(id, r, oui); await commerces(); msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 })); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     vue.querySelectorAll("[data-mer]").forEach(b => b.onclick = async () => { try { await D.adminMiseEnRoute(b.closest("tr").dataset.id, b.dataset.mer, "fait"); await commerces(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } });
   }
   // ---------------- Prospects (audit gratuit de la page de vente) : relances J+2, J+5, J+10 envoyées par le service du jour
@@ -160,10 +197,24 @@
           <div class="actions"><button type="button" class="bouton second petit" data-copier-gbp>${t("con.copier")}</button>${x.lien ? `<a class="bouton second petit" href="${e(x.lien)}" target="_blank" rel="noopener" data-ouvrir-gbp>${t("con.gbp.ouvrir")}</a>` : ""}<button type="button" class="bouton petit" data-publie-gbp>${t("con.gbp.marquer")}</button></div>
           ${x.lien ? "" : `<p class="note">${t("con.gbp.sans.lien")}</p>`}</article>`).join("")}</div>`
         : `<section class="carte"><p class="texte2">${t("con.gbp.vide")}</p></section>`}`;
+  // ---------------- Publication à la main, sans Metricool (22/10/2026) : tant que RENOM_METRICOOL_ACTIF (n8n) ne vaut pas « oui », chaque contenu
+  // programmé arrive ici, une carte par réseau, triée par heure prévue (admin_publications_a_publier). Télécharger le média (lien signé au clic),
+  // copier la légende, publier depuis le compte du commerce, puis « Marquer comme publiée » : la base note l'heure du clic et le journal (interne).
+  // En évidence quand l'heure prévue est passée de plus de 2 heures. Pensé pour le téléphone : une colonne, boutons pleine largeur.
+  const NOM_RESEAU = { instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", google: t("res.google") };
+  const filePublications = l => `<section class="carte" aria-labelledby="pm-titre"><h2 id="pm-titre">${t("con.pm.titre")}</h2><p class="texte2">${t("con.pm.chapo")}</p></section>
+      ${l.length ? `<div class="pile" id="publications-a-publier">${l.map((x, i) => `<article class="carte${x.en_retard ? " attention" : ""}" data-pm="${e(x.id)}" data-pm-res="${e(x.reseau)}" data-pm-i="${i}">
+          <div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="etat${x.en_retard ? "" : " actif"}">${t(x.en_retard ? "con.pm.retard" : "con.pm.prevue", { d: dh(x.prevu_le) })}</span></div>
+          <p class="fort">${NOM_RESEAU[x.reseau] || e(x.reseau)} · ${t("con.pm.format." + (x.type === "video" ? "video" : x.format === "story" ? "story" : "publication"))}</p>
+          ${(x.deja || []).length ? `<p class="note">${t("con.pm.deja", { res: x.deja.map(r => NOM_RESEAU[r] || e(r)).join(", ") })}</p>` : ""}
+          ${x.son ? `<p class="note fort">${t("con.pm.son", { a: e(x.son.ambiance || "naturel") })}</p>` : ""}
+          <div class="f"><label for="pm-${i}">${t("con.pm.legende", { res: NOM_RESEAU[x.reseau] || e(x.reseau) })}</label><textarea id="pm-${i}" readonly data-pm-legende translate="no" rows="${Math.min(12, Math.max(3, Math.ceil(String(x.legende || "").length / 34) + 1))}">${e(x.legende || "")}</textarea></div>
+          <div class="actions"><button type="button" class="bouton second petit" data-pm-media>${t(x.type === "video" ? "con.pm.video" : "con.pm.visuel")}</button><button type="button" class="bouton second petit" data-pm-copier>${t("con.pm.copier")}</button><button type="button" class="bouton petit" data-pm-publiee>${t("con.pm.marquer")}</button></div></article>`).join("")}</div>`
+        : `<section class="carte"><p class="texte2" id="pm-vide">${t("con.pm.vide")}</p></section>`}`;
   async function apublier() {
-    const [avisG, l] = await Promise.all([D.adminAvisAPublier(), D.adminCommentairesAPublier()]);
+    const [pubs, avisG, l] = await Promise.all([D.adminPublicationsAPublier(), D.adminAvisAPublier(), D.adminCommentairesAPublier()]);
     vue.innerHTML = `${entete(t("con.apublier.titre"), t("con.apublier.chapo"))}
-      <p class="msg" id="msg" role="status"></p>${fileGoogle(avisG)}
+      <p class="msg" id="msg" role="status"></p>${filePublications(pubs)}${fileGoogle(avisG)}
       <section class="carte" aria-labelledby="cm-pub-titre"><h2 id="cm-pub-titre">${t("con.cm.titre")}</h2><p class="texte2">${t("con.cm.chapo")}</p></section>
       ${l.length ? `<div class="pile">${l.map(x => `<article class="carte" data-id="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.validee.le", { res: RESEAUX_CM[x.reseau] || e(x.reseau), d: dh(x.decide_le || x.cree_le) })}</span></div>
           ${x.texte ? `<p class="note">${t("con.commentaire.de", { de: x.auteur ? t("con.de", { a: e(x.auteur) }) : "", x: `<span translate="no">${e(x.texte)}</span>` })}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}
@@ -173,6 +224,15 @@
       : `<section class="carte"><p class="texte2">${t("con.rien.apublier")}</p></section>`}`;
     vue.querySelectorAll("[data-copier]").forEach(b => b.onclick = async () => { const x = b.closest("article").querySelector("[data-rep]"); try { await navigator.clipboard.writeText(x.value); msg(t("con.copiee")); } catch (er) { x.select(); msg(t("con.selectionnee")); } });
     vue.querySelectorAll("[data-publie]").forEach(b => b.onclick = async () => { try { await D.adminCommentairePublie(b.closest("article").dataset.id); await apublier(); msg(t("con.publiee.equipe")); } catch (er) { msg(ph(er.message)); } });
+    const pm = b => pubs[+b.closest("article").dataset.pmI];
+    vue.querySelectorAll("[data-pm-copier]").forEach(b => b.onclick = async () => { const x = b.closest("article").querySelector("[data-pm-legende]"); try { await navigator.clipboard.writeText(x.value); msg(t("con.pm.copiee")); } catch (er) { x.select(); msg(t("con.selectionnee")); } });
+    vue.querySelectorAll("[data-pm-media]").forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { const u = await D.adminLienMedia(pm(b)); if (!u) { msg(t("con.pm.sans.media")); return; }
+        const a = document.createElement("a"); a.href = u; a.download = ""; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); msg(t("con.pm.telechargement")); }
+      catch (er) { msg(ph(er.message)); } finally { b.disabled = false; } });
+    vue.querySelectorAll("[data-pm-publiee]").forEach(b => b.onclick = async () => { const x = pm(b); b.disabled = true;
+      try { const r = await D.adminPublicationPubliee(x.id, x.reseau); await apublier(); msg(t("con.pm.notee", { res: NOM_RESEAU[x.reseau] || x.reseau, h: dh(r.publie_le) })); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     vue.querySelectorAll("[data-copier-gbp]").forEach(b => b.onclick = async () => { const x = b.closest("article").querySelector("[data-rep-gbp]"); try { await navigator.clipboard.writeText(x.value); msg(t("con.copiee")); } catch (er) { x.select(); msg(t("con.selectionnee")); } });
     vue.querySelectorAll("[data-publie-gbp]").forEach(b => b.onclick = async () => { b.disabled = true; try { await D.adminAvisMarquerPubliee(b.closest("article").dataset.avisPub); await apublier(); msg(t("con.gbp.publiee")); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     // Son de plateforme des vidéos programmées : l'API Metricool ne documente aucun champ pour le poser (moteur/metricool_api.py) ; l'équipe
@@ -327,7 +387,7 @@
     })());
     x.oublier(); await x.rendre();
   }
-  const ROUTES = { commerces, prospects, garanties, alertes, videos, apublier, journal, invitations, creer, style };
+  const ROUTES = { commerces, prospects, garanties, alertes, videos, apublier, journal, invitations, creer, style, photos: photosClient };
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
@@ -336,7 +396,7 @@
     if (s.role !== "administrateur") return refuse();
     if (s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
     const [r, param] = location.hash.replace("#/", "").split("/"); const ecran = ROUTES[r] ? r : "commerces";
-    route = ecran === "style" ? "commerces" : ecran; connecte = true; dessinerNav();   // le panneau « Style du commerce » dépend de l'entrée Commerces
+    route = ["style", "photos"].includes(ecran) ? "commerces" : ecran; connecte = true; dessinerNav();   // panneaux « Style du commerce » et « Déposer des photos » : entrée Commerces
     const cle = ecran + "/" + (param || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
     try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
   }
