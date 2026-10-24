@@ -108,6 +108,8 @@ details.carte>summary{min-height:44px;padding:10px 0;cursor:pointer}
 .chapo{color:var(--texte2);max-width:640px;font-size:17px;line-height:1.45}
 .texte2{color:var(--texte2)}
 .note{font-size:14px;color:var(--discret)}
+/* Vidéo animée par IA (24/10/2026) : étiquette sobre, texte seul en casse normale ; ni trait ni barre de couleur, aucun orange. */
+.etiquette-ia{display:inline-block;margin:8px 0;padding:5px 10px;font-size:14px;font-weight:600;line-height:1.35;color:var(--texte2);background:var(--releve);border:1px solid var(--filet);border-radius:6px;text-transform:none;letter-spacing:normal;max-width:100%}
 .meta{font-size:13px;font-weight:700;color:var(--discret)}
 .etat{font-size:13px;font-weight:700;color:var(--discret)}
 .etat.actif{color:var(--citron)}

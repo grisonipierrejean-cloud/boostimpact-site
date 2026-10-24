@@ -1426,6 +1426,9 @@
     "dv.conservation": ["Vos vidéos d'origine sont effacées 30 jours après la validation du montage (ou 30 jours après un refus). Seule la vidéo montée reste.",
       "Your original videos are deleted 30 days after the edit is approved (or 30 days after a rejection). Only the edited video is kept.", "Uw originele video's worden 30 dagen na de goedkeuring van de montage gewist (of 30 dagen na een weigering). Alleen de gemonteerde video blijft."],
     "dv.montage.de.vos": ["montage de vos vidéos", "edit of your videos", "montage van uw video's"],
+    // Vidéo animée par IA (24/10/2026) : étiquette des cartes (Accueil, Contenus, valider.html) et de la console (« À publier à la main »).
+    "ia.etiquette": ["Vidéo animée par IA à partir de votre photo", "Video animated by AI from your photo", "Video met AI geanimeerd op basis van uw foto"],
+    "con.pm.ia": ["Vidéo animée par IA à partir de la photo du commerce : la mention IA reste dans la légende.", "Video animated by AI from the business's photo: the AI notice stays in the caption.", "Video met AI geanimeerd op basis van de foto van de zaak: de AI-vermelding blijft in het bijschrift."],
     "dv.st.en_envoi": ["Envoi en cours", "Uploading", "Wordt verstuurd"], "dv.st.envoye": ["Envoyé", "Sent", "Verstuurd"], "dv.st.en_montage": ["En montage", "Being edited", "In montage"], "dv.st.a_valider": ["À valider", "To approve", "Goed te keuren"],
     "dv.st.valide": ["Validé", "Approved", "Goedgekeurd"], "dv.st.refuse": ["Refusé", "Rejected", "Geweigerd"], "dv.st.annule": ["Annulé", "Cancelled", "Geannuleerd"], "dv.st.abandonne": ["Non terminé", "Not finished", "Niet afgerond"],
     "etape.DEPOT_VIDEO": ["Vidéos déposées", "Videos uploaded", "Video's opgeladen"], "etape.DEPOT_VIDEO_ANNULE": ["Envoi de vidéos annulé", "Video upload cancelled", "Verzending van video's geannuleerd"], "etape.MONTAGE": ["Montage à valider", "Edit to approve", "Montage goed te keuren"],
@@ -1563,6 +1566,7 @@
   };
   // Phrases avec une partie variable : [expression, remplacement anglais].
   const PR = [
+    [/^La mention « (.*) » doit rester dans la légende d'une vidéo animée par IA\.$/, (m, x) => `The notice “${x}” must stay in the caption of an AI-animated video.`, (m, x) => `De vermelding “${x}” moet in het bijschrift van een met AI geanimeerde video blijven.`],
     [/^En démonstration : (.+)\.$/, (m, l) => "In the demo: " + l.replace(/ ou ([^,]+)$/, " or $1") + ".", (m, l) => "In de demo: " + l.replace(/ ou ([^,]+)$/, " of $1") + "."],
     [/^Sur la fiche Google, le texte est limité à 1 500 caractères\. Celui-ci en compte (\d+)\.$/, (m, n) => `On the Google profile, text is limited to 1,500 characters. This one has ${nombre(n, 0, "en")}.`, (m, n) => `Op het Google-profiel is de tekst beperkt tot 1.500 tekens. Deze tekst telt er ${nombre(n, 0, "nl")}.`],
     [/^Choisissez de (\d+) à (\d+) avis \(vous en avez choisi (\d+)\)\.$/, (m, a, b, n) => `Choose ${a} to ${b} reviews (you've chosen ${n}).`, (m, a, b, n) => `Kies ${a} tot ${b} reviews (u hebt er ${n} gekozen).`],

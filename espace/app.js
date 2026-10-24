@@ -34,6 +34,8 @@
     "GARANTIE_MANQUEMENT", "MOIS_OFFERT_APPLIQUE", "RELEVE_MENSUEL", "OPTION_COMMANDEE", "OPTION_ELEMENTS_RECUS", "OPTION_LIVREE", "OPTION_SECOND_TEST_REMIS"]);
   const ST_ABO = I.carte("abo.st", ["en_attente", "actif", "impaye", "resilie"]);
   const M = window.RENOM_MAJ;
+  // Vidéo animée par IA (24/10/2026) : étiquette sobre sur la carte (texte seul, ni trait de couleur, ni majuscules d'étiquette).
+  const etiquetteIA = x => M.estIA(x) ? `<p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p>` : "";
   const nombre = I.nombre;
   const moisDe = m => new Date(m.slice(0, 7) + "-15T12:00:00");
   const hm = I.hm;
@@ -342,10 +344,10 @@
     const carteContenu = `<section class="carte a-valider"${premier ? ` data-contenu="${e(premier.id)}"` : ""}>
           <div class="carte-tete"><h2>${t(premier ? "acc.contenu.un" : "acc.contenu.aucun")}</h2>${aValider.length > 1 ? `<a href="#/contenus">${t("voir.les", { n: aValider.length })}</a>` : `<a href="#/contenus">${t("acc.ouvrir.contenus")}</a>`}</div>
           ${premier ? `<div class="apercu-reseaux">${blocReseaux(premier, u1, v1, u91)}<div class="apercu-texte">
-            <p class="meta">${FORMAT_LIB[M.formatDe(premier)]}</p>
+            <p class="meta">${FORMAT_LIB[M.formatDe(premier)]}</p>${etiquetteIA(premier)}
             <p class="note visible">${t("acc.legende.note")}</p>${formatsPublies(premier, u1, u91)}${decisions(premier, t("refuser"))}</div></div>`
           : dernier ? `<div class="apercu${v1 ? " avec-video" : ""}">${media(dernier, u1, v1)}<div class="apercu-texte">
-            <p class="meta">${t("acc.dernier", { type: t(dernier.type === "video" ? "type.video.courte" : "type.publication"), quand: I.minusculeDebut(jourRelatif(dernier.cree_le)) })}</p><p class="legende"${lc()}>${e(dernier.legende || "")}</p>
+            <p class="meta">${t("acc.dernier", { type: t(dernier.type === "video" ? "type.video.courte" : "type.publication"), quand: I.minusculeDebut(jourRelatif(dernier.cree_le)) })}</p>${etiquetteIA(dernier)}<p class="legende"${lc()}>${e(dernier.legende || "")}</p>
             <p class="etat">${ST_CONTENU[dernier.statut] || e(dernier.statut)}</p></div></div>`
           : `<p class="texte2">${t("acc.contenus.vide")}</p>`}
         </section>`;
@@ -692,7 +694,7 @@
       <p class="msg" id="msg" role="status"></p>
       ${liste.length ? `<div class="cartes">${liste.map((x, i) => `<article class="carte contenu" data-contenu="${e(x.id)}">
         <p class="meta"><span>${formatCourt(x)}${x.depot_video_id ? " · " + t("dv.montage.de.vos") : ""} · ${jourRelatif(x.cree_le)}</span><span class="etat${x.statut === "a_valider" ? " actif" : ""}">${ST_CONTENU[x.statut] || e(x.statut)}</span></p>
-        ${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
+        ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
         ${x.note_modification ? `<p class="note">${t("contenus.demande")}<span${lc()}>${e(x.note_modification)}</span></p>` : ""}
         ${x.statut === "a_valider" ? formatsPublies(x, urls[i], u9s[i]) + decisions(x, t("contenus.refuser")) : x.statut === "approuve" ? boutonsAuto(x.id, c.metier) : ""}</div></article>`).join("")}</div>`
       : `<section class="carte"><p class="texte2">${VIDE_FILTRE[filtre]}</p></section>`}`

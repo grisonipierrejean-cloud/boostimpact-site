@@ -242,6 +242,7 @@
       ${l.length ? `<div class="pile" id="publications-a-publier">${l.map((x, i) => `<article class="carte${x.en_retard ? " attention" : ""}" data-pm="${e(x.id)}" data-pm-res="${e(x.reseau)}" data-pm-i="${i}">
           <div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="etat${x.en_retard ? "" : " actif"}">${t(x.en_retard ? "con.pm.retard" : "con.pm.prevue", { d: dh(x.prevu_le) })}</span></div>
           <p class="fort">${NOM_RESEAU[x.reseau] || e(x.reseau)} · ${t("con.pm.format." + (x.type === "video" ? "video" : x.format === "story" ? "story" : "publication"))}</p>
+          ${x.ia ? `<p class="etiquette-ia" data-ia>${t("con.pm.ia")}</p>` : ""}
           ${(x.deja || []).length ? `<p class="note">${t("con.pm.deja", { res: x.deja.map(r => NOM_RESEAU[r] || e(r)).join(", ") })}</p>` : ""}
           ${x.son ? `<p class="note fort">${t("con.pm.son", { a: e(x.son.ambiance || "naturel") })}</p>` : ""}
           <div class="f"><label for="pm-${i}">${t("con.pm.legende", { res: NOM_RESEAU[x.reseau] || e(x.reseau) })}</label><textarea id="pm-${i}" readonly data-pm-legende translate="no" rows="${Math.min(12, Math.max(3, Math.ceil(String(x.legende || "").length / 34) + 1))}">${e(x.legende || "")}</textarea></div>

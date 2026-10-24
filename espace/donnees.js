@@ -98,7 +98,7 @@
       const r = premierDe(await rpcPublic("objet_par_jeton", { p_jeton: String(jeton || "") })); if (!r) return null;
       const base = { etat: "a_valider", objet: r.objet, commerce: r.commerce, expire_le: r.expire_le, langue: r.langue || null };
       // apercu_9x16_url : visuel TikTok d'une publication photo (bloc SQL « Aperçus par réseau », 15/10/2026) ; absent d'un lien plus ancien.
-      if (r.contenu) { const c = r.contenu; return { ...base, type: c.type, format: c.format, legende: c.legende || "", legendes: c.legendes || null, visuel_url: c.apercu_url || null, visuel_9x16_url: c.apercu_9x16_url || null, video_url: null }; }
+      if (r.contenu) { const c = r.contenu; return { ...base, type: c.type, format: c.format, legende: c.legende || "", legendes: c.legendes || null, visuel_url: c.apercu_url || null, visuel_9x16_url: c.apercu_9x16_url || null, video_url: null, ia: c.ia === true }; }
       if (r.avis) { const a = r.avis; return { ...base, note: a.note, texte: a.texte || "", auteur: a.auteur || "", reponse_proposee: a.reponse_proposee || "" }; }
       if (r.commentaire) { const m = r.commentaire; return { ...base, reseau: m.reseau, categorie: m.categorie, texte: m.texte || "", auteur: m.auteur || "", reponse_proposee: m.reponse_proposee || "", recu_le: m.recu_le }; }
       return r;
@@ -136,6 +136,15 @@
   // Légende propre au réseau, avec repli sur la légende unique (contenus créés avant la mise à jour).
   const legendeDe = (c, r) => { const l = c && c.legendes && c.legendes[r]; return typeof l === "string" && l.trim() ? l : (c && c.legende) || ""; };
   const longueur = t => Array.from(String(t || "")).length;
+  // Vidéo animée par IA (24/10/2026) : drapeau {"drapeau": "ia"} posé par le moteur (moteur/video_ia.py) dans contenus.drapeaux, ou « ia » rendu
+  // par objet_par_jeton et admin_publications_a_publier. La légende d'un réseau doit garder une des trois mentions (mêmes textes que
+  // moteur/video_ia.json et mentions_ia_par_langue() de schema.sql, égalité testée par moteur/tests/test_video_ia.py) ; même phrase que la base.
+  const MENTIONS_IA = { fr: "Vidéo animée par IA à partir de notre photo.", en: "AI-animated video from our photo.", nl: "Video met AI geanimeerd op basis van onze foto." };
+  const estIA = c => !!c && (c.ia === true || (Array.isArray(c.drapeaux) && c.drapeaux.some(d => d && d.drapeau === "ia" && d.ia !== false)));
+  const controlerMentionIA = (c, t, langue) => {
+    if (!estIA(c) || !String(t || "").trim() || Object.values(MENTIONS_IA).some(m => String(t).includes(m))) return;
+    throw new Error(`La mention « ${MENTIONS_IA[langue] || MENTIONS_IA.fr} » doit rester dans la légende d'une vidéo animée par IA.`);
+  };
   const controlerLegende = (r, t) => {
     if (!RESEAUX.includes(r)) throw new Error("Réseau inconnu.");
     t = String(t || "").trim(); if (!t) throw new Error("La légende ne peut pas être vide.");
@@ -592,7 +601,7 @@
         return { chemin, deja: r.deja };
       },
       async adminDeposerPhotos(cid, details) { const r = await sb.rpc("admin_deposer_photos", { p_commerce: cid, p_details: details }); if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data; },
-      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id,drapeaux").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Kit de marque (écran « Votre style ») : colonne commerces.marque ; la base contrôle le kit, pose la version, l'auteur et aligne commerces.couleurs.
       async marque() { return marqueDe(await self.commerce()); },
       async deposerLogo(f) { return logoDe(await self.commerce(), f); },
@@ -786,7 +795,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { CRENEAUX, LIMITE_GOOGLE, formatDe, reseauxPour, legendeDe, longueur, partiesParis, prochainCreneau, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel };
+  window.RENOM_MAJ = { CRENEAUX, LIMITE_GOOGLE, formatDe, reseauxPour, legendeDe, longueur, partiesParis, prochainCreneau, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
