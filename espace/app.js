@@ -128,8 +128,10 @@
   }
   function blocReseaux(x, u, v, u9) {
     vus.set(x.id, { x, u, v, u9 }); const r = choixRes[x.id] || "instagram", modifiable = (x.statut === "a_valider" || x.statut === "approuve") && M.reseauxPour(x).includes(r);
+    // Onglets : seulement les réseaux où ce format peut partir (24/10/2026) : ni vidéo ni story sur la fiche Google, donc pas d'onglet « Fiche Google ».
+    const ordre = ORDRE_RES.filter(k => M.reseauxPour(x).includes(k));
     return `<div class="reseaux" data-reseaux="${e(x.id)}">
-      <div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ORDRE_RES.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}">${RES[k]}</button>`).join("")}</div>
+      <div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}">${RES[k]}</button>`).join("")}</div>
       <div class="res-panneau" role="tabpanel" aria-labelledby="t-${e(x.id)}-${r}">${cadre(x.id)}</div>
       ${modifiable ? `<div class="f" data-edition hidden><label for="leg-${e(x.id)}">${t("leg.pour", { res: RES[r] })}</label><textarea id="leg-${e(x.id)}" class="haut-texte" data-texte-legende${lc()}></textarea>
         <p class="note" data-compte-edition aria-live="polite"></p>
@@ -186,8 +188,9 @@
   vue.addEventListener("input", ev => { const ta = ev.target.closest("[data-texte-legende]"); if (!ta) return; const b = ta.closest("[data-reseaux]"); b.querySelector("[data-compte-edition]").textContent = compteEdition(choixRes[b.dataset.reseaux] || "instagram", ta.value); });
   vue.addEventListener("keydown", ev => {
     const k = ev.target.closest("[data-res]"); if (!k || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(ev.key)) return; ev.preventDefault();
-    const i = ORDRE_RES.indexOf(k.dataset.res), j = ev.key === "Home" ? 0 : ev.key === "End" ? 3 : (i + (ev.key === "ArrowRight" ? 1 : 3)) % 4, b = k.closest("[data-reseaux]");
-    choixRes[b.dataset.reseaux] = ORDRE_RES[j]; redessinerReseaux(b, true);
+    const b = k.closest("[data-reseaux]"), ordre = [...b.querySelectorAll("[role=tab][data-res]")].map(x => x.dataset.res), n = ordre.length, i = ordre.indexOf(k.dataset.res);
+    const j = ev.key === "Home" ? 0 : ev.key === "End" ? n - 1 : (i + (ev.key === "ArrowRight" ? 1 : n - 1)) % n;
+    choixRes[b.dataset.reseaux] = ordre[j]; redessinerReseaux(b, true);
   });
 
   // ---------------- Navigation : barre latérale sur ordinateur, onglets du bas sur téléphone
@@ -267,7 +270,7 @@
     ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t("cx.chapo"), apres: apresEntree,
       extra: comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
       <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "",
-      pied: `<p class="retour"><a href="https://boostimpact.agency/">${t("cx.retour.site")}</a></p>` });
+      pied: `<p class="retour"><a href="../">${t("cx.retour.site")}</a></p>` });
   }
   // Visite directe de la démonstration (boutons sous le formulaire, redessinés quand on passe d'un mode de l'écran à l'autre).
   vue.addEventListener("click", async ev => { const b = ev.target.closest && ev.target.closest("[data-entrer]"); if (b && D.mode === "demo") { await D.ouvrirLien(b.dataset.entrer); await apresEntree(); } });
@@ -1453,7 +1456,7 @@
       $("va-creer").disabled = n < VA.MIN || !!c.en_pause;
       if (!$("msg").dataset.fixe) msg(n < VA.MIN ? t("va.cocher", { min: VA.MIN, n }) : "");
       // Aperçu : couleurs de la fiche pour un fond uni ; pour les photos, un fond sombre neutre tient lieu de photo assombrie.
-      const hex = (x, d) => /^#[0-9a-f]{6}$/i.test(x || "") ? x : d, accent = hex(co.accent, "#2438FF");
+      const hex = (x, d) => /^#[0-9a-f]{6}$/i.test(x || "") ? x : d, accent = String(co.accent || "").toUpperCase() === "#2438FF" ? "#0F1C3A" : hex(co.accent, "#0F1C3A");   // même accent par défaut que moteur/video_avis.py (24/10/2026)
       const fond = va.fond === "photos" ? "#26282E" : va.fond === "accent" ? accent : hex(co.fond, "#FFFFFF");
       const encre = va.fond === "photos" ? "#FFFFFF" : [hex(co.texte, "#000000"), hex(co.fond, "#FFFFFF"), "#000000", "#FFFFFF"].find(x => vaContraste(x, fond) >= 4.5) || "#000000";
       const etoile = va.fond === "uni" && vaContraste(accent, fond) >= 3 ? accent : encre;

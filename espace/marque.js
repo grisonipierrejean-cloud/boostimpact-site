@@ -106,9 +106,13 @@
       style_photo: (!logo && groupes.length) ? styleDesPhotos(ech) : (STYLE_METIER[metier] || "naturel"),
       gabarit_prefere: null, gabarit_impose: false, mots_signature: [], a_eviter: [] };
   }
+  // Accent quand le commerce n'en a fixé aucun (24/10/2026, comme moteur/marque.py) : bleu nuit #0F1C3A ; le bleu #2438FF par défaut de la base
+  // n'est jamais un choix du commerce et disparaît des kits non validés.
+  const ACCENT_DEFAUT = "#0F1C3A", ACCENT_HISTORIQUE = "#2438FF";
+  const accentChoisi = x => estHexa(x) && x.toUpperCase() !== ACCENT_HISTORIQUE ? x : null;
   function defaut(couleurs, metier, ton, cat) {
-    const c = couleurs || {}, k = proposer({ metier, ton, cat });
-    return { ...k, couleurs: couleursLisibles({ principale: c.accent || "#2438FF", secondaire: c.accent || "#2438FF", fond: c.fond || "#FFFFFF", texte: c.texte || "#000000" }),
+    const c = couleurs || {}, k = proposer({ metier, ton, cat }), a = accentChoisi(c.accent) || ACCENT_DEFAUT;
+    return { ...k, couleurs: couleursLisibles({ principale: a, secondaire: a, fond: c.fond || "#FFFFFF", texte: c.texte || "#000000" }),
       couple: "franc", police_titres: "bricolage", police_texte: "figtree", palette: [] };
   }
   // Kit complet et sûr (toute valeur hors liste remplacée par la valeur par défaut), comme marque.normaliser du moteur.
@@ -117,7 +121,7 @@
     if (!m || typeof m !== "object") return base;
     const k = { ...base }; CLES.forEach(x => { if (x in m && m[x] != null) k[x] = m[x]; });
     const cc = m.couleurs && typeof m.couleurs === "object" ? m.couleurs : {};
-    k.couleurs = couleursLisibles(Object.fromEntries(["principale", "secondaire", "fond", "texte"].map(x => [x, estHexa(cc[x]) ? cc[x].toUpperCase() : base.couleurs[x]])));
+    k.couleurs = couleursLisibles(Object.fromEntries(["principale", "secondaire", "fond", "texte"].map(x => [x, estHexa(cc[x]) && (m.verrouille || x === "fond" || x === "texte" || cc[x].toUpperCase() !== ACCENT_HISTORIQUE) ? cc[x].toUpperCase() : base.couleurs[x]])));
     if (!(k.police_titres in cat.familles)) k.police_titres = base.police_titres;
     if (!cat.textes.includes(k.police_texte)) k.police_texte = base.police_texte;
     if (!STYLES_PHOTO.includes(k.style_photo)) k.style_photo = base.style_photo;
@@ -228,8 +232,9 @@
     const p = fab(tmin); return [p, tmin, coupe(x, texte, p, tmin === 0 ? 1 : largeur)];
   }
   function ecrire(x, t, px, py, police, couleur) { x.font = police; x.fillStyle = couleur; x.textBaseline = "alphabetic"; const m = x.measureText(t); x.fillText(t, px, py + (m.fontBoundingBoxAscent || 0)); }
-  function capitales(x, t, px, py, police, couleur, suivi = 3) { x.font = police; for (const ch of t.toUpperCase()) { ecrire(x, ch, px, py, police, couleur); px += x.measureText(ch).width + suivi; } return px; }
-  const largeurCap = (x, t, police, suivi = 3) => { x.font = police; return [...t.toUpperCase()].reduce((s, ch) => s + x.measureText(ch).width + suivi, 0); };
+  // Nom du commerce (24/10/2026, comme moteur/gabarits.py) : casse normale, sans espacement de lettres ; plus de filet ni de barre de couleur.
+  function nomCommerce(x, t, px, py, police, couleur) { ecrire(x, t, px, py, police, couleur); x.font = police; return px + x.measureText(t).width; }
+  const largeurNom = (x, t, police) => { x.font = police; return x.measureText(t).width; };
   function photoRect(x, img, dx, dy, dw, dh) {
     if (!img) { x.fillStyle = "#3A3C44"; x.fillRect(dx, dy, dw, dh); return; }
     const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height, rs = sw / sh, rd = dw / dh;
@@ -261,9 +266,8 @@
       const marge = 56, pad = 40, [pt, tt, lignes] = ajuste(x, textes.texte_visuel, titre, W - 2 * marge - 2 * pad, 84, 52, 3), pn = corps(26, 700);
       const ht = lignes.length * Math.floor(tt * 1.12), ch = pad + 30 + 18 + ht + pad, y0 = H - 140 - ch - 1;
       x.fillStyle = css(fond, 242 / 255); x.fillRect(marge, y0, W - 2 * marge + 1, ch + 1);
-      x.fillStyle = css(accent); x.fillRect(marge, y0, 11, ch + 1);
       const ink = css(encreSur(fond, c)), gauche = poserLogo(x, logo, k, W - marge - pad, y0 + pad + 7, 46, fond, 240);
-      if (gauche === null || marge + pad + largeurCap(x, nom, pn) + 24 <= gauche) capitales(x, nom, marge + pad, y0 + pad - 6, pn, css(couleurLibelle(fond, c)));
+      if (gauche === null || marge + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, marge + pad, y0 + pad - 6, pn, css(couleurLibelle(fond, c)));
       let y = y0 + pad + 40; for (const l of lignes) { ecrire(x, l, marge + pad, y, pt, ink); y += Math.floor(tt * 1.12); }
     } else if (gabarit === "editorial") {
       const m = 56; x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
@@ -272,15 +276,15 @@
       const ph = H - 2 * m - (28 + 20 + hT + 24 + 2 + 22 + hP) - 32;
       photoRect(x, photo, m, m, W - 2 * m, ph);
       let y = m + ph + 32; const pl = couleurLibelle(fond, c), gauche = poserLogo(x, logo, k, W - m, y + 12, 44, fond, 240);
-      if (gauche === null || m + largeurCap(x, nom, pn) + 24 <= gauche) capitales(x, nom, m, y, pn, css(pl));
+      if (gauche === null || m + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, m, y, pn, css(pl));
       y += 48; for (const l of lt) { ecrire(x, l, m, y, pt, ink); y += Math.floor(tt * 1.1); }
-      y += 24; x.fillStyle = css(pl); x.fillRect(m, y, W - 2 * m + 1, 3); y += 24;
+      y += 48;
       for (const l of petit) { ecrire(x, l, m, y, pp, ink); y += Math.floor(32 * 1.4); }
     } else {
       const m = 64, barre = 120; x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
       const ink = css(encreSur(fond, c)), inkAcc = css(encreSur(accent, c)); x.fillStyle = css(accent); x.fillRect(0, 0, W, barre + 1);
       const pn = corps(30, 700), gauche = poserLogo(x, logo, k, W - m, barre / 2, 64, accent, 300);
-      if (gauche === null || m + largeurCap(x, nom, pn, 4) + 24 <= gauche) capitales(x, nom, m, barre / 2 - 18, pn, inkAcc, 4);
+      if (gauche === null || m + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, m, barre / 2 - 18, pn, inkAcc);
       const [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, W - 2 * m, 120, 64, 4), pp = corps(36, 600);
       const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche]).slice(0, 4).flatMap(t => coupe(x, t, pp, W - 2 * m));
       const hT = lt.length * Math.floor(tt * 1.08), hI = info.length * Math.floor(36 * 1.5), photoH = H - barre - (56 + hT + 36 + hI + 40);

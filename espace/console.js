@@ -31,9 +31,13 @@
     if (!connecte) return;
     const lien = ([r, nom, icone], avecIcone) => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : ""}>${avecIcone ? `<span class="onglet-icone">${icone}</span>` : ""}<span>${nom}</span></a>`;
     if (large.matches) lat.innerHTML = `<div class="lat-in"><a class="logo" href="${I.lien("console.html")}" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><nav id="nav" class="menu" aria-label="${t("con.titre")}"><div class="groupe"><p class="groupe-lib">${t("con.titre")}</p>${ENTREES.map(x => lien(x, false)).join("")}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
-    else { haut.innerHTML = `<a class="logo" href="${I.lien("console.html")}" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><span class="haut-note">${t("con.titre")}</span>${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button>`; onglets.innerHTML = ENTREES.map(x => lien(x, true)).join("");
-      // La barre défile horizontalement : l'onglet ouvert reste visible.
-      const a = onglets.querySelector("[aria-current]"); if (a) onglets.scrollLeft = a.offsetLeft - (onglets.clientWidth - a.offsetWidth) / 2; }
+    else { haut.innerHTML = `<a class="logo" href="${I.lien("console.html")}" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><span class="haut-note">${t("con.titre")}</span>${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button>`; onglets.innerHTML = `<div class="ong-defile">${ENTREES.map(x => lien(x, true)).join("")}</div><div class="ong-jauge" aria-hidden="true"><span></span></div>`;
+      // La barre défile horizontalement : l'onglet ouvert reste visible. Jauge sous les onglets (24/10/2026) : montre qu'il y en a d'autres et où l'on est
+      // (les barres de défilement natives sont masquées sur téléphone).
+      const d = onglets.querySelector(".ong-defile"), j = onglets.querySelector(".ong-jauge"), a = d.querySelector("[aria-current]");
+      if (a) d.scrollLeft = a.offsetLeft - (d.clientWidth - a.offsetWidth) / 2;
+      const jauge = () => { const w = d.scrollWidth; j.hidden = w <= d.clientWidth + 1; j.firstChild.style.left = (100 * d.scrollLeft / w) + "%"; j.firstChild.style.width = (100 * d.clientWidth / w) + "%"; };
+      d.addEventListener("scroll", jauge, { passive: true }); jauge(); }
   }
 
   async function refuse() { connecte = false; dessinerNav(); vue.innerHTML = `<div class="connexion"><div class="carte"><div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div><div class="entete"><h1>${t("con.refuse.titre")}</h1><p class="chapo">${t("con.refuse.texte")}</p></div><a class="bouton second plein" href="${I.lien("index.html")}">${t("con.retour.espace")}</a></div></div>`; }
@@ -408,7 +412,12 @@
     const l = await D.adminJournal(), C = k => t("con.col." + k);
     vue.innerHTML = `${entete(t("con.journal.titre"))}<section class="carte"><div class="f etroit"><label for="filtre">${t("con.filtrer")}</label><input id="filtre" type="text"></div></section>
       <section class="carte tableau"><table class="tab"><thead><tr><th>${C("date")}</th><th>${C("commerce")}</th><th>${C("etape")}</th><th>${C("detail")}</th></tr></thead><tbody id="corps"></tbody></table></section>`;
-    const dessiner = () => { const f = $("filtre").value.toLowerCase(); $("corps").innerHTML = l.filter(x => !f || (x.commerce + " " + x.type).toLowerCase().includes(f)).map(x => `<tr><td data-l="${C("date")}">${dh(x.cree_le)}</td><td data-l="${C("commerce")}">${e(x.commerce || "")}</td><td data-l="${C("etape")}"><span class="fort">${e(x.type)}</span></td><td data-l="${C("detail")}" class="note casse" translate="no">${e(JSON.stringify(x.detail))}</td></tr>`).join(""); };
+    // Étape : libellé lisible (etape.* de i18n.js, les mêmes que l'historique de l'espace), le code en petit dessous pour le filtre et le support ;
+    // détail : « clé : valeur » au lieu du JSON brut (24/10/2026).
+    const libelle = ty => I.a("etape." + ty) ? t("etape." + ty) : String(ty || "").charAt(0) + String(ty || "").slice(1).toLowerCase().replace(/_/g, " ");
+    const valeur = (k, v) => v === true ? t("con.journal.oui") : v === false ? t("con.journal.non") : v && typeof v === "object" ? JSON.stringify(v) : k === "raison" ? ph(String(v)) : String(v);
+    const detail = d => d && typeof d === "object" && !Array.isArray(d) ? Object.entries(d).map(([k, v]) => `${k}${t("deux.points")}${valeur(k, v)}`).join(" · ") : (d == null ? "" : JSON.stringify(d));
+    const dessiner = () => { const f = $("filtre").value.toLowerCase(); $("corps").innerHTML = l.filter(x => !f || (x.commerce + " " + x.type + " " + libelle(x.type)).toLowerCase().includes(f)).map(x => `<tr><td data-l="${C("date")}">${dh(x.cree_le)}</td><td data-l="${C("commerce")}">${e(x.commerce || "")}</td><td data-l="${C("etape")}"><span class="fort">${e(libelle(x.type))}</span><br><span class="note" translate="no">${e(x.type)}</span></td><td data-l="${C("detail")}" class="note casse" translate="no">${e(detail(x.detail))}</td></tr>`).join(""); };
     $("filtre").oninput = dessiner; dessiner();
   }
   async function invitations() {

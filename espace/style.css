@@ -77,6 +77,8 @@ details.carte>summary{min-height:44px;padding:10px 0;cursor:pointer}
 .haut .haut-note+.langues{margin-left:0}
 .haut .langues+.quitter{margin-left:0}
 .haut-note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Sous 420 px, l'offre (espace) ou « Console » ne tient plus qu'en « Offre Premi… » ou « C… » : masquée (24/10/2026). L'offre reste sur l'accueil et l'écran Offre. */
+@media (max-width:419px){.haut-note{display:none}}
 .connexion-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-6px -6px -6px 0}
 .lat-pied{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 0 12px}
 .lat-pied .quitter{margin-top:0;padding:0 4px}
@@ -528,8 +530,10 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .themes li{align-items:flex-start;flex-wrap:wrap}
 .theme{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px}
 .t-barre{display:flex;gap:2px;height:8px}
-.t-pos{background:var(--marque);border-radius:4px}
-.t-neg{background:var(--texte2);border-radius:4px}
+/* Thèmes des avis (24/10/2026) : positives en bleu ardoise clair #B9C6DD (8,4:1 sur la surface), négatives en gris #7C8396 (3,8:1 sur la surface,
+   WCAG 1.4.11 ; le pierre #5D6270 ne ferait que 2,4:1) ; 2,2:1 entre les deux. Les nombres sont aussi écrits sous chaque thème. */
+.t-pos{background:#B9C6DD;border-radius:4px}
+.t-neg{background:#7C8396;border-radius:4px}
 .liste li>.t-compte{text-align:left}
 
 /* Notifications : aperçu de l'email (démonstration) */
@@ -573,15 +577,21 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .consentement input{margin-top:3px;flex:0 0 auto}
 details.dernieres summary{cursor:pointer;font-weight:700;min-height:44px;padding-top:10px;text-decoration:underline;text-underline-offset:3px}
 .sante{display:inline-block;font-size:13px;font-weight:700;line-height:1.4;border-radius:6px;padding:2px 8px;border:1px solid var(--bord);background:var(--releve);color:var(--encre)}
-.sante-vert{background:#10291B;border-color:#2F6B45;color:#9BE3B4}
-.sante-orange{background:#2A2610;border-color:#6B6026;color:#F0E08A}
+/* Santé (24/10/2026) : teintes de la charte, le mot reste écrit. Vert : contour ardoise, texte ardoise clair (8,4:1) ; orange : pastille pleine
+   ardoise clair, texte bleu nuit (9,8:1) ; rouge inchangé (seule alerte forte). */
+.sante-vert{background:transparent;border-color:#3B5781;color:#B9C6DD}
+.sante-orange{background:#B9C6DD;border-color:#B9C6DD;color:#0F1C3A}
 .sante-rouge{background:#331416;border-color:#7A3036;color:#FFB0B0}
 .raisons{list-style:none;margin:6px 0 0;padding:0;font-size:14px;line-height:1.4;color:var(--texte2)}
 .raisons li+li{margin-top:4px}
 /* Console sur téléphone : sept onglets lisibles (14 px), la barre défile horizontalement. */
-.console .onglets{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;gap:2px;padding-left:4px;padding-right:4px;font-size:14px}
-.console .onglets::-webkit-scrollbar{display:none}
+.console .onglets{display:block;padding-left:4px;padding-right:4px;font-size:14px}
+.console .ong-defile{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;gap:2px}
+.console .ong-defile::-webkit-scrollbar{display:none}
 .console .onglets a{flex:0 0 auto;min-width:88px;padding:6px 10px;white-space:nowrap}
+/* Jauge de défilement des 9 onglets (24/10/2026) : filet du fond, curseur gris #7C8396 (3,8:1 sur le fond de la barre) à la position et à la largeur visibles. */
+.ong-jauge{position:relative;height:3px;margin:6px 8px 0;background:var(--filet);border-radius:2px}
+.ong-jauge span{position:absolute;top:0;bottom:0;left:0;background:#7C8396;border-radius:2px}
 @media (min-width:900px){.tab td[data-l="Santé"]{min-width:170px}}
 
 /* ---------- Accueil : le bilan du mois en tête, chiffres clés en blanc (le vert reste aux petites touches) ; la carte « à valider » sur marine relevé, cadre vert épais, très visible. */

@@ -149,20 +149,20 @@ var C=NL?{
   videNote:'Now enter your current Google rating: your result appears here.',
   baseCa:function(x){return 'For '+x+' of turnover a year.'},baseClients:function(x){return 'Your estimated turnover: '+x+' a year.'},
   passer:function(a,b){return 'Going from '+a+' to '+b+' is worth:'},
-  sommet:function(n){return 'At '+n+', you’re already at the top: the challenge is to stay above the others.'},
-  sous4:function(n){return 'At '+n+', you’re below the 4-star line. 68% of consumers surveyed by BrightLocal (US, 2026) will only use a business with four or more stars.'},
+  sommet:function(n){return 'At '+n+', you\'re already at the top: the challenge is to stay above the others.'},
+  sous4:function(n){return 'At '+n+', you\'re below the 4-star line. 68% of consumers surveyed by BrightLocal (US, 2026) will only use a business with four or more stars.'},
   sous45:function(n){return 'At '+n+', you clear the 4-star line. But 31% of consumers surveyed by BrightLocal (US, 2026) will only use a business with 4.5 stars or more.'},
   noteInvalide:'Ratings run from 1 to 5, for example 4.1.'
 }:{
-  videCa:'Indiquez votre chiffre d’affaires et votre note : le résultat s’affiche ici.',
-  videClients:'Indiquez vos clients par jour, votre panier moyen, vos jours d’ouverture et votre note : le résultat s’affiche ici.',
-  videNote:'Indiquez maintenant votre note Google actuelle : le résultat s’affiche ici.',
-  baseCa:function(x){return 'Pour '+x+' de chiffre d’affaires par an.'},baseClients:function(x){return 'Votre chiffre d’affaires estimé : '+x+' par an.'},
+  videCa:'Indiquez votre chiffre d\'affaires et votre note : le résultat s\'affiche ici.',
+  videClients:'Indiquez vos clients par jour, votre panier moyen, vos jours d\'ouverture et votre note : le résultat s\'affiche ici.',
+  videNote:'Indiquez maintenant votre note Google actuelle : le résultat s\'affiche ici.',
+  baseCa:function(x){return 'Pour '+x+' de chiffre d\'affaires par an.'},baseClients:function(x){return 'Votre chiffre d\'affaires estimé : '+x+' par an.'},
   passer:function(a,b){return 'Passer de '+a+' à '+b+' représente :'},
-  sommet:function(n){return 'À '+n+', vous êtes déjà en haut : l’enjeu est de rester au-dessus des autres.'},
-  sous4:function(n){return 'À '+n+', vous êtes sous la barre des 4 étoiles. 68 % des clients interrogés par BrightLocal (États-Unis, 2026) ne choisissent qu’un commerce noté 4 ou plus.'},
-  sous45:function(n){return 'À '+n+', vous passez la barre des 4 étoiles. Mais 31 % des clients interrogés par BrightLocal (États-Unis, 2026) ne choisissent qu’un commerce noté 4,5 ou plus.'},
-  noteInvalide:'La note s’écrit entre 1 et 5, par exemple 4,1.'
+  sommet:function(n){return 'À '+n+', vous êtes déjà en haut : l\'enjeu est de rester au-dessus des autres.'},
+  sous4:function(n){return 'À '+n+', vous êtes sous la barre des 4 étoiles. 68 % des clients interrogés par BrightLocal (États-Unis, 2026) ne choisissent qu\'un commerce noté 4 ou plus.'},
+  sous45:function(n){return 'À '+n+', vous passez la barre des 4 étoiles. Mais 31 % des clients interrogés par BrightLocal (États-Unis, 2026) ne choisissent qu\'un commerce noté 4,5 ou plus.'},
+  noteInvalide:'La note s\'écrit entre 1 et 5, par exemple 4,1.'
 };
 // Objectif atteignable pour une note n (au dixième) ; null à 4,5 ou plus (rien à chiffrer).
 function objectif(n){return n>=CIBLE?null:n>=PALIER?CIBLE:Math.round((n+1)*10)/10}

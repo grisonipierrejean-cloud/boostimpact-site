@@ -300,7 +300,7 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .calc-resultat{background:var(--nuit);color:var(--texte);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:12px}
 .calc-montant{font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:52px;line-height:1;color:var(--ivoire)}
 .calc-prudence,.calc-limite{font-size:15px;line-height:1.55;color:var(--doux)}
-.calc-limite{background:rgba(255,255,255,.06);border-radius:4px;padding:14px 16px;color:var(--ivoire)}
+.calc-limite{background:var(--surface);border:1px solid var(--trait);border-radius:4px;padding:14px 16px;color:var(--texte-doux)}
 
 /* ---------- Questions */
 .faq{max-width:860px;display:flex;flex-direction:column;gap:28px}
@@ -473,6 +473,8 @@ fieldset.champ{border:0;margin:0;padding:0;min-width:0}
 fieldset.champ legend{padding:0;margin-bottom:6px}
 /* Pages de remerciement sans formulaire : étapes numérotées dans la marge du texte, pied de page en bas de l'écran. */
 .suite-etapes{padding-left:22px;display:flex;flex-direction:column;gap:10px;max-width:620px}
+/* Numéros de liste (24/10/2026) : Chrome donne des chiffres tabulaires aux puces, d'où « 1 . » ; chiffres proportionnels, comme le texte. */
+li::marker{font-variant-numeric:normal}
 .simple>.perimetre{color:var(--texte-discret);font-size:15px}
 body:has(>main>.simple){min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
 body:has(>main>.simple)>main{flex:1 0 auto}

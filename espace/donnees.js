@@ -168,6 +168,18 @@
     }
     throw new Error("Aucun créneau libre dans les 60 prochains jours.");
   }
+  // Dernier créneau du métier à l'instant t ou avant (publication passée de la graine de démonstration).
+  function creneauAvant(metier, pris, t) {
+    const occupe = new Set(pris || []), p = partiesParis(t), heures = (CRENEAUX[metier] || CRENEAUX.autre).slice().reverse();
+    for (let k = 0; k < 60; k++) {
+      const d = new Date(Date.UTC(p.a, p.m, p.j - k));
+      for (const hm of heures) {
+        const [h, mi] = hm.split(":").map(Number), u = instantParis(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, mi);
+        if (u <= t && !occupe.has(u)) return u;
+      }
+    }
+    return t;
+  }
   // Actions propres à la fiche Google : contrôles de forme, les mêmes avant l'appel à la base.
   const TYPES_ACTION = ["photos", "offre", "evenement", "horaires"];
   const aujourdhui = () => { const p = partiesParis(Date.now()); return `${p.a}-${String(p.m + 1).padStart(2, "0")}-${String(p.j).padStart(2, "0")}`; };
@@ -408,6 +420,8 @@
   // Rien de configuré : pas de bouton (null). Source : https://docs.stripe.com/payment-links/url-parameters, lue le 14/10/2026.
   const STATUTS_ABONNEMENT = ["en_attente", "actif", "impaye", "resilie"];
   const fraisOfferts = (maintenant, s) => (maintenant || new Date().toISOString().slice(0, 10)) <= ((s && s.fraisOffertsJusquAu) || CONDITIONS.mise_en_route.offerts_jusqu_au);
+  // Langue de la page de paiement Stripe : celle de l'espace (fr, en ou nl, toutes reconnues par Stripe), plus le français forcé (24/10/2026).
+  const langueStripe = () => { const l = window.RENOM_I18N && window.RENOM_I18N.langue; return ["fr", "en", "nl"].includes(l) ? l : "fr"; };
   function lienAbonnement(ab, c, offre, maintenant, rythme) {
     const s = cfg.stripe || {}, https = u => typeof u === "string" && /^https:\/\/[^\s"<>]+$/.test(u) ? u : null;
     // Abonnement en cours (même impayé) : jamais le lien de paiement, qui créerait un second abonnement ; seulement le portail.
@@ -417,7 +431,7 @@
     // Essentiel : aucuns frais de mise en route, un seul lien (« sans_frais ») ; Standard et Premium : « offerts » jusqu'au 30/11/2026 inclus, puis « factures ».
     const base = https(!(OFFRES[offre] || {}).frais_mise_en_route ? r.sans_frais : fraisOfferts(maintenant, s) ? (r.offerts || r.factures) : r.factures);
     if (!base || !c || !/^[A-Za-z0-9_-]{1,200}$/.test(String(c.id || ""))) return null;
-    return base + (base.includes("?") ? "&" : "?") + ["client_reference_id=" + encodeURIComponent(c.id), "locale=fr"].join("&");
+    return base + (base.includes("?") ? "&" : "?") + ["client_reference_id=" + encodeURIComponent(c.id), "locale=" + langueStripe()].join("&");
   }
   const MODELE_CSV = "prenom;email;date_passage\nCamille;camille@exemple.fr;" + new Date().toISOString().slice(0, 10) + "\n";
   // ---- fin des règles communes des automatisations
