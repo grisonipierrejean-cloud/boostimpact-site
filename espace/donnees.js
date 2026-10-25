@@ -8,13 +8,13 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
-    standard: { nom: "Standard", nom_nl: "Standaard", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
-    premium: { nom: "Premium", nom_nl: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
-    croissance: { nom: "Croissance", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
+    premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
+    croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
-  const MSG_OFFRES = "Offres en vente : Essentiel, Standard, Premium.";
+  const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
   const CONDITIONS = { garantie_delais: { fiche_optimisee_jours: 7, premier_contenu_heures: 72, avis_traite_heures: 24, alerte_fiche_avant_heures: 48, alerte_contenu_avant_heures: 24,

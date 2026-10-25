@@ -193,69 +193,89 @@
     choixRes[b.dataset.reseaux] = ordre[j]; redessinerReseaux(b, true);
   });
 
-  // ---------------- Navigation : barre latérale sur ordinateur, onglets du bas sur téléphone
-  // Barre latérale : Accueil, Résultats, Créer, Publier, Réputation, Mon commerce. Téléphone : 5 onglets (le calendrier rejoint Créer).
+  // ---------------- Navigation (25/10/2026, décision de PJ : « c'est trop, ajuste ») : le restaurateur a 5 gestes à faire. 4 onglets (Accueil, Photos,
+  // À valider, Résultats) et « Réglages » dans l'en-tête (téléphone) ou en bas de la barre latérale (ordinateur). Aucun écran n'est supprimé : chaque
+  // ancienne adresse (#/contenus, #/offre, #/calendrier…) ouvre le même contenu, rangé dans l'un de ces cinq endroits.
+  //   Accueil : ce qui attend le commerçant, les prochaines publications (calendrier complet en dessous : #/calendrier), l'idée de la semaine.
+  //   Photos : le dépôt, et la vidéo d'avis dans le même écran (#/videoavis l'ouvre dépliée).
+  //   À valider : une seule boîte, trois sections (Contenus, Avis, Commentaires) ; badge = tout ce qui attend une décision.
+  //   Résultats : les résultats et le bilan du mois, puis la collecte d'avis (deux sections).
+  //   Réglages : offre et factures, comptes connectés, notifications, style, fiche, fiche Google, démarrage.
   const GROUPES = [
-    { id: "accueil", nom: t("groupe.accueil"), ecrans: ["accueil"], seul: true },
-    { id: "resultats", nom: t("groupe.resultats"), ecrans: ["resultats"], seul: true },
-    { id: "creer", nom: t("groupe.creer"), ecrans: ["photos", "contenus"], compte: "contenus" },
-    { id: "publier", nom: t("groupe.publier"), ecrans: ["calendrier"], mobile: "creer" },
-    { id: "reputation", nom: t("groupe.reputation"), court: t("groupe.reputation.court"), ecrans: ["avis", "commentaires", "collecte", "fichegoogle"], compte: "avis" },
-    { id: "commerce", nom: t("groupe.commerce"), court: t("groupe.commerce.court"), ecrans: ["fiche", "offre", "comptes", "notifications"] },
+    { id: "accueil", ecrans: ["accueil", "calendrier"] },
+    { id: "photos", ecrans: ["photos", "videoavis"] },
+    { id: "avalider", ecrans: ["avalider", "contenus", "avis", "commentaires"], sections: ["contenus", "avis", "commentaires"], compte: "avalider" },
+    { id: "resultats", ecrans: ["resultats", "collecte"], sections: ["resultats", "collecte"], compte: "retours" },
   ];
-  const ECRANS = I.carte("ecran", ["accueil", "resultats", "photos", "contenus", "calendrier", "avis", "commentaires", "collecte", "fichegoogle", "fiche", "offre", "comptes", "notifications", "demarrage"]);
+  const REGLAGES = { id: "reglages", ecrans: ["reglages", "offre", "comptes", "notifications", "style", "fiche", "fichegoogle", "demarrage"] };
+  GROUPES.concat(REGLAGES).forEach(g => { g.nom = t("groupe." + g.id); });
+  const ECRANS = I.carte("ecran", ["accueil", "resultats", "photos", "avalider", "contenus", "calendrier", "avis", "commentaires", "collecte", "fichegoogle", "fiche", "offre", "comptes",
+    "notifications", "demarrage", "videoavis", "style", "reglages"]);
   // Anciennes adresses : elles mènent toujours quelque part (aucun lien cassé).
   const ANCIENNES = { idees: "contenus" };
-  const groupesMobile = () => GROUPES.filter(g => !g.mobile).map(g => ({ ...g, ecrans: [...g.ecrans, ...GROUPES.filter(x => x.mobile === g.id).flatMap(x => x.ecrans)] }));
+  const groupeDe = r => GROUPES.concat(REGLAGES).find(g => g.ecrans.includes(r)) || GROUPES[0];
   const trait = d => `<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const APPAREIL = trait('<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>');
   const ICONES = {
     accueil: trait('<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path>'),
+    photos: APPAREIL,
+    avalider: trait('<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8.5 12.5l2.5 2.5 4.5-5"></path>'),
     resultats: trait('<path d="M4 20h16"></path><path d="M6 16l4-5 3 3 5-7"></path>'),
-    creer: trait('<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M4 16l4.5-4.5 4 4 3-3L20 17"></path>'),
-    publier: trait('<rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path>'),
-    reputation: trait('<path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"></path>'),
-    commerce: trait('<path d="M4 10l1.5-5h13L20 10"></path><path d="M5 10v10h14V10"></path><path d="M4 10h16M10 20v-5h4v5"></path>'),
+    reglages: trait('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="17" r="2"></circle>'),
   };
-  const APPAREIL = trait('<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>');
   const GALERIE = trait('<rect x="4" y="4" width="16" height="16" rx="3"></rect><circle cx="9" cy="9.5" r="1.5"></circle><path d="M4 16l4.5-4.5 4 4 3-3L20 17"></path>');
   const CAMERA = trait('<rect x="3" y="7" width="13" height="10" rx="2"></rect><path d="M16 11l5-3v8l-5-3z"></path>');
   const FILM = trait('<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M10 9l5 3-5 3z"></path>');
   const large = window.matchMedia("(min-width: 900px)");
-  const nb = { contenus: 0, avis: 0, commentaires: 0 }; let offreNom = "", route = "accueil", connecte = false;
+  const nb = { contenus: 0, avis: 0, commentaires: 0, avalider: 0, retours: 0 }; let offreNom = "", route = "accueil", connecte = false, commentairesInclus = true;
   const compte = k => `<span class="nb" data-nb="${k}"${nb[k] ? "" : " hidden"}><span data-n>${nb[k] || ""}</span><span class="vh">${t("nav.a.traiter")}</span></span>`;
-  const lienMenu = r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : ""}><span>${ECRANS[r]}</span>${["contenus", "avis", "commentaires"].includes(r) ? compte(r) : r === "collecte" ? compte("retours") : ""}</a>`;
+  const COMPTE_ECRAN = { contenus: "contenus", avis: "avis", commentaires: "commentaires", collecte: "retours" };
+  // Lien d'un groupe : il mène au premier écran du groupe ; data-ecrans liste tous ses écrans (le lien reste allumé sur chacun).
+  const lienGroupe = (g, icone) => `<a href="#/${g.ecrans[0]}" data-r="${g.ecrans[0]}" data-ecrans="${g.ecrans.join(" ")}"${g.ecrans.includes(route) ? ` aria-current="${g.ecrans[0] === route ? "page" : "true"}"` : ""}>${icone
+    ? `<span class="onglet-icone">${ICONES[g.id]}${g.compte ? compte(g.compte) : ""}</span><span>${g.nom}</span>` : `<span>${g.nom}</span>${g.compte ? compte(g.compte) : ""}`}</a>`;
   function dessinerNav() {
     document.body.classList.toggle("hors-session", !connecte);
     const lat = $("lat"), haut = $("haut"), sous = $("sous"), onglets = $("onglets");
     lat.innerHTML = haut.innerHTML = sous.innerHTML = onglets.innerHTML = "";
     if (!connecte) return;
+    const actif = groupeDe(route);
+    // Sections d'un écran en plusieurs parties (À valider, Résultats) : une rangée de liens au-dessus du contenu, sur téléphone comme sur ordinateur.
+    const secs = (actif.sections || []).filter(r => r !== "commentaires" || commentairesInclus || route === r);
+    sous.innerHTML = secs.length > 1 ? secs.map(r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : ""}><span>${ECRANS[r]}</span>${COMPTE_ECRAN[r] ? compte(COMPTE_ECRAN[r]) : ""}</a>`).join("") : "";
+    sous.setAttribute("aria-label", actif.nom);
     if (large.matches) {
-      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.filter(g => g.seul).map(g => lienMenu(g.ecrans[0])).join("")}</div>${GROUPES.filter(g => !g.seul).map(g =>
-        `<div class="groupe"><p class="groupe-lib">${g.nom}</p>${g.ecrans.map(lienMenu).join("")}</div>`).join("")}</nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
+      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
+        <div class="groupe groupe-reglages">${lienGroupe(REGLAGES)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
       return;
     }
-    const GM = groupesMobile(), actif = GM.find(g => g.ecrans.includes(route)) || GM[0];
-    // « Quitter » : dans l'en-tête quand le groupe Mon commerce est ouvert (à la suite des liens du groupe, il se retrouvait seul sur une ligne).
-    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}${actif.id === "commerce" ? `<button type="button" id="sortir" class="quitter">${t("quitter")}</button>` : ""}`;
-    sous.innerHTML = actif.ecrans.length > 1 ? actif.ecrans.map(lienMenu).join("") : "";
-    sous.setAttribute("aria-label", actif.nom);
-    // Chaque onglet mène au premier écran de son groupe ; data-ecrans liste tous les écrans du groupe.
+    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}<nav class="haut-reglages" aria-label="${REGLAGES.nom}">${lienGroupe(REGLAGES, true)}</nav>`;
     onglets.setAttribute("aria-label", t("nav.espace"));
-    onglets.innerHTML = GM.map(g => `<a href="#/${g.ecrans[0]}" data-r="${g.ecrans[0]}" data-ecrans="${g.ecrans.join(" ")}"${g === actif ? ` aria-current="${g.ecrans[0] === route ? "page" : "true"}"` : ""}>
-      <span class="onglet-icone">${ICONES[g.id]}${g.compte ? compte(g.compte) : ""}</span><span>${g.court || g.nom}</span></a>`).join("");
+    onglets.innerHTML = GROUPES.map(g => lienGroupe(g, true)).join("");
+  }
+  // Décisions en attente par section (badges) ; « À valider » les additionne.
+  async function compterAValider() {
+    const [ct, av, k, cm] = await Promise.all([D.contenus(), D.avis(), D.compteur(), D.commentaires().catch(() => [])]);
+    return { k, contenus: ct.filter(x => x.statut === "a_valider").length, avis: av.filter(x => x.statut === "a_valider" && !x.sensible).length,
+      commentaires: k.commentaires_inclus ? cm.filter(x => x.statut === "a_valider" || x.statut === "humain").length : 0 };
   }
   async function majCompteurs() {
     try {
-      const [ct, av, k, cm] = await Promise.all([D.contenus(), D.avis(), D.compteur(), D.commentaires().catch(() => [])]);
-      nb.contenus = ct.filter(x => x.statut === "a_valider").length;
-      nb.avis = av.filter(x => (x.statut === "a_valider" && !x.sensible) || x.statut === "humain").length;
-      nb.commentaires = k.commentaires_inclus ? cm.filter(x => x.statut === "a_valider" || x.statut === "humain").length : 0;
-      offreNom = k.offre_nom || "";
-      nb.retours = await retoursNonLus(); nb.reputation = nb.avis + nb.commentaires + nb.retours;   // ---- Collecte
+      const n = await compterAValider();
+      nb.contenus = n.contenus; nb.avis = n.avis; nb.commentaires = n.commentaires; nb.avalider = n.contenus + n.avis + n.commentaires;
+      offreNom = n.k.offre || n.k.offre_nom || "";   // identifiant : le nom vient de moteur/offres.json, dans la langue de la page
+      if (commentairesInclus !== !!n.k.commentaires_inclus) { commentairesInclus = !!n.k.commentaires_inclus; dessinerNav(); }
+      nb.retours = await retoursNonLus();   // ---- Collecte
     } catch (er) { return; }
     document.querySelectorAll("[data-nb]").forEach(s => { const n = nb[s.dataset.nb]; s.hidden = !n; s.querySelector("[data-n]").textContent = n || ""; });
     const o = $("haut-offre"); if (o) o.textContent = offreNom ? t("offre.nom", { nom: offreNom }) : "";
   }
+  // « À valider » sans section précisée : la première qui attend une décision (contenus, puis avis, puis commentaires), sinon les contenus.
+  async function avalider() {
+    let r = "contenus"; try { const n = await compterAValider(); r = ["contenus", "avis", "commentaires"].find(x => n[x]) || "contenus"; } catch (er) {}
+    history.replaceState(null, "", "#/" + r); return rendre();
+  }
+  // Lien de retour d'un écran rangé dans Réglages ou sous l'accueil (texte simple, aucun menu).
+  const retour = (href, cle) => `<p class="retour-liste"><a href="${href}">${t(cle)}</a></p>`;
 
   // ---------------- Connexion
   // Démonstration : les comptes affichés sont ceux de la graine chargée (parcours ou graine publique), jamais écrits en dur.
@@ -306,7 +326,9 @@
       try { await D.deciderIdee(id, d); await apres(); msg(t(d === "retenue" ? "idee.retenue.msg" : "idee.ecartee.msg")); majCompteurs(); } catch (er) { msg(ph(er.message)); } });
   }
 
-  // ---------------- Accueil
+  // ---------------- Accueil (25/10/2026) : « ce que vous avez à faire maintenant ». En tête, un bouton par action en attente (contenus, réponses
+  // d'avis, commentaires, mise en route, démarrage, photos du mois) ; puis les prochaines publications (le calendrier devient ce bloc ; le calendrier
+  // complet reste à #/calendrier) ; puis l'idée de la semaine. Le bilan du mois est passé dans Résultats ; l'offre, la fiche et le style dans Réglages.
   // Bilan du mois : 4 chiffres au plus et une phrase. Mêmes données que l'email du 1er du mois (fonction bilan_mois).
   const bandeauDemo = () => D.mode === "demo" ? `<div class="bandeau-demo" role="note"><p class="fort">${t("demo.chiffres")}</p><p>${t("demo.chiffres.texte")}</p></div>` : "";
   function bilanBloc(b) {
@@ -319,93 +341,68 @@
     return `<section class="carte bilan" aria-labelledby="bilan-titre"><div class="carte-tete"><h2 id="bilan-titre">${t("bilan.titre", { mois: m.getMonth() })}</h2><span class="note">${t("bilan.a.ce.jour")}</span></div>
       ${D.mode === "demo" ? `<p class="note bilan-demo"><span class="fort">${t("demo.chiffres.point")}</span> ${t("bilan.demo")}</p>` : ""}
       <p class="texte2">${morceaux.join(" ")}</p>
-      <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)))}${chiffre(t("bilan.publications"), nombre(n(b.publications)))}${chiffre(t("bilan.note"), notes ? nombre(b.note_fin, 1) : `<a href="#/resultats">${t("voir.resultats")}</a>`)}${chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)))}</dl>
-      <p class="pied"><a href="#/resultats">${t("bilan.tous")}</a></p></section>`;
+      <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)))}${chiffre(t("bilan.publications"), nombre(n(b.publications)))}${chiffre(t("bilan.note"), notes ? nombre(b.note_fin, 1) : t("non.lue"))}${chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)))}</dl></section>`;
   }
   const k0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const plusTard = id => { try { return localStorage.getItem("renom-demarrage-plus-tard:" + id) === "1"; } catch (er) { return false; } };
+  // Photos du mois : aucune photo envoyée depuis le 1er du mois (heure de l'appareil), commerce actif.
+  const debutDuMois = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); };
   async function accueil() {
     const c0 = await D.commerce();
     if (!c0.demarrage_fini && !plusTard(c0.id)) return demarrage();
-    const [c, k, p, ct, av, cal, bilan, mr, ids, cm0] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(), D.bilanMois().catch(() => null),
+    const [c, k, p, ct, av, cal, mr, ids, cm0] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
       D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => [])]);
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
     nomCommerce = c.nom;
     const aValider = ct.filter(x => x.statut === "a_valider"), reponses = av.filter(x => x.statut === "a_valider" && !x.sensible), humains = av.filter(x => x.statut === "humain");
-    const prochaines = cal.filter(x => x.statut === "programme").slice(0, 3), premier = aValider[0], avis1 = reponses[0], dernier = premier ? null : (ct.find(x => x.statut !== "refuse") || ct[0]);
-    const [u1, v1, u91, ...vign] = await Promise.all([urlSure(premier || dernier), videoSure(premier || dernier), premier ? url916(premier) : null, ...prochaines.map(x => urlSure(x.contenu))]);
-    // Sous-titre aligné sur « une photo, un clic » : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires), le même
-    // que le bilan du mois et les jetons de validation, et leur durée (environ 40 secondes chacune). Les alertes ont leur propre bandeau.
-    // Un avis sensible n'en fait plus partie (décision de PJ du 22/10/2026) : l'équipe s'en charge, le commerçant n'a rien à faire.
-    const mois = new Date(k.mois + "T12:00:00"), nv = aValider.length + reponses.length + cmValider.length, na = cmHumains.length + (idee ? 1 : 0);
-    const phrase = nv ? t("acc.validations", { n: nv, m: Math.max(1, Math.round(nv * 40 / 60)) }) : na ? t("acc.choses", { n: na }) : t(mr && mr.faits < mr.total ? "acc.reste.mer" : "acc.a.jour");
+    const prochaines = cal.filter(x => x.statut === "programme").slice(0, 3), vign = await Promise.all(prochaines.map(x => urlSure(x.contenu)));
+    // Sous-titre : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires) et leur durée (environ 40 secondes chacune).
+    // Un avis sensible n'en fait pas partie (décision de PJ du 22/10/2026) : l'équipe s'en charge, le commerçant n'a rien à faire.
+    const nv = aValider.length + reponses.length + cmValider.length, na = cmHumains.length + (idee ? 1 : 0), merEnCours = !!(mr && mr.points && mr.faits < mr.total);
+    const phrase = nv ? t("acc.validations", { n: nv, m: Math.max(1, Math.round(nv * 40 / 60)) }) : na ? t("acc.choses", { n: na }) : t(merEnCours ? "acc.reste.mer" : "acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
-    const ficheRemplie = c.specialites || c.ton || c.horaires;
-    // Ordre de l'accueil (mobile d'abord, 18/10/2026) : 1. alertes (avis sensible, commentaire délicat) tout en haut ; 2. ce qui attend une décision
-    // (contenu, idée de la semaine, réponse d'avis, réponse de commentaire, démarrage et mise en route) ; 3. le reste (bilan, style, publications, fiche, offre).
-    const carteContenu = `<section class="carte a-valider"${premier ? ` data-contenu="${e(premier.id)}"` : ""}>
-          <div class="carte-tete"><h2>${t(premier ? "acc.contenu.un" : "acc.contenu.aucun")}</h2>${aValider.length > 1 ? `<a href="#/contenus">${t("voir.les", { n: aValider.length })}</a>` : `<a href="#/contenus">${t("acc.ouvrir.contenus")}</a>`}</div>
-          ${premier ? `<div class="apercu-reseaux">${blocReseaux(premier, u1, v1, u91)}<div class="apercu-texte">
-            <p class="meta">${FORMAT_LIB[M.formatDe(premier)]}</p>${etiquetteIA(premier)}
-            <p class="note visible">${t("acc.legende.note")}</p>${formatsPublies(premier, u1, u91)}${decisions(premier, t("refuser"))}</div></div>`
-          : dernier ? `<div class="apercu${v1 ? " avec-video" : ""}">${media(dernier, u1, v1)}<div class="apercu-texte">
-            <p class="meta">${t("acc.dernier", { type: t(dernier.type === "video" ? "type.video.courte" : "type.publication"), quand: I.minusculeDebut(jourRelatif(dernier.cree_le)) })}</p>${etiquetteIA(dernier)}<p class="legende"${lc()}>${e(dernier.legende || "")}</p>
-            <p class="etat">${ST_CONTENU[dernier.statut] || e(dernier.statut)}</p></div></div>`
-          : `<p class="texte2">${t("acc.contenus.vide")}</p>`}
-        </section>`;
-    const carteAvis = `<section class="carte moitie"${avis1 ? ` data-avis="${e(avis1.id)}"` : ""}>
-          <div class="carte-tete"><h2>${t(avis1 ? "acc.avis.un" : "acc.avis.aucun")}</h2>${avis1 ? `<span class="note">${etoiles(avis1.note)}</span>` : ""}</div>
-          ${avis1 ? `${citation(avis1)}${avis1.auteur && !avis1.efface_le ? `<p class="note">${e(avis1.auteur)}</p>` : ""}${reponseAValider(avis1)}${reponses.length > 1 ? `<p class="note pied"><a href="#/avis">${t("acc.avis.voir", { n: reponses.length })}</a></p>` : ""}`
-          : `<p class="texte2">${t(regleAvis(c))}</p><p class="pied"><a href="#/avis">${t("acc.ouvrir.avis")}</a></p>`}
-        </section>`;
+    const photosDuMois = p.filter(x => Date.parse(x.cree_le) >= debutDuMois()).length;
+    // Un bouton par action en attente, dans l'ordre des gestes : valider, puis mettre en route, puis envoyer les photos.
+    const actions = [
+      aValider.length ? { id: "contenus", href: "#/contenus", texte: t("acc.act.contenus", { n: aValider.length }) } : null,
+      reponses.length ? { id: "avis", href: "#/avis", texte: t("acc.act.avis", { n: reponses.length }) } : null,
+      cmValider.length + cmHumains.length ? { id: "commentaires", href: "#/commentaires", texte: t("acc.act.commentaires", { n: cmValider.length + cmHumains.length }) } : null,
+      merEnCours ? { id: "mise-en-route", vers: "mise-en-route", texte: t("acc.act.mer", { a: mr.faits, b: mr.total }) } : null,
+      !c.demarrage_fini ? { id: "demarrage", href: "#/demarrage", texte: t("acc.dem.reprendre") } : null,
+      !c.en_pause && !photosDuMois ? { id: "photos", href: "#/photos", texte: t("acc.act.photos") } : null,
+    ].filter(Boolean);
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      ${cmHumains.length ? `<section class="alerte" id="alerte-commentaires"><div><p class="fort">${t("acc.cm.titre", { n: cmHumains.length })}</p>
-        <p>${t("acc.cm.texte")}</p></div><a class="bouton second" href="#/commentaires">${t("acc.cm.lire", { n: cmHumains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
         <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
       <p class="msg" id="msg" role="status"></p>
+      <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
+        ${actions.length ? `<ul class="actions-attente">${actions.map(a => `<li>${a.vers ? `<button type="button" class="bouton second" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
+          : `<a class="bouton second" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : `<p class="texte2" id="a-faire-rien">${t("acc.a.jour")}</p>`}</section>
       ${carteAutorisation(c)}
-      ${await proposition(c)}
-      ${premier ? carteContenu : ""}
-      ${blocIdeeSemaine(idee)}
-      ${avis1 ? `<div class="rangee">${carteAvis}</div>` : ""}
-      ${cmValider.length ? `<section class="carte" data-commentaire="${e(cmValider[0].id)}" id="accueil-commentaire"><div class="carte-tete"><h2>${t("acc.cm.un")}</h2>${cmValider.length > 1 ? `<a href="#/commentaires">${t("voir.les", { n: cmValider.length })}</a>` : `<a href="#/commentaires">${t("acc.ouvrir.commentaires")}</a>`}</div>
-        ${corpsCommentaire(cmValider[0])}</section>` : ""}
-      ${!c.demarrage_fini ? `<section class="alerte"><div><p class="fort">${t("acc.dem.titre")}</p><p>${t("acc.dem.texte")}</p></div><a class="bouton second" href="#/demarrage">${t("acc.dem.reprendre")}</a></section>` : ""}
       ${blocMiseEnRoute(mr)}
-      ${bilanBloc(bilan)}
-      ${carteStyle(c)}
-      ${premier ? "" : carteContenu}
-      <div class="rangee">
-        ${avis1 ? "" : carteAvis}
-        <section class="carte moitie">
-          <div class="carte-tete"><h2>${t("acc.prochaines")}</h2></div>
-          ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${x.reseaux.map(r => RES[r]).join(", ")}</p></div></li>`).join("")}</ul>`
-          : `<p class="texte2">${t("acc.rien.programme")}</p>`}
-          <p class="pied"><a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>
-        </section>
-      </div>
-      <div class="rangee">
-        <section class="carte moitie"><div class="carte-tete"><h2>${t("acc.ou")}</h2></div>
-          <ul class="liste"><li><a href="#/contenus">${t("acc.ou.contenus")}</a><span class="fort">${aValider.length}</span></li>
-          <li><a href="#/avis">${t("acc.ou.reponses")}</a><span class="fort">${reponses.length}</span></li>
-          <li><a href="#/avis">${t("acc.ou.humains")}</a><span class="fort">${humains.length}</span></li>
-          ${k.commentaires_inclus ? `<li><a href="#/commentaires">${t("acc.ou.commentaires")}</a><span class="fort">${cmValider.length}</span></li>` : ""}
-          <li><a href="#/photos">${t("acc.ou.photos")}</a><span class="fort">${p.filter(x => x.statut === "a_traiter").length}</span></li></ul></section>
-        <section class="carte etroite"><div class="carte-tete"><h2>${t("acc.fiche")}</h2><span class="note">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""}</span></div>
-          <p class="texte2">${t(ficheRemplie ? "acc.fiche.remplie" : "acc.fiche.vide")}</p>
-          <p class="pied"><a class="bouton second" href="#/fiche">${t("acc.ouvrir.fiche")}</a></p></section>
-        <section class="carte etroite">
-          <div class="carte-tete"><h2>${t("offre.titre.nom", { nom: e(k.offre_nom) })}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
-          ${mesure(t("mes.publications"), k.publications_utilisees, k.publications_plafond)}
-          ${k.videos_plafond ? mesure(t("mes.videos"), k.videos_utilisees, k.videos_plafond) : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
-          <div class="pied"><p class="note">${t("acc.compteur.zero", { mois: (mois.getMonth() + 1) % 12 })}</p><a href="#/offre">${t("acc.voir.offre")}</a></div>
-        </section>
-      </div>`;
-    brancherDecisions(vue, accueil); brancherAvis(vue, accueil); brancherAutomatisations(vue, accueil); brancherCommentaires(vue, accueil); brancherAutorisation(accueil);
+      ${carteStyle(c, true)}
+      <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
+        <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
+        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${x.reseaux.map(r => RES[r]).join(", ")}</p></div></li>`).join("")}</ul>`
+        : `<p class="texte2">${t("acc.rien.programme")}</p>`}
+        <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
+      </section>
+      ${blocIdeeSemaine(idee)}`;
+    vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
+    brancherAutomatisations(vue, accueil); brancherAutorisation(accueil);
+  }
+
+  // ---------------- Réglages (25/10/2026) : tout ce qui se règle une fois, rangé derrière un seul lien de l'en-tête. Chaque écran garde son adresse.
+  const ENTREES_REGLAGES = ["offre", "comptes", "notifications", "style", "fiche", "fichegoogle", "demarrage"];
+  async function reglages() {
+    const c = await D.commerce();
+    vue.innerHTML = `${entete("", t("ecran.reglages"), t("reg.chapo"))}
+      ${carteStyle(c, false)}
+      <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.map(r => `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r)}</span><span class="note">${t("reg." + r + ".texte")}</span></span></a></li>`).join("")}</ul></nav>
+      ${large.matches ? "" : `<p class="pied-reglages"><button type="button" id="sortir" class="bouton second">${t("quitter")}</button></p>`}`;
   }
 
   // ---------------- Fiche
@@ -413,7 +410,7 @@
     const c = await D.commerce(), v = k => e(c[k] ?? ""), co = c.couleurs || {};
     const dm = c.demarrage || {}, sienne = x => x ? `<span${lc()}>${e(x)}</span>` : "";
     const rep = (lib, val) => `<li><span class="note">${lib}</span><span>${val || `<span class="note">${t("fiche.pas.reponse")}</span>`}</span></li>`;
-    vue.innerHTML = `${entete(t("fiche.sur"), t("fiche.titre"), t("fiche.chapo"))}
+    vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("fiche.sur"), t("fiche.titre"), t("fiche.chapo"))}
     <section class="carte fiche demarrage-resume"><div class="carte-tete"><h2>${t("fiche.dem.titre")}</h2><a href="#/demarrage">${t(c.demarrage_fini ? "fiche.dem.modifier" : "fiche.dem.repondre")}</a></div>
       ${c.demarrage ? `<ul class="liste reponses">${rep(t("q.phrase.titre"), sienne(dm.phrase))}${rep(t("q.distinctions.titre"), sienne(dm.distinctions))}${rep(t("fiche.dem.ton"), e(TONS_LIB[dm.ton] || ""))}${rep(t("q.interdits.titre"), sienne(dm.interdits))}${rep(t("fiche.dem.action"), dm.action ? e(ACTIONS_LIB[dm.action]) + (dm.action_detail ? t("deux.points") + sienne(dm.action_detail) : "") : "")}</ul>`
       : `<p class="texte2">${t("fiche.dem.vide")}</p>`}</section>
@@ -459,7 +456,7 @@
   const clePhoto = f => [f.name, f.size, f.lastModified || 0].join(":");
   async function photos() {
     const [c, l] = await Promise.all([D.commerce(), D.photos()]);
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.creer"), t("photos.titre"), t("photos.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t("photos.titre"), t("photos.chapo"))}
       ${c.photos_autorisees_le ? `<p class="note" id="autorisation-donnee">${t("aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
@@ -473,7 +470,8 @@
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
           ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
-      ${await blocDepotVideo(c)}`;
+      ${await blocDepotVideo(c)}
+      ${await blocVideoAvis(c)}`;
     brancherAutorisation(photos);
     // Deux façons de choisir (appareil photo, galerie ou fichiers de l'ordinateur) ; l'envoi reste le même pour les deux.
     const choisies = () => [...$("appareil").files, ...$("fichiers").files];
@@ -510,7 +508,7 @@
       if (deposees) await suitePhotos(c);
       majCompteurs();
     };
-    brancherDepotVideo();
+    brancherDepotVideo(); await brancherVideoAvis();
   }
   // Après un envoi réussi : la suite en une phrase, avec le lien vers Contenus. Délai : seulement celui que l'offre promet (« Premier contenu proposé
   // sous 72 h », Standard et Premium, site/index.html #offres ; COND = moteur/conditions_offre.json), et seulement tant qu'aucun contenu n'existe.
@@ -621,12 +619,12 @@
   // Tant qu'un dépôt est envoyé ou en montage et que l'écran reste ouvert : le suivi se relit toutes les 15 secondes (une lecture de la table).
   function dvSurveiller(l) {
     clearTimeout(dvMinuteur);
-    if (l.some(d => ["envoye", "en_montage"].includes(d.statut))) dvMinuteur = setTimeout(() => { if (ecranCourant === photos && !dv.envoi && $("dv-suivi")) dvRafraichirSuivi().catch(() => {}); }, window.RENOM_SUIVI_MS || 15000);
+    if (l.some(d => ["envoye", "en_montage"].includes(d.statut))) dvMinuteur = setTimeout(() => { if ([photos, videoAvis].includes(ecranCourant) && !dv.envoi && $("dv-suivi")) dvRafraichirSuivi().catch(() => {}); }, window.RENOM_SUIVI_MS || 15000);
   }
   let dvOuvert = null;
   async function blocDepotVideo(c) {
     const [k, l] = await Promise.all([D.compteurVideos(), D.depotsVideo()]), o = window.RENOM_OFFRES[c.offre_id] || {};
-    if (!k.videos_plafond) return `<section class="carte" id="depot-video"><h2>${t("dv.sans.titre")}</h2><p class="texte2">${t("dv.sans.texte", { offre: e(o.nom || c.offre_id) })}</p>
+    if (!k.videos_plafond) return `<section class="carte" id="depot-video"><h2>${t("dv.sans.titre")}</h2><p class="texte2">${t("dv.sans.texte", { offre: e(I.offre(c.offre_id)) })}</p>
       <p class="pied"><a class="bouton second" href="#/offre">${t("dv.voir.offres")}</a></p></section>${l.length ? `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>` : ""}`;
     dvOuvert = l.find(d => d.statut === "en_envoi" && Date.now() - Date.parse(d.cree_le) < DV.OUVERT_MS) || null;
     const attente = k.videos_reservees - k.videos_utilisees, plein = k.videos_reservees >= k.videos_plafond && !dvOuvert;
@@ -689,7 +687,7 @@
     const liste = l.filter(x => famille(x) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
     const formatCourt = x => t("format.court." + M.formatDe(x));
-    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil">${entete(t("groupe.creer"), t("contenus.titre"), t(delegationActive(c) ? "contenus.chapo.delegation" : "contenus.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil">${entete(t("groupe.avalider"), t("contenus.titre"), t(delegationActive(c) ? "contenus.chapo.delegation" : "contenus.chapo"))}
         <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees">${t("idees.titre")}</button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
@@ -731,7 +729,7 @@
         return `<li${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><p class="fort">${I.jourEtDate(d)}</p><div>${it.length ? it.map(x => `<p>${heure(x.prevu_le)} · ${x.reseaux.map(r => RES[r]).join(", ")} · <span${lc()}>${e(cut(x.contenu?.legende || "", 60))}</span></p>`).join("") : `<p class="note">${t("cal.rien")}</p>`}</div></li>`; }).join("") + "</ul>";
     }
     const titre = cal.mode === "mois" ? `${cap(MOIS[ref.getMonth()])} ${ref.getFullYear()}` : t("cal.semaine.du", { d: date(lundi) });
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.publier"), t("cal.titre"), t("cal.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}${retour("#/accueil", "cal.retour")}${entete(t("groupe.accueil"), t("cal.titre"), t("cal.chapo"))}
       <div class="rangee">
         <section class="carte large"><div class="carte-tete"><h2>${titre}</h2>
           <div class="actions serre"><button type="button" class="bouton second petit" data-m="semaine" aria-pressed="${cal.mode === "semaine"}">${t("cal.semaine")}</button><button type="button" class="bouton second petit" data-m="mois" aria-pressed="${cal.mode === "mois"}">${t("cal.mois")}</button>
@@ -807,8 +805,6 @@
   // ---- Collecte : début. Page publique d'avis, QR code et carte A6, demande par WhatsApp, retours privés.
   // Conformité Google : la page publique est la même pour tous les clients ; rien ici ne trie selon la note.
   // La carte A6 et le message WhatsApp s'adressent aux clients du commerce : ils sont écrits dans la langue du commerce.
-  nb.retours = 0; nb.reputation = 0;
-  GROUPES.find(g => g.id === "reputation").compte = "reputation";   // onglet du téléphone : avis à traiter et retours non lus
   const retoursNonLus = async () => { try { return (await D.retoursPrives()).filter(x => !x.lu).length; } catch (er) { return 0; } };
   const HOTE_GOOGLE = /(^|\.)(google\.[a-z.]{2,6}|g\.page|goo\.gl|g\.co)$/i;
   // Lien Google proposé par la page publique : même règle que la base (https obligatoire, sinon identifiant de lieu).
@@ -859,13 +855,13 @@
       <p>${t("a6.texte", null, lgc)}</p><div class="qr"${id ? ` id="${id}"` : ""}>${qrSvg(page)}</div></div>`;
     const regle = `<section class="carte"><h2>${t("col.regle.titre")}</h2><p class="texte2">${t("col.regle.texte")}</p></section>`;
     if (!l) {
-      vue.innerHTML = `${entete(t("groupe.reputation"), t("ecran.collecte"), t("col.chapo"))}
+      vue.innerHTML = `${entete(t("groupe.resultats"), t("ecran.collecte"), t("col.chapo"))}
         <div class="pile">${regle}${blocMesure(mesure)}
           <section class="carte"><h2>${t("col.manque.titre")}</h2><p class="texte2">${t("col.manque.texte")}</p>
           <p class="note">${t("col.manque.note")}</p></section></div>`;
       return;
     }
-    vue.innerHTML = `${entete(t("groupe.reputation"), t("ecran.collecte"), t("col.chapo"))}
+    vue.innerHTML = `${entete(t("groupe.resultats"), t("ecran.collecte"), t("col.chapo"))}
       <div class="colonnes collecte">
         <div class="pile">
           ${regle}
@@ -957,7 +953,7 @@
   const AIDE = I.carte("compte.aide", ["google", "facebook", "instagram", "tiktok"]);
   async function comptes() {
     const l = await D.comptes();
-    vue.innerHTML = `${entete(t("groupe.commerce"), t("ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t("comptes.chapo"))}
+    vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t("ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t("comptes.chapo"))}
       <div class="cartes comptes">${l.map(x => `<article class="carte"><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}</article>`).join("")}</div>`;
   }
 
@@ -996,7 +992,7 @@
     // Formule annuelle (16/10/2026) : prix de base = prix par mois en paiement annuel ; économie EXACTE affichée (12 x (mensuel - base)), jamais un pourcentage arrondi à 20.
     const gainAn = o.prix_mensuel_ht && o.prix_ht ? 12 * (o.prix_mensuel_ht - o.prix_ht) : 0;
     const contenus = o.contenus ?? ((+k.publications_plafond || 0) + (+k.videos_plafond || 0));
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre_nom) }))}
+    vue.innerHTML = `${pauseBandeau(c)}${retour("#/reglages", "reg.retour")}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre || k.offre_nom) }))}
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
           ${mesure(t("offre.pub.utilisees"), k.publications_utilisees, k.publications_plafond)}
@@ -1068,7 +1064,7 @@
     return t("lecture.echec");
   }
   async function resultats() {
-    const [c, R] = await Promise.all([D.commerce(), D.resultats(6)]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+    const [c, R, bilan] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null)]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     const prem = avecNote[0], dern = avecNote[avecNote.length - 1], rep = (R && R.reponses) || {}, audit = (R && R.audit) || [], conc = (R && R.concurrents) || [], themes = (R && R.themes) || [], col = (R && R.collecte) || {};
     const pts = k => mois.map(m => ({ v: m[k] == null ? null : +m[k], lib: moisLong(m.mois), court: moisCourt(m.mois) }));
     const periode = mois.length ? t("res.periode", { a: moisLong(mois[0].mois), b: moisLong(mois[mois.length - 1].mois) }) : "";
@@ -1080,6 +1076,7 @@
     const lecture = lectureTexte(lg), nonLue = t("non.lue"), nonLuM = t("non.lu");
     vue.innerHTML = `${entete(t("groupe.resultats"), t("res.titre"), t("res.chapo") + (periode ? ", " + periode : "") + ".")}
       ${bandeauDemo()}
+      ${bilanBloc(bilan)}
       ${lecture ? `<p class="note lecture-google" id="lecture-google">${e(lecture)}</p>` : ""}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.note, +dern.note, 1), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
@@ -1142,7 +1139,7 @@
   }
   async function ficheGoogle() {
     const [c, l, ph_] = await Promise.all([D.commerce(), D.actionsFiche(), D.photos()]);
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.reputation"), t("act.titre"), t("act.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t("act.titre"), t("act.chapo"))}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="af-titre-carte"><h2 id="af-titre-carte">${t("act.preparer.titre")}</h2>
           <form id="af"><div class="f"><label for="af-type">${t("act.quoi")}</label><select id="af-type">${Object.entries(TYPES_ACT).map(([k, lib]) => `<option value="${k}"${k === typeAction ? " selected" : ""}>${lib}</option>`).join("")}</select></div>
@@ -1193,7 +1190,7 @@
   async function notifications() {
     const [c, s] = await Promise.all([D.commerce(), D.session()]), n = c.notifications || { email: true, whatsapp: false };
     const adresse = c.email_validation || (s && s.email) || "";
-    vue.innerHTML = `${entete(t("groupe.commerce"), t("ecran.notifications"), t("notif.chapo"))}
+    vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t("ecran.notifications"), t("notif.chapo"))}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="n-titre"><h2 id="n-titre">${t("notif.comment")}</h2><form id="f-notif">
           <fieldset><legend>${t("notif.canaux")}</legend>
@@ -1382,7 +1379,6 @@
   // Écran du groupe « Créer » : choisir 2 à 4 avis, un fond, un style ; la vidéo arrive dans « Contenus », à valider.
   // Tout ce qui concerne la vidéo d'avis est dans ce bloc (écran, entrée de menu, libellés du journal) ; les règles sont dans donnees.js.
   const VA = window.RENOM_VIDEO_AVIS;
-  GROUPES.find(g => g.id === "creer").ecrans.push("videoavis"); ECRANS.videoavis = t("ecran.videoavis");
   Object.assign(ETAPES, I.carte("etape", ["VIDEO_AVIS", "VIDEO_AVIS_DEMANDEE", "VIDEO_AVIS_REFUSEE", "DEPOT_VIDEO", "DEPOT_VIDEO_ANNULE", "MONTAGE", "MONTAGE_RELANCE", "RUSHES_A_EFFACER", "RUSHES_EFFACES", "MUSIQUE_PLATEFORME_NON_POSEE", "MUSIQUE_PLATEFORME_POSEE"]));
   const ST_VA = I.carte("va.st", ["a_traiter", "en_cours", "traitee", "refusee"]);
   // Noms des styles et des fonds : ceux de donnees.js (égalité testée avec le moteur), traduits à l'affichage d'après leur identifiant.
@@ -1408,22 +1404,25 @@
     majCompteurs();
     if (dm.some(x => x.statut === "a_traiter" || x.statut === "en_cours")) va.veille = setTimeout(() => vaSuivre().catch(() => {}), 2000);
   }
-  async function videoAvis() {
-    const [c, k, tous, ph_] = await Promise.all([D.commerce(), D.compteur(), D.avisVideo(), D.photos()]);
-    const titre = entete(t("groupe.creer"), t("ecran.videoavis"), t("va.chapo"));
-    if (!k.videos_plafond) {
-      vue.innerHTML = `${pauseBandeau(c)}${titre}<section class="carte"><h2>${t("va.offre.titre")}</h2>
-        <p class="texte2 lecture">${t("va.offre.texte", { nom: e(k.offre_nom) })}</p><p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>`;
-      return;
-    }
+  // Vidéo d'avis dans l'écran Photos (25/10/2026) : une carte « Créer une vidéo d'avis » (offres avec vidéos) ; #/videoavis la déplie (section #video-avis).
+  // Message propre à la section (#va-msg) : l'écran Photos a déjà le sien (#msg).
+  let vaOuvert = false, vaCtx = null;
+  const vaMsg = x => { const m = $("va-msg"); if (m) m.textContent = x; };
+  async function blocVideoAvis(c) {
+    const [k, tous, ph_] = await Promise.all([D.compteur(), vaOuvert ? D.avisVideo() : [], D.photos()]); vaCtx = null;
+    if (!vaOuvert) return k.videos_plafond ? `<section class="carte" id="video-avis" aria-labelledby="va-titre"><h2 id="va-titre">${t("ecran.videoavis")}</h2><p class="texte2">${t("va.chapo")}</p>
+      <p class="pied"><a class="bouton second" id="va-ouvrir" href="#/videoavis">${t("va.ouvrir")}</a></p></section>` : "";
+    if (!k.videos_plafond) return `<section class="carte" id="video-avis" aria-labelledby="va-titre"><h2 id="va-titre">${t("va.offre.titre")}</h2>
+        <p class="texte2 lecture">${t("va.offre.texte", { nom: e(I.offre(k.offre || k.offre_nom)) })}</p><p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>`;
     const motifs = new Map(tous.map(a => [a.id, VA.motif(a)])), bons = tous.filter(a => !motifs.get(a.id)), autres = tous.filter(a => motifs.get(a.id));
     va.choisis = va.choisis.filter(id => bons.some(a => a.id === id));
     if (!va.fond || (va.fond === "photos" && !ph_.length)) va.fond = ph_.length ? "photos" : "uni";
-    const co = c.couleurs || {};
-    vue.innerHTML = `${pauseBandeau(c)}${titre}
+    vaCtx = { c, bons, co: c.couleurs || {} };
+    return `<section class="va-bloc" id="video-avis" aria-labelledby="va-titre"><div class="carte-tete"><h2 id="va-titre">${t("ecran.videoavis")}</h2><a href="#/photos" id="va-fermer">${t("fermer")}</a></div>
+      <p class="texte2">${t("va.chapo")}</p>
       <div class="colonnes va">
         <div class="pile">
-          <section class="carte"><div class="carte-tete"><h2>${t("va.avis.titre")}</h2><span class="note" id="va-compte"></span></div>
+          <section class="carte"><div class="carte-tete"><h3>${t("va.avis.titre")}</h3><span class="note" id="va-compte"></span></div>
             <p class="note">${t("va.avis.note")}</p>
             <p class="note" id="va-30-jours">${t("va.30.jours")}</p>
             ${bons.length ? `<ul class="liste va-avis">${bons.map(a => `<li><label class="option va-choix"><input type="checkbox" name="va-avis" value="${e(a.id)}"${va.choisis.includes(a.id) ? " checked" : ""}>
@@ -1432,29 +1431,32 @@
             : `<p class="texte2">${t("va.aucun.avis")}</p>`}
             ${autres.length ? `<details class="va-refus"><summary>${t("va.non.proposes", { n: autres.length })}</summary><ul class="liste">${autres.map(a => `<li><div><p class="fort">${e(a.auteur || t("va.auteur.inconnu"))} · ${etoiles(a.note)}</p><p class="citation"${lc()}>${t("guillemets.insec", { x: e(cut(a.texte || "", 140)) })}</p><p class="note">${e(ph(motifs.get(a.id)))}</p></div></li>`).join("")}</ul></details>` : ""}
           </section>
-          <section class="carte"><h2>${t("va.fond.titre")}</h2><fieldset><legend class="vh">${t("va.fond.legend")}</legend>
+          <section class="carte"><h3>${t("va.fond.titre")}</h3><fieldset><legend class="vh">${t("va.fond.legend")}</legend>
             ${VA.FONDS.map(f0 => { const f = { ...f0, ...vaFond(f0) }, sans = f.id === "photos" && !ph_.length; return `<label class="option va-choix"><input type="radio" name="va-fond" value="${f.id}"${va.fond === f.id ? " checked" : ""}${sans ? " disabled" : ""}><span class="va-texte"><span>${f.nom}${sans ? t("va.sans.photo") : ""}</span><span class="note">${f.note}</span></span></label>`; }).join("")}</fieldset></section>
-          <section class="carte"><h2>${t("va.typo.titre")}</h2><p class="note">${t("va.typo.note")}</p>
+          <section class="carte"><h3>${t("va.typo.titre")}</h3><p class="note">${t("va.typo.note")}</p>
             <fieldset class="va-styles"><legend class="vh">${t("va.typo.legend")}</legend>${VA.STYLES.map(s => `<label class="va-style"><input class="vh" type="radio" name="va-style" value="${s.id}"${va.style === s.id ? " checked" : ""}>
               <span class="va-style-nom" style="${vaPolice(s.titre)}">${vaNomStyle(s)}</span><span class="va-style-ex" style="${vaPolice(s.texte)}">${t("va.typo.exemple")}</span></label>`).join("")}</fieldset></section>
         </div>
         <div class="pile">
-          <section class="carte"><div class="carte-tete"><h2>${t("va.apercu")}</h2><span class="note">${t("va.indicatif")}</span></div>
+          <section class="carte"><div class="carte-tete"><h3>${t("va.apercu")}</h3><span class="note">${t("va.indicatif")}</span></div>
             <div class="va-apercu" id="va-apercu"></div>
             <p class="note">${t("va.apercu.note")}</p></section>
-          <section class="carte"><h2>${t("va.creer.titre")}</h2><p class="texte2" id="va-quota">${vaQuota(k)}</p>
+          <section class="carte"><h3>${t("va.creer.titre")}</h3><p class="texte2" id="va-quota">${vaQuota(k)}</p>
             <p class="note">${t("va.creer.note")}</p>
-            <div class="actions"><button type="button" class="bouton" id="va-creer">${t("va.creer")}</button></div><p class="msg" id="msg" role="status"></p></section>
-          <section class="carte"><h2>${t("va.demandes")}</h2><div id="va-demandes"></div></section>
+            <div class="actions"><button type="button" class="bouton" id="va-creer">${t("va.creer")}</button></div><p class="msg" id="va-msg" role="status"></p></section>
+          <section class="carte"><h3>${t("va.demandes")}</h3><div id="va-demandes"></div></section>
         </div>
-      </div>`;
-    const cases = [...vue.querySelectorAll("input[name=va-avis]")];
+      </div></section>`;
+  }
+  async function brancherVideoAvis() {
+    if (!vaCtx || !$("va-creer")) return;
+    const { c, bons, co } = vaCtx, cases = [...vue.querySelectorAll("input[name=va-avis]")];
     const maj = () => {
       const n = va.choisis.length, premier = bons.find(a => a.id === va.choisis[0]), s = VA.STYLES.find(x => x.id === va.style) || VA.STYLES[0];
       $("va-compte").textContent = t("va.compte", { n, max: VA.MAX });
       cases.forEach(i => { i.disabled = !i.checked && n >= VA.MAX; const r = va.choisis.indexOf(i.value); i.closest("label").querySelector("[data-rang]").textContent = r < 0 ? "" : t("va.position", { n: r + 1 }); });
       $("va-creer").disabled = n < VA.MIN || !!c.en_pause;
-      if (!$("msg").dataset.fixe) msg(n < VA.MIN ? t("va.cocher", { min: VA.MIN, n }) : "");
+      if (!$("va-msg").dataset.fixe) vaMsg(n < VA.MIN ? t("va.cocher", { min: VA.MIN, n }) : "");
       // Aperçu : couleurs de la fiche pour un fond uni ; pour les photos, un fond sombre neutre tient lieu de photo assombrie.
       const hex = (x, d) => /^#[0-9a-f]{6}$/i.test(x || "") ? x : d, accent = String(co.accent || "").toUpperCase() === "#2438FF" ? "#0F1C3A" : hex(co.accent, "#0F1C3A");   // même accent par défaut que moteur/video_avis.py (24/10/2026)
       const fond = va.fond === "photos" ? "#26282E" : va.fond === "accent" ? accent : hex(co.fond, "#FFFFFF");
@@ -1465,16 +1467,21 @@
       ap.innerHTML = `<p class="va-ap-nom" style="${vaPolice(s.auteur)}">${e(c.nom)}</p><div class="va-ap-centre"><span style="color:${etoile}">${vaEtoiles(premier ? premier.note : 5)}</span>
         <p class="va-ap-texte" style="${vaPolice(s.texte)};font-size:${taille.toFixed(1)}px"${premier ? lc() : ""}>${e(texte)}</p><p class="va-ap-auteur" style="${vaPolice(s.auteur)}">${premier ? e(premier.auteur) : ""}</p></div>`;
     };
-    cases.forEach(i => i.onchange = () => { delete $("msg").dataset.fixe; if (i.checked) va.choisis.push(i.value); else va.choisis = va.choisis.filter(x => x !== i.value); maj(); });
+    cases.forEach(i => i.onchange = () => { delete $("va-msg").dataset.fixe; if (i.checked) va.choisis.push(i.value); else va.choisis = va.choisis.filter(x => x !== i.value); maj(); });
     vue.querySelectorAll("input[name=va-fond]").forEach(i => i.onchange = () => { va.fond = i.value; maj(); });
     vue.querySelectorAll("input[name=va-style]").forEach(i => i.onchange = () => { va.style = i.value; maj(); });
     $("va-creer").onclick = async () => {
       try {
         $("va-creer").disabled = true; await D.demanderVideoAvis({ avis_ids: va.choisis, fond: va.fond, style: va.style });
-        va.choisis = []; await videoAvis(); $("msg").dataset.fixe = "1"; msg(t("va.enregistree"));
-      } catch (er) { $("msg").dataset.fixe = "1"; msg(ph(er.message)); $("va-creer").disabled = va.choisis.length < VA.MIN; }
+        va.choisis = []; await photos(); $("va-msg").dataset.fixe = "1"; vaMsg(t("va.enregistree"));
+      } catch (er) { $("va-msg").dataset.fixe = "1"; vaMsg(ph(er.message)); $("va-creer").disabled = va.choisis.length < VA.MIN; }
     };
     maj(); await vaSuivre();
+  }
+  // Adresse #/videoavis : l'écran Photos, section Vidéo d'avis dépliée et amenée à l'écran.
+  async function videoAvis() {
+    const premiere = !vaOuvert; vaOuvert = true; await photos();
+    if (premiere && $("video-avis")) $("video-avis").scrollIntoView({ block: "start" });
   }
   // ---- fin du bloc Vidéo d'avis ------------------------------------------------------------------------------------
 
@@ -1484,16 +1491,17 @@
   // et les expressions maison / à éviter en option repliée. Aucune couleur, police ni ambiance à choisir ici.
   // Tant que rien n'est validé, les contenus partent avec le style proposé. Écran partagé avec la console : marque.js, fonction ecran.
   const MQ = window.RENOM_MARQUE;
-  GROUPES.find(g => g.id === "commerce").ecrans.splice(1, 0, "style"); ECRANS.style = t("ecran.style");
   Object.assign(ETAPES, I.carte("etape", ["MARQUE_PROPOSEE", "MARQUE_ENREGISTREE", "MARQUE_VALIDEE", "MARQUE_REGLEE_RENOM", "MARQUE_VALIDEE_RENOM", "STYLE_CHANGEMENT_DEMANDE",
     "MARQUE_APERCUS", "LOGO_ILLISIBLE", "VIDEO_GENEREE_REFUSEE"]));
-  const styleEcran = MQ.ecran({ vue, I, mode: "commercant", entete: () => entete(t("sty.sur"), t("ecran.style"), t("sty.chapo")),
+  const styleEcran = MQ.ecran({ vue, I, mode: "commercant", entete: () => retour("#/reglages", "reg.retour") + entete(t("groupe.reglages"), t("ecran.style"), t("sty.chapo")),
     commerce: () => D.commerce(), marque: () => D.marque(), deposerLogo: f => D.deposerLogo(f),
     regler: (p, v) => D.reglerMaMarque(p, v), demander: x => D.demanderChangementStyle(x), apres: async () => majCompteurs() });
-  // Carte de l'accueil : « Votre style est prêt » quand BoostImpact l'a validé, « Nous créons votre style » avant ; rien une fois que le commerçant l'a validé.
-  const carteStyle = c => {
+  // Carte du style : « Votre style est prêt » quand BoostImpact l'a validé, « Nous créons votre style » avant ; rien une fois que le commerçant l'a validé.
+  // Accueil (25/10/2026) : seulement « prêt » (le commerçant a quelque chose à regarder) ; Réglages : les deux états.
+  const carteStyle = (c, surAccueil) => {
     const m = c.marque, pret = !!(m && m.verrouille && m.valide_par === "renom");
     if (m && m.verrouille && !pret) return "";
+    if (surAccueil && !pret) return "";
     const k = pret ? "acc.style.pret" : "acc.style";
     return `<section class="carte style-accueil" id="carte-style" aria-labelledby="carte-style-titre"><div class="style-accueil-corps">
       <div><h2 id="carte-style-titre">${t(k + ".titre")}</h2><p class="texte2">${t(k + ".texte")}</p></div>
@@ -1504,7 +1512,16 @@
   // ---- fin du bloc Votre style ------------------------------------------------------------------------------------
 
   // ---------------- Routage
-  const ROUTES = { connexion, accueil, resultats, fiche, photos, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, style };
+  const ROUTES = { connexion, accueil, resultats, fiche, photos, avalider, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, style, reglages };
+  // Administrateur arrivé dans l'espace des commerçants (25/10/2026) : il le dit, avec « Ouvrir la console » et « Se connecter avec un autre compte »
+  // (déconnexion, puis le formulaire de connexion). Même écran que la console pour un commerçant (console.js, refuse).
+  function reserveCommercants() {
+    connecte = false; derniere = null; dessinerNav();
+    vue.innerHTML = `<div class="connexion"><div class="carte" id="acces-reserve"><div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div>
+      <div class="entete"><h1>${t("con.refuse.titre")}</h1><p class="chapo">${t("esp.admin.texte")}</p></div>
+      <a class="bouton plein" href="${I.lien("console.html")}">${t("esp.admin.console")}</a><button type="button" class="bouton second plein" id="autre-compte">${t("acces.autre.compte")}</button></div></div>`;
+    $("autre-compte").onclick = async () => { await D.quitter(); aller("accueil"); };
+  }
   const aller = r => { if (location.hash === "#/" + r) rendre(); else location.hash = "#/" + r; };
   let derniere = null, langueLue = null;
   async function rendre() {
@@ -1515,13 +1532,13 @@
     // Lien d'email ouvert ici par un compte à double authentification (l'administrateur seul en a une, 18/10/2026) : la console demande le code.
     if (s.codeRequis) { location.href = I.lien("console.html"); return; }
     if (s.motDePasseRequis) { connecte = false; derniere = null; dessinerNav(); return choixMotDePasse(s); }
-    if (s.role === "administrateur" && D.mode === "demo" && !/(\?|&)voir\b/.test(location.search)) { location.href = I.lien("console.html"); return; }
+    if (s.role === "administrateur" && !(D.mode === "demo" && /(\?|&)voir\b/.test(location.search))) return reserveCommercants();
     // Langue : sans choix explicite (?lang= ou sélecteur), l'espace prend celle du commerce (la page se recharge une fois si elle change).
     if (s.role !== "administrateur" && langueLue !== s.email) {
       try { const c = await D.commerce(); langueCommerce = I.langueValide(c && c.langue) || "fr"; langueLue = s.email; if (I.depuisCommerce(langueCommerce)) return; } catch (er) {}
     }
     connecte = true; route = ECRANS[r] ? r : "accueil"; dessinerNav();
-    if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; } derniere = route;
+    if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; if (route !== "videoavis") vaOuvert = false; } derniere = route;
     ecranCourant = ROUTES[route];
     try { await ROUTES[route](); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
     vue.focus({ preventScroll: true }); majCompteurs();

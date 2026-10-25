@@ -59,6 +59,7 @@ Fichiers d'origine téléchargés en 2400 px, convertis en WebP (1920 x 1280 ; d
 | img/resto-dressage.webp | https://www.pexels.com/fr-fr/photo/30047126/ | premier écran, carrousel |
 | img/resto-bistrot.webp | https://www.pexels.com/fr-fr/photo/15790872/ | premier écran, carrousel |
 | img/resto-salle.webp | https://www.pexels.com/fr-fr/photo/9198282/ | premier écran, carrousel |
+| img/partage.jpg | https://www.pexels.com/fr-fr/photo/9198282/ (même photo que resto-salle.webp, assombrie, nom du site ajouté par outils/image_partage.py) | image de partage (og:image, twitter:image), 1200 x 630 |
 | img/resto-assiette.webp | https://www.pexels.com/fr-fr/photo/30488328/ | démonstration : « Votre photo » et la publication préparée |
 
 Aucune photo n'est présentée comme celle d'un client de BoostImpact (mention en bas de page). Les anciennes photos (img/renom-*.webp, sections

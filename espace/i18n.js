@@ -45,9 +45,12 @@
   const NOMBRES_FR = ["zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze"];
   const NOMBRES_EN = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
   const NOMBRES_NL = ["nul", "één", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien", "elf", "twaalf"];
-  // Noms des offres en néerlandais (moteur/offres.json, nom_nl) : les noms français viennent de la base (offres.nom).
-  const OFFRES_NL = { Essentiel: "Essentieel", Standard: "Standaard" };
-  const offreNl = n => OFFRES_NL[String(n)] || n;
+  // Noms des offres (25/10/2026) : une seule source, moteur/offres.json (nom, nom_en, nom_nl), recopiée dans window.RENOM_OFFRES (donnees.js, égalité
+  // testée par moteur/tests/test_commentaires.js). On les cherche par identifiant (essentiel, standard, premium) ou par le nom français de la base
+  // (offres.nom) ; dans les textes, {offre:<identifiant>} devient le nom dans la langue du texte. Offre inconnue : le nom reçu, tel quel.
+  const offreDe = n => { const O = window.RENOM_OFFRES || {}; return O[n] || Object.values(O).find(o => o.nom === String(n)) || null; };
+  const nomOffre = (n, l) => { const o = offreDe(n), g = lg(l); return !o ? n : (g === "en" ? o.nom_en : g === "nl" ? o.nom_nl : o.nom) || o.nom || n; };
+  const offreNl = n => nomOffre(n, "nl");
   const elision = m => /^[aeiouyéè]/i.test(m) ? "d'" : "de ";
 
   // ---------------------------------------------------------------- Dictionnaire
@@ -121,7 +124,52 @@
     "ecran.avis": ["Avis Google", "Google reviews", "Google-reviews"], "ecran.commentaires": ["Commentaires", "Comments", "Reacties"], "ecran.collecte": ["Collecte d'avis", "Getting reviews", "Reviews verzamelen"], "ecran.fichegoogle": ["Fiche Google", "Google profile", "Google-profiel"],
     "ecran.fiche": ["Fiche", "Details", "Gegevens"], "ecran.offre": ["Offre", "Plan", "Formule"], "ecran.comptes": ["Comptes connectés", "Connected accounts", "Gekoppelde accounts"], "ecran.notifications": ["Notifications", "Notifications", "Meldingen"],
     "ecran.demarrage": ["Démarrage", "Getting started", "Opstart"], "ecran.videoavis": ["Vidéo d'avis", "Review video", "Reviewvideo"],
-    "offre.nom": ["Offre {nom}", "{nom} plan", v => "Formule " + offreNl(v.nom)], "offre.titre.nom": ["Offre {nom}", "{nom} plan", v => "Formule " + offreNl(v.nom)],
+    // ---- Navigation simplifiée (25/10/2026) : 4 onglets et Réglages
+    "groupe.photos": ["Photos", "Photos", "Foto's"], "groupe.avalider": ["À valider", "To approve", "Goed te keuren"], "groupe.reglages": ["Réglages", "Settings", "Instellingen"],
+    "ecran.avalider": ["À valider", "To approve", "Goed te keuren"], "ecran.reglages": ["Réglages", "Settings", "Instellingen"],
+    "reg.chapo": ["Votre offre, vos comptes et vos préférences.", "Your plan, your accounts and your preferences.", "Uw formule, uw accounts en uw voorkeuren."],
+    "reg.retour": ["Retour aux réglages", "Back to settings", "Terug naar de instellingen"], "cal.retour": ["Retour à l'accueil", "Back to home", "Terug naar start"],
+    "reg.offre": ["Offre et factures", "Plan and invoices", "Formule en facturen"],
+    "reg.offre.texte": ["Ce qui est compris, le compteur du mois, l'abonnement et les factures.", "What's included, this month's counter, your subscription and invoices.", "Wat inbegrepen is, de teller van deze maand, het abonnement en de facturen."],
+    "reg.comptes": ["Réseaux connectés", "Connected accounts", "Gekoppelde accounts"],
+    "reg.comptes.texte": ["Google, Facebook, Instagram et TikTok : l'état de chaque accès.", "Google, Facebook, Instagram and TikTok: the status of each access.", "Google, Facebook, Instagram en TikTok: de status van elke toegang."],
+    "reg.notifications": ["Notifications", "Notifications", "Meldingen"],
+    "reg.notifications.texte": ["Email, WhatsApp et l'application sur votre téléphone.", "Email, WhatsApp and the app on your phone.", "E-mail, WhatsApp en de app op uw telefoon."],
+    "reg.style": ["Votre style", "Your style", "Uw stijl"],
+    "reg.style.texte": ["Les couleurs et le logo de vos contenus.", "The colours and logo used in your content.", "De kleuren en het logo van uw posts."],
+    "reg.fiche": ["Votre fiche", "Your details", "Uw gegevens"],
+    "reg.fiche.texte": ["Ce que BoostImpact peut dire de vous : spécialités, ton, horaires, contact.", "What BoostImpact can say about you: specialities, tone, opening hours, contact.", "Wat BoostImpact over u mag zeggen: specialiteiten, toon, openingsuren, contact."],
+    "reg.fichegoogle": ["Fiche Google", "Google profile", "Google-profiel"],
+    "reg.fichegoogle.texte": ["Photos, offre, événement ou horaires exceptionnels à publier sur Google.", "Photos, an offer, an event or special opening hours to publish on Google.", "Foto's, een aanbieding, een evenement of uitzonderlijke openingsuren om op Google te publiceren."],
+    "reg.demarrage": ["Démarrage", "Getting started", "Opstart"],
+    "reg.demarrage.texte": ["Vos 5 réponses pour que BoostImpact écrive comme vous.", "Your 5 answers so BoostImpact writes the way you do.", "Uw 5 antwoorden zodat BoostImpact schrijft zoals u."],
+    "acc.afaire.titre": ["À faire maintenant", "To do now", "Nu te doen"],
+    "acc.act.contenus": [v => v.n > 1 ? `Valider ${v.n} contenus` : "Valider 1 contenu", v => v.n === 1 ? "Approve 1 post" : `Approve ${v.n} posts`, v => v.n === 1 ? "1 post goedkeuren" : `${v.n} posts goedkeuren`],
+    "acc.act.avis": [v => v.n > 1 ? `Valider ${v.n} réponses d'avis` : "Valider 1 réponse d'avis", v => v.n === 1 ? "Approve 1 review reply" : `Approve ${v.n} review replies`, v => v.n === 1 ? "1 antwoord op een review goedkeuren" : `${v.n} antwoorden op reviews goedkeuren`],
+    "acc.act.commentaires": [v => v.n > 1 ? `Traiter ${v.n} commentaires` : "Traiter 1 commentaire", v => v.n === 1 ? "Deal with 1 comment" : `Deal with ${v.n} comments`, v => v.n === 1 ? "1 reactie behandelen" : `${v.n} reacties behandelen`],
+    "acc.act.mer": ["Terminer la mise en route, {a} sur {b}", "Finish your setup, {a} of {b}", "Uw opstart afronden, {a} van {b}"],
+    "acc.act.photos": ["Envoyer vos photos du mois", "Send this month's photos", "De foto's van deze maand sturen"],
+    "va.ouvrir": ["Créer une vidéo d'avis", "Create a review video", "Een reviewvideo maken"],
+    "esp.admin.texte": ["Cet espace est celui des commerçants. Vous êtes connecté avec le compte de l'administrateur.", "This area is for business owners. You are signed in with the administrator account.", "Deze zone is voor handelaars. U bent aangemeld met het beheerdersaccount."],
+    "esp.admin.console": ["Ouvrir la console", "Open the console", "De console openen"],
+    "acces.autre.compte": ["Se connecter avec un autre compte", "Sign in with another account", "Aanmelden met een ander account"],
+    // ---- Console simplifiée (25/10/2026) : À faire, Clients, Prospects
+    "con.entree.afaire": ["À faire", "To do", "Te doen"], "con.entree.clients": ["Clients", "Clients", "Klanten"],
+    "con.afaire.chapo": ["Tout ce qui attend l'équipe, en une seule file : ce qui est en retard d'abord, puis l'échéance la plus proche.", "Everything waiting for the team, in a single queue: overdue items first, then the nearest deadline.", "Alles wat op het team wacht, in één lijst: wat te laat is eerst, daarna de dichtstbijzijnde vervaldag."],
+    "con.afaire.types": ["Types d'éléments", "Item types", "Soorten"], "con.afaire.tout": ["Tout, {n}", "All, {n}", "Alles, {n}"],
+    "con.af.alertes": ["Alertes", "Alerts", "Meldingen"], "con.af.apublier": ["À publier", "To publish", "Te publiceren"], "con.af.avis": ["Avis et commentaires", "Reviews and comments", "Reviews en reacties"],
+    "con.af.videos": ["Vidéos", "Videos", "Video's"], "con.af.garanties": ["Garanties", "Guarantees", "Garanties"], "con.af.miseenroute": ["Mises en route", "Setups", "Opstarten"],
+    "con.af.options": ["Options commandées", "Ordered add-ons", "Bestelde opties"],
+    "con.afaire.erreur": ["Une partie de la file n'a pas pu être lue. Rechargez la page.", "Part of the queue could not be loaded. Reload the page.", "Een deel van de lijst kon niet worden gelezen. Laad de pagina opnieuw."],
+    "con.afaire.vide": ["Rien à faire pour le moment.", "Nothing to do right now.", "Momenteel niets te doen."],
+    "con.afaire.vide.type": ["Rien de ce type pour le moment.", "Nothing of this type right now.", "Momenteel niets van deze soort."],
+    "con.nouveau.client": ["Nouveau client", "New client", "Nieuwe klant"], "con.journal.tous": ["Journal de tous les clients", "Log for all clients", "Logboek van alle klanten"],
+    "con.journal.chapo": ["Toutes les étapes, tous clients confondus. Filtrez par commerce ou par type.", "Every step, for all clients. Filter by business or by type.", "Alle stappen, voor alle klanten. Filter op zaak of soort."],
+    "con.journal.client": ["Journal de ce client", "This client's log", "Logboek van deze klant"], "con.client.etat": ["État et offre", "Status and plan", "Status en formule"],
+    "con.client.style": ["Style et photos", "Style and photos", "Stijl en foto's"], "con.client.ouvrir": ["Ouvrir la fiche", "Open the record", "De fiche openen"],
+    "con.client.retour": ["Retour à la fiche du client", "Back to the client record", "Terug naar de fiche van de klant"],
+    "offre.nom": [v => "Offre " + nomOffre(v.nom, "fr"), v => nomOffre(v.nom, "en") + " plan", v => "Formule " + nomOffre(v.nom, "nl")],
+    "offre.titre.nom": [v => "Offre " + nomOffre(v.nom, "fr"), v => nomOffre(v.nom, "en") + " plan", v => "Formule " + nomOffre(v.nom, "nl")],
     // ---- Morceaux partagés
     "pause.titre": ["Votre commerce est en pause", "Your business is paused", "Uw zaak is gepauzeerd"],
     "pause.texte": ["Votre commerce est en pause : aucune nouvelle création ni programmation n'est possible. Contactez BoostImpact.", "Your business is paused: no new content can be created or scheduled. Please contact BoostImpact.", "Uw zaak is gepauzeerd: er kunnen geen nieuwe posts gemaakt of ingepland worden. Neem contact op met BoostImpact."],
@@ -505,8 +553,8 @@
       "Set-up fee: {prix} excl. VAT, once (in-depth audit, listing optimisation, set-up of the chosen social networks, review cards). Waived for any subscription taken out up to and including {date}.", "Opstartkosten: {prix} excl. btw, eenmalig (grondige audit, optimalisatie van het profiel, installatie van de gekozen netwerken, reviewkaarten). Gratis voor elk abonnement afgesloten tot en met {date}."],
     "offre.frais.factures": ["Frais de mise en route&nbsp;: {prix} HT, facturés une fois avec le premier paiement (audit approfondi, optimisation de la fiche, mise en place des réseaux retenus, cartes d'avis).",
       "Set-up fee: {prix} excl. VAT, charged once with the first payment (in-depth audit, listing optimisation, set-up of the chosen social networks, review cards).", "Opstartkosten: {prix} excl. btw, eenmalig aangerekend bij de eerste betaling (grondige audit, optimalisatie van het profiel, installatie van de gekozen netwerken, reviewkaarten)."],
-    "offre.frais.aucun": ["Aucuns frais de mise en route avec l'offre Essentiel.",
-      "No set-up fee with the Essential plan.", "Geen opstartkosten met de formule Essentieel."],
+    "offre.frais.aucun": ["Aucuns frais de mise en route avec l'offre {offre:essentiel}.",
+      "No set-up fee with the {offre:essentiel} plan.", "Geen opstartkosten met de formule {offre:essentiel}."],
     "offre.sans.engagement": ["Au mois, sans engagement&nbsp;: résiliable chaque mois. À l'année&nbsp;: 12 mois payés d'avance, renouvelés sauf résiliation, sans remboursement au prorata.", "Monthly, no commitment: cancel any month. Yearly: 12 months paid in advance, renewed unless cancelled, no pro rata refund.", "Maandelijks, zonder verbintenis: elke maand opzegbaar. Jaarlijks: 12 maanden vooraf betaald, verlengd tenzij u opzegt, zonder terugbetaling pro rata."],
     "offre.retiree": ["Votre offre n'est plus proposée aux nouveaux commerces. Elle reste la vôtre, aux mêmes conditions.", "Your plan is no longer offered to new businesses. It stays yours, on the same terms.", "Uw formule wordt niet meer aangeboden aan nieuwe zaken. Ze blijft de uwe, onder dezelfde voorwaarden."],
     "offre.garanties.titre": ["Notre garantie sur les délais",
@@ -754,13 +802,13 @@
     "cm.sur": ["Votre réputation sur les réseaux", "Your reputation on social media", "Uw reputatie op sociale media"],
     "cm.chapo": ["Les commentaires laissés sous vos publications Instagram et Facebook arrivent ici. BoostImpact propose une réponse, vous décidez.", "Comments left under your Instagram and Facebook posts show up here. BoostImpact suggests a reply, you decide.", "De reacties onder uw posts op Instagram en Facebook komen hier terecht. BoostImpact stelt een antwoord voor, u beslist."],
     "cm.offre.titre": ["Votre offre ne comprend pas les réponses aux commentaires", "Your plan doesn't include comment replies", "Uw formule omvat geen antwoorden op reacties"],
-    "cm.offre.texte": ["Les réponses aux commentaires sont comprises dans les offres Standard et Premium. Pour en profiter, contactez BoostImpact pour changer d'offre.",
-      "Comment replies are included in the Standard and Premium plans. To get them, contact BoostImpact to change plan.", "Antwoorden op reacties zijn inbegrepen in de formules Standaard en Premium. Wilt u ze, neem dan contact op met BoostImpact om van formule te veranderen."],
+    "cm.offre.texte": ["Les réponses aux commentaires sont comprises dans les offres {offre:standard} et {offre:premium}. Pour en profiter, contactez BoostImpact pour changer d'offre.",
+      "Comment replies are included in the {offre:standard} and {offre:premium} plans. To get them, contact BoostImpact to change plan.", "Antwoorden op reacties zijn inbegrepen in de formules {offre:standard} en {offre:premium}. Wilt u ze, neem dan contact op met BoostImpact om van formule te veranderen."],
     "cm.vide.titre": ["Aucun commentaire pour le moment", "No comments yet", "Nog geen reacties"],
     "cm.vide.texte": ["Les commentaires de vos publications apparaîtront ici dès que vos comptes Instagram et Facebook seront reliés à BoostImpact.", "Comments on your posts will appear here as soon as your Instagram and Facebook accounts are linked to BoostImpact.", "De reacties op uw posts verschijnen hier zodra uw Instagram- en Facebookaccounts aan BoostImpact gekoppeld zijn."],
     "cm.spams": ["Classés comme spam, sans réponse ({n})", "Marked as spam, no reply ({n})", "Als spam gemarkeerd, zonder antwoord ({n})"], "cm.auto": ["Répondre automatiquement aux compliments", "Reply to compliments automatically", "Automatisch antwoorden op complimenten"],
     "cm.auto.aide": ["Désactivé par défaut. Une fois activé, un simple compliment reçoit un remerciement sans attendre votre accord. Les questions et les réclamations attendent toujours votre accord.",
-      "Off by default. When on, a simple compliment gets a thank-you without waiting for your approval. Questions and complaints always wait for your approval.", "Standaard uitgeschakeld. Eenmaal ingeschakeld krijgt een gewoon compliment een bedankje zonder op uw akkoord te wachten. Vragen en klachten wachten altijd op uw akkoord."],
+      "Off by default. When on, a simple compliment gets a thank-you without waiting for your approval. Questions and complaints always wait for your approval.", "Uitgeschakeld tot u het inschakelt. Eenmaal ingeschakeld krijgt een gewoon compliment een bedankje zonder op uw akkoord te wachten. Vragen en klachten wachten altijd op uw akkoord."],
     "cm.comment": ["Comment ça marche", "How it works", "Hoe het werkt"],
     "cm.c1": ["BoostImpact classe chaque commentaire : question, compliment, réclamation, spam ou sensible.", "BoostImpact sorts each comment: question, compliment, complaint, spam or sensitive.", "BoostImpact deelt elke reactie in: vraag, compliment, klacht, spam of gevoelig."],
     "cm.c2": ["Un commentaire sensible (insulte, accusation, santé, question juridique) n'est jamais traité par BoostImpact : vous êtes alerté.", "A sensitive comment (insult, accusation, health, legal matter) is never handled by BoostImpact: you are alerted.", "Een gevoelige reactie (belediging, beschuldiging, gezondheid, juridische kwestie) wordt nooit door BoostImpact behandeld: u krijgt een melding."],
@@ -824,14 +872,14 @@
       "Not reached", "Niet gehaald"],
     "con.obj.etat.condition_manquante": ["Cartes d'avis à installer",
       "Review cards to set up", "Reviewkaarten te plaatsen"],
-    "con.file.equipe": ["traité par l'équipe (Standard, Premium)",
-      "handled by the team (Standard, Premium)", "behandeld door het team (Standaard, Premium)"],
+    "con.file.equipe": ["traité par l'équipe ({offre:standard}, {offre:premium})",
+      "handled by the team ({offre:standard}, {offre:premium})", "behandeld door het team ({offre:standard}, {offre:premium})"],
     "con.file.traite": ["Traité le {d}",
       "Handled on {d}", "Behandeld op {d}"],
     "con.file.reponse.proposer": ["Réponse à proposer au commerçant",
       "Reply to propose to the business owner", "Antwoord om aan de handelaar voor te stellen"],
-    "con.file.mode.equipe": ["Standard, Premium : l'équipe publie la réponse sous 24 h ; le commerçant est prévenu automatiquement (WhatsApp, sinon email).",
-      "Standard, Premium: the team publishes the reply within 24 hours; the business owner is informed automatically (WhatsApp, otherwise email).", "Standaard, Premium: het team publiceert het antwoord binnen 24 uur; de handelaar wordt automatisch op de hoogte gebracht (WhatsApp, anders e-mail)."],
+    "con.file.mode.equipe": ["{offre:standard}, {offre:premium} : l'équipe publie la réponse sous 24 h ; le commerçant est prévenu automatiquement (WhatsApp, sinon email).",
+      "{offre:standard}, {offre:premium}: the team publishes the reply within 24 hours; the business owner is informed automatically (WhatsApp, otherwise email).", "{offre:standard}, {offre:premium}: het team publiceert het antwoord binnen 24 uur; de handelaar wordt automatisch op de hoogte gebracht (WhatsApp, anders e-mail)."],
     "con.file.mode.proposer": ["Proposez la réponse au commerçant ({email}), par email, sans lien de validation. Publiez-la seulement après son accord écrit.",
       "Propose the reply to the business owner ({email}), by email, with no approval link. Publish it only after their written consent.", "Stel het antwoord voor aan de handelaar ({email}), per e-mail, zonder goedkeuringslink. Publiceer het pas na zijn schriftelijk akkoord."],
     "con.file.sans.email": ["adresse non renseignée",
@@ -844,8 +892,8 @@
       "Reply proposed", "Antwoord voorgesteld"],
     "con.file.proposee.msg": ["Réponse notée comme proposée : l'avis compte comme traité.",
       "Reply recorded as proposed: the review counts as handled.", "Antwoord genoteerd als voorgesteld: de review telt als behandeld."],
-    "con.cm.equipe.titre": ["Commentaires des commerces Premium",
-      "Comments for Premium businesses", "Reacties van Premium-zaken"],
+    "con.cm.equipe.titre": ["Commentaires des commerces {offre:premium}",
+      "Comments for {offre:premium} businesses", "Reacties van {offre:premium}-zaken"],
     "con.cm.equipe.chapo": ["Gestion des commentaires par l'équipe. Un commentaire sensible n'est jamais publié sans relecture.",
       "Comment management by the team. A sensitive comment is never published without review.", "Beheer van de reacties door het team. Een gevoelige reactie wordt nooit gepubliceerd zonder nalezing."],
     "con.cm.equipe.reponse": ["Réponse",
@@ -856,10 +904,10 @@
       "Ignore", "Negeren"],
     "con.delais.titre": ["Garantie des délais",
       "Turnaround guarantee", "Termijngarantie"],
-    "con.delais.chapo": ["Départ : accès à la fiche remis et premières photos reçues (la plus tardive des deux). Fiche optimisée sous 7 jours, premier contenu sous 72 h (Standard et Premium), chaque avis traité sous 24 h. Alertes avant dépassement ; un manquement donne un mois offert.",
-      "Start: listing access given and first photos received (whichever is later). Listing optimised within 7 days, first content within 72 hours (Standard and Premium), every review handled within 24 hours. Alerts before a deadline is missed; a miss gives a free month.", "Start: toegang tot het profiel bezorgd en eerste foto's ontvangen (de laatste van beide). Profiel geoptimaliseerd binnen 7 dagen, eerste post binnen 72 uur (Standaard en Premium), elke review behandeld binnen 24 uur. Meldingen vóór een termijn verstrijkt; een gemiste termijn geeft een gratis maand."],
-    "con.delais.sans.objet": ["Sans objet (Essentiel)",
-      "Not applicable (Essential)", "Niet van toepassing (Essentieel)"],
+    "con.delais.chapo": ["Départ : accès à la fiche remis et premières photos reçues (la plus tardive des deux). Fiche optimisée sous 7 jours, premier contenu sous 72 h ({offre:standard} et {offre:premium}), chaque avis traité sous 24 h. Alertes avant dépassement ; un manquement donne un mois offert.",
+      "Start: listing access given and first photos received (whichever is later). Listing optimised within 7 days, first content within 72 hours ({offre:standard} and {offre:premium}), every review handled within 24 hours. Alerts before a deadline is missed; a miss gives a free month.", "Start: toegang tot het profiel bezorgd en eerste foto's ontvangen (de laatste van beide). Profiel geoptimaliseerd binnen 7 dagen, eerste post binnen 72 uur ({offre:standard} en {offre:premium}), elke review behandeld binnen 24 uur. Meldingen vóór een termijn verstrijkt; een gemiste termijn geeft een gratis maand."],
+    "con.delais.sans.objet": ["Sans objet ({offre:essentiel})",
+      "Not applicable ({offre:essentiel})", "Niet van toepassing ({offre:essentiel})"],
     "con.delais.avant": ["avant le {d}",
       "by {d}", "vóór {d}"],
     "con.delais.fait": ["fait le {d}",
@@ -931,10 +979,10 @@
       "Review handled within 24 hours", "Review behandeld binnen 24 uur"],
     "con.ret.titre": ["Réseaux retenus et mode délégation",
       "Chosen networks and delegation mode", "Gekozen netwerken en delegatiemodus"],
-    "con.ret.chapo": ["Réseaux choisis par le commerçant à la mise en route, notés ici : le moteur ne produit et la base ne programme que pour eux, plus la fiche Google. Mode délégation : Premium seulement, une fois accepté par écrit par le commerçant.",
-      "Networks chosen by the business owner at set-up, recorded here: the engine only produces, and the database only schedules, for those, plus the Google profile. Delegation mode: Premium only, once accepted in writing by the business owner.", "Netwerken gekozen door de handelaar bij de opstart, hier genoteerd: de motor produceert en de database plant alleen voor die netwerken, plus het Google-profiel. Delegatiemodus: alleen Premium, zodra de handelaar hem schriftelijk aanvaard heeft."],
-    "con.ret.google.seul": ["Fiche Google seulement (Essentiel)",
-      "Google profile only (Essential)", "Alleen het Google-profiel (Essentieel)"],
+    "con.ret.chapo": ["Réseaux choisis par le commerçant à la mise en route, notés ici : le moteur ne produit et la base ne programme que pour eux, plus la fiche Google. Mode délégation : {offre:premium} seulement, une fois accepté par écrit par le commerçant.",
+      "Networks chosen by the business owner at set-up, recorded here: the engine only produces, and the database only schedules, for those, plus the Google profile. Delegation mode: {offre:premium} only, once accepted in writing by the business owner.", "Netwerken gekozen door de handelaar bij de opstart, hier genoteerd: de motor produceert en de database plant alleen voor die netwerken, plus het Google-profiel. Delegatiemodus: alleen {offre:premium}, zodra de handelaar hem schriftelijk aanvaard heeft."],
+    "con.ret.google.seul": ["Fiche Google seulement ({offre:essentiel})",
+      "Google profile only ({offre:essentiel})", "Alleen het Google-profiel ({offre:essentiel})"],
     "con.ret.delegation.le": ["Accepté le {d}",
       "Accepted on {d}", "Aanvaard op {d}"],
     "con.ret.delegation.non": ["Pas encore accepté",
@@ -946,8 +994,8 @@
     "con.mc.manque": ["Marque Metricool à créer : publications à la main en attendant.", "Metricool brand to create: posts by hand in the meantime.", "Metricool-merk aan te maken: intussen publicaties met de hand."],
     "con.mc.ok": ["Marque Metricool enregistrée.", "Metricool brand saved.", "Metricool-merk opgeslagen."],
     "con.file.titre": ["File des avis de BoostImpact", "BoostImpact's review queue", "Wachtrij met reviews van BoostImpact"],
-    "con.file.chapo": ["Standard et Premium : avis de 1 à 3 étoiles et avis sensibles, traités par l'équipe (relire ou écrire la réponse, publier), réponse sous 24 h ; le commerçant est prévenu, pas consulté. Essentiel : avis sensibles, la réponse est proposée au commerçant et publiée seulement avec son accord. Tant que l'accès à l'API Google n'est pas ouvert : copiez la réponse, publiez-la sur la fiche Google du commerce, puis cliquez sur « Réponse publiée ».",
-      "Standard and Premium: 1 to 3-star reviews and sensitive reviews, handled by the team (check or write the reply, publish), reply within 24 hours; the business owner is informed, not consulted. Essential: sensitive reviews, the reply is proposed to the business owner and published only with their consent. Until Google API access is granted: copy the reply, post it on the business's Google listing, then click “Reply published”.", "Standaard en Premium: reviews van 1 tot 3 sterren en gevoelige reviews, behandeld door het team (antwoord nalezen of schrijven, publiceren), antwoord binnen 24 uur; de handelaar wordt op de hoogte gebracht, niet geraadpleegd. Essentieel: gevoelige reviews, het antwoord wordt aan de handelaar voorgesteld en alleen met zijn akkoord gepubliceerd. Zolang de toegang tot de Google-API niet open is: kopieer het antwoord, publiceer het op het Google-profiel van de zaak en klik daarna op “Antwoord gepubliceerd”."],
+    "con.file.chapo": ["{offre:standard} et {offre:premium} : avis de 1 à 3 étoiles et avis sensibles, traités par l'équipe (relire ou écrire la réponse, publier), réponse sous 24 h ; le commerçant est prévenu, pas consulté. {offre:essentiel} : avis sensibles, la réponse est proposée au commerçant et publiée seulement avec son accord. Tant que l'accès à l'API Google n'est pas ouvert : copiez la réponse, publiez-la sur la fiche Google du commerce, puis cliquez sur « Réponse publiée ».",
+      "{offre:standard} and {offre:premium}: 1 to 3-star reviews and sensitive reviews, handled by the team (check or write the reply, publish), reply within 24 hours; the business owner is informed, not consulted. {offre:essentiel}: sensitive reviews, the reply is proposed to the business owner and published only with their consent. Until Google API access is granted: copy the reply, post it on the business's Google listing, then click “Reply published”.", "{offre:standard} en {offre:premium}: reviews van 1 tot 3 sterren en gevoelige reviews, behandeld door het team (antwoord nalezen of schrijven, publiceren), antwoord binnen 24 uur; de handelaar wordt op de hoogte gebracht, niet geraadpleegd. {offre:essentiel}: gevoelige reviews, het antwoord wordt aan de handelaar voorgesteld en alleen met zijn akkoord gepubliceerd. Zolang de toegang tot de Google-API niet open is: kopieer het antwoord, publiceer het op het Google-profiel van de zaak en klik daarna op “Antwoord gepubliceerd”."],
     "con.file.retard": ["Échéance des 24 h dépassée ({d})", "24-hour deadline passed ({d})", "Termijn van 24 uur verstreken ({d})"], "con.file.avant": ["À publier avant le {d}", "Publish by {d}", "Te publiceren vóór {d}"],
     "con.file.sensible": ["avis sensible ({r})", "sensitive review ({r})", "gevoelige review ({r})"],
     "con.file.recu": ["Reçu le {d}", "Received {d}", "Ontvangen op {d}"], "con.file.reponse": ["Réponse à publier", "Reply to publish", "Te publiceren antwoord"], "con.file.publiee": ["Réponse publiée", "Reply published", "Antwoord gepubliceerd"],
@@ -1364,8 +1412,8 @@
       "Film a few short shots: we edit them into one vertical video for Instagram, Facebook and TikTok. It arrives in “To approve”, like your other content.", "Film enkele korte shots: wij monteren ze tot één verticale video voor Instagram, Facebook en TikTok. Ze komt bij “Goed te keuren” terecht, zoals uw andere posts."],
     "dv.compteur": ["Vidéos ce mois-ci : {a} sur {b}", "Videos this month: {a} of {b}", "Video's deze maand: {a} van {b}"], "dv.compteur.attente": [v => `, dont ${v.n} en préparation`, v => `, including ${v.n} in progress`, v => `, waarvan ${v.n} in voorbereiding`],
     "dv.sans.titre": ["Vidéos", "Videos", "Video's"],
-    "dv.sans.texte": ["Votre offre {offre} ne comprend pas de vidéo. L'offre Premium en comprend 4 par mois, de 60 secondes au plus : vous filmez, nous montons.",
-      "Your {offre} plan doesn't include video. The Premium plan includes 4 a month, 60 seconds max. each: you film, we edit.", v => `Uw formule ${offreNl(v.offre)} omvat geen video. De formule Premium omvat er 4 per maand, van max. 60 seconden: u filmt, wij monteren.`],
+    "dv.sans.texte": ["Votre offre {offre} ne comprend pas de vidéo. L'offre {offre:premium} en comprend 4 par mois, de 60 secondes au plus : vous filmez, nous montons.",
+      "Your {offre} plan doesn't include video. The {offre:premium} plan includes 4 a month, 60 seconds max. each: you film, we edit.", v => `Uw formule ${offreNl(v.offre)} omvat geen video. De formule {offre:premium} omvat er 4 per maand, van max. 60 seconden: u filmt, wij monteren.`],
     "dv.voir.offres": ["Voir les offres", "See the plans", "De formules bekijken"],
     "dv.plafond": ["Le plafond de vidéos de votre offre est atteint ce mois-ci. Le compteur repart à zéro au début du mois.", "Your plan's video limit has been reached this month. The count resets at the start of the month.", "Het videoplafond van uw formule is deze maand bereikt. De teller begint opnieuw bij het begin van de maand."],
     "dv.guide.titre": ["Bien filmer, en 5 points", "Filming well, in 5 points", "Goed filmen, in 5 punten"],
@@ -1590,7 +1638,7 @@
     [/^Fichier non reçu : (.*)\.$/, (m, x) => `File not received: ${x}.`, (m, x) => `Bestand niet ontvangen: ${x}.`],
     [/^Kit de marque refusé : (.*)$/, (m, l) => `Style rejected by the database: ${l}`, (m, l) => `Stijl geweigerd door de database: ${l}`],
     [/^expression [àa] [ée]viter \(kit de marque\) : (.*)$/, (m, x) => `phrase to avoid (your style): ${x}`, (m, x) => `te vermijden uitdrukking (uw stijl): ${x}`],
-    [/^Offre plus vendue : (\S+)\. Offres en vente : Essentiel, Standard, Premium\.$/, (m, o) => `Plan no longer sold: ${o}. Plans on sale: Essential, Standard, Premium.`, (m, o) => `Formule niet meer verkocht: ${o}. Formules in verkoop: Essentieel, Standaard, Premium.`],
+    [/^Offre plus vendue : (\S+)\. Offres en vente : [^.]+\.$/, (m, o) => `Plan no longer sold: ${o}. Plans on sale: Essential, Growth, Premium.`, (m, o) => `Formule niet meer verkocht: ${o}. Formules in verkoop: Essentieel, Groei, Premium.`],
     [/^réseau non compris dans l'offre ou non retenu pour ce commerce : (\S+)$/, (m, r) => `network not included in the plan or not chosen for this business: ${r}`, (m, r) => `netwerk niet inbegrepen in de formule of niet gekozen voor deze zaak: ${r}`],
     [/^(\d+) nouveau\(x\) avis sur (\d+) au jour (\d+) \(seuil en vue : (\d+)\)\. Objectif interne, aucune conséquence de facturation\.$/, (m, g, o, j, s) => `${g} new review(s) out of ${o} on day ${j} (on-track threshold: ${s}). Internal target, no billing consequence.`, (m, g, o, j, s) => `${g} nieuwe review(s) van ${o} op dag ${j} (drempel om in zicht te blijven: ${s}). Interne doelstelling, geen gevolg voor de facturatie.`],
     [/^(\d+) nouveau\(x\) avis sur (\d+) à l'échéance du (\S+)\. Objectif interne, aucune conséquence de facturation\.$/, (m, g, o, d) => `${g} new review(s) out of ${o} at the ${d} deadline. Internal target, no billing consequence.`, (m, g, o, d) => `${g} nieuwe review(s) van ${o} op de vervaldag van ${d}. Interne doelstelling, geen gevolg voor de facturatie.`],
@@ -1620,8 +1668,10 @@
   // ---------------------------------------------------------------- Lecture
   function t(cle, v, l) {
     const e = T[cle], i = RANG[lg(l)] || 0; if (!e) return cle;
-    let x = e[i] == null ? e[0] : e[i]; if (typeof x === "function") return x(v || {});
-    return v ? x.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : x;
+    let x = e[i] == null ? e[0] : e[i];
+    const offres = s => typeof s === "string" ? s.replace(/\{offre:(\w+)\}/g, (m, k) => nomOffre(k, l)) : s;
+    if (typeof x === "function") return offres(x(v || {}));
+    return offres(v ? x.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)) : x);
   }
   const a = cle => cle in T;
   const ou = (cle, defaut) => langue === "fr" && defaut != null ? defaut : (a(cle) ? t(cle) : defaut);
@@ -1696,7 +1746,7 @@
 
   window.RENOM_I18N = {
     get langue() { return langue; }, get explicite() { return !!explicite; }, langueValide: valide,
-    t, a, ou, carte, phrase, liste, nombre, mois: l => mois(l), moisCourt: (i, l) => moisCourt(i, l), joursCourts: l => joursCourts(l),
+    t, a, ou, carte, phrase, liste, nombre, offre: nomOffre, mois: l => mois(l), moisCourt: (i, l) => moisCourt(i, l), joursCourts: l => joursCourts(l),
     jourMois, date, heure, heureCourte, dateHeure, hm, dateLongue,
     // « mercredi 14 octobre, 12 h 00 » au milieu d'une phrase française ; l'anglais garde la majuscule du jour.
     dateHeureDans: (d, l) => { const s = dateHeure(d, l); return fr(l) ? s.charAt(0).toLowerCase() + s.slice(1) : s; },

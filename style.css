@@ -222,7 +222,7 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .etape .etape-num{margin-top:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:44px;line-height:.9;color:var(--texte)}
 .etape p{font-size:16px;line-height:1.6;color:var(--texte-doux);margin-top:6px}
 
-/* ---------- Offres : trois cartes blanches sur ivoire, filet fin. L'offre conseillée (Standard) : filet bleu nuit de 2 px, mention en ardoise. */
+/* ---------- Offres : trois cartes blanches sur ivoire, filet fin. L'offre conseillée (Croissance) : filet bleu nuit de 2 px, mention en ardoise. */
 .offres{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}
 .offre{background:var(--surface);color:var(--texte);border:1px solid var(--trait);border-radius:var(--r-carte);padding:28px 22px;display:flex;flex-direction:column;gap:18px;min-width:0}
 .offre.reco{border:2px solid var(--nuit);padding:27px 21px}
