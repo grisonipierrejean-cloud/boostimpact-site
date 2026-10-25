@@ -18,13 +18,13 @@
   },
   "site_url": "https://boostimpact.agency",
   "hebergement": {
-    "pages_production": "github_pages",
+    "pages_production": "cloudflare_pages",
     "fournisseurs": {
-      "github_pages": {
-        "nom": "GitHub, Inc. (service GitHub Pages)",
-        "adresse": "88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis",
-        "telephone": "non publié (contact : https://support.github.com)",
-        "source": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement (lue le 13/10/2026)"
+      "cloudflare_pages": {
+        "nom": "Cloudflare, Inc. (service Cloudflare Pages)",
+        "adresse": "101 Townsend St., San Francisco, CA 94107, États-Unis",
+        "telephone": "+1 650 319 8930",
+        "source": "https://www.cloudflare.com/en/website-terms/ (lue le 25/10/2026)"
       },
       "supabase": {
         "nom": "Supabase Pte. Ltd.",
