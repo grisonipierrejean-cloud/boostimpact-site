@@ -98,7 +98,16 @@ var choix=g.querySelectorAll('.rythme-choix');
 // date de .offres (heure de Paris, incluse), facturés ensuite ; Essentiel : un seul lien, sans frais. Sans JavaScript : lien annuel, frais offerts.
 var jusqu=o.getAttribute('data-frais-offerts-jusqu')||'',auj='';try{auj=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Paris'})}catch(e){}
 var cas=(auj&&jusqu&&auj>jusqu)?'factures':'offerts',boutons=o.querySelectorAll('.offre-choisir');
-function liens(r){for(var i=0;i<boutons.length;i++){var b=boutons[i],u=b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais');if(u)b.setAttribute('href',u)}}
+// Rythme écrit sur le bouton et lien direct vers l'autre rythme sous le bouton (25/10/2026, test de PJ : le sélecteur en haut de section passait
+// inaperçu et Stripe n'affiche qu'un seul rythme par lien ; le client voit maintenant au moment du clic ce qu'il paie et comment changer).
+var lg=(document.documentElement.lang||'fr').slice(0,2),T={fr:{annuel:"à l'année",mensuel:'au mois',ou_annuel:"Ou payer à l'année (2 mois offerts)",ou_mensuel:'Ou payer au mois, sans engagement'},
+en:{annuel:'yearly',mensuel:'monthly',ou_annuel:'Or pay yearly (2 months free)',ou_mensuel:'Or pay monthly, no commitment'},
+nl:{annuel:'per jaar',mensuel:'per maand',ou_annuel:'Of per jaar betalen (2 maanden gratis)',ou_mensuel:'Of per maand betalen, zonder verbintenis'}}[lg]||null;
+function lien(b,r){return b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais')}
+function liens(r){var autre=r==='annuel'?'mensuel':'annuel';for(var i=0;i<boutons.length;i++){var b=boutons[i],u=lien(b,r);if(u)b.setAttribute('href',u);
+if(!T)continue;if(!b.hasAttribute('data-texte'))b.setAttribute('data-texte',b.textContent);b.textContent=b.getAttribute('data-texte')+' '+T[r];
+var a=b.nextElementSibling;if(!a||!a.classList.contains('offre-autre')){a=document.createElement('a');a.className='offre-autre';b.parentNode.insertBefore(a,b.nextSibling)}
+var v=lien(b,autre);if(v){a.href=v;a.textContent=T['ou_'+autre];a.hidden=false}else a.hidden=true}}
 function choisir(r){o.setAttribute('data-rythme-actif',r);for(var i=0;i<choix.length;i++)choix[i].setAttribute('aria-pressed',choix[i].getAttribute('data-choix')===r?'true':'false');liens(r)}
 g.hidden=false;choisir('annuel');
 g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');if(b)choisir(b.getAttribute('data-choix'))});

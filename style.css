@@ -245,6 +245,8 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .rythme-choix:hover{color:var(--texte)}
 .rythme-choix[aria-pressed="true"]{background:var(--nuit);color:var(--ivoire)}
 .rythme-gain{font-size:13px;font-weight:600}
+.offre-autre{display:block;margin-top:12px;text-align:center;font-size:15px;color:var(--texte-doux);text-decoration:underline;text-underline-offset:3px}
+.offre-autre:hover{color:var(--texte)}
 .offres[data-rythme-actif="annuel"] [data-rythme="mensuel"],.offres[data-rythme-actif="mensuel"] [data-rythme="annuel"]{display:none}
 .inclus{list-style:none;display:flex;flex-direction:column;gap:10px;flex:1}
 .inclus li{font-size:15px;line-height:1.5;padding-top:10px;border-top:1px solid var(--trait)}
