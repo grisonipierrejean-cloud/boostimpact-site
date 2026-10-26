@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Rapport d'audit en ligne (26/10/2026). L'email d'audit porte https://boostimpact.agency/audit/?r=<uuid> au lieu d'une pièce jointe (spam
+     chez Yahoo). audit.js lit r (uuid v4, contrôle strict), télécharge le rapport public du seau Supabase « rapports » (servi en text/plain par
+     Supabase : voulu) et l'affiche dans une iframe srcdoc SANS script (sandbox sans allow-scripts ni allow-same-origin) ; liens du rapport
+     ouverts dans un nouvel onglet (allow-popups, base target _blank ajoutée par audit.js). Rapport absent ou erreur : message court FR/EN/NL selon
+     la langue du navigateur et lien vers le formulaire d'audit. Page non indexée ; aucune adresse transmise à un tiers (no-referrer). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https:; connect-src https://ydojahvxzgprlzigumjn.supabase.co; frame-src 'self'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Votre audit, BoostImpact</title>
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0F1C3A">
+<link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png"><link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="stylesheet" href="../style.css?v=2510b">
+<style>
+html,body{height:100%}
+body.rapport-ouvert{overflow:hidden;background:#F6F4EF}
+.rapport-cadre{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#F6F4EF}
+.audit-attente{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;color:var(--texte-discret);font-size:15px}
+</style>
+</head><body>
+<p class="audit-attente" id="attente" aria-live="polite"></p>
+<div id="absent" hidden>
+<header class="entete entete-simple"><div class="wrap"><a class="logo" href="../index.html" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a></div></header>
+<main>
+<section class="wrap simple">
+<h1 id="absent-titre"></h1>
+<p class="chapo" id="absent-texte"></p>
+<p><a class="btn btn-prim btn-grand" id="absent-lien" href="https://boostimpact.agency/#audit"></a></p>
+</section>
+</main>
+</div>
+<iframe class="rapport-cadre" id="rapport" title="Votre audit, BoostImpact" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" hidden></iframe>
+<script src="audit.js"></script>
+</body></html>
