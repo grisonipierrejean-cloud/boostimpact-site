@@ -69,7 +69,10 @@
     return `<div class="pile serre style-ligne"><p class="note">${etat}</p>${n ? `<p class="note fort">${t("con.sty.ligne.demandes", { n })}</p>` : ""}<a class="bouton second petit" href="${I.lien("console.html")}#/style/${encodeURIComponent(c.id)}" data-style="${e(c.id)}">${t("con.sty.ouvrir")}</a></div>`
       + lignePhotos(c); };
   // Autorisation photos (décision de PJ du 22/10/2026, CGV article 11) : son état, et « Déposer des photos pour ce client » (panneau #/photos/<commerce>).
-  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? t("con.ph.autorise", { d: I.date(c.photos_autorisees_le) }) : t("con.ph.non")}</p>
+  // Autorisation photos (CGV article 11, 26/10/2026) : « fiche Google seulement » pour un Essentiel, ou une autorisation donnée en Essentiel et pas encore
+  // étendue par le commerçant (commerces.photos_autorisees_perimetre) : l'équipe ne reprend alors que les photos publiées sur la fiche Google.
+  const phAutorise = c => t((OFFRES[c.offre_id] || {}).reseaux_sociaux === false || c.photos_autorisees_perimetre === "fiche_google" ? "con.ph.autorise.google" : "con.ph.autorise", { d: I.date(c.photos_autorisees_le) });
+  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? phAutorise(c) : t("con.ph.non")}</p>
     <a class="bouton second petit" href="${I.lien("console.html")}#/photos/${encodeURIComponent(c.id)}" data-photos="${e(c.id)}">${t("con.ph.bouton")}</a></div>`;
   // Panneau « Déposer des photos pour ce client » : fermé sans l'autorisation du commerçant (la base le refuse aussi : admin_deposer_photos et la règle du
   // seau). Envoi de chaque photo dans le dossier du commerce (même envoi que l'espace), puis un seul enregistrement (1 à 10 photos), source « equipe ».
@@ -77,7 +80,7 @@
     const c = cid && (await D.adminCommerces()).find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
     const ouvert = !!c.photos_autorisees_le;
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.ph.bouton")}</p><h1>${e(c.nom)}</h1><p class="chapo">${t("con.ph.chapo")}</p></div><p class="retour-liste"><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.retour")}</a></p>
-      <section class="carte" id="ph-client"><p class="fort">${ouvert ? t("con.ph.autorise", { d: I.date(c.photos_autorisees_le) }) : t("con.ph.non")}</p>
+      <section class="carte" id="ph-client"><p class="fort">${ouvert ? phAutorise(c) : t("con.ph.non")}</p>
       ${ouvert ? `<form id="ph-f"><div class="f"><label for="ph-fichiers">${t("con.ph.choisir")}</label><input id="ph-fichiers" type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple></div>
         <div class="actions"><button class="bouton" type="submit" id="ph-ok">${t("con.ph.deposer")}</button><button type="button" class="lien" id="ph-retirer">${t("con.ph.retirer")}</button></div></form>`
       : `<p class="texte2" id="ph-ferme">${t("con.ph.sans")}</p>`}<p class="msg" id="msg" role="status"></p></section>`;
@@ -231,7 +234,8 @@
   //    (« Réponse publiée », commerçant prévenu) ; Essentiel, avis sensibles : la réponse est PROPOSÉE au commerçant (admin_avis_proposer),
   //    publiée seulement avec son accord (admin_avis_publie, accord coché). Tant que l'accès à l'API Google n'est pas ouvert, la réponse est publiée à
   //    la main sur la fiche, puis notée ici.
-  // 2. Commentaires des commerces Premium (gestion par l'équipe). 3. Garantie des délais : départ (accès et premières photos), fiche sous 7 jours,
+  // 2. Commentaires des commerces Premium (gestion par l'équipe). 3. Garantie des délais : départ (Essentiel : accès seul, depuis le 26/10/2026 ;
+  //    Croissance et Premium : accès et premières photos), fiche sous 7 jours,
   //    premier contenu sous 72 h, avis sous 24 h ; manquements → mois offert, appliqué À LA MAIN dans Stripe puis noté ici (ordres/BRANCHEMENT.md).
   // 4. Réseaux retenus et mode délégation. 5. Objectif INTERNE des pilotes (ancienne garantie « 10 avis ») : jamais montré au commerçant.
   // 3 à 5 sont dans la fiche de chaque client ; les délais en retard ou proches et les mois offerts à appliquer sont aussi dans « À faire ».
@@ -421,7 +425,7 @@
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>
         <h3>${t("con.delais.titre")}</h3>${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
-          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="date" required></div><p class="note">${t("con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
+          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="date" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
         ${mq.length ? `<h3>${t("con.mq.titre")}</h3><div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
         <h3>${t("con.ret.titre")}</h3><div class="pile serre" data-ret="${e(cid)}">${o.reseaux_sociaux ? `<div class="pile serre">${RESEAUX_RET.map(r => `<label class="option"><input type="checkbox" value="${r}" data-ret-res${ret.includes(r) ? " checked" : ""}><span>${NOM_RES[r]}</span></label>`).join("")}<button type="button" class="bouton second petit" data-ret-enregistrer>${t("enregistrer")}</button></div>` : `<p class="note">${t("con.ret.google.seul")}</p>`}
           ${o.delegation ? `<label class="option"><input type="checkbox" data-delegation${c.delegation_signee_le ? " checked" : ""}><span>${t(c.delegation_signee_le ? "con.ret.delegation.le" : "con.ret.delegation.non", { d: c.delegation_signee_le ? I.date(jourDe(c.delegation_signee_le)) : "" })}</span></label>` : `<p class="note">${t("con.ret.delegation.sans")}</p>`}</div>

@@ -16,6 +16,10 @@
   // Offre sans réseaux sociaux (Essentiel : fiche Google seulement, moteur/offres.json). 26/10/2026 (test réel de PJ) : ses écrans ne parlent ni de
   // réseaux, ni de vidéos, ni de « community manager » ; les photos y sont facultatives, pour ses publications Google du mois (clés « .google »).
   const sansReseaux = c => offreDe(c).reseaux_sociaux === false;
+  // Autorisation photos (CGV article 11, 26/10/2026) : périmètre « fiche_google » (donnée en Essentiel) ou « fiche_site_reseaux ». Après un passage
+  // de l'Essentiel à Croissance ou Premium, l'autorisation reste limitée à la fiche Google : la case (texte complet) est proposée de nouveau.
+  const autorisationGoogle = c => sansReseaux(c) || c.photos_autorisees_perimetre === "fiche_google";
+  const autorisationAJour = c => !!c.photos_autorisees_le && (sansReseaux(c) || c.photos_autorisees_perimetre !== "fiche_google");
   const pubGoogle = c => offreDe(c).publications || 2;
   // Mode délégation : Premium ET accepté par écrit par le commerçant (commerces.delegation_signee_le, saisi dans la console).
   const delegationActive = c => !!(offreDe(c).delegation && (c || {}).delegation_signee_le);
@@ -466,7 +470,7 @@
     const [c, l] = await Promise.all([D.commerce(), D.photos()]);
     const g = sansReseaux(c);
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}
-      ${c.photos_autorisees_le ? `<p class="note" id="autorisation-donnee">${t("aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
+      ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
           <form id="f"><div class="f"><div class="depot">
@@ -771,9 +775,10 @@
 
   // ---------------- Autorisation photos (décision de PJ du 22/10/2026, CGV article 11) : case au premier écran (démarrage, et accueil tant qu'elle
   // n'est pas cochée), état dans l'écran Photos. Fonction autoriser_photos (schema.sql) ; le retrait se fait par email (noté par l'équipe).
-  const carteAutorisation = c => c.photos_autorisees_le ? "" : `<section class="carte autorisation-photos" id="autorisation-photos" aria-labelledby="aut-titre">
+  // Essentiel (26/10/2026) : la case ne porte que sur les photos publiées par le commerce sur sa fiche Google (« aut.case.google »).
+  const carteAutorisation = c => autorisationAJour(c) ? "" : `<section class="carte autorisation-photos" id="autorisation-photos" aria-labelledby="aut-titre">
       <h2 id="aut-titre">${t("aut.titre")}</h2><p class="texte2">${t("aut.chapo")}</p>
-      <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t("aut.case")}</span></label>
+      <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t(sansReseaux(c) ? "aut.case.google" : "aut.case")}</span></label>
       <div class="actions"><button type="submit" class="bouton second" id="aut-ok">${t("aut.enregistrer")}</button></div><p class="msg" id="aut-msg" role="status"></p></form></section>`;
   function brancherAutorisation(apres) {
     const f = $("aut-f"); if (!f) return;
@@ -976,9 +981,10 @@
   const COND = window.RENOM_CONDITIONS;
   const euros = x => t("euros", { x: nombre(x) });
   const ETATS_DELAI = I.carte("delai.etat", ["non_demarre", "en_cours", "tenu", "manque"]);
-  function suiviDelais(g) {
+  // Essentiel (26/10/2026, CGV article 10) : les délais partent de l'accès à la fiche Google seul (photos facultatives).
+  function suiviDelais(g, google) {
     if (!g) return "";
-    if (!g.depart) return `<div class="pile serre" id="offre-delais-suivi"><h3>${t("offre.delais.suivi")}</h3><p class="note">${t("offre.delais.pas.demarre")}</p></div>`;
+    if (!g.depart) return `<div class="pile serre" id="offre-delais-suivi"><h3>${t("offre.delais.suivi")}</h3><p class="note">${t(google ? "offre.delais.pas.demarre.google" : "offre.delais.pas.demarre")}</p></div>`;
     const ligne = (lib, d, id) => `<li id="${id}"><span>${lib}${d.echeance ? `<span class="note">${t(d.fait_le ? "offre.delais.fait" : "offre.delais.avant", { d: I.dateLongue((d.fait_le || d.echeance).slice(0, 10)) })}</span>` : ""}</span><span class="etat${d.etat === "tenu" ? " actif" : ""}">${ETATS_DELAI[d.etat] || e(d.etat)}</span></li>`;
     const av = g.avis_en_cours || [], offerts = (g.mois_offerts || []).map(m => I.dateLongue(m)).join(", ");
     return `<div class="pile serre" id="offre-delais-suivi"><h3>${t("offre.delais.suivi")}</h3>
@@ -1031,10 +1037,10 @@
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>
           ${o.reseaux_sociaux ? `<li><p class="fort">${t("offre.garantie.contenu", { n: gd.premier_contenu_heures })}</p></li>` : ""}
           <li><p class="fort">${t("offre.garantie.avis24", { n: gd.avis_traite_heures })}</p></li>
-          <li><p class="note">${t("offre.garantie.contrepartie")}</p></li></ul>
-        ${suiviDelais(g)}</section>
+          <li><p class="note">${t(o.reseaux_sociaux === false ? "offre.garantie.contrepartie.google" : "offre.garantie.contrepartie")}</p></li></ul>
+        ${suiviDelais(g, o.reseaux_sociaux === false)}</section>
       ${optionsCommandees(cmds)}
-      <section class="carte" id="offre-processus"><h2>${t("offre.processus.titre")}</h2><ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n)}</li>`).join("")}</ol></section>
+      <section class="carte" id="offre-processus"><h2>${t("offre.processus.titre")}</h2><ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol></section>
       <section class="carte" id="offre-abonnement"><div class="carte-tete"><h2>${t("abo.titre")}</h2>${ab ? `<span class="etat${ab.statut === "actif" ? " actif" : ""}" id="abo-statut">${ST_ABO[ab.statut] || e(ab.statut)}</span>` : ""}</div>
         <p class="texte2 lecture">${ab ? t("abo.texte." + ab.statut) : t("abo.aucun")}</p>
         ${lien ? `<p class="pied actions-abo"><a class="bouton${lienA ? " second" : ""}" id="offre-payer" href="${e(lien)}" target="_blank" rel="noopener">${t(portail ? "abo.bouton.portail" : "abo.bouton.mensuel")}</a>${lienA ? `<a class="bouton" id="offre-payer-annuel" href="${e(lienA)}" target="_blank" rel="noopener">${t("abo.bouton.annuel", { gain: euros(gainAn) })}</a>` : ""}</p><p class="note">${t(portail ? "abo.note.portail" : "abo.note.paiement")}</p>`
