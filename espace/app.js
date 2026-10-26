@@ -13,6 +13,10 @@
   // Règle de publication des réponses aux avis, selon l'offre (moteur/avis/regles.js ; CGV article 8). Essentiel : tout est validé par le commerçant ;
   // Standard : 4 et 5 étoiles automatiques ; Premium : en plus, 1 à 3 étoiles traités par l'équipe BoostImpact. Un avis sensible n'est jamais automatique.
   const offreDe = c => (window.RENOM_OFFRES || {})[(c || {}).offre_id] || {};
+  // Offre sans réseaux sociaux (Essentiel : fiche Google seulement, moteur/offres.json). 26/10/2026 (test réel de PJ) : ses écrans ne parlent ni de
+  // réseaux, ni de vidéos, ni de « community manager » ; les photos y sont facultatives, pour ses publications Google du mois (clés « .google »).
+  const sansReseaux = c => offreDe(c).reseaux_sociaux === false;
+  const pubGoogle = c => offreDe(c).publications || 2;
   // Mode délégation : Premium ET accepté par écrit par le commerçant (commerces.delegation_signee_le, saisi dans la console).
   const delegationActive = c => !!(offreDe(c).delegation && (c || {}).delegation_signee_le);
   // Avis : l'équipe répond et publie elle-même (avis de 1 à 3 étoiles et avis sensibles) en Standard et en Premium (offres.avis_equipe, 22/10/2026).
@@ -294,6 +298,9 @@
   }
   // Visite directe de la démonstration (boutons sous le formulaire, redessinés quand on passe d'un mode de l'écran à l'autre).
   vue.addEventListener("click", async ev => { const b = ev.target.closest && ev.target.closest("[data-entrer]"); if (b && D.mode === "demo") { await D.ouvrirLien(b.dataset.entrer); await apresEntree(); } });
+  // Lien d'email au nouveau format (?jeton=…&type=…, 26/10/2026) : écran à un bouton (acces.js, lienEmail) ; au clic, le lien est vérifié, puis
+  // rendre() montre le choix du mot de passe (session née du lien). Lien expiré ou déjà servi : l'écran de connexion, « recevoir un nouveau lien ».
+  const lienEmail = () => ACC.lienEmail({ vue, I, D, apres: () => rendre(), echec: () => connexion() });
   // Session ouverte par un lien d'email (invitation, mot de passe oublié) : seulement le choix du mot de passe, jamais l'espace.
   const choixMotDePasse = s => ACC.choixMotDePasse({ vue, I, D, email: s.email, apres: apresEntree, annuler: async () => { await D.quitter(); aller("accueil"); } });
 
@@ -370,7 +377,7 @@
       cmValider.length + cmHumains.length ? { id: "commentaires", href: "#/commentaires", texte: t("acc.act.commentaires", { n: cmValider.length + cmHumains.length }) } : null,
       merEnCours ? { id: "mise-en-route", vers: "mise-en-route", texte: t("acc.act.mer", { a: mr.faits, b: mr.total }) } : null,
       !c.demarrage_fini ? { id: "demarrage", href: "#/demarrage", texte: t("acc.dem.reprendre") } : null,
-      !c.en_pause && !photosDuMois ? { id: "photos", href: "#/photos", texte: t("acc.act.photos") } : null,
+      !c.en_pause && !photosDuMois ? { id: "photos", href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
     ].filter(Boolean);
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
@@ -401,7 +408,8 @@
     const c = await D.commerce();
     vue.innerHTML = `${entete("", t("ecran.reglages"), t("reg.chapo"))}
       ${carteStyle(c, false)}
-      <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.map(r => `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r)}</span><span class="note">${t("reg." + r + ".texte")}</span></span></a></li>`).join("")}</ul></nav>
+      <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.map(r => { const g = r === "comptes" && sansReseaux(c) ? ".google" : "";
+        return `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r + g)}</span><span class="note">${t("reg." + r + ".texte" + g)}</span></span></a></li>`; }).join("")}</ul></nav>
       ${large.matches ? "" : `<p class="pied-reglages"><button type="button" id="sortir" class="bouton second">${t("quitter")}</button></p>`}`;
   }
 
@@ -456,7 +464,8 @@
   const clePhoto = f => [f.name, f.size, f.lastModified || 0].join(":");
   async function photos() {
     const [c, l] = await Promise.all([D.commerce(), D.photos()]);
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t("photos.titre"), t("photos.chapo"))}
+    const g = sansReseaux(c);
+    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}
       ${c.photos_autorisees_le ? `<p class="note" id="autorisation-donnee">${t("aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
@@ -624,6 +633,9 @@
   let dvOuvert = null;
   async function blocDepotVideo(c) {
     const [k, l] = await Promise.all([D.compteurVideos(), D.depotsVideo()]), o = window.RENOM_OFFRES[c.offre_id] || {};
+    // Offre sans réseaux (Essentiel, 26/10/2026) : aucune carte « Vidéos » (une vidéo ne se publie pas sur la fiche Google) ; seulement le suivi
+    // d'anciens dépôts, s'il y en a (commerce passé d'une autre offre à l'Essentiel).
+    if (!k.videos_plafond && sansReseaux(c)) return l.length ? `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>` : "";
     if (!k.videos_plafond) return `<section class="carte" id="depot-video"><h2>${t("dv.sans.titre")}</h2><p class="texte2">${t("dv.sans.texte", { offre: e(I.offre(c.offre_id)) })}</p>
       <p class="pied"><a class="bouton second" href="#/offre">${t("dv.voir.offres")}</a></p></section>${l.length ? `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>` : ""}`;
     dvOuvert = l.find(d => d.statut === "en_envoi" && Date.now() - Date.parse(d.cree_le) < DV.OUVERT_MS) || null;
@@ -687,7 +699,7 @@
     const liste = l.filter(x => famille(x) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
     const formatCourt = x => t("format.court." + M.formatDe(x));
-    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil">${entete(t("groupe.avalider"), t("contenus.titre"), t(delegationActive(c) ? "contenus.chapo.delegation" : "contenus.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil">${entete(t("groupe.avalider"), t("contenus.titre"), t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo"))}
         <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees">${t("idees.titre")}</button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
@@ -739,7 +751,7 @@
           <div class="champs deux"><div class="f"><label for="jour">${t("cal.date")}</label><input id="jour" type="date" value="${demain()}" required></div><div class="f"><label for="heure">${t("cal.heure")}</label><input id="heure" type="time" value="12:00" required></div></div>
           <fieldset><legend>${t("cal.reseaux")}</legend>${window.RENOM_RESEAUX.map(r => `<label class="option"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : t("cal.non.connecte")}</span></label>`).join("")}
           <p class="aide">${t("cal.plafond.aide")}</p></fieldset>
-          <button class="bouton" type="submit">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t("cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
+          <button class="bouton" type="submit">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
       <section class="carte"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
         <p><span class="fort">${dateHeure(x.prevu_le)}</span> · ${x.reseaux.map(r => RES[r]).join(", ")} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
@@ -952,8 +964,9 @@
   // ---------------- Comptes connectés
   const AIDE = I.carte("compte.aide", ["google", "facebook", "instagram", "tiktok"]);
   async function comptes() {
-    const l = await D.comptes();
-    vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t("ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t("comptes.chapo"))}
+    // Offre sans réseaux (Essentiel, 26/10/2026) : seulement l'accès à la fiche Google ; Facebook, Instagram et TikTok ne la concernent pas.
+    const [c, l0] = await Promise.all([D.commerce(), D.comptes()]), g = sansReseaux(c), l = g ? l0.filter(x => x.reseau === "google") : l0;
+    vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t(g ? "reg.comptes.google" : "ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t(g ? "comptes.chapo.google" : "comptes.chapo"))}
       <div class="cartes comptes">${l.map(x => `<article class="carte"><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}</article>`).join("")}</div>`;
   }
 
@@ -996,15 +1009,15 @@
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
           ${mesure(t("offre.pub.utilisees"), k.publications_utilisees, k.publications_plafond)}
-          ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
-          <div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>
+          ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
+          ${o.reseaux_sociaux === false ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
         <section class="carte moitie"><h2>${t("offre.inclus")}</h2><ul class="liste">
           <li id="offre-contenus"><span>${t("offre.inc.contenus")}</span><span class="fort">${o.videos ? t("offre.contenus.dont.videos", { n: contenus, v: o.videos }) : t("offre.contenus.n", { n: contenus })}</span></li>
           <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
-          <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li><li><span>${t("offre.inc.commentaires")}</span><span class="fort">${t(k.commentaires_inclus ? "comprises" : "non.comprises")}</span></li>
+          <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>${o.reseaux_sociaux === false ? "" : `<li><span>${t("offre.inc.commentaires")}</span><span class="fort">${t(k.commentaires_inclus ? "comprises" : "non.comprises")}</span></li>`}
           <li><span>${t("offre.inc.concurrents")}</span><span class="fort">${t("comprise")}</span></li><li><span>${t("offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
-          <p class="note pied">${t("offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
+          <p class="note pied">${t(o.reseaux_sociaux === false ? "offre.contenus.unite.google" : "offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
       </div>
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
         <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
@@ -1114,7 +1127,7 @@
         <section class="carte moitie" aria-labelledby="r-col"><div class="carte-tete"><h2 id="r-col">${t("res.collecte.titre")}</h2><a href="#/collecte">${t("res.collecte.ouvrir")}</a></div>${chiffresCollecte(col, true)}
           <p class="note">${t("res.collecte.note")}</p></section>
       </div>
-      <section class="carte" aria-labelledby="r-portee"><h2 id="r-portee">${t("res.portee.titre")}</h2><p class="texte2" id="portee">${t("res.portee")}</p></section>`;
+      <section class="carte" aria-labelledby="r-portee"><h2 id="r-portee">${t("res.portee.titre")}</h2><p class="texte2" id="portee">${t(sansReseaux(c) ? "res.portee.google" : "res.portee")}</p></section>`;
   }
 
   // ---------------- Fiche Google : photos, offre, événement, horaires exceptionnels. Le commerçant valide, rien ne part seul.
@@ -1268,7 +1281,7 @@
       vue.innerHTML = `${entete(t("dem5.fini"), e(c.nom), t("dem5.fini.chapo"))}
         <section class="carte style-accueil" id="dem-style"><h2>${t("dem5.style.titre")}</h2><p class="texte2">${t("dem5.style.texte")}</p>
           <p class="pied"><a class="bouton" href="#/style">${t("dem5.style.bouton")}</a></p></section>
-        <section class="carte"><h2>${t("dem5.maintenant")}</h2><p class="texte2">${t("dem5.maintenant.texte")}</p>
+        <section class="carte"><h2>${t("dem5.maintenant")}</h2><p class="texte2">${sansReseaux(c) ? t("dem5.maintenant.texte.google", { n: pubGoogle(c) }) : t("dem5.maintenant.texte")}</p>
           <div class="actions"><button type="button" class="bouton" id="dem-accueil">${t("dem5.accueil")}</button><a class="bouton second" href="#/fiche">${t("dem5.voir.fiche")}</a></div></section>`;
       $("dem-accueil").onclick = () => { dem.pour = null; aller("accueil"); };
       return;
@@ -1525,6 +1538,8 @@
   const aller = r => { if (location.hash === "#/" + r) rendre(); else location.hash = "#/" + r; };
   let derniere = null, langueLue = null;
   async function rendre() {
+    // Lien d'email au nouveau format : avant toute session (une session déjà ouverte sur l'appareil ne doit pas masquer le choix du mot de passe).
+    if (ACC.jeton) { connecte = false; derniere = null; dessinerNav(); return lienEmail(); }
     const r = (location.hash.replace("#/", "") || "accueil").split("?")[0], s = await D.session();
     // Ancienne adresse (par exemple #/idees) : remplacée par la nouvelle, sans ajouter d'étape dans l'historique.
     if (ANCIENNES[r]) { if (r === "idees") ideesOuvertes = true; history.replaceState(null, "", "#/" + ANCIENNES[r]); return rendre(); }

@@ -352,6 +352,10 @@
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
     ETATS: { a_faire: "À faire", declare: "Fait selon vous, BoostImpact vérifie", fait: "Fait" },
+    // Étapes d'une offre (26/10/2026) : sans réseaux sociaux (Essentiel, OFFRES[...].reseaux_sociaux false), pas d'étape « metricool ».
+    // Même règle que la base (mise_en_route_avec_reseaux, schema.sql) et que les emails (pointsOffre, moteur/courriels/service.js) ;
+    // offre inconnue : avec réseaux.
+    pointsOffre(offre) { const o = OFFRES[offre]; return AUTO.POINTS.map(x => x.point).filter(p => p !== "metricool" || !o || o.reseaux_sociaux !== false); },
   };
   const emailValide = e => /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]{2,}$/.test(e || "") && String(e).length <= 254;
   const dateValide = d => /^\d{4}-\d{2}-\d{2}$/.test(d || "") && !isNaN(Date.parse(d + "T00:00:00Z")) && new Date(d + "T00:00:00Z").toISOString().slice(0, 10) === d;
@@ -478,6 +482,7 @@
         : ["mfa_totp_enroll_not_enabled", "mfa_totp_verify_not_enabled"].includes(c) ? "desactive"
         : ["invalid_credentials", "email_not_confirmed", "user_banned", "user_not_found"].includes(c) ? "identifiants"
         : c === "weak_password" ? "faible" : st === 429 || /rate_limit/.test(c) ? "trop"
+        : ["otp_expired", "flow_state_expired", "flow_state_not_found"].includes(c) ? "lien"
         : ["reauthentication_needed", "session_not_found", "session_expired", "bad_jwt", "no_authorization"].includes(c) || st === 401 ? "session" : "autre";
       return Object.assign(new Error((er && er.message) || code), { code, codeSupabase: c });
     };
@@ -559,6 +564,17 @@
         const r = await sb.auth.resetPasswordForEmail(String(email || "").trim(), { redirectTo: retourConnexion() });
         if (r.error && erreurAuth(r.error).code === "service") throw erreurAuth(r.error);
         return {};
+      },
+      // Lien d'email au nouveau format (26/10/2026, acces.js, lienEmail) : vérifié seulement au clic de la personne. verifyOtp({ token_hash, type })
+      // (supabase.com/docs/reference/javascript/auth-verifyotp) ouvre une session née du lien (amr « otp », internal/api/verify.go, verifyPost) :
+      // elle n'ouvre que le choix du mot de passe, comme avant. Jeton expiré, déjà servi ou inconnu : 403 otp_expired -> code « lien ».
+      async verifierLien(token_hash, type) {
+        if (!ACC.TYPES_LIEN.includes(type)) throw Object.assign(new Error("type de lien inconnu"), { code: "lien" });
+        await sb.auth.signOut({ scope: "local" }).catch(() => {});   // une autre session ouverte sur cet appareil ne se mélange pas au lien
+        const r = await sb.auth.verifyOtp({ token_hash, type });
+        if (r.error) throw erreurAuth(r.error);
+        if (!r.data || !r.data.session) throw Object.assign(new Error("lien sans session"), { code: "lien" });
+        cache = null;
       },
       // Choix du mot de passe depuis la session d'un lien d'email : updateUser, puis la session du lien est fermée (révoquée côté Supabase) et une
       // nouvelle s'ouvre par signInWithPassword : son jeton porte amr « password » (updateUser ne change pas l'amr de la session en cours).

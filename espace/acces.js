@@ -46,12 +46,30 @@
     r.ok = r.longueur && r.lettre && r.chiffre && r.taille;
     return r;
   }
-  // Retour d'un lien d'email : fragment « #access_token=…&type=invite » ou « #error=…&error_code=otp_expired ».
+  // Retour d'un lien d'email À L'ANCIEN FORMAT (emails partis avant le 26/10/2026) : fragment « #access_token=…&type=invite » ou
+  // « #error=…&error_code=otp_expired ».
   function lienRecu(hash) {
     try {
       const q = new URLSearchParams(String(hash || "").replace(/^#/, ""));
       return { type: q.get("type") || null, erreur: q.get("error_code") || q.get("error") || null };
     } catch (e) { return { type: null, erreur: null }; }
+  }
+  // Lien d'email AU NOUVEAU FORMAT (26/10/2026, moteur/courriels/supabase.js) : « ?jeton=<hash du jeton>&type=invite|recovery|email ». L'ouvrir
+  // ne consomme rien (un robot de messagerie qui pré-ouvre les liens ne peut plus le « griller ») : le jeton n'est vérifié qu'au clic de la
+  // personne, par supabase.auth.verifyOtp({ token_hash, type }). Types acceptés : ceux de verifyOtp pour un lien d'email (EmailOtpType de
+  // supabase-js, hors email_change). Rend { token_hash, type }, { invalide: true } (adresse abîmée : traité comme un lien expiré) ou null.
+  const TYPES_LIEN = ["invite", "recovery", "email", "magiclink", "signup"];
+  function jetonRecu(search) {
+    try {
+      const q = new URLSearchParams(String(search || "").replace(/^\?/, ""));
+      if (!q.has("jeton")) return null;
+      const j = q.get("jeton") || "", type = q.get("type") || "";
+      return /^[A-Za-z0-9_-]{8,256}$/.test(j) && TYPES_LIEN.includes(type) ? { token_hash: j, type } : { invalide: true };
+    } catch (e) { return null; }
+  }
+  // Adresse sans « jeton » ni « type » (le reste de la requête et le fragment sont gardés).
+  function sansJeton(href) {
+    try { const u = new URL(href); u.searchParams.delete("jeton"); u.searchParams.delete("type"); return u.href; } catch (e) { return href; }
   }
 
   // ---------------------------------------------------------------- Double authentification de l'administrateur (18/10/2026, décision de PJ)
@@ -108,7 +126,7 @@
   const secretTotp = () => base32(crypto.getRandomValues(new Uint8Array(20)));
   const uriTotp = (secret, compte, emetteur) => `otpauth://totp/${encodeURIComponent(emetteur)}:${encodeURIComponent(compte)}?algorithm=SHA1&digits=6&issuer=${encodeURIComponent(emetteur)}&period=30&secret=${secret}`;
 
-  const A = { DOUBLE_AUTH_ADMIN, METHODES_FORTES, MIN, MAX_OCTETS, decoderJwt, methodes, accesOuvert, accesDuJeton, controlerMotDePasse, lienRecu,
+  const A = { DOUBLE_AUTH_ADMIN, METHODES_FORTES, MIN, MAX_OCTETS, decoderJwt, methodes, accesOuvert, accesDuJeton, controlerMotDePasse, lienRecu, jetonRecu, sansJeton, TYPES_LIEN,
     forteAdmin, etapeAdmin, facteurTotpVerifie, codeSaisi, codeValide, cleGroupee, base32, debase32, totp, verifierTotp, secretTotp, uriTotp };
   if (typeof module === "object" && module.exports) module.exports = A;
   if (!racine || !racine.document) return;
@@ -116,6 +134,7 @@
   // ---------------------------------------------------------------- Écrans (espace et console)
   // Lu AVANT que la bibliothèque Supabase ne lise puis n'efface le fragment (ce fichier est chargé avant donnees.js).
   A.lien = lienRecu(racine.location.hash);
+  A.jeton = jetonRecu(racine.location.search);
   const $ = id => document.getElementById(id);
   const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const tete = I => `<div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div>`;
@@ -171,6 +190,33 @@
       try { await D.connecter(adr, mdp); await o.apres(); }
       catch (er) { message(texteErreur(I, er)); bouton.disabled = false; const c = $("mdp"); if (c) { c.value = ""; c.focus(); } }
     };
+  }
+
+  // Lien d'email au nouveau format (?jeton=…&type=…, 26/10/2026) : un écran, UN bouton ; le jeton n'est vérifié qu'au clic (D.verifierLien,
+  // verifyOtp), puis o.apres() (l'espace montre alors « Choisissez votre mot de passe » : la session née du lien n'a pas « password »).
+  // Lien expiré, déjà servi ou abîmé : o.echec() (écran de connexion en mode « recevoir un nouveau lien », message acc.err.lien). Réseau coupé :
+  // le message, et le bouton reste là (le jeton n'a pas servi). L'adresse est nettoyée dès que le jeton a été présenté à Supabase.
+  // o : { vue, I, D, apres(), echec() }.
+  function oublierJeton() { A.jeton = null; try { history.replaceState(null, "", sansJeton(location.href)); } catch (x) {} }
+  function lienEmail(o) {
+    const { vue, I, D } = o, t = I.t, j = A.jeton;
+    const perdu = () => { oublierJeton(); A.lien = { type: null, erreur: "lien" }; return o.echec(); };
+    if (!j || j.invalide) return perdu();
+    const invite = j.type === "invite";
+    vue.innerHTML = `<div class="connexion"><div class="carte" id="lien-email" data-type="${e(j.type)}">${tete(I)}
+      <div class="entete"><h1>${t(invite ? "acc.jeton.titre.invite" : "acc.jeton.titre")}</h1><p class="chapo">${t(invite ? "acc.jeton.chapo.invite" : "acc.jeton.chapo")}</p></div>
+      <button class="bouton plein" type="button" id="jeton-ok">${t("acc.jeton.bouton")}</button><p class="msg" id="msg" role="status"></p></div></div>`;
+    const b = $("jeton-ok");
+    b.onclick = async () => {
+      b.disabled = true; message(t("acc.jeton.verification"));
+      try { await D.verifierLien(j.token_hash, j.type); }
+      catch (er) {
+        if (er && er.code === "service") { message(texteErreur(I, er)); b.disabled = false; return; }   // réseau : le jeton n'a pas servi, on peut réessayer
+        return perdu();
+      }
+      oublierJeton(); await o.apres();
+    };
+    b.focus();
   }
 
   // Choix du mot de passe (session née d'un lien d'email). o : { vue, I, D, email, apres() : après l'entrée, annuler() : déconnexion }.
@@ -261,6 +307,7 @@
   }
 
   A.connexion = connexion;
+  A.lienEmail = lienEmail;
   A.choixMotDePasse = choixMotDePasse;
   A.doubleAuthentification = doubleAuthentification;
   racine.RENOM_ACCES = A;

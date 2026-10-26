@@ -313,6 +313,8 @@
     const C4 = ["principale", "secondaire", "fond", "texte"];
     const sty = { pour: null, c: null, kit: null, brut: null, demandes: [], images: [], photo: 0, logo: null, logoImg: null, logoUrl: null, attente: 0, ouvert: false };
     const langueDe = c => I.langueValide(c && c.langue) || "fr";
+    // Commerçant en offre sans réseaux (Essentiel, 26/10/2026) : ses textes ne parlent pas de vidéos (clé « .google » quand elle existe).
+    const gx = cle => !renom && ((window.RENOM_OFFRES || {})[(sty.c || {}).offre_id] || {}).reseaux_sociaux === false && I.a(cle + ".google") ? cle + ".google" : cle;
     const nomCouple = c => I.langue === "en" ? c.en : I.langue === "nl" ? (c.nl || c.en) : c.nom;
     const ratio = r => I.nombre(Math.floor(r * 10) / 10, 1);
     const textesApercu = c => {
@@ -330,8 +332,8 @@
         if (b) return [t("con.sty.etat.nonvalide"), t("con.sty.etat.dernier." + par, { d: I.date(b.maj || Date.now()), v: b.version })];
         return [t("con.sty.etat.aucun"), t("con.sty.etat.propose." + s) + " " + t("con.sty.etat.aucun.suite")];
       }
-      if (valide && par === "renom") return [t("sty.etat.pret"), t("sty.etat.pret.texte", { d, v: b.version })];
-      if (valide) return [t("sty.etat.valide", { d }), t("sty.etat.valide.texte", { v: b.version })];
+      if (valide && par === "renom") return [t("sty.etat.pret"), t(gx("sty.etat.pret.texte"), { d, v: b.version })];
+      if (valide) return [t("sty.etat.valide", { d }), t(gx("sty.etat.valide.texte"), { v: b.version })];
       if (par === "renom") return [t("sty.etat.renom"), t("sty.etat.renom.texte", { d })];
       return [t("sty.etat.preparation"), t("sty.etat.preparation.texte")];
     }
@@ -457,7 +459,7 @@
       } else {
         const cp = cat.couples.find(x => x.id === k.couple) || cat.couples.find(x => x.titres === k.police_titres) || null, fam = id => (cat.familles[id] || {}).nom || id;
         const resume = `<div class="sty-resume"><div class="style-nuancier" aria-hidden="true">${C4.map(x => `<span style="background:${e(k.couleurs[x])}"></span>`).join("")}</div>
-            <p class="note">${t("sty.resume", { p: e(cp ? nomCouple(cp) : fam(k.police_titres)), f: e(fam(k.police_titres) + (k.police_texte !== k.police_titres ? " · " + fam(k.police_texte) : "")), a: STY_SP[k.style_photo] || "" })}</p></div>`;
+            <p class="note">${t(gx("sty.resume"), { p: e(cp ? nomCouple(cp) : fam(k.police_titres)), f: e(fam(k.police_titres) + (k.police_texte !== k.police_titres ? " · " + fam(k.police_texte) : "")), a: STY_SP[k.style_photo] || "" })}</p></div>`;
         const dejaValide = valide && (b.valide_par || "commercant") === "commercant";
         o.vue.innerHTML = `${enTete}
           <div class="colonnes sty">
