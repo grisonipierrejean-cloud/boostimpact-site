@@ -27,7 +27,18 @@
   const equipeRepond = c => !!(offreDe(c).avis_equipe || offreDe(c).delegation);
   // Règle des avis par offre : Premium ; Standard (avis_equipe, 22/10/2026) ; ancienne offre retirée (Croissance, Signature : 4 et 5 étoiles
   // automatiques, 1 à 3 étoiles proposées au commerçant, inchangée tant que son abonnement court) ; Essentiel.
-  const regleAvis = c => { const o = offreDe(c); return o.delegation ? "avis.regle.premium" : o.avis_equipe ? "avis.regle.standard" : o.avis_auto ? "avis.regle.retiree" : "avis.regle.essentiel"; };
+  const regleAvis = c => { const o = offreDe(c); return o.delegation ? "premium" : o.avis_equipe ? "standard" : o.avis_auto ? "retiree" : "essentiel"; };
+  // Réglage des avis en blocs (26/10/2026, test réel de PJ : un seul paragraphe « 4 et 5 étoiles … 1 à 3 étoiles et avis sensibles … » illisible
+  // sur téléphone). Un bloc par cas, titre court et une ou deux phrases ; même sens qu'avant pour chaque offre, aucune règle changée. Croissance et
+  // Premium : 4 et 5 étoiles, 1 à 3 étoiles, avis sensibles. Ancienne offre retirée : idem. Essentiel (tout passe par le commerçant) : « De 1 à 5
+  // étoiles », puis avis sensibles. Écrans Avis, Offre (« Qui publie quoi ») et Fiche.
+  const BLOCS_AVIS = {
+    premium: [["45", "avis.regle.auto.45"], ["13", "avis.regle.equipe.13"], ["sensibles", "avis.regle.equipe.sensibles"]],
+    standard: [["45", "avis.regle.auto.45"], ["13", "avis.regle.equipe.13"], ["sensibles", "avis.regle.equipe.sensibles"]],
+    retiree: [["45", "avis.regle.auto.45"], ["13", "avis.regle.retiree.13"], ["sensibles", "avis.sensible.jamais"]],
+    essentiel: [["tous", "avis.regle.essentiel.tous"], ["sensibles", "avis.sensible.jamais"]] };
+  const regleAvisBlocs = c => { const r = regleAvis(c);
+    return `<dl class="regle-avis" data-regle="${r}">${BLOCS_AVIS[r].map(([b, k]) => `<div class="regle-avis-bloc" data-bloc="${b}"><dt>${t("avis.bloc." + b)}</dt><dd>${t(k)}</dd></div>`).join("")}</dl>`; };
   const ETAT = I.carte("etat", ["non_connecte", "en_attente", "connecte", "erreur"]);
   const ETAPES = I.carte("etape", ["ACCES_RESEAU_VERIFIE", "ACCES_RESEAU_RETIRE", "PRODUIT", "PUBLIE", "PROGRAMME", "PROGRAMMATION_ANNULEE", "IDEES", "CONTENU_APPROUVE", "CONTENU_MODIFICATION", "CONTENU_REFUSE", "REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION",
     "AVIS_RECU", "AVIS_A_VALIDER", "AVIS_VALIDE", "AVIS_REFUSE", "AVIS_PUBLIE", "AVIS_SENSIBLE", "MISE_EN_PAUSE", "REPRISE", "OFFRE_CHANGEE", "COMMERCE_CREE", "LEGENDE_MODIFIEE", "EMAIL_VALIDATION",
@@ -354,6 +365,15 @@
       <p class="texte2">${morceaux.join(" ")}</p>
       <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)))}${chiffre(t("bilan.publications"), nombre(n(b.publications)))}${chiffre(t("bilan.note"), notes ? nombre(b.note_fin, 1) : t("non.lue"))}${chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)))}</dl></section>`;
   }
+  // Offre souscrite, en haut de l'accueil (26/10/2026, test réel de PJ : « Bonjour » et le nom du commerce, sans l'offre ; sur téléphone, la note de l'en-tête
+  // est masquée sous 420 px). Nom de l'offre, une ligne sur ce qu'elle comprend (chiffres de moteur/offres.json, via window.RENOM_OFFRES), lien vers
+  // l'écran Offre (Réglages). Texte sobre : ni badge, ni couleur d'accent.
+  function offreAccueil(c) {
+    const o = offreDe(c); if (!o.nom) return "";
+    const ligne = t("acc.offre.inclus", { n: o.contenus ?? ((o.publications || 0) + (o.videos || 0)), v: o.videos || 0, g: o.reseaux_sociaux === false, cm: !!o.commentaires });
+    return `<div class="offre-accueil" id="offre-accueil"><p class="fort" id="offre-accueil-nom">${e(t("offre.nom", { nom: c.offre_id }))}</p>
+      <p class="texte2" id="offre-accueil-inclus">${e(ligne)}</p><p><a href="#/offre" id="offre-accueil-lien">${t("acc.voir.offre")}</a></p></div>`;
+  }
   const k0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const plusTard = id => { try { return localStorage.getItem("renom-demarrage-plus-tard:" + id) === "1"; } catch (er) { return false; } };
   // Photos du mois : aucune photo envoyée depuis le 1er du mois (heure de l'appareil), commerce actif.
@@ -386,7 +406,7 @@
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div>
+      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p>${offreAccueil(c)}</div>
         <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
       <p class="msg" id="msg" role="status"></p>
       <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
@@ -404,6 +424,7 @@
       ${blocIdeeSemaine(idee)}`;
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
     brancherAutomatisations(vue, accueil); brancherAutorisation(accueil);
+    if (versMiseEnRoute) { versMiseEnRoute = false; const x = $("mise-en-route"); if (x) x.scrollIntoView({ block: "start" }); }
   }
 
   // ---------------- Réglages (25/10/2026) : tout ce qui se règle une fois, rangé derrière un seul lien de l'en-tête. Chaque écran garde son adresse.
@@ -442,7 +463,7 @@
         <div class="f"><label for="email_validation">${t("fiche.email")}</label><input id="email_validation" type="email" value="${v("email_validation")}"></div></div></section>
       <section class="carte"><h2>${t("fiche.avis.titre")}</h2>
         <div class="f"><label for="lien_avis">${t("fiche.lien")}</label><input id="lien_avis" type="url" value="${v("lien_avis")}"><p class="aide">${t("fiche.lien.aide")}</p></div>
-        <div class="pile serre" id="fiche-regle-avis"><h3>${t("fiche.reponses")}</h3><p class="texte2">${t(regleAvis(c))}</p>
+        <div class="pile serre" id="fiche-regle-avis"><h3>${t("fiche.reponses")}</h3>${regleAvisBlocs(c)}
           <p class="aide">${t("fiche.reglage.aide")}</p></div></section>
       <section class="carte" id="fiche-style"><h2>${t("fiche.couleurs")}</h2>
         <div class="style-accueil-corps"><p class="texte2">${t("fiche.couleurs.style")}</p><div class="style-nuancier" aria-hidden="true">${[co.accent, co.fond, co.texte].filter(Boolean).map(x => `<span style="background:${e(x)}"></span>`).join("")}</div></div>
@@ -523,12 +544,13 @@
     };
     brancherDepotVideo(); await brancherVideoAvis();
   }
-  // Après un envoi réussi : la suite en une phrase, avec le lien vers Contenus. Délai : seulement celui que l'offre promet (« Premier contenu proposé
+  // Après un envoi réussi : la suite en une phrase, avec le lien vers les contenus de l'onglet « À valider ». Délai : seulement celui que l'offre promet (« Premier contenu proposé
   // sous 72 h », Standard et Premium, site/index.html #offres ; COND = moteur/conditions_offre.json), et seulement tant qu'aucun contenu n'existe.
+  // 26/10/2026 (test réel de PJ) : le lien porte le nom de l'onglet tel qu'il apparaît (« À valider »), plus « Contenus ».
   async function suitePhotos(c) {
     const s = $("ph-suite"); if (!s) return;
     const premier = !!offreDe(c).reseaux_sociaux && !(await D.contenus().catch(() => [null])).length;
-    s.innerHTML = t("photos.suite", { lien: `<a href="#/contenus">${e(ECRANS.contenus)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
+    s.innerHTML = t("photos.suite", { lien: `<a href="#/contenus">${e(ECRANS.avalider)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
     s.hidden = false;
   }
 
@@ -651,7 +673,8 @@
       ${dvOuvert && !dv.envoi ? `<div class="alerte dv-ouvert" role="status"><div><p class="fort">${t("dv.ouvert.titre")}</p><p>${t("dv.ouvert.texte", { d: I.dateHeureDans(dvOuvert.cree_le) })}</p>
         <p><button type="button" class="lien" id="dv-annuler">${t("dv.annuler")}</button></p></div></div>` : ""}
       <div class="dv-grille">
-        <div class="dv-guide"><h3>${t("dv.guide.titre")}</h3><ol class="dv-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
+        <div class="dv-guide"><h3>${t("dv.guide.titre")}</h3><ol class="dv-points" id="dv-guide-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
+          <p class="note" id="dv-guide-accord">${t("dv.guide.accord")}</p>
           <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div>
         ${plein ? `<div><p class="texte2" id="dv-plein">${t("dv.plafond")}</p><p class="msg" id="dv-msg" role="status" aria-live="polite"></p></div>` : `<form id="fv" class="dv-form" novalidate><div class="f"><div class="depot">
             <span class="depot-choix"><input id="filmer" class="vh" type="file" accept="video/*" capture="environment"><label for="filmer" class="bouton second appareil-photo">${CAMERA}<span>${t("dv.filmer")}</span></label></span>
@@ -728,10 +751,31 @@
 
   // ---------------- Calendrier
   const cal = { mode: "mois", ref: new Date() };
+  // Calendrier « pas programmable » (26/10/2026, test réel de PJ en Premium) : tant qu'aucun réseau social du commerce n'est relié à notre outil
+  // de programmation et vérifié par l'équipe (compte « connecte » : admin_acces_reseau de schema.sql ; étape de mise en route « metricool »),
+  // rien ne se programme sur les réseaux. Le calendrier le dit en tête : pourquoi, où en est l'étape (à faire, déclarée et en vérification,
+  // ou faite mais accès inactif), ce qui se passe ensuite (à l'accès vérifié, les contenus approuvés se programment seuls : schema.sql, bloc
+  // « Accès vérifié »), avec un lien vers la mise en route (#/miseenroute) ou vers Comptes connectés. Essentiel (fiche Google seulement) :
+  // jamais ce message, et le formulaire ne propose que la fiche Google.
+  function calendrierBloque(c, connectes, mr) {
+    if (sansReseaux(c)) return "";
+    const sociaux = window.RENOM_RESEAUX_AUTORISES(c).filter(r => r !== "google");
+    if (connectes.some(r => sociaux.includes(r))) return "";
+    const p = ((mr && mr.points) || []).find(x => x.point === "metricool"), etat = p ? p.etat : "a_faire";
+    const merVisible = !!(mr && mr.points && mr.faits < mr.total), lien = etat === "fait" || !merVisible ? ["#/comptes", "cal.bloque.lien.comptes"] : ["#/miseenroute", "cal.bloque.lien.mer"];
+    return `<section class="alerte cal-bloque" id="cal-bloque" data-etape="${e(etat)}" aria-labelledby="cal-bloque-titre"><div>
+      <p class="fort" id="cal-bloque-titre">${t("cal.bloque.titre")}</p>
+      <p id="cal-bloque-pourquoi">${t("cal.bloque.pourquoi")}</p>
+      <p id="cal-bloque-etape">${t("cal.bloque.etape." + (["declare", "fait"].includes(etat) ? etat : "a_faire"))}</p>
+      <p id="cal-bloque-ensuite">${t(etat === "declare" ? "cal.bloque.ensuite.declare" : "cal.bloque.ensuite")}</p></div>
+      <a class="bouton second" id="cal-bloque-lien" href="${lien[0]}">${t(lien[1])}</a></section>`;
+  }
   async function calendrier() {
-    const [c, l, ct, cpt] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes()]);
+    const [c, l, ct, cpt, mr] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes(), D.miseEnRoute().catch(() => null)]);
     const actifs = l.filter(x => x.statut !== "annule"), prets = ct.filter(x => x.statut === "approuve");
     const connectes = cpt.filter(x => x.etat === "connecte").map(x => x.reseau), vign = await Promise.all(l.map(x => urlSure(x.contenu)));
+    // Réseaux proposés au formulaire : ceux de l'offre et retenus (Essentiel : la fiche Google seule), dans l'ordre habituel.
+    const autorises = window.RENOM_RESEAUX_AUTORISES(c), proposes = window.RENOM_RESEAUX.filter(r => autorises.includes(r));
     const ref = new Date(cal.ref), aujourd = new Date(); let grille = "";
     const du = d => actifs.filter(x => memeJour(new Date(x.prevu_le), d));
     const lundi = (() => { const d = new Date(ref); d.setDate(ref.getDate() - ((ref.getDay() + 6) % 7)); return d; })();
@@ -746,6 +790,7 @@
     }
     const titre = cal.mode === "mois" ? `${cap(MOIS[ref.getMonth()])} ${ref.getFullYear()}` : t("cal.semaine.du", { d: date(lundi) });
     vue.innerHTML = `${pauseBandeau(c)}${retour("#/accueil", "cal.retour")}${entete(t("groupe.accueil"), t("cal.titre"), t("cal.chapo"))}
+      ${calendrierBloque(c, connectes, mr)}
       <div class="rangee">
         <section class="carte large"><div class="carte-tete"><h2>${titre}</h2>
           <div class="actions serre"><button type="button" class="bouton second petit" data-m="semaine" aria-pressed="${cal.mode === "semaine"}">${t("cal.semaine")}</button><button type="button" class="bouton second petit" data-m="mois" aria-pressed="${cal.mode === "mois"}">${t("cal.mois")}</button>
@@ -753,7 +798,7 @@
         <section class="carte etroite"><h2>${t("cal.programmer.titre")}</h2>${prets.length ? `<form id="f">
           <div class="f"><label for="contenu">${t("cal.contenu")}</label><select id="contenu">${prets.map(x => `<option value="${e(x.id)}">${t(x.type === "video" ? "type.video" : "type.publication.cap")}${t("deux.points")}${e(cut(x.legende || "", 70))}</option>`).join("")}</select></div>
           <div class="champs deux"><div class="f"><label for="jour">${t("cal.date")}</label><input id="jour" type="date" value="${demain()}" required></div><div class="f"><label for="heure">${t("cal.heure")}</label><input id="heure" type="time" value="12:00" required></div></div>
-          <fieldset><legend>${t("cal.reseaux")}</legend>${window.RENOM_RESEAUX.map(r => `<label class="option"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : t("cal.non.connecte")}</span></label>`).join("")}
+          <fieldset><legend>${t(sansReseaux(c) ? "cal.ou.publier" : "cal.reseaux")}</legend>${proposes.map(r => `<label class="option"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : t("cal.non.connecte")}</span></label>`).join("")}
           <p class="aide">${t("cal.plafond.aide")}</p></fieldset>
           <button class="bouton" type="submit">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
@@ -813,8 +858,8 @@
           ${x.statut === "publie" || x.statut === "valide" || x.statut === "a_publier_main" ? `<p class="reponse"><span class="fort">${t(etiquetteReponse(x))}</span> <span${lc()}>${e(x.reponse || x.reponse_proposee || "")}</span></p>` : ""}</article>`).join("")
           : `<section class="carte"><h2>${t("avis.vide.titre")}</h2><p class="texte2">${t("avis.vide.texte")}</p></section>`}
           <p class="msg" id="msg" role="status"></p></div>
-        <section class="carte" id="avis-regle"><h2>${t("reglage")}</h2><p class="texte2">${t(regleAvis(c))}</p>
-          <p class="note">${t("avis.sensible.jamais")}</p><p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>
+        <section class="carte" id="avis-regle"><h2>${t("reglage")}</h2>${regleAvisBlocs(c)}
+          <p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>
       </div>`;
     brancherAvis(vue, avis);
   }
@@ -1030,9 +1075,8 @@
         <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : offerts ? t("offre.frais.offerts", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) }) : t("offre.frais.factures", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
-      <section class="carte" id="offre-regle"><h2>${t("offre.regle.titre")}</h2><p class="texte2 lecture">${t(regleAvis(c))}</p>
-        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? "offre.regle.contenus.delegation.option" : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p>
-        <p class="note">${t("avis.sensible.jamais")}</p></section>
+      <section class="carte" id="offre-regle"><h2>${t("offre.regle.titre")}</h2>${regleAvisBlocs(c)}
+        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? "offre.regle.contenus.delegation.option" : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p></section>
       <section class="carte" id="offre-garanties"><h2>${t("offre.garanties.titre")}</h2>
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>
           ${o.reseaux_sociaux ? `<li><p class="fort">${t("offre.garantie.contenu", { n: gd.premier_contenu_heures })}</p></li>` : ""}
@@ -1542,13 +1586,15 @@
     $("autre-compte").onclick = async () => { await D.quitter(); aller("accueil"); };
   }
   const aller = r => { if (location.hash === "#/" + r) rendre(); else location.hash = "#/" + r; };
-  let derniere = null, langueLue = null;
+  let derniere = null, langueLue = null, versMiseEnRoute = false;
   async function rendre() {
     // Lien d'email au nouveau format : avant toute session (une session déjà ouverte sur l'appareil ne doit pas masquer le choix du mot de passe).
     if (ACC.jeton) { connecte = false; derniere = null; dessinerNav(); return lienEmail(); }
     const r = (location.hash.replace("#/", "") || "accueil").split("?")[0], s = await D.session();
     // Ancienne adresse (par exemple #/idees) : remplacée par la nouvelle, sans ajouter d'étape dans l'historique.
     if (ANCIENNES[r]) { if (r === "idees") ideesOuvertes = true; history.replaceState(null, "", "#/" + ANCIENNES[r]); return rendre(); }
+    // #/miseenroute (lien du calendrier, 26/10/2026) : l'accueil, ouvert sur la carte de la mise en route.
+    if (r === "miseenroute") { versMiseEnRoute = true; history.replaceState(null, "", "#/accueil"); return rendre(); }
     if (!s) { connecte = false; derniere = null; dessinerNav(); return connexion(); }
     // Lien d'email ouvert ici par un compte à double authentification (l'administrateur seul en a une, 18/10/2026) : la console demande le code.
     if (s.codeRequis) { location.href = I.lien("console.html"); return; }

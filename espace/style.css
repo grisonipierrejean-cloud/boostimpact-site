@@ -248,6 +248,8 @@ legend{padding:0;margin-bottom:4px}
 /* ---------- Accueil */
 .entete-accueil{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 24px}
 .entete-accueil .entete{flex:1 1 280px}
+/* Offre souscrite sous le titre de l'accueil (26/10/2026) : un filet fin, le nom, une ligne, un lien. Ni badge, ni couleur d'accent. */
+.offre-accueil{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--filet);max-width:640px;font-size:15px;line-height:1.45}
 .apercu{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:start}
 .apercu.avec-video{grid-template-columns:minmax(0,1fr)}
 .apercu.avec-video .media{max-width:240px}
@@ -701,7 +703,7 @@ details.dernieres summary{cursor:pointer;font-weight:700;min-height:44px;padding
 .dv-guide h3{font-size:15px;font-weight:700;line-height:1.3}
 .dv-guide h3+ol,.dv-guide h3+ul{margin-top:-2px}
 .dv-points{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px;color:var(--texte2)}
-.dv-points+h3{margin-top:8px}
+.dv-points+h3,#dv-guide-accord+h3{margin-top:8px}
 .dv-form{display:flex;flex-direction:column;gap:14px;min-width:0}
 .dv-form textarea{min-height:64px}
 .dv-fichiers:empty{display:none}
@@ -731,3 +733,12 @@ h3{font-family:var(--sans);font-size:17px;font-weight:700;line-height:1.25}
 .etapes-offre li{padding-left:4px}
 .etapes-offre li::marker{font-weight:700;color:var(--encre)}
 .actions-abo{display:flex;flex-wrap:wrap;gap:10px}
+/* Réglage des avis en blocs (26/10/2026) : un bloc par cas, titre court puis une ou deux phrases, séparés par un filet fin. Téléphone d'abord. */
+.regle-avis{display:flex;flex-direction:column;margin:0}
+.regle-avis-bloc{padding:12px 0;border-top:1px solid var(--filet)}
+.regle-avis-bloc:first-child{border-top:0;padding-top:0}
+.regle-avis-bloc:last-child{padding-bottom:0}
+.regle-avis dt{font-weight:600;font-size:15px;color:var(--encre)}
+.regle-avis dd{margin:4px 0 0;font-size:15px;line-height:1.45;color:var(--texte2);max-width:72ch}
+/* Calendrier pas encore programmable (26/10/2026) : pourquoi, où en est l'étape, ce qui se passe ensuite. */
+.cal-bloque>div{display:flex;flex-direction:column;gap:6px}
