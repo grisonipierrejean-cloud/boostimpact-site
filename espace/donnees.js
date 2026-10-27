@@ -14,6 +14,9 @@
     croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
+  // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
+  // (schema.sql) ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "27 octobre 2026";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -408,7 +411,10 @@
     OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
     RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
-    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler" };
+    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler",
+    // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
+    STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
+    ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
@@ -417,6 +423,15 @@
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : la récupérer" : "Pas de fiche : la créer"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
     if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
+    // Changement d'offre (27/10/2026) : ce qu'il reste à faire à la main, avec les noms des offres (moteur/offres.json) et les clés de prix du catalogue.
+    const nomO = k => (OFFRES[k] || {}).nom || k || "offre inconnue";
+    if (a.type === "STRIPE_A_METTRE_A_JOUR") return `Offre changée dans la console : ${nomO(d.offre)}. Dans Stripe, l'abonnement ${d.abonnement || ""}${d.client_stripe ? " (client " + d.client_stripe + ")" : ""} est encore en ${nomO(d.offre_stripe)} : « Mettre à jour l'abonnement », remplacer le prix par boost_${d.offre}_mois ou boost_${d.offre}_an (même rythme), enregistrer. La tâche se ferme seule quand Stripe confirme.`;
+    if (a.type === "PUBLICATIONS_A_RETIRER") return `${d.nombre || 1} publication(s) déjà envoyée(s) à Metricool sur un réseau hors de l'offre ${nomO(d.offre)} : les supprimer dans Metricool.`;
+    if (a.type === "OFFRE_CHANGEE") return `${nomO(d.ancienne)} vers ${nomO(d.offre)} (${d.sens === "descente" ? "descente" : "montée"}), par Stripe (lien de paiement payé, ou prix changé). Espace déjà à jour ; suivre la mise en route.${d.test ? " (mode test)" : ""}`;
+    // Montée payée par le lien de l'offre du dessus : l'ancien abonnement reste actif dans Stripe tant qu'il n'est pas arrêté (n8n le fait si la clé existe).
+    if (a.type === "ANCIEN_ABONNEMENT_A_ARRETER") { const j = d.depuis ? String(d.depuis).slice(0, 10).split("-").reverse().join("/") : "date inconnue";
+      return `${nomO(d.offre)}, souscrit le ${j} : abonnement ${d.abonnement || ""}${d.client_stripe ? " (client " + d.client_stripe + ")" : ""}, remplacé par ${d.nouveau || "le nouvel abonnement"} (${nomO(d.nouvelle_offre)}). Dans Stripe : l'annuler tout de suite, au prorata, puis rembourser le crédit de l'ancien client. La tâche se ferme seule quand Stripe confirme l'arrêt.${d.test ? " (mode test)" : ""}`; }
+    if (a.type === "OFFRE_INFERIEURE_PAYEE") return `Lien de l'offre ${nomO(d.offre)} payé alors que le commerce est en ${nomO(d.offre_commerce)} avec un abonnement en cours : rien n'a changé. Appeler le commerçant ; une baisse se fait par la console, à la fin de la période payée.${d.test ? " (mode test)" : ""}`;
     if (a.type === "ERREUR_WORKFLOW") return `${d.workflow || "Workflow inconnu"}, nœud ${d.noeud || "inconnu"} : ${d.message || ""}`;
     // Libellés lisibles (26/10/2026, audit du parcours, constat 32) : « Accès Google, Réseaux » au lieu de « google, metricool ».
     if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => POINTS_MER[r.point] || r.point).join(", ")}.`;
@@ -448,17 +463,39 @@
   const fraisOfferts = (maintenant, s) => (maintenant || new Date().toISOString().slice(0, 10)) <= ((s && s.fraisOffertsJusquAu) || CONDITIONS.mise_en_route.offerts_jusqu_au);
   // Langue de la page de paiement Stripe : celle de l'espace (fr, en ou nl, toutes reconnues par Stripe), plus le français forcé (24/10/2026).
   const langueStripe = () => { const l = window.RENOM_I18N && window.RENOM_I18N.langue; return ["fr", "en", "nl"].includes(l) ? l : "fr"; };
-  function lienAbonnement(ab, c, offre, maintenant, rythme) {
+  // fraisDejaPayes (montée d'offre, 27/10/2026) : le commerce a déjà payé (ou s'est vu offrir) la mise en route : variante « offerts » quelle que soit la date.
+  function lienAbonnement(ab, c, offre, maintenant, rythme, fraisDejaPayes) {
     const s = cfg.stripe || {}, https = u => typeof u === "string" && /^https:\/\/[^\s"<>]+$/.test(u) ? u : null;
     // Abonnement en cours (même impayé) : jamais le lien de paiement, qui créerait un second abonnement ; seulement le portail.
     if (ab && ab.statut !== "resilie") return https(s.portail);
     if (!OFFRES_EN_VENTE.includes(offre)) return null;   // offre retirée : aucun lien de paiement
     const r = ((s.liens || {})[offre] || {})[rythme === "annuel" ? "annuel" : "mensuel"] || {};
     // Essentiel : aucuns frais de mise en route, un seul lien (« sans_frais ») ; Standard et Premium : « offerts » jusqu'au 30/11/2026 inclus, puis « factures ».
-    const base = https(!(OFFRES[offre] || {}).frais_mise_en_route ? r.sans_frais : fraisOfferts(maintenant, s) ? (r.offerts || r.factures) : r.factures);
+    const base = https(!(OFFRES[offre] || {}).frais_mise_en_route ? r.sans_frais : fraisDejaPayes ? r.offerts : fraisOfferts(maintenant, s) ? (r.offerts || r.factures) : r.factures);
     if (!base || !c || !/^[A-Za-z0-9_-]{1,200}$/.test(String(c.id || ""))) return null;
     return base + (base.includes("?") ? "&" : "?") + ["client_reference_id=" + encodeURIComponent(c.id), "locale=" + langueStripe()].join("&");
   }
+  // ---- Montée d'offre en libre-service (27/10/2026, audit du parcours, constats 6 et 22 ; décision de PJ révisée le même jour) : lien du bouton
+  // « Passer à <offre> » de l'écran Offre = LIEN DE PAIEMENT de l'offre du dessus, jamais le portail client (qui ne change plus d'abonnement).
+  // Même rythme que l'abonnement en cours (abonnements.rythme ; inconnu : mensuel) ; frais de mise en route « offerts » jusqu'à fraisOffertsJusquAu,
+  // puis « factures » (190 € HT une fois, sur la première facture) : même règle que lienAbonnement. Paramètres d'URL des liens de paiement
+  // (docs.stripe.com/payment-links/customize, « Customize checkout with URL parameters », et docs.stripe.com/payment-links/url-parameters, lus le
+  // 27/10/2026) : client_reference_id = le commerce (« sent in the checkout.session.completed webhook » : la base y reconnaît la montée et arrête
+  // l'ancien abonnement), prefilled_email (« enter an email address on the payment page automatically », modifiable par le client), locale.
+  // Rien de configuré : null.
+  function lienMonteeOffre(ab, c, offreSuivante, maintenant) {
+    if (!(OFFRES[offreSuivante] && OFFRES_EN_VENTE.includes(offreSuivante))) return null;
+    const actif = ab && ab.statut !== "resilie", rythme = actif && ab.rythme === "annuel" ? "annuel" : "mensuel";
+    // Mise en route déjà payée (correctif du 27/10/2026, décision de PJ) : un commerce dont l'offre comprend la mise en route (Croissance) ne la repaie
+    // jamais : Croissance -> Premium prend TOUJOURS la variante « offerts » (sans ligne de frais), quelle que soit la date. Seule la montée depuis
+    // l'Essentiel (offre sans mise en route) prend « factures » après fraisOffertsJusquAu.
+    const dejaPayes = !!(OFFRES[(c || {}).offre_id] || {}).frais_mise_en_route;
+    const base = lienAbonnement(null, c, offreSuivante, maintenant, rythme, dejaPayes); if (!base) return null;
+    const em = String((c || {}).email_validation || "").trim().toLowerCase();
+    return /^[^\s@"<>]+@[^\s@"<>]+\.[^\s@"<>]+$/.test(em) ? base + "&prefilled_email=" + encodeURIComponent(em) : base;
+  }
+  // Abonnement à montrer : le plus récent qui n'est pas résilié (après une montée, l'ancien, arrêté, reste dans la table), sinon le plus récent.
+  const abonnementCourant = l => (l || []).find(x => x.statut !== "resilie") || (l || [])[0] || null;
   const MODELE_CSV = "prenom;email;date_passage\nCamille;camille@exemple.fr;" + new Date().toISOString().slice(0, 10) + "\n";
   // ---- fin des règles communes des automatisations
 
@@ -690,8 +727,16 @@
       async comptes() { const c = await self.commerce(); const l = ok(await sb.from("comptes_connectes").select("reseau,etat,detail").eq("commerce_id", c.id)); return RESEAUX.map(r => l.find(x => x.reseau === r) || { reseau: r, etat: "non_connecte", detail: "" }); },
       async compteur() { const c = await self.commerce(); return ok(await sb.from("compteur").select("*").eq("commerce_id", c.id).single()); },
       // Abonnement Stripe du commerce (lecture seule : la table n'est écrite que par le webhook, schema.sql, bloc « abonnements Stripe »).
-      async abonnement() { const c = await self.commerce(); const l = ok(await sb.from("abonnements").select("offre,statut,stripe_customer,remise_lancement_fin,maj_le").eq("commerce_id", c.id).order("maj_le", { ascending: false }).limit(1)); return l[0] || null; },
-      lienAbonnement,
+      // « * » : la colonne rythme n'existe qu'avec le bloc SQL du 27/10/2026 (sans lui : lien de montée mensuel).
+      async abonnement() { const c = await self.commerce(); return abonnementCourant(ok(await sb.from("abonnements").select("*").eq("commerce_id", c.id).order("maj_le", { ascending: false }).limit(5))); },
+      lienAbonnement, lienMonteeOffre,
+      // Mode délégation par bouton (27/10/2026) : seulement si la base a le bloc « Changement d'offre en libre-service et mode délégation dans
+      // l'espace » (colonne delegation_version_cgv lue par select *). Sans lui : l'écran Offre garde « écrivez-nous ».
+      delegationParBouton(c) { return !!c && Object.prototype.hasOwnProperty.call(c, "delegation_version_cgv"); },
+      async reglerDelegation(active) {
+        const c = await self.commerce(), r = await sb.rpc("regler_delegation", { p_commerce: c.id, p_active: !!active });
+        if (r.error) throw new Error(r.error.message); cache = null; return r.data;
+      },
       async journal() { const c = await self.commerce(); return journalCommercant(ok(await sb.from("journal").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100))); },
       // ---- Collecte : page publique et retours privés
       async jetonAvis() { return (await self.commerce()).jeton_avis; },

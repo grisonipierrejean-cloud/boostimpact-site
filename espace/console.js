@@ -538,7 +538,8 @@
     zc.querySelector("[data-a=pause]").onclick = async () => { try { await D.adminPause(cid, !c.en_pause); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const zn = zc.querySelector("[data-a=nom]"); if (zn) zn.onclick = async () => { try { await D.adminConfirmerNom(cid, $("nom-console").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const zf = zc.querySelector("[data-a=fiche-verifiee]"); if (zf) zf.onclick = async () => { try { await D.adminFicheGoogleVerifiee(cid, $("fiche-verif").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    // Changement d'offre (27/10/2026) : la base arrête ce qui est hors de la nouvelle offre et ajoute la tâche « Mettre Stripe à jour » si besoin.
+    zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("con.offre.changee")); } catch (er) { msg(ph(er.message)); } };
     vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async () => { const r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
       try { const x = await D.adminAccesReseau(cid, r, oui), dep = oui && r === "google" ? await noterAccesGoogle(cid) : null; await client(cid);

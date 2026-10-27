@@ -531,7 +531,7 @@
     const g = sansReseaux(c), plein = g && k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond;
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}
       ${plein ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: (new Date().getMonth() + 1) % 12 })}</p>
-        <p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a href="#/offre?dessus" id="plafond-offre">${t("photos.plafond.lien")}</a></p></section>` : ""}
+        <p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
       ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
@@ -701,11 +701,12 @@
   let dvOuvert = null;
   async function blocDepotVideo(c) {
     const [k, l] = await Promise.all([D.compteurVideos(), D.depotsVideo()]), o = window.RENOM_OFFRES[c.offre_id] || {};
-    // Offre sans réseaux (Essentiel, 26/10/2026) : aucune carte « Vidéos » (une vidéo ne se publie pas sur la fiche Google) ; seulement le suivi
-    // d'anciens dépôts, s'il y en a (commerce passé d'une autre offre à l'Essentiel).
-    if (!k.videos_plafond && sansReseaux(c)) return l.length ? `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>` : "";
-    if (!k.videos_plafond) return `<section class="carte" id="depot-video"><h2>${t("dv.sans.titre")}</h2><p class="texte2">${t("dv.sans.texte", { offre: e(I.offre(c.offre_id)) })}</p>
-      <p class="pied"><a class="bouton second" href="#/offre">${t("dv.voir.offres")}</a></p></section>${l.length ? `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>` : ""}`;
+    // Offre sans réseaux (Essentiel, 26/10/2026) : aucune carte « Vidéos » (une vidéo ne se publie pas sur la fiche Google). Changement d'offre
+    // (27/10/2026, constat 20) : une offre sans vidéo n'affiche plus le suivi des anciens dépôts (ceux pas encore montés sont annulés par la base,
+    // changer_offre_commerce) ; les vidéos déjà montées restent dans « À valider » et le calendrier. Croissance : la carte dit ce qu'apporte le Premium.
+    if (!k.videos_plafond && sansReseaux(c)) return "";
+    if (!k.videos_plafond) return `<section class="carte" id="depot-video"><h2>${t("dv.sans.titre")}</h2><p class="texte2">${t("dv.sans.texte", { offre: e(I.offre(c.offre_id)), v: (window.RENOM_OFFRES.premium || {}).videos })}</p>
+      <p class="pied"><a class="bouton second" href="#/offre?dessus=premium" id="dv-passer">${t("offre.passer.lien", { nom: e(I.offre("premium")) })}</a></p></section>`;
     dvOuvert = l.find(d => d.statut === "en_envoi" && Date.now() - Date.parse(d.cree_le) < DV.OUVERT_MS) || null;
     const attente = k.videos_reservees - k.videos_utilisees, plein = k.videos_reservees >= k.videos_plafond && !dvOuvert;
     const plans = t("dv.plans." + (c.metier === "restaurant" ? "restaurant" : "autre"));
@@ -1095,11 +1096,12 @@
     if (!g.depart) return `<div class="pile serre" id="offre-delais-suivi"><h3>${t("offre.delais.suivi")}</h3><p class="note">${t(google ? "offre.delais.pas.demarre.google" : "offre.delais.pas.demarre")}</p></div>`;
     const ligne = (lib, d, id) => `<li id="${id}"><span>${lib}${d.echeance ? `<span class="note">${t(d.fait_le ? "offre.delais.fait" : "offre.delais.avant", { d: I.dateLongue((d.fait_le || d.echeance).slice(0, 10)) })}</span>` : ""}</span><span class="etat${d.etat === "tenu" ? " actif" : ""}">${ETATS_DELAI[d.etat] || e(d.etat)}</span></li>`;
     const av = g.avis_en_cours || [], offerts = (g.mois_offerts || []).map(m => I.dateLongue(m)).join(", ");
-    return `<div class="pile serre" id="offre-delais-suivi"><h3>${t("offre.delais.suivi")}</h3>
+    // Suivi replié (27/10/2026, écran Offre plus court sur téléphone) : les engagements restent affichés au-dessus.
+    return `<details class="repliable sous" id="offre-delais-suivi"><summary><h3>${t("offre.delais.suivi")}</h3></summary><div class="pile serre">
       <p class="note">${t("offre.delais.depart", { d: I.dateLongue(g.depart.slice(0, 10)) })}</p>
       <ul class="liste">${ligne(t("offre.delais.fiche"), g.fiche, "delai-fiche")}${g.premier_contenu ? ligne(t("offre.delais.contenu"), g.premier_contenu, "delai-contenu") : ""}
         <li id="delai-avis"><span>${t("offre.delais.avis")}</span><span class="fort chiffre">${av.length ? t("offre.delais.avis.n", { n: av.length }) : t("offre.delais.avis.aucun")}</span></li></ul>
-      ${offerts ? `<p class="note" id="offre-mois-offerts">${t("offre.delais.mois.offerts", { l: offerts })}</p>` : ""}</div>`;
+      ${offerts ? `<p class="note" id="offre-mois-offerts">${t("offre.delais.mois.offerts", { l: offerts })}</p>` : ""}</div></details>`;
   }
   // Options commandées (22/10/2026, CGV article 3 bis) : une ligne par option payée, « en cours » (date prévue dès que les éléments du client sont
   // reçus, sinon le délai) ou « livrée le … » (et le second test de la Visibilité IA). Rien quand le commerce n'a commandé aucune option.
@@ -1109,20 +1111,45 @@
     ? (x.second_test_prevu_le && !x.second_test_fait_le ? t("opt.livree.second", { d: I.dateLongue(jourParis(x.livree_le)), s: I.dateLongue(x.second_test_prevu_le) }) : t("opt.livree", { d: I.dateLongue(jourParis(x.livree_le)) }))
     : x.elements_recus_le ? t("opt.en.cours.date", { d: I.dateLongue(x.livraison_prevue_le) }) : t("opt.en.cours.elements", { n: ((window.RENOM_OPTIONS || {})[x.option_id] || {}).livraison_jours || 14 });
   const optionsCommandees = l => (l || []).length ? `<section class="carte" id="offre-options"><h2>${t("opt.titre")}</h2>${l.map(x => `<p class="texte2 lecture" data-option="${e(x.option_id)}"><span class="fort">${e(nomOption(x.option_id))}</span>${t("deux.points")}${etatOption(x)}</p>`).join("")}</section>` : "";
-  // Offre du dessus et Premium (27/10/2026, constats 21 et 22). Aucune montée d'offre en ligne ni bouton d'activation (décisions de PJ) : on dit
-  // ce que l'offre ajoute et comment la demander. Chiffres : moteur/offres.json (window.RENOM_OFFRES).
-  function offreDessus(c, o) {
-    const O = window.RENOM_OFFRES || {};
-    if (o.delegation) return `<section class="carte" id="offre-premium"><h2>${t("offre.premium.titre")}</h2><ul class="liste">
+  // Offre du dessus et Premium (27/10/2026, constats 6, 21 et 22 ; décisions de PJ du 27/10/2026). Offre du dessus : ce qu'elle ajoute, son prix
+  // (chiffres de moteur/offres.json : window.RENOM_OFFRES) et le bouton « Passer à <offre> », qui ouvre le portail client de Stripe (abonnement en
+  // cours) ou la page de paiement de cette offre (aucun abonnement) : D.lienMonteeOffre. Sans lien Stripe configuré : « écrivez-nous ».
+  // Adresse « #/offre?dessus » (offre suivante) ou « #/offre?dessus=premium » (offre précise, plus haute que l'offre actuelle : vidéos).
+  // Premium : bilan commenté et point de 30 min chaque mois (CGV, tableau des offres et article 3), mode délégation activé ou désactivé ICI
+  // (D.reglerDelegation, fonction regler_delegation : accord horodaté avec la version des CGV) ; base sans ce bloc : texte « écrivez-nous ».
+  const ORDRE_OFFRES = ["essentiel", "standard", "premium"];
+  const offreCible = (c, voulue) => { const i = ORDRE_OFFRES.indexOf(c.offre_id), j = ORDRE_OFFRES.indexOf(voulue);
+    return i >= 0 && j > i ? voulue : i >= 0 && i < ORDRE_OFFRES.length - 1 ? ORDRE_OFFRES[i + 1] : null; };
+  function offreDessus(c, o, ab, voulue) {
+    const O = window.RENOM_OFFRES || {}, h = COND.delegation.publication_auto_heures;
+    if (o.delegation) {
+      const actif = delegationActive(c), bouton = !!(D.reglerDelegation && D.delegationParBouton && D.delegationParBouton(c));
+      const reglage = !bouton ? (actif ? `<p class="note">${t("offre.premium.delegation.sortir")}</p>` : `<p class="texte2 lecture" id="delegation-activer">${t("offre.premium.delegation.activer", { h })}</p>`)
+        : actif ? `<p class="texte2 lecture" id="delegation-etat">${t("offre.deleg.depuis", { d: I.dateLongue(String(c.delegation_signee_le).slice(0, 10)), h })}</p>
+            <p class="pied"><button type="button" class="bouton second" id="delegation-desactiver">${t("offre.deleg.desactiver")}</button></p>`
+        : `<p class="texte2 lecture" id="delegation-accord">${t("offre.deleg.accord", { h })}</p>
+            <p class="pied"><button type="button" class="bouton" id="delegation-activer-btn">${t("offre.deleg.activer")}</button></p><p class="note">${t("offre.deleg.trace")}</p>`;
+      return `<section class="carte" id="offre-premium"><h2>${t("offre.premium.titre")}</h2><ul class="liste">
         <li id="premium-videos"><span>${t("offre.inc.videos")}</span><span class="fort">${t("offre.premium.videos", { v: o.videos })}</span></li>
         <li id="premium-point"><span>${t("offre.premium.point")}</span><span class="fort">${t("compris")}</span></li>
-        <li id="premium-delegation"><span>${t("offre.premium.delegation")}</span><span class="fort">${t(delegationActive(c) ? "offre.premium.delegation.active" : "offre.premium.delegation.inactive")}</span></li></ul>
-      ${delegationActive(c) ? `<p class="note">${t("offre.premium.delegation.sortir")}</p>` : `<p class="texte2 lecture" id="delegation-activer">${t("offre.premium.delegation.activer", { h: COND.delegation.publication_auto_heures })}</p>`}</section>`;
-    const suiv = c.offre_id === "essentiel" ? "standard" : c.offre_id === "standard" ? "premium" : null, s_ = O[suiv]; if (!s_) return "";
+        <li id="premium-delegation"><span>${t("offre.premium.delegation")}</span><span class="fort">${t(actif ? "offre.premium.delegation.active" : "offre.premium.delegation.inactive")}</span></li></ul>
+        ${reglage}<p class="msg" id="msg-deleg" role="status"></p></section>`;
+    }
+    const suiv = offreCible(c, voulue), s_ = O[suiv]; if (!s_) return "";
+    // Lien de paiement de l'offre du dessus (jamais le portail : décision de PJ du 27/10/2026), même rythme que l'abonnement en cours.
+    const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv) : null, enCours = !!(ab && ab.statut !== "resilie");
+    const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = window.RENOM_MAJ.aujourdhui() <= mer.offerts_jusqu_au;
+    // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
+    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) });
     const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2", "offre.dessus.std.3"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
-    return `<section class="carte" id="offre-dessus"><h2>${t("offre.dessus.titre", { nom: e(I.offre(suiv)) })}</h2>
-      <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h: COND.delegation.publication_auto_heures })}</p></li>`).join("")}</ul>
-      <p class="texte2">${t("offre.dessus.prix", { prix: euros(s_.prix_ht) })}</p><p class="note">${t("offre.dessus.comment")}</p></section>`;
+    return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
+      <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
+      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(s_.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
+      <p class="texte2" id="dessus-mensuel">${t("offre.dessus.mensuel", { prix: euros(s_.prix_mensuel_ht) })}</p>
+      ${frais ? `<p class="texte2" id="dessus-frais">${frais}</p>` : ""}
+      ${lien ? `<p class="pied actions-abo"><a class="bouton" id="offre-passer" href="${e(lien)}" target="_blank" rel="noopener">${t("offre.dessus.passer", { nom })}</a></p>
+        <p class="note" id="dessus-note">${t(enCours ? "offre.dessus.note.paiement" : "offre.dessus.note.paiement.seul", { nom, r: t("offre.dessus.rythme." + rythme) })}</p>`
+        : `<p class="note" id="dessus-note">${t("offre.dessus.comment")}</p>`}</section>`;
   }
   async function offre() {
     const [k, j, c, ab, g, cmds] = await Promise.all([D.compteur(), D.journal(), D.commerce(), D.abonnement ? D.abonnement().catch(() => null) : null, D.maGarantieDelais ? D.maGarantieDelais().catch(() => null) : null,
@@ -1134,43 +1161,51 @@
     // Formule annuelle (16/10/2026) : prix de base = prix par mois en paiement annuel ; économie EXACTE affichée (12 x (mensuel - base)), jamais un pourcentage arrondi à 20.
     const gainAn = o.prix_mensuel_ht && o.prix_ht ? 12 * (o.prix_mensuel_ht - o.prix_ht) : 0;
     const contenus = o.contenus ?? ((+k.publications_plafond || 0) + (+k.videos_plafond || 0));
+    // Ordre (27/10/2026, écran trop long sur téléphone) : ce mois-ci, puis l'offre du dessus et son bouton (ou ce que Premium apporte), puis le détail ;
+    // règle de publication, parcours, plafond et historique repliés (tout le texte reste dans la page, rien de contractuel n'est retiré).
+    const repli = (id, titre, corps) => `<details class="repliable" id="${id}-repli"><summary><h2>${titre}</h2></summary><div id="${id}">${corps}</div></details>`;
+    const baisse = ORDRE_OFFRES.indexOf(c.offre_id) > 0;
     vue.innerHTML = `${pauseBandeau(c)}${retour("#/reglages", "reg.retour")}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre || k.offre_nom) }))}
-      <div class="rangee">
-        <section class="carte moitie"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
+        <section class="carte" id="offre-mois"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
           ${mesure(t("offre.pub.utilisees"), k.publications_utilisees, k.publications_plafond)}
           ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
           ${o.reseaux_sociaux === false ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
-        <section class="carte moitie"><h2>${t("offre.inclus")}</h2><ul class="liste">
+      ${offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1])}
+        <section class="carte" id="offre-inclus"><h2>${t("offre.inclus")}</h2><ul class="liste">
           <li id="offre-contenus"><span>${t("offre.inc.contenus")}</span><span class="fort">${o.videos ? t("offre.contenus.dont.videos", { n: contenus, v: o.videos }) : t("offre.contenus.n", { n: contenus })}</span></li>
           <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
           <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>${o.reseaux_sociaux === false ? "" : `<li><span>${t("offre.inc.commentaires")}</span><span class="fort">${t(k.commentaires_inclus ? "comprises" : "non.comprises")}</span></li>`}
           <li><span>${t("offre.inc.concurrents")}</span><span class="fort">${t("comprise")}</span></li><li><span>${t(o.delegation ? "offre.inc.bilan.premium" : "offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
           <p class="note pied">${t(o.reseaux_sociaux === false ? "offre.contenus.unite.google" : "offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
-      </div>
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
         <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
         <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : offerts ? t("offre.frais.offerts", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) }) : t("offre.frais.factures", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
-      <section class="carte" id="offre-regle"><h2>${t("offre.regle.titre")}</h2>${regleAvisBlocs(c)}
-        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? "offre.regle.contenus.delegation.option" : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p></section>
       <section class="carte" id="offre-garanties"><h2>${t("offre.garanties.titre")}</h2>
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>
           ${o.reseaux_sociaux ? `<li><p class="fort">${t("offre.garantie.contenu", { n: gd.premier_contenu_heures })}</p></li>` : ""}
           <li><p class="fort">${t("offre.garantie.avis24", { n: gd.avis_traite_heures })}</p></li>
           <li><p class="note">${t(o.reseaux_sociaux === false ? "offre.garantie.contrepartie.google" : "offre.garantie.contrepartie")}</p></li></ul>
         ${suiviDelais(g, o.reseaux_sociaux === false)}</section>
-      ${offreDessus(c, o)}
       ${optionsCommandees(cmds)}
-      <section class="carte" id="offre-processus"><h2>${t("offre.processus.titre")}</h2><ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol></section>
       <section class="carte" id="offre-abonnement"><div class="carte-tete"><h2>${t("abo.titre")}</h2>${ab ? `<span class="etat${ab.statut === "actif" ? " actif" : ""}" id="abo-statut">${ST_ABO[ab.statut] || e(ab.statut)}</span>` : ""}</div>
         <p class="texte2 lecture">${ab ? t("abo.texte." + ab.statut) : t("abo.aucun")}</p>
         ${lien ? `<p class="pied actions-abo"><a class="bouton${lienA ? " second" : ""}" id="offre-payer" href="${e(lien)}" target="_blank" rel="noopener">${t(portail ? "abo.bouton.portail" : "abo.bouton.mensuel")}</a>${lienA ? `<a class="bouton" id="offre-payer-annuel" href="${e(lienA)}" target="_blank" rel="noopener">${t("abo.bouton.annuel", { gain: euros(gainAn) })}</a>` : ""}</p><p class="note">${t(portail ? "abo.note.portail" : "abo.note.paiement")}</p>`
-          : D.mode === "demo" ? `<p class="note">${t("abo.demo")}</p>` : ""}</section>
-      <section class="carte"><h2>${t("offre.plafond.titre")}</h2><p class="texte2 lecture">${t("offre.plafond.texte")}</p></section>
-      <section class="carte"><h2>${t("offre.historique")}</h2>${j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`}</section>`;
+          : D.mode === "demo" ? `<p class="note">${t("abo.demo")}</p>` : ""}
+        ${baisse ? `<p class="note" id="offre-baisse">${t("offre.baisse")}</p>` : ""}</section>
+      <section class="carte replis" id="offre-plus">${repli("offre-regle", t("offre.regle.titre"), `${regleAvisBlocs(c)}
+        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? "offre.regle.contenus.delegation.option" : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p>`)}
+      ${repli("offre-processus", t("offre.processus.titre"), `<ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol>`)}
+      ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte")}${offreCible(c) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
+      ${repli("offre-historique", t("offre.historique"), j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
+    // Mode délégation (Premium) : activé ou désactivé par le commerçant ; l'écran est relu (règle de publication, historique).
+    const deleg = async (oui, b) => { b.disabled = true; try { await D.reglerDelegation(oui); await offre(); const m = $("msg-deleg"); if (m) m.textContent = t(oui ? "offre.deleg.ok.active" : "offre.deleg.ok.inactive"); }
+      catch (er) { b.disabled = false; const m = $("msg-deleg"); if (m) m.textContent = ph(er.message); } };
+    if ($("delegation-activer-btn")) $("delegation-activer-btn").onclick = () => deleg(true, $("delegation-activer-btn"));
+    if ($("delegation-desactiver")) $("delegation-desactiver").onclick = () => deleg(false, $("delegation-desactiver"));
   }
 
   // ---------------- Résultats : ce que BoostImpact rapporte, mois par mois. Aucun chiffre inventé : la portée attend les statistiques des réseaux.
@@ -1583,7 +1618,7 @@
     const titre = entete(t("cm.sur"), t("ecran.commentaires"), t("cm.chapo"));
     if (!k.commentaires_inclus) {
       vue.innerHTML = `${titre}<section class="carte"><h2>${t("cm.offre.titre")}</h2>
-        <p class="texte2 lecture">${t("cm.offre.texte")}</p><p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>`;
+        <p class="texte2 lecture">${t("cm.offre.texte")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="cm-passer">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>`;
       return;
     }
     const l = l0.map((x, i) => [x, i]).sort((a, b) => rangCommentaire(a[0]) - rangCommentaire(b[0]) || a[1] - b[1]).map(x => x[0]);
@@ -1650,7 +1685,7 @@
     if (!vaOuvert) return k.videos_plafond ? `<section class="carte" id="video-avis" aria-labelledby="va-titre"><h2 id="va-titre">${t("ecran.videoavis")}</h2><p class="texte2">${t("va.chapo")}</p>
       <p class="pied"><a class="bouton second" id="va-ouvrir" href="#/videoavis">${t("va.ouvrir")}</a></p></section>` : "";
     if (!k.videos_plafond) return `<section class="carte" id="video-avis" aria-labelledby="va-titre"><h2 id="va-titre">${t("va.offre.titre")}</h2>
-        <p class="texte2 lecture">${t("va.offre.texte", { nom: e(I.offre(k.offre || k.offre_nom)) })}</p><p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>`;
+        <p class="texte2 lecture">${t("va.offre.texte", { nom: e(I.offre(k.offre || k.offre_nom)), v: (window.RENOM_OFFRES.premium || {}).videos })}</p><p class="pied"><a class="bouton second" href="#/offre?dessus=premium" id="va-passer">${t("offre.passer.lien", { nom: e(I.offre("premium")) })}</a></p></section>`;
     const motifs = new Map(tous.map(a => [a.id, VA.motif(a)])), bons = tous.filter(a => !motifs.get(a.id)), autres = tous.filter(a => motifs.get(a.id));
     va.choisis = va.choisis.filter(id => bons.some(a => a.id === id));
     if (!va.fond || (va.fond === "photos" && !ph_.length)) va.fond = ph_.length ? "photos" : "uni";

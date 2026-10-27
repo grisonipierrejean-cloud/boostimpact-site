@@ -359,7 +359,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
 /* ---------- Pied de page (contenu géré par outils/legal.py : ne pas modifier entre les marqueurs) */
 /* Pied compact : « © 2026 BoostImpact », liens légaux, « Un service de Girlden LTD ». Identité complète (.pied-identite) seulement sur les pages
-   légales et la fiche de mise en route : 12 px, gris lisible (règle 20 du règlement britannique 2015/17 : lisible à l'œil nu). */
+   légales : 12 px, gris lisible (règle 20 du règlement britannique 2015/17 : lisible à l'œil nu). */
 .pied{background:var(--nuit);padding:18px 0 22px;font-size:14px;line-height:1.5;color:var(--discret)}
 .pied .wrap{display:flex;flex-direction:column;gap:2px}
 .pied-ligne{display:flex;flex-wrap:wrap;align-items:center;gap:0 20px}
@@ -374,13 +374,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .simple{padding-top:56px;padding-bottom:88px;display:flex;flex-direction:column;gap:24px;max-width:760px}
 .simple h1{font-size:clamp(42px,5.6vw,72px)}
 .simple .chapo{font-size:19px}
-.carte-form,.form-fiche{background:var(--blanc);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 20px;gap:18px}
+.carte-form{background:var(--blanc);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 20px;gap:18px}
 .carte-form{display:flex;flex-direction:column}
-.form-fiche{display:grid;grid-template-columns:minmax(0,1fr)}
 .carte-form .lib{color:var(--texte)}
-.form-fiche .ok input,.carte-form .ok input{accent-color:var(--nuit)}
-.form-fiche .ok a{color:var(--texte)}
-.form-fiche [role=alert]{color:#9B1C1C;font-weight:600}
+.carte-form .ok input{accent-color:var(--nuit)}
 .simple .note{color:var(--texte-discret)}
 
 /* ---------- Pages légales : fond blanc */
@@ -440,9 +437,7 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
   .calc-trio{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pied-ligne{gap:0 28px}
   .pied-societe{margin-left:auto}
-  .form-fiche{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .form-fiche .champ:not(.demi),.form-fiche>div:last-child,.form-fiche .hp,.form-fiche .ok,.form-fiche fieldset{grid-column:1/-1}
-  .carte-form,.form-fiche{padding:32px}
+  .carte-form{padding:32px}
   .juridique{padding-top:64px}
   .fiche-legale>div{grid-template-columns:220px minmax(0,1fr)}
 }

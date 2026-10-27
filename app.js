@@ -6,7 +6,7 @@ var RENOM_NL=/^nl\b/.test(document.documentElement.lang);
 // Chaque formulaire envoie DIRECTEMENT au webhook n8n de production écrit dans son attribut action (https://peejay.app.n8n.cloud/webhook/<path>),
 // en JSON. Réussite seulement si n8n répond 2xx ET {"ok":true} (nœud « Respond to Webhook ») ; sinon le formulaire affiche une erreur
 // avec l'adresse de contact. Rien de secret ici : les protections sont côté n8n (origine https://boostimpact.agency, champ piège website,
-// contrôle strict des champs, limite d'audits par email et par jour) : n8n/build_audit.py, n8n/build_formulaires.py.
+// contrôle strict des champs, limite d'audits par email et par jour) : n8n/build_audit.py (la fiche de mise en route et son workflow, n8n/build_formulaires.py, sont supprimés depuis le 27/10/2026).
 var BOOST_CONTACT='info@boostimpact.agency';
 // Champs du formulaire en objet ; un nom répété (cases à cocher) devient une liste.
 function boostDonnees(form){var o={};new FormData(form).forEach(function(v,k){o[k]=(k in o)?[].concat(o[k],v):v});return o}
@@ -46,7 +46,7 @@ var T=RENOM_NL?{
   ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html',
   metier:'Choisissez votre métier, pour qu\'on prépare votre fiche.',boutonSans:'Faire créer ma fiche'
 };
-// Téléphone ou WhatsApp : facultatif ; même règle que tel() de n8n (n8n/build_formulaires.py, reprise dans n8n/build_audit.py) :
+// Téléphone ou WhatsApp : facultatif ; même règle que tel() de n8n (n8n/build_audit.py) :
 // espaces regroupés, puis 6 à 40 caractères parmi chiffres, espaces et + ( ) . / -. Côté n8n, un numéro invalide est ignoré, la demande passe.
 var TEL=/^[0-9 +().\/-]{6,40}$/;
 // Lien de la fiche Google (18/10/2026) : OBLIGATOIRE (un nom seul est trop imprécis). Tous les liens Google sont acceptés :
@@ -93,19 +93,6 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
 (function(){
 var a=document.getElementById('suite-audit'),b=document.getElementById('suite-sans-fiche');if(!a||!b)return;
 if(location.hash==='#sans-fiche'){a.hidden=true;b.hidden=false}
-})();
-
-// ---- Fiche de mise en route (mise-en-route.html, en/getting-started.html, nl/aan-de-slag.html) -> webhook renom-fiche-client.
-(function(){
-var f=document.forms['fiche-client'];if(!f)return;
-var EN=RENOM_EN,b=f.querySelector('button[type=submit]');
-f.addEventListener('submit',function(e){e.preventDefault();if(f.website.value)return;
-  var a=f.querySelector('.envoi-echec');if(a)a.parentNode.removeChild(a);
-  b.disabled=true;
-  boostEnvoyer(f,boostDonnees(f))
-  .then(function(){f.innerHTML='<p>'+(RENOM_NL?'Formulier ontvangen. We sturen u per e-mail een link om het wachtwoord van uw klantenzone te kiezen: daar laadt u uw foto\u2019s op.':EN?'Form received. We\u2019ll email you a link to choose your client area password: that\u2019s where you upload your photos.':'Fiche reçue. Nous vous envoyons par email un lien pour choisir le mot de passe de votre espace : c\u2019est là que vous déposerez vos photos.')+'</p>'})
-  .catch(function(){b.disabled=false;var p=document.createElement('p');p.className='envoi-echec';p.setAttribute('role','alert');p.textContent=boostEchec(EN);f.appendChild(p)});
-});
 })();
 
 // ---- Offres : sélecteur Annuel / Mensuel (formule annuelle du 16/10/2026). Sans JavaScript, le sélecteur reste masqué et les deux prix sont affichés.
