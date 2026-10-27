@@ -1311,8 +1311,18 @@
         <section class="carte moitie" aria-labelledby="r-col"><div class="carte-tete"><h2 id="r-col">${t("res.collecte.titre")}</h2><a href="#/collecte">${t("res.collecte.ouvrir")}</a></div>${chiffresCollecte(col, true)}
           <p class="note">${t("res.collecte.note")}</p></section>
       </div>
+      ${resultatsDessus(c)}
       ${lecture ? `<p class="note lecture-google" id="lecture-google">${e(lecture)}</p>` : ""}`;
     // 27/10/2026 (constat 9) : la carte « Portée de vos publications » reviendra quand les statistiques des réseaux seront branchées.
+  }
+  // Essentiel (27/10/2026, audit du parcours, constat 22) : sous ses résultats, ce que Croissance ajouterait (mêmes lignes que l'écran Offre, chiffres de
+  // moteur/offres.json) et le lien vers l'offre du dessus. Aucun chiffre de concurrent inventé : la base ne lit pas leurs réseaux.
+  function resultatsDessus(c) {
+    const suiv = sansReseaux(c) ? offreCible(c) : null, s_ = suiv && (window.RENOM_OFFRES || {})[suiv]; if (!s_) return "";
+    const nom = e(I.offre(suiv));
+    return `<section class="carte" id="resultats-dessus" aria-labelledby="r-dessus"><h2 id="r-dessus">${t("offre.dessus.titre", { nom })}</h2>
+      <ul class="liste-engagements">${["offre.dessus.std.1", "offre.dessus.std.2"].map(k => `<li><p>${t(k, { n: s_.contenus })}</p></li>`).join("")}</ul>
+      <p class="pied"><a class="bouton second" href="#/offre?dessus" id="resultats-passer">${t("offre.passer.lien", { nom })}</a></p></section>`;
   }
 
   // ---------------- Fiche Google : photos, offre, événement, horaires exceptionnels. Le commerçant valide, rien ne part seul.
