@@ -1257,7 +1257,7 @@
           ${taux == null ? `<p class="texte2">${t("res.rep.aucun")}</p>` : `<dl class="bilan-chiffres deux"><div class="bilan-chiffre"><dt>${t("res.taux")}</dt><dd class="chiffre" id="taux">${t("pourcent", { n: nombre(taux) })}</dd></div><div class="bilan-chiffre"><dt>${t("res.l.delai")}</dt><dd class="chiffre" id="delai">${delaiTexte(rep.delai_moyen_h)}</dd></div></dl>
           <p class="note">${t("res.rep.note", { n: mois.length })}</p>`}</section>
         <section class="carte large" aria-labelledby="r-audit"><div class="carte-tete"><h2 id="r-audit">${t("res.score.titre")}</h2><span class="note">${t("etat.actuel")}</span></div>
-          ${dernierAudit ? `<p><span class="chiffre grand-chiffre">${nombre(+dernierAudit.score)}</span> <span class="note">${t("res.score.sur")}</span></p>
+          ${dernierAudit ? `<p><span class="chiffre grand-chiffre chiffre-or" id="score-audit">${nombre(+dernierAudit.score)}</span> <span class="note">${t("res.score.sur")}</span></p>
           <div class="audit"><div class="pile serre piliers">${piliersDe(dernierAudit.piliers).map(p => mesure(e(p.nom), p.note, p.sur)).join("")}</div></div>
           <p class="note">${t("res.score.note")}</p>`
           : `<p class="texte2">${t(lg.score === "non_reliee" ? "res.score.non.reliee" : "res.score.non.calcule")}</p>`}</section>
@@ -1435,7 +1435,10 @@
     return `<div class="etape-tete"><span class="etape-num" aria-hidden="true">${n}</span><h2 id="${id}">${titre}</h2>${etat ? `<span class="etat${etat === "fait" ? " actif" : ""}">${etat === "demande" ? t("mer2.demande.etat") : ETATS_MR[etat] || e(etat)}</span>` : ""}</div>`;
   }
   async function ecranNom(c) {
+    // Offre activée sur le même écran (27/10/2026, demande de PJ) : le commerçant voit tout de suite quelle offre il a prise.
+    const off = offreAccueil(c);
     vue.innerHTML = `${entete(t("ecran.demarrage"), t("nom.titre"), t("nom.chapo"))}
+      ${off ? `<section class="carte nom-offre" aria-label="${e(t("nom.offre"))}"><p class="texte2">${t("nom.offre")}</p>${off}</section>` : ""}
       <section class="carte nom-commerce" aria-labelledby="nom-lib"><form id="nom-f" novalidate>
         <div class="f"><label for="nom-commerce" id="nom-lib">${t("nom.lib")}</label><input id="nom-commerce" type="text" maxlength="120" autocomplete="organization" value="${e(c.nom)}" aria-describedby="nom-aide" required>
           <p class="aide" id="nom-aide">${t("nom.aide")}</p></div>

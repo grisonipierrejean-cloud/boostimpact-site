@@ -5,6 +5,8 @@
    --texte-discret, --trait, --trait-fort, --surface, --encart : chaque fond les redéfinit.
    Contrastes (au pire) : sur ivoire --texte 15,6:1, --texte-doux 10,9:1, --texte-discret 5,9:1, ardoise 6,5:1 ; sur bleu nuit --doux 13,4:1,
    --discret 7,6:1.
+   Troisième couleur (26/10/2026, PJ) : or champagne --or, accent rare et sur bleu nuit seulement (8,1:1) : point du mot-symbole de l'en-tête sombre,
+   montant du simulateur, deux filets fins, anneau de focus sur fond sombre. Jamais en texte sur ivoire ou blanc (1,9:1 et 2,1:1), jamais en aplat.
    Titres : Source Serif 4 (axe opsz au plus grand, graisse 400), casse normale, jamais de majuscules forcées. Texte : Schibsted Grotesk 400 à 600.
    Licence SIL OFL 1.1, polices hébergées dans fonts/ (fonts/OFL-source-serif-4.txt, fonts/OFL-schibsted-grotesk.txt).
    Interdits : dégradé, pilule, ombre portée, trait coloré devant un libellé, orange ou terracotta, vert vif, majuscules d'étiquette, sur-titre,
@@ -23,6 +25,13 @@
   --discret:#AEB2BE;
   --ardoise:#3B5781;
   --ardoise-clair:#B9C6DD;
+  /* Or champagne (26/10/2026, demande de PJ : troisième couleur de marque, « effet plus luxueux »). Seule définition de la valeur pour le site ;
+     mêmes valeurs dans espace/web/style.css (--or), moteur/audit/rapport.py (OR) et moteur/courriels/courriels.js (MISE_EN_PAGE.C.or), vérifiées
+     par moteur/tests/test_couleur_or.py. Teinte 44°, saturation 35 %, luminosité 65 % : le point de départ proposé (teinte 40°, saturation 43 %)
+     tirait vers l'orange (le détecteur d'orange d'espace/test_ecrans.py le classait orange) ; 4° de teinte en plus et 8 points de saturation en
+     moins le ramènent au champagne, à contraste égal. Accent rare, jamais en aplat. Texte or SEULEMENT sur bleu nuit :
+     8,1:1 sur --nuit, 7,0:1 sur --carte ; sur ivoire 1,9:1 et sur blanc 2,1:1, donc interdit sur fond clair. */
+  --or:#C4B385;
   --pierre:#5D6270;
   --filet-clair:#DDD8CD;
   --filet-clair-fort:#C9C2B4;
@@ -94,7 +103,8 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 /* Bleu nuit : bloc d'audit, résultat du simulateur, pied de page, offre conseillée dans le comparatif */
 .sombre,.audit-section,.calc-resultat,.pied{--fond:var(--nuit);--texte:var(--ivoire);--texte-doux:var(--doux);--texte-discret:var(--discret);--trait:var(--filet);--trait-fort:var(--filet-fort);--surface:var(--carte);--encart:rgba(255,255,255,.06)}
 .sombre a:hover,.audit-section a:hover,.pied a:hover{color:var(--ardoise-clair)}
-.sombre :focus-visible,.audit-section :focus-visible,.pied :focus-visible{outline-color:var(--ivoire)}
+/* Focus clavier sur bleu nuit : anneau or (8,1:1 sur --nuit, au-delà des 3:1 de WCAG 1.4.11), au lieu de l'ivoire (26/10/2026). */
+.sombre :focus-visible,.audit-section :focus-visible,.pied :focus-visible{outline-color:var(--or)}
 
 /* ---------- Boutons : bleu nuit plein (action principale), contour fin (secondaire). Pas de couleur vive. */
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 22px;border:1px solid var(--nuit);border-radius:var(--r-btn);background:var(--nuit);color:var(--ivoire);font:inherit;font-size:16px;font-weight:600;line-height:1.25;letter-spacing:.005em;text-align:center;text-decoration:none;cursor:pointer;transition:background-color .15s ease,color .15s ease}
@@ -300,7 +310,8 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(
 .calc-radio input{accent-color:var(--nuit)}
 .calc-trio{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .calc-resultat{background:var(--nuit);color:var(--texte);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:12px}
-.calc-montant{font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:52px;line-height:1;color:var(--ivoire)}
+/* Montant estimé : chiffre clé sur bleu nuit, en or (8,1:1, grand texte : 3:1 exigé). */
+.calc-montant{font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:52px;line-height:1;color:var(--or)}
 .calc-prudence,.calc-limite{font-size:15px;line-height:1.55;color:var(--doux)}
 .calc-limite{background:var(--surface);border:1px solid var(--trait);border-radius:4px;padding:14px 16px;color:var(--texte-doux)}
 
@@ -331,7 +342,7 @@ input[type=text],input[type=email],input[type=tel],input[type=url],input[type=nu
 input::placeholder{color:#767A86}
 textarea{min-height:112px;line-height:1.45;resize:vertical}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ardoise);outline-offset:1px}
-.audit-section input:focus-visible,.audit-section select:focus-visible{outline:2px solid var(--ivoire)}
+.audit-section input:focus-visible,.audit-section select:focus-visible{outline:2px solid var(--or)}
 .choix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .choix .m-choix{min-height:48px;padding:8px 12px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:transparent;color:var(--texte);font:inherit;font-size:15px;font-weight:500;line-height:1.25;text-align:left;cursor:pointer}
 .choix .m-choix:hover{border-color:var(--texte)}
@@ -491,13 +502,14 @@ body:has(>main>.simple)>main{flex:1 0 auto}
    plus dense. */
 body:has(#haut) .entete{background:var(--nuit);border-bottom-color:rgba(255,255,255,.1);color:var(--ivoire)}
 body:has(#haut) .entete .logo,body:has(#haut) .entete .logo:hover{color:var(--ivoire)}
-body:has(#haut) .entete .logo-point{color:var(--ardoise-clair)}
+/* Point du mot-symbole en or sur l'en-tête bleu nuit (26/10/2026, 8,1:1). Sur l'en-tête ivoire des autres pages, il reste ardoise (l'or y ferait 1,9:1). */
+body:has(#haut) .entete .logo-point{color:var(--or)}
 body:has(#haut) .entete .menu a{color:var(--ivoire)}
 body:has(#haut) .entete .menu a:hover{color:var(--ardoise-clair)}
 body:has(#haut) .entete .langues,body:has(#haut) .entete .langues a{color:var(--discret)}
 body:has(#haut) .entete .langue-active{color:var(--ivoire)}
 body:has(#haut) .entete .langues a:hover{color:var(--ivoire)}
-body:has(#haut) .entete :focus-visible{outline-color:var(--ivoire)}
+body:has(#haut) .entete :focus-visible{outline-color:var(--or)}
 body:has(#haut) .entete .btn-menu{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
 body:has(#haut) .entete .btn-menu:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
 /* Logo : le mot « boostimpact » porte la marque (700, serré), « .agency » en retrait. */
@@ -526,7 +538,7 @@ body:has(#haut) .entete .btn-menu:hover{background:var(--blanc);border-color:var
 #haut .btn-prim:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
 #haut .lien-fort{color:var(--ivoire)}
 #haut .lien-fort:hover{color:var(--ardoise-clair)}
-#haut :focus-visible{outline-color:var(--ivoire)}
+#haut :focus-visible{outline-color:var(--or)}
 /* La figure garde son ordre dans le code (texte puis aperçu) ; seule la photo sort du flux pour couvrir la section. */
 #haut .apercu{position:static;margin:0;display:block}
 #haut .carrousel{position:absolute;inset:0;height:auto;border-radius:0;z-index:-1;background:var(--nuit)}
@@ -594,3 +606,9 @@ body:has(#haut) .entete .logo::before{background:var(--ivoire);color:var(--nuit)
 .g-chip{display:inline-flex;align-items:center;vertical-align:-0.18em;background:var(--ivoire);border-radius:6px;padding:3px 8px 4px;margin:0 1px}
 .g-chip img{height:.95em;width:auto;display:block}
 @media (max-width:759px){#haut .apercu .mention{display:none}}
+
+/* ---------- Or champagne, filets fins sur bleu nuit (26/10/2026, demande de PJ). Deux filets d'un pixel seulement, en pleine largeur de leur bloc
+   (jamais un trait court devant ou au-dessus d'un libellé) : sous le titre du premier écran, au-dessus du prix de départ ; dans le bloc d'audit, au-dessus
+   de l'urgence réelle. Filet or sur bleu nuit : 8,1:1. Les autres filets restent blancs translucides : l'or reste rare. */
+#haut .haut-prix{border-top-color:var(--or)}
+.audit-urgence{border-top-color:var(--or)}

@@ -12,7 +12,7 @@
 <style>
 /* Page publique de validation par lien (valider.html#<jeton>), ouverte depuis l'email : sans connexion, à usage unique, 7 jours.
    Charte du site, comme l'espace (style.css, 22/10/2026) : bleu nuit et ivoire, Source Serif 4 pour les titres, Schibsted Grotesk pour le reste, coins de 6 à 8 px. Ni dégradé, ni pilule, ni trait coloré. */
-:root{color-scheme:dark;--fond:#0F1C3A;--surface:#18284B;--releve:#22355E;--creux:#0B1631;--encre:#F6F4EF;--texte2:#E3E1DA;--discret:#AEB2BE;--bord:#7C8396;--filet:rgba(255,255,255,.14);--marque:#F6F4EF;
+:root{color-scheme:dark;--fond:#0F1C3A;--surface:#18284B;--releve:#22355E;--creux:#0B1631;--encre:#F6F4EF;--texte2:#E3E1DA;--discret:#AEB2BE;--bord:#7C8396;--filet:rgba(255,255,255,.14);--marque:#F6F4EF;--or:#C4B385;
   --titre:'Source Serif 4',Georgia,'Times New Roman',serif;--sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
 @font-face{font-family:'Source Serif 4';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/source-serif-4.woff2) format('woff2')}
 @font-face{font-family:'Schibsted Grotesk';font-weight:400 700;font-style:normal;font-display:swap;src:url(fonts/schibsted-grotesk.woff2) format('woff2')}
@@ -23,7 +23,7 @@ body{margin:0;font-family:var(--sans);font-size:17px;line-height:1.5;color:var(-
 h1,h2,p{margin:0}
 main{max-width:560px;margin:0 auto;padding:24px 16px calc(32px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 #page,#erreur,#fait{display:flex;flex-direction:column;gap:14px}
-.logo{font-family:var(--sans);font-weight:700;font-size:20px;letter-spacing:-.03em;white-space:nowrap}.logo-point{color:#B9C6DD}.logo-suffixe{font-weight:400;letter-spacing:-.01em;opacity:.62}
+.logo{font-family:var(--sans);font-weight:700;font-size:20px;letter-spacing:-.03em;white-space:nowrap}/* point du mot-symbole en or champagne (26/10/2026, --or de site/style.css, 8,1:1 sur --fond) */.logo-point{color:var(--or)}.logo-suffixe{font-weight:400;letter-spacing:-.01em;opacity:.62}
 .barre{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-8px -8px -8px 0}
 .langues{display:inline-flex;align-items:center;gap:2px}
 .langues button{font:inherit;font-size:14px;font-weight:600;letter-spacing:.04em;min-width:44px;min-height:44px;padding:0 8px;background:none;border:0;border-radius:6px;color:var(--discret);cursor:pointer;text-decoration:none}

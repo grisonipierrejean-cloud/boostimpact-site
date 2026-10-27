@@ -1612,6 +1612,7 @@
     "con.relancer": ["Relancer le montage", "Restart editing", "Montage opnieuw starten"], "con.relance.ok": ["Montage relancé.", "Editing restarted.", "Montage opnieuw gestart."], "con.aucun.depot": ["Aucun dépôt de vidéos.", "No video uploads.", "Geen video-uploads."],
     "con.essais": [v => `${v.n} ${pl(v.n, "relance", "relances")}`, v => `${v.n} ${en1(v.n, "restart", "restarts")}`, v => `${v.n} keer opnieuw gestart`],
     // ---- Mise en route claire et travail visible (27/10/2026, audit du parcours, constats 1, 3, 8 à 12, 14, 21 à 23, 31 à 34)
+    "nom.offre": ["Votre offre activée", "Your active plan", "Uw actieve formule"],
     "nom.titre": ["Le nom de votre commerce", "Your business name", "De naam van uw zaak"],
     "nom.chapo": ["Vérifiez-le avant tout : vos clients le verront dans les demandes d'avis que nous leur envoyons.", "Check it first: your customers will see it in the review requests we send them.", "Controleer hem eerst: uw klanten zien hem in de reviewverzoeken die wij hun sturen."],
     "nom.lib": ["Nom du commerce", "Business name", "Naam van de zaak"],
