@@ -50,7 +50,7 @@
 <li class="diapo" aria-hidden="true"><img src="img/resto-bistrot.webp" width="1920" height="1280" alt="Salle de bistrot aux murs de pierre (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Bistrot</span></li>
 <li class="diapo" aria-hidden="true"><img src="img/resto-salle.webp" width="1920" height="1280" alt="Une serveuse prépare une table avant le service (photo d'illustration)" loading="lazy" decoding="async"><span class="diapo-metier">Mise en place</span></li>
 </ul>
-<div class="carrousel-ctrl" hidden><button type="button" class="carrousel-pause" aria-label="Mettre les photos en pause" data-pause="Mettre les photos en pause" data-lecture="Relancer les photos"></button><div class="carrousel-points"><button type="button" class="carrousel-point" aria-label="Photo 1&nbsp;: Restaurant" aria-current="true"></button><button type="button" class="carrousel-point" aria-label="Photo 2&nbsp;: Coiffure"></button><button type="button" class="carrousel-point" aria-label="Photo 3&nbsp;: Institut"></button><button type="button" class="carrousel-point" aria-label="Photo 4&nbsp;: Fleuriste"></button><button type="button" class="carrousel-point" aria-label="Photo 5&nbsp;: Gastronomie"></button></div></div>
+<div class="carrousel-ctrl" hidden><button type="button" class="carrousel-pause" aria-label="Mettre les photos en pause" data-pause="Mettre les photos en pause" data-lecture="Relancer les photos"></button><div class="carrousel-points"><button type="button" class="carrousel-point" aria-label="Photo 1&nbsp;: Brasserie" aria-current="true"></button><button type="button" class="carrousel-point" aria-label="Photo 2&nbsp;: Service"></button><button type="button" class="carrousel-point" aria-label="Photo 3&nbsp;: Cuisine"></button><button type="button" class="carrousel-point" aria-label="Photo 4&nbsp;: Bistrot"></button><button type="button" class="carrousel-point" aria-label="Photo 5&nbsp;: Mise en place"></button></div></div>
 </div>
 <ol class="apercu-fil" aria-label="Ce que vous voyez passer dans le mois (exemple fictif)">
 <li class="apercu-carte"><p class="apercu-quoi">Avis traité</p><p class="apercu-ligne"><strong>Julie M.</strong> <span class="etoiles" role="img" aria-label="5 étoiles sur 5"></span></p><p class="apercu-texte">« Merci Julie, au plaisir de vous revoir très vite.&nbsp;»</p></li>
@@ -115,6 +115,7 @@
 <div class="tete">
 <h2 id="offres-titre">Trois offres, à l'année ou au mois.</h2>
 <p class="tete-chapo">Un contenu, c'est un sujet&nbsp;: il est publié sur chacun de vos réseaux et sur votre fiche Google.</p>
+<p class="tete-chapo offres-fiche"><strong>Pas encore sur Google&nbsp;? On crée votre fiche.</strong> C'est compris dans les trois offres.</p>
 </div>
 <div class="rythme" role="group" aria-label="Rythme de paiement" hidden>
 <button type="button" class="rythme-choix" data-choix="annuel" aria-pressed="true">Annuel <span class="rythme-gain">2 mois offerts</span></button>
@@ -133,6 +134,7 @@
 </div>
 <ul class="inclus">
 <li data-cgv="Optimisation initiale de la fiche Google|Mise à jour des informations transmises">Votre fiche Google optimisée, puis mise à jour avec ce que vous nous transmettez</li>
+<li data-cgv="Création de la fiche Google si le commerce n'en a pas">Votre fiche Google créée si vous n'en avez pas encore</li>
 <li data-cgv="Réponses aux avis Google=Préparées, validées par vous">Réponses à vos avis préparées par l'IA, publiées après votre validation</li>
 <li data-cgv="Lien et QR code pour demander des avis">Un lien et un QR code pour demander des avis</li>
 <li data-cgv="Contenus originaux par mois=2|Diffusion des contenus=Fiche Google">2 publications par mois sur votre fiche Google</li>
@@ -177,8 +179,8 @@
 <li data-cgv="Publication des contenus=Mode délégation">Mode délégation, si vous le choisissez&nbsp;: votre validation devient facultative, et sans réponse de votre part 48&nbsp;h après l'envoi, nous publions</li>
 <li data-cgv="Réponses aux avis Google=4 et 5 étoiles : publiées pour vous, sans intervention ; les autres prises en charge par l'équipe|Réponses aux commentaires=Gérées dans le périmètre convenu">Avis négatifs et commentaires pris en charge par notre équipe, qui vous consulte si nécessaire</li>
 <li data-cgv="Bilan du mois=Bilan commenté et point de 30 min">Le bilan commenté et un point mensuel de 30 minutes avec l'équipe</li>
+<li data-cgv="Retouche incluse par contenu=Une">Une retouche par contenu incluse</li>
 </ul>
-<p class="offre-sans">Une retouche par contenu incluse.</p>
 <a class="btn btn-contour offre-choisir" href="https://buy.stripe.com/3cIbJ116p66o33ccYHf7i0d" data-annuel-offerts="https://buy.stripe.com/3cIbJ116p66o33ccYHf7i0d" data-annuel-factures="https://buy.stripe.com/eVq28rdTb2UcdHQaQzf7i0f" data-mensuel-offerts="https://buy.stripe.com/aFacN5bL32UcbzIbUDf7i0a" data-mensuel-factures="https://buy.stripe.com/6oUeVdaGZ0M447g5wff7i0c">Choisir Premium</a>
 </article>
 
@@ -197,7 +199,7 @@
 <tr><th scope="row">Publication des contenus</th><td>Après votre validation</td><td class="reco">Après votre validation</td><td>Mode délégation, si vous le choisissez&nbsp;: sans réponse sous 48&nbsp;h, nous publions</td></tr>
 <tr><th scope="row">Réponses aux avis Google</th><td>Préparées, validées par vous</td><td class="reco">4 et 5 étoiles&nbsp;: publiées pour vous, sans intervention&nbsp;; les autres prises en charge par l'équipe</td><td>4 et 5 étoiles&nbsp;: publiées pour vous, sans intervention&nbsp;; les autres prises en charge par l'équipe</td></tr>
 <tr><th scope="row">Réponses aux commentaires</th><td>Non</td><td class="reco">Préparées, cas délicats validés par vous</td><td>Nous répondons pour vous, dans le cadre convenu</td></tr>
-<tr><th scope="row">Premier contenu proposé sous 72 h</th><td>Sans objet</td><td class="reco">Oui</td><td>Oui</td></tr>
+<tr><th scope="row">Premier contenu proposé sous 72 h</th><td>Non garanti</td><td class="reco">Oui</td><td>Oui</td></tr>
 </tbody></table>
 </div>
 
@@ -284,7 +286,7 @@
 </div>
 </div></section>
 
-<!-- Demande d'audit (champs : commerce, ville, email, telephone facultatif (18/10/2026), lien_maps obligatoire (lien de la fiche Google, 18/10/2026) ; envoi en JSON au webhook n8n de l'attribut action, site/app.js). Livrable : 3 priorités et 3 concurrents. -->
+<!-- Demande d'audit (champs : commerce, ville, email, telephone facultatif (18/10/2026), lien_maps obligatoire (lien de la fiche Google, 18/10/2026), sauf si la case sans_fiche est cochée : métier demandé à la place, aucun audit, email « nous créons votre fiche » (27/10/2026) ; envoi en JSON au webhook n8n de l'attribut action, site/app.js). Livrable : 3 priorités et 3 concurrents. -->
 <section id="audit" class="section audit-section"><div class="wrap"><div class="audit-bloc">
 <div class="audit-texte">
 <h2>Votre audit gratuit.</h2>
@@ -300,7 +302,9 @@
 <div class="champ"><label for="g-email">Email</label><input id="g-email" name="email" type="email" autocomplete="email" required></div>
 </div>
 <div class="champ"><label for="g-tel">Téléphone ou WhatsApp (facultatif)</label><input id="g-tel" name="telephone" type="tel" autocomplete="tel"></div>
-<div class="champ"><label for="g-maps">Lien de votre fiche Google</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" required aria-describedby="aide-maps"><p class="aide" id="aide-maps">Sur Google, cherchez votre commerce, touchez Partager, puis copiez le lien.</p></div>
+<div class="champ" id="champ-maps"><label for="g-maps">Lien de votre fiche Google</label><input id="g-maps" name="lien_maps" type="url" inputmode="url" autocomplete="off" required aria-describedby="aide-maps"><p class="aide" id="aide-maps">Sur Google, cherchez votre commerce, touchez Partager, puis copiez le lien.</p></div>
+<div class="ok"><input id="g-sans" name="sans_fiche" value="oui" type="checkbox" aria-controls="champ-maps champ-metier"><label for="g-sans">Je n'ai pas encore de fiche Google</label></div>
+<div class="champ" id="champ-metier" hidden><label for="g-metier">Votre métier</label><select id="g-metier" name="metier" aria-describedby="aide-metier"><option value="">Choisissez</option><option value="restaurant">Restaurant, café, bar</option><option value="beaute">Beauté, coiffure, bien-être</option><option value="sport">Sport, salle, coach</option><option value="autre">Autre commerce</option></select><p class="aide" id="aide-metier">Nous créons votre fiche&nbsp;: c'est compris dans les trois offres. Vous recevez la marche à suivre par email.</p></div>
 <div class="hp" aria-hidden="true"><label>Ne pas remplir<input name="website" tabindex="-1" autocomplete="off"></label></div>
 <div class="ok"><input id="g-ok" name="consentement" value="oui" type="checkbox" required><label for="g-ok">J'accepte de recevoir mon audit et quelques messages de suivi, désinscription en un clic. <a href="confidentialite.html">Confidentialité</a></label></div>
 <button class="btn btn-prim btn-grand" id="envoi" type="submit">Recevoir mon audit gratuit</button>
@@ -315,5 +319,5 @@
 <!-- legal:pied-site --><footer class="pied" id="pied"><div class="wrap"><div class="pied-ligne"><span class="pied-copy">&copy; 2026 BoostImpact</span>
 <nav class="pied-liens" aria-label="Informations légales"><a href="mentions-legales.html">Mentions légales</a><a href="cgv.html">Conditions de vente</a><a href="confidentialite.html">Confidentialité</a><a href="sous-traitance.html">Sous-traitance</a></nav>
 <span class="pied-societe">Un service de Girlden LTD</span></div></div></footer><!-- /legal:pied-site -->
-<script src="app.js?v=2510b"></script>
+<script src="app.js?v=2710a"></script>
 </body></html>

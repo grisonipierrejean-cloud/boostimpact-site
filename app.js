@@ -29,19 +29,22 @@ var T=RENOM_NL?{
   tel:'Dit telefoonnummer lijkt niet te kloppen: alleen cijfers, spaties en + ( ) . / -, bijvoorbeeld +32 470 12 34 56. Laat het veld leeg als u dat liever hebt.',
   maps:'Plak de link die u kopieerde via Google of Google Maps (knop Delen).',
   mapsVide:'Plak de link naar uw Google-bedrijfsprofiel: zoek uw zaak op Google, tik op Delen en kopieer de link.',
-  ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html'
+  ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html',
+  metier:'Kies uw sector, zodat we uw profiel kunnen voorbereiden.',boutonSans:'Mijn profiel laten aanmaken'
 }:EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
   tel:'This phone number doesn\u2019t look right: digits, spaces and + ( ) . / - only, for example +33 6 12 34 56 78. Leave it empty if you prefer.',
   maps:'Paste the link copied from Google or Google Maps (Share button).',
   mapsVide:'Paste the link to your Google listing: search for your business on Google, tap Share, then copy the link.',
-  ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html'
+  ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html',
+  metier:'Choose your trade, so we can prepare your listing.',boutonSans:'Have my listing created'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
   tel:'Ce numéro ne semble pas valide : chiffres, espaces et + ( ) . / - seulement, par exemple 06 12 34 56 78. Laissez le champ vide si vous préférez.',
   maps:'Collez le lien copié depuis Google ou Google Maps (bouton Partager).',
   mapsVide:'Collez le lien de votre fiche Google : sur Google, cherchez votre commerce, touchez Partager, puis copiez le lien.',
-  ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html'
+  ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html',
+  metier:'Choisissez votre métier, pour qu\'on prépare votre fiche.',boutonSans:'Faire créer ma fiche'
 };
 // Téléphone ou WhatsApp : facultatif ; même règle que tel() de n8n (n8n/build_formulaires.py, reprise dans n8n/build_audit.py) :
 // espaces regroupés, puis 6 à 40 caractères parmi chiffres, espaces et + ( ) . / -. Côté n8n, un numéro invalide est ignoré, la demande passe.
@@ -54,6 +57,12 @@ var GOOGLE=/^https?:\/\/(?:(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-
 function lienGoogle(v){var t=String(v||'').replace(/\s+/g,' ').trim(),m=t.match(/https?:\/\/[^\s"<>]+/i);
   return (m?m[0]:/^(?:share\.google|g\.co|maps\.app\.goo\.gl|goo\.gl|g\.page|business\.google\.com|(?:www\.|maps\.)?google\.)/i.test(t)?'https://'+t.split(' ')[0]:'').slice(0,500)}
 var err=$('#err'),btn=$('#envoi');
+// Pas encore de fiche Google (27/10/2026) : la case remplace le lien de la fiche par le métier ; n8n n'audite rien et répond par l'email
+// « nous créons votre fiche » (n8n/build_audit.py). Case décochée : envoi identique à celui d'avant (ni sans_fiche, ni metier).
+var sans=form.sans_fiche,champMaps=$('#champ-maps'),champMetier=$('#champ-metier');
+function sansFiche(){return !!(sans&&sans.checked)}
+function basculer(){var s=sansFiche();if(champMaps)champMaps.hidden=s;if(champMetier)champMetier.hidden=!s;if(!btn.disabled)btn.textContent=s?T.boutonSans:T.bouton}
+if(sans){sans.addEventListener('change',basculer);basculer()}
 function erreur(m,champ){err.textContent=m;err.hidden=false;if(champ)champ.focus()}
 // Le message d'erreur disparaît dès que le visiteur corrige : il ne reste pas affiché à tort.
 function effacer(){if(!err.hidden){err.hidden=true;err.textContent=''}}
@@ -64,17 +73,26 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   if(!form.ville.value.trim())return erreur(T.ville,form.ville);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.value.trim()))return erreur(T.email,form.email);
   var t=form.telephone?form.telephone.value.replace(/\s+/g,' ').trim():'';if(t&&!TEL.test(t))return erreur(T.tel,form.telephone);
-  var brut=form.lien_maps.value.trim(),m=lienGoogle(brut);
-  if(!brut)return erreur(T.mapsVide,form.lien_maps);
-  if(!GOOGLE.test(m))return erreur(T.maps,form.lien_maps);
+  var s=sansFiche(),brut=form.lien_maps.value.trim(),m=lienGoogle(brut);
+  if(s){if(!form.metier.value)return erreur(T.metier,form.metier)}
+  else{if(!brut)return erreur(T.mapsVide,form.lien_maps);
+    if(!GOOGLE.test(m))return erreur(T.maps,form.lien_maps)}
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
-  var d=boostDonnees(form);d.lien_maps=m;
+  var d=boostDonnees(form);if(s)delete d.lien_maps;else{d.lien_maps=m;delete d.metier}
   btn.disabled=true;btn.textContent=T.envoi;
   // Page de remerciement seulement si n8n a accepté la demande ; sinon, message d'erreur avec l'adresse de contact.
+  // Sans fiche : même page, suite propre à ce cas (#sans-fiche, bloc affiché plus bas dans ce fichier).
   boostEnvoyer(form,d)
-  .then(function(){location.href=T.merci})
-  .catch(function(){btn.disabled=false;btn.textContent=T.bouton;erreur(boostEchec(EN))});
+  .then(function(){location.href=T.merci+(s?'#sans-fiche':'')})
+  .catch(function(){btn.disabled=false;btn.textContent=s?T.boutonSans:T.bouton;erreur(boostEchec(EN))});
 });
+})();
+
+// ---- Page de remerciement (merci.html, en/thank-you.html, nl/bedankt.html), 27/10/2026 : demande « sans fiche Google » (#sans-fiche) ->
+// la suite propre à ce cas remplace celle de l'audit. Sans JavaScript : la suite de l'audit, comme avant.
+(function(){
+var a=document.getElementById('suite-audit'),b=document.getElementById('suite-sans-fiche');if(!a||!b)return;
+if(location.hash==='#sans-fiche'){a.hidden=true;b.hidden=false}
 })();
 
 // ---- Fiche de mise en route (mise-en-route.html, en/getting-started.html, nl/aan-de-slag.html) -> webhook renom-fiche-client.
@@ -103,7 +121,9 @@ var cas=(auj&&jusqu&&auj>jusqu)?'factures':'offerts',boutons=o.querySelectorAll(
 var lg=(document.documentElement.lang||'fr').slice(0,2),T={fr:{annuel:"à l'année",mensuel:'au mois',ou_annuel:"Ou payer à l'année (2 mois offerts)",ou_mensuel:'Ou payer au mois, sans engagement'},
 en:{annuel:'yearly',mensuel:'monthly',ou_annuel:'Or pay yearly (2 months free)',ou_mensuel:'Or pay monthly, no commitment'},
 nl:{annuel:'per jaar',mensuel:'per maand',ou_annuel:'Of per jaar betalen (2 maanden gratis)',ou_mensuel:'Of per maand betalen, zonder verbintenis'}}[lg]||null;
-function lien(b,r){return b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais')}
+// Langue de la page de paiement (27/10/2026) : paramètre « locale » de Stripe (docs.stripe.com/payment-links/customize) ; la base en tire la langue
+// des emails du nouveau client dès son invitation (moteur/paiement/stripe.js, client_en_ligne). Sans JavaScript : lien sans langue (français).
+function lien(b,r){var u=b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais');return u&&T&&/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u)?u+'?locale='+lg:u}
 function liens(r){var autre=r==='annuel'?'mensuel':'annuel';for(var i=0;i<boutons.length;i++){var b=boutons[i],u=lien(b,r);if(u)b.setAttribute('href',u);
 if(!T)continue;if(!b.hasAttribute('data-texte'))b.setAttribute('data-texte',b.textContent);b.textContent=b.getAttribute('data-texte')+' '+T[r];
 var a=b.nextElementSibling;if(!a||!a.classList.contains('offre-autre')){a=document.createElement('a');a.className='offre-autre';b.parentNode.insertBefore(a,b.nextSibling)}

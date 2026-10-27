@@ -46,6 +46,17 @@
   const PHRASES_MARQUE = { invalide: "Identifiant de marque Metricool invalide : des chiffres seulement (blogId, lu dans l'adresse de la marque sur Metricool).",
     prise: "Cette marque Metricool est déjà celle d'un autre commerce." };
   const PHRASE_WHATSAPP = "Numéro WhatsApp invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.";
+  // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : mêmes règles et mêmes phrases que la base.
+  const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
+    TEXTES: { nom_vide: "Indiquez le nom de votre commerce.", nom_long: "Le nom est trop long (120 caractères au plus).",
+      telephone: "Numéro de téléphone invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.", sujet: "Sujet inconnu.",
+      cas: "Cas inconnu : pas de fiche, ou fiche pas à votre nom.", deja_verifiee: "Votre fiche est déjà vérifiée par Google.",
+      fiche_en_creation: "Fiche Google en création : la garantie démarre à sa vérification par Google (console, « Fiche vérifiée par Google »).",
+      date_verif: "Date de vérification invalide (aujourd'hui au plus tard).", decision: "Décision inconnue : approuver ou en parler.",
+      avis_introuvable: "Avis introuvable.", avis_equipe: "Avec votre offre, notre équipe répond elle-même à cet avis.", rien_a_approuver: "Aucune réponse proposée à approuver pour cet avis." },
+    nom(v) { const n = String(v == null ? "" : v).replace(/\s+/g, " ").trim(); if (n.length < 2) throw new Error(MER.TEXTES.nom_vide); if (n.length > 120) throw new Error(MER.TEXTES.nom_long); return n; },
+    telephone(v) { const n = numeroWhatsapp(v); if (!n) throw new Error(MER.TEXTES.telephone); return n; } };
+  window.RENOM_MER = MER;
   window.RENOM_WHATSAPP = { numero: numeroWhatsapp };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
@@ -348,7 +359,7 @@
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
       { point: "google", titre: "Donner à BoostImpact l'accès administrateur à votre fiche Google", aide: "Sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire.", declarable: true },
-      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "BoostImpact crée votre espace dans notre outil de programmation et vous envoie un lien de connexion. Ce lien est valable 3 jours (71 heures précisément) : passé ce délai, demandez-en un nouveau. Ouvrez-le, puis connectez Facebook et Instagram. BoostImpact publie ensuite pour vous, seulement ce que vous avez approuvé.", declarable: true },
+      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Nous créons votre espace dans notre outil de programmation et vous envoyons un lien de connexion par email. Ouvrez-le dans les 3 jours et connectez vos réseaux ; s'il a expiré, répondez à notre email pour en recevoir un nouveau.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
     ETATS: { a_faire: "À faire", declare: "Fait selon vous, BoostImpact vérifie", fait: "Fait" },
@@ -394,10 +405,21 @@
     AVIS_A_PUBLIER_ATTENTE: "Avis Google : réponse à publier depuis 4 h", AVIS_NON_REDIGE: "Avis Google : avis relevé sans réponse rédigée",
     AVIS_NON_VISIBLES: "Avis Google : nouveaux avis non lus par le relevé",
     // Options commandées (22/10/2026, enregistrer_commande_option de schema.sql)
-    OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché" };
+    OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché",
+    // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
+    RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
+    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler" };
+  // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
+  const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
+  const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
+    if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
+    if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : la récupérer" : "Pas de fiche : la créer"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
+    if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
+    if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
     if (a.type === "ERREUR_WORKFLOW") return `${d.workflow || "Workflow inconnu"}, nœud ${d.noeud || "inconnu"} : ${d.message || ""}`;
-    if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => r.point).join(", ")}.`;
+    // Libellés lisibles (26/10/2026, audit du parcours, constat 32) : « Accès Google, Réseaux » au lieu de « google, metricool ».
+    if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => POINTS_MER[r.point] || r.point).join(", ")}.`;
     if (a.type === "PAIEMENT_REFUSE") return `Abonnement ${d.abonnement || ""} : appeler le commerçant sous 24 h.${d.test ? " (mode test)" : ""}`;
     if (a.type === "ABONNEMENT_SANS_COMMERCE") return `Abonnement ${d.abonnement || ""} payé sans commerce rattaché : le rattacher dans l'éditeur SQL.${d.test ? " (mode test)" : ""}`;
     // Client en ligne (21/10/2026, client_en_ligne de schema.sql) : information seulement, ou cas d'une adresse déjà connue à vérifier.
@@ -747,6 +769,15 @@
       async demandesAvis() { return ok(await sb.rpc("mes_demandes_avis", {})); },
       async ajouterOpposition(email) { ok(await sb.rpc("ajouter_opposition", { p_email: String(email || "") })); },
       async miseEnRoute() { return ok(await sb.rpc("ma_mise_en_route", {})); },
+      // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible » ; les écrans ne les appellent que si la colonne
+      // commerces.nom_confirme_le existe, c'est-à-dire quand le bloc est appliqué)
+      async confirmerNom(nom) { const r = ok(await sb.rpc("confirmer_nom_commerce", { p_nom: MER.nom(nom) })); cache = null; return r; },
+      async demanderRappel(sujet, telephone) { return ok(await sb.rpc("demander_rappel", { p_sujet: sujet || "mise_en_route", p_telephone: MER.telephone(telephone) })); },
+      async demanderFicheGoogle(cas) { const r = ok(await sb.rpc("demander_creation_fiche", { p_cas: cas })); cache = null; return r; },
+      async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
+      async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
+      async adminConfirmerNom(cid, nom) { return ok(await sb.rpc("admin_confirmer_nom", { p_commerce: cid, p_nom: MER.nom(nom) })); },
+      async adminFicheGoogleVerifiee(cid, le) { return ok(await sb.rpc("admin_fiche_google_verifiee", { p_commerce: cid, p_le: le })); },
       async declarerMiseEnRoute(point) { return ok(await sb.rpc("declarer_mise_en_route", { p_point: point })); },
       async deciderIdee(id, decision) { ok(await sb.rpc("decider_idee", { p_id: id, p_decision: decision })); },
       desinscriptionInfo: jeton => publicSupabase.desinscriptionInfo(jeton),
@@ -758,6 +789,7 @@
       prospectParJeton: jeton => publicSupabase.prospectParJeton(jeton),
       resultatParJeton: (jeton, resultat, note) => publicSupabase.resultatParJeton(jeton, resultat, note),
       async adminMiseEnRoute(cid, point, etat) { return ok(await sb.rpc("admin_mise_en_route", { p_commerce: cid, p_point: point, p_etat: etat })); },
+      async adminLienReseaux(cid, envoye = true) { return ok(await sb.rpc("admin_lien_reseaux", { p_commerce: cid, p_envoye: !!envoye })); },
       objetParJeton: jeton => publicSupabase.objetParJeton(jeton),
       validerParJeton: (jeton, decision, texte) => publicSupabase.validerParJeton(jeton, decision, texte),
       async adminMetricoolMarque(cid, blog) { return ok(await sb.rpc("admin_metricool_marque", { p_commerce: cid, p_blog_id: String(blog == null ? "" : blog).trim() || null })); },
@@ -768,14 +800,30 @@
           sante: sa.find(s => s.commerce_id === c.id) || null, demandes_style: ds.filter(d => d.commerce_id === c.id).length }));
       },
       async adminJournal() { const cs = ok(await sb.from("commerces").select("id,nom")), j = ok(await sb.from("journal").select("*").order("cree_le", { ascending: false }).limit(300)); return j.map(x => ({ ...x, commerce: (cs.find(c => c.id === x.commerce_id) || {}).nom })); },
+      // 26/10/2026 (console, garantie des 24 h) : chaque alerte porte son code, son commerce, l'avis (« Ouvrir l'avis ») ou l'identifiant de l'alerte
+      // de l'exploitant (« Traité » : admin_alerte_vue, fonction du bloc « Automatisations de service ») ; une alerte traitée (vue_le) n'est plus lue.
       async adminAlertes() {
         const cs = ok(await sb.from("commerces").select("id,nom")), n = id => (cs.find(c => c.id === id) || {}).nom;
         const av = ok(await sb.from("avis").select("*").eq("sensible", true).eq("statut", "humain")), j = ok(await sb.from("journal").select("*").in("type", ["REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION", "SCHEMA_INCOMPLET"]).order("cree_le", { ascending: false }).limit(50)), p = ok(await sb.from("publications").select("*").eq("statut", "echec"));
-        const ae = ok(await sb.from("alertes_exploitant").select("*").order("cree_le", { ascending: false }).limit(50));
-        const cm = ok(await sb.from("commentaires").select("commerce_id,raisons,texte,cree_le").eq("categorie", "sensible").eq("statut", "humain"));
-        return [...av.map(a => ({ type: "Avis sensible", commerce: n(a.commerce_id), texte: (a.raisons || []).join(", ") + " : " + (a.texte || "").slice(0, 100), date: a.cree_le })), ...j.map(x => ({ type: x.type, commerce: n(x.commerce_id), texte: JSON.stringify(x.detail), date: x.cree_le })), ...p.map(x => ({ type: "Publication en échec", commerce: n(x.commerce_id), texte: x.erreur || "", date: x.prevu_le })),
-          ...ae.map(a => ({ type: TYPES_ALERTE[a.type] || a.type, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le })),
-          ...cm.map(x => ({ type: "Commentaire sensible", commerce: n(x.commerce_id), texte: (x.raisons || []).join(", ") + " : " + (x.texte || "texte effacé après 30 jours").slice(0, 100), date: x.cree_le }))];
+        const ae = ok(await sb.from("alertes_exploitant").select("*").is("vue_le", null).order("cree_le", { ascending: false }).limit(50));
+        const cm = ok(await sb.from("commentaires").select("id,commerce_id,raisons,texte,cree_le").eq("categorie", "sensible").eq("statut", "humain"));
+        return [...av.map(a => ({ type: "Avis sensible", code: "AVIS_SENSIBLE", avis_id: a.id, commerce_id: a.commerce_id, commerce: n(a.commerce_id), texte: (a.raisons || []).join(", ") + " : " + (a.texte || "").slice(0, 100), date: a.cree_le })),
+          ...j.map(x => ({ type: x.type, code: x.type, journal: true, detail: x.detail, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: JSON.stringify(x.detail), date: x.cree_le })),
+          ...p.map(x => ({ type: "Publication en échec", code: "PUBLICATION_ECHEC", publication_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: x.erreur || "", date: x.prevu_le })),
+          ...ae.map(a => ({ type: TYPES_ALERTE[a.type] || a.type, code: a.type, id: a.id, commerce_id: a.commerce_id || null, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le })),
+          ...cm.map(x => ({ type: "Commentaire sensible", code: "COMMENTAIRE_SENSIBLE", commentaire_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: (x.raisons || []).join(", ") + " : " + (x.texte || "texte effacé après 30 jours").slice(0, 100), date: x.cree_le }))];
+      },
+      async adminAlerteVue(id) { ok(await sb.rpc("admin_alerte_vue", { p_id: id })); },
+      // Prises en charge (« Je prends ») et nouveau client complet : bloc « Console : garantie des 24 h tenue à deux » de schema.sql. Tant que ce bloc
+      // n'est pas collé, adminPrises rend null (la console masque « Je prends ») et adminCreerClient crée le commerce par admin_creer_commerce, sans
+      // ville, langue ni fiche (rend { id, partiel: true } : la console le dit).
+      async adminPrises() { const r = await sb.rpc("admin_prises", {}); return r.error ? null : (r.data || []); },
+      async adminPrendre(cle, par, prendre = true) { return ok(await sb.rpc("admin_prendre", { p_cle: cle, p_par: par, p_prendre: !!prendre })); },
+      async adminCreerClient(p) {
+        const r = await sb.rpc("admin_creer_client", { p: p || {} });
+        if (!r.error) return r.data;
+        if (r.error.code === "PGRST202" || /could not find the function/i.test(r.error.message || "")) return { id: await self.adminCreer(p.nom, p.metier, p.offre, p.email), partiel: true };
+        throw new Error(r.error.message);
       },
       async adminCreer(nom, metier, offre, email) { return ok(await sb.rpc("admin_creer_commerce", { p_nom: nom, p_metier: metier, p_offre: offre, p_email: email })); },
       async adminOffre(id, offre) { ok(await sb.rpc("admin_changer_offre", { p_commerce: id, p_offre: offre })); },

@@ -11,6 +11,23 @@
   $("demo").hidden = D.mode !== "demo";
   const entete = (titre, texte) => `<div class="entete"><p class="sur">${t("con.sur")}</p><h1>${titre}</h1>${texte ? `<p class="chapo">${texte}</p>` : ""}</div>`;
 
+  // ---------------- Prise en charge (« Je prends », 26/10/2026, audit du parcours, constat 26). Le compte de la console est partagé (bloc
+  // « Administrateur sans double authentification ») : la session ne dit pas QUI est connecté. Le prénom est donc choisi sur chaque appareil (stockage
+  // du navigateur, simple confort) et envoyé avec chaque prise (fonction SQL admin_prendre). Chaque carte de « À faire » a une clé « <objet>:<id> » ;
+  // « Pris par Pascal, 14 h 02 » et le filtre « À moi » en découlent. Base sans le bloc « Console : garantie des 24 h tenue à deux » : adminPrises
+  // rend null, et tout ce qui touche à la prise est masqué.
+  const CLE_PRENOM = "renom-console-prenom";
+  let moi = (() => { try { return (localStorage.getItem(CLE_PRENOM) || "").trim().slice(0, 40); } catch (er) { return ""; } })();
+  const garderMoi = v => { moi = String(v || "").trim().slice(0, 40); try { if (moi) localStorage.setItem(CLE_PRENOM, moi); else localStorage.removeItem(CLE_PRENOM); } catch (er) {} };
+  let prises = null;
+  const memeNom = (a, b) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+  const quandPris = d => new Date(d).toDateString() === new Date().toDateString() ? I.heure(d) : dh(d);
+  const blocPrise = cle => { const p = prises[cle], mien = p && memeNom(p.par, moi);
+    return `<div class="prise" data-prise="${e(cle)}">${p ? `<p class="note fort" data-pris-par>${t("con.prise.par", { p: e(p.par), h: quandPris(p.pris_le) })}</p>` : ""}<button type="button" class="bouton second petit" data-prendre="${mien ? 0 : 1}">${t(mien ? "con.prise.laisser" : p ? "con.prise.reprendre" : "con.prise.prendre")}</button></div>`; };
+  const avecPrise = (html, cle) => cle && prises ? html.replace(/<\/article>\s*$/, blocPrise(cle) + "</article>") : html;
+  const aMoi = cle => !!(prises && cle && prises[cle] && memeNom(prises[cle].par, moi));
+  async function lirePrises() { try { const l = D.adminPrises ? await D.adminPrises() : null; prises = Array.isArray(l) ? Object.fromEntries(l.map(x => [x.cle, x])) : null; } catch (er) { prises = null; } }
+
   // ---------------- Navigation (25/10/2026, décision de PJ : « c'est trop, ajuste ») : trois onglets. À faire (une seule file triée par urgence :
   // alertes, à publier à la main, avis de l'équipe, vidéos, garanties, mises en route, options), Clients (liste, fiche de chaque client, nouveau
   // client, journal) et Prospects. Barre latérale sur ordinateur, onglets du bas sur téléphone.
@@ -62,7 +79,11 @@
   const COURT = I.carte("con.court", ["compte", "google", "metricool", "demarrage"]);
   const sante = s => s ? `<p><span class="sante sante-${e(s.niveau)}">${NIVEAUX[s.niveau] || e(s.niveau)}</span></p>${s.raisons.length ? `<ul class="raisons">${s.raisons.map(r => `<li>${e(ph(r))}</li>`).join("")}</ul>` : `<p class="note">${t("con.rien.signaler")}</p>`}` : `<p class="note">${t("con.non.calcule")}</p>`;
   const miseEnRoute = s => { const m = s && s.mise_en_route; if (!m) return ""; const reste = m.points.filter(x => x.etat !== "fait");
-    return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${["google", "metricool"].includes(x.point) ? `<button type="button" class="bouton second petit" data-mer="${e(x.point)}">${t("con.verifie", { x: x.point === "google" ? "Google" : "Metricool" })}</button>` : ""}`).join("")}`; };
+    // Étape réseaux (27/10/2026) : l'équipe note l'envoi du lien de connexion (« Lien envoyé ») ; avant, l'étape n'est relancée ni comptée au commerçant.
+    // lien_envoye_le absent (base d'avant le bloc « Emails au commerçant ») : rien n'est affiché de plus.
+    const lien = x => x.point !== "metricool" || x.etat !== "a_faire" || !("lien_envoye_le" in x) ? ""
+      : `<p class="note">${x.lien_envoye_le ? t("con.mer.lien.envoye", { d: I.date(x.lien_envoye_le) }) : t("con.mer.lien.attente")}</p><button type="button" class="bouton second petit" data-mer-lien>${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>`;
+    return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${lien(x)}${["google", "metricool"].includes(x.point) ? `<button type="button" class="bouton second petit" data-mer="${e(x.point)}">${t("con.verifie", { x: x.point === "google" ? "Google" : "Metricool" })}</button>` : ""}`).join("")}`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
     const etat = m && m.verrouille ? t("con.sty.ligne." + (m.valide_par === "renom" ? "renom" : "commercant"), { d: I.date(m.verrouille_le || m.maj) }) : t(m ? "con.sty.ligne.attente" : "con.sty.ligne.aucun");
@@ -163,7 +184,7 @@
           : null;
         return `<tr data-id="${e(p.id)}"><td data-l="${C("prospect")}"><p class="fort">${e(p.commerce || t("con.non.nomme"))}</p><p class="note casse">${qui}</p>${p.note_pj ? `<p class="note">${e(p.note_pj)}</p>` : ""}</td><td data-l="${C("audit")}">${p.audit_le ? jourCourt(p.audit_le) : ""}</td>
           <td data-l="${C("suivi")}"><p class="fort">${et}</p><p class="note">${det}</p></td>
-          <td data-l="${C("actions")}"><div class="pile serre">${actions !== null ? actions : fini ? "" : `${!p.rapport_envoye_le ? `<button type="button" class="bouton second petit" data-p="rapport_envoye">${t("con.rapport.envoye")}</button>` : ""}<button type="button" class="bouton second petit" data-p="rdv">${t("con.rdv")}</button>${!p.repondu_le ? `<button type="button" class="bouton second petit" data-p="reponse">${t("con.a.repondu")}</button>` : ""}<button type="button" class="lien" data-p="arreter">${t("con.arreter")}</button>`}</div></td></tr>`; }).join("")}</tbody></table></section>`
+          <td data-l="${C("actions")}"><div class="pile serre"><a class="bouton second petit" href="#/nouveau/${encodeURIComponent(p.id)}" data-creer-client>${t("con.p.creer.client")}</a>${actions !== null ? actions : fini ? "" : `${!p.rapport_envoye_le ? `<button type="button" class="bouton second petit" data-p="rapport_envoye">${t("con.rapport.envoye")}</button>` : ""}<button type="button" class="bouton second petit" data-p="rdv">${t("con.rdv")}</button>${!p.repondu_le ? `<button type="button" class="bouton second petit" data-p="reponse">${t("con.a.repondu")}</button>` : ""}<button type="button" class="lien" data-p="arreter">${t("con.arreter")}</button>`}</div></td></tr>`; }).join("")}</tbody></table></section>`
       : `<section class="carte"><p class="texte2">${t("con.aucun.prospect")}</p></section>`}`;
     vue.querySelectorAll("[data-p]").forEach(b => b.onclick = async () => { try { await D.adminProspect(b.closest("tr").dataset.id, b.dataset.p); await prospects(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } });
     vue.querySelectorAll("[data-r]").forEach(b => b.onclick = async () => { try { await D.adminResultatProspect(b.closest("tr").dataset.id, b.dataset.r); await prospects(); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } });
@@ -183,7 +204,20 @@
     const w = I.langue !== "fr" && String(x || "").match(/^(.*), nœud (.*?) : ([\s\S]*)$/);
     if (w) return `<span translate="no">${e(w[1])}</span>, ${t("con.noeud")} <span translate="no">${e(w[2])}</span>: <span translate="no">${e(w[3])}</span>`;
     const [a, b] = texteAlerte(x); return e(a) + (b ? `<span translate="no">${e(b)}</span>` : ""); };
-  const carteAlerte = a => `<article class="carte" data-alerte><div class="carte-tete"><h2>${e(ph(a.type))}</h2><span class="note">${dh(a.date)}</span></div><p class="fort">${e(a.commerce || "")}</p><p class="texte2 casse">${alerteHtml(a.texte)}</p></article>`;
+  // Alertes en tête (26/10/2026, audit du parcours, constat 4) : « Avis sensible » et « Erreur de workflow » ont une échéance (reçue + 24 h, garantie des
+  // avis) et l'étiquette « En retard » une fois passée. Boutons : « Ouvrir l'avis » (la file des avis du client, dans sa fiche) ou « Ouvrir le
+  // client », et « Traité » pour une alerte de l'exploitant (admin_alerte_vue : elle sort de la file). Un avis sensible n'a pas de « Traité » ici :
+  // il ne sort qu'une fois la réponse publiée (sa carte de la file des avis, en tête elle aussi, porte « Traité : réponse publiée »).
+  // Étapes du journal (refus, échec) : libellé et détail lisibles, comme dans le journal.
+  const ALERTES_PRIO = ["AVIS_SENSIBLE", "ERREUR_WORKFLOW"];
+  const echeanceAlerte = a => ALERTES_PRIO.includes(a.code) ? Date.parse(a.date) + GD.avis_traite_heures * 3600000 : null;
+  const carteAlerte = a => { const ech = echeanceAlerte(a), retard = ech != null && Date.now() > ech;
+    const ouvrir = a.avis_id && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>`
+      : a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}" data-ouvrir-client>${t("con.al.ouvrir.client")}</a>` : "";
+    const traite = a.id != null && D.adminAlerteVue ? `<button type="button" class="bouton petit" data-alerte-vue>${t("con.al.traite")}</button>` : "";
+    return `<article class="carte${retard ? " attention" : ""}" data-alerte="${e(a.id ?? "")}" data-code="${e(a.code || "")}"><div class="carte-tete"><h2>${e(a.journal ? libelleEtape(a.code) : ph(a.type))}</h2>${ech != null ? `<span class="etat${retard ? " retard" : " actif"}">${t(retard ? "con.al.retard" : "con.al.avant", { d: dh(ech) })}</span>` : `<span class="note">${dh(a.date)}</span>`}</div>
+      ${a.commerce ? `<p class="fort">${e(a.commerce)}</p>` : ""}<p class="texte2 casse">${a.journal ? `<span translate="no">${e(detailJournal(a.detail))}</span>` : alerteHtml(a.texte)}</p>${ech != null ? `<p class="note">${t("con.file.recu", { d: dh(a.date) })}</p>` : ""}
+      ${a.avis_id ? `<p class="note">${t("con.al.publiee.seulement")}</p>` : ""}${ouvrir || traite ? `<div class="actions">${ouvrir}${traite}</div>` : ""}</article>`; };
   // File « à publier à la main » : réponses aux commentaires validées par le commerçant, tant que l'accès de Meta n'est pas accordé (ou si l'API a
   // refusé). Texte prêt à copier, lien vers la publication ; « Publiée » une fois la réponse collée sous le commentaire, sous le compte du commerce.
   const RESEAUX_CM = { instagram: "Instagram", facebook: "Facebook" };
@@ -245,14 +279,23 @@
   const RESEAUX_RET = ["instagram", "facebook", "tiktok"], NOM_RES = I.carte("res", ["facebook", "instagram", "google", "tiktok"]);
   const etoiles = n => t("con.etoiles", { n }), COND_O = window.RENOM_CONDITIONS.objectif_interne_pilotes, GD = window.RENOM_CONDITIONS.garantie_delais;
   const jourDe = v => v ? String(v).slice(0, 10) : "";
-  const carteAvisFile = a => `<article class="carte${a.en_retard ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"><div class="carte-tete"><h2>${e(a.commerce || "")}</h2><span class="etat${a.en_retard ? "" : " actif"}">${a.traite_le ? t("con.file.traite", { d: dh(a.traite_le) }) : t(a.en_retard ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) })}</span></div>
-          <p class="note">${t("con.file.titre")}</p>
+  // Avis sensible (26/10/2026) : en tête de « À faire » (alertes), « En retard » passé reçu + 24 h tant que la réponse n'est pas PUBLIÉE (une réponse
+  // proposée au commerçant ne suffit pas) ; « Traité : réponse publiée » ; « Ouvrir l'avis » (fiche du client) et « Voir sur Google » (lien de
+  // l'avis ou de la fiche, si connu). Mode équipe : l'avis reste dans la file jusqu'à la publication, même s'il a été « traité » plus tôt.
+  const retardAvis = a => a.sensible || a.mode === "equipe" ? Date.now() > Date.parse(a.echeance) : !!a.en_retard;
+  const carteAvisFile = (a, o = {}) => { const r = retardAvis(a), sens = !!a.sensible;
+    const etat = sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
+    const ouvrir = !o.surClient && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>` : "";
+    const google = a.lien ? `<a class="bouton second petit" href="${e(a.lien)}" target="_blank" rel="noopener" data-avis-google>${t("con.al.google")}</a>` : "";
+    return `<article class="carte${r ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"${sens ? " data-sensible" : ""}><div class="carte-tete"><h2>${sens ? t("con.al.avis.sensible") : e(a.commerce || "")}</h2><span class="etat${r ? (sens ? " retard" : "") : " actif"}">${etat}</span></div>
+          ${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
           <p class="fort">${etoiles(a.note)} · ${e(I.offre(a.offre || ""))}${a.sensible ? " · " + t("con.file.sensible", { r: e((a.raisons || []).join(", ")) }) : " · " + t("con.file.equipe")}</p>
           ${a.texte ? `<p class="texte2 casse" translate="no">${e(a.texte)}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}<p class="note">${t("con.file.recu", { d: dh(a.recu_le) })}</p>
           <div class="f"><label for="rep-av-${e(a.id)}">${t(a.mode === "equipe" ? "con.file.reponse" : "con.file.reponse.proposer")}</label><textarea id="rep-av-${e(a.id)}" data-rep-avis maxlength="2000" translate="no">${e(a.reponse_proposee || "")}</textarea></div>
           ${a.mode === "equipe" ? `<p class="note">${t("con.file.mode.equipe")}</p>` : `<p class="note">${t("con.file.mode.proposer", { email: a.email_client ? `<span class="casse">${e(a.email_client)}</span>` : t("con.file.sans.email") })}</p>
-          ${a.propose_le ? `<p class="note">${t("con.file.proposee", { d: dh(a.propose_le) })}</p>` : ""}<label class="option"><input type="checkbox" data-accord><span>${t("con.file.accord")}</span></label>`}
-          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis>${t("con.copier")}</button>${a.mode === "equipe" ? "" : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}<button type="button" class="bouton petit" data-avis-publie>${t("con.file.publiee")}</button></div></article>`;
+          ${a.propose_le ? `<p class="note">${t("con.file.proposee", { d: dh(a.propose_le) })}</p>` : ""}${a.accord_espace ? `<p class="fort" data-accord-espace>${t("con.file.accord.espace", { d: dh(a.decision_client_le) })}</p>` : a.decision_client === "en_parler" ? `<p class="fort">${t("con.file.en.parler", { d: dh(a.decision_client_le) })}</p>` : ""}<label class="option"><input type="checkbox" data-accord${a.accord_espace ? " checked" : ""}><span>${t("con.file.accord")}</span></label>`}
+          ${ouvrir || google ? `<div class="actions">${ouvrir}${google}</div>` : ""}
+          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis>${t("con.copier")}</button>${a.mode === "equipe" ? "" : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}<button type="button" class="bouton petit" data-avis-publie>${t(sens ? "con.file.traite.publiee" : "con.file.publiee")}</button></div></article>`; };
   const carteCommentaireEquipe = x => `<article class="carte" data-cm="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${NOM_RES[x.reseau] || e(x.reseau)}</span></div>
           <p class="note">${t("con.cm.equipe.titre")}</p>
           <p class="texte2 casse" translate="no">${e(x.texte || "")}</p><p class="note">${x.auteur ? e(x.auteur) + " · " : ""}${dh(x.recu_le)}</p>
@@ -266,8 +309,11 @@
     return t("con.coh.objet", { commerce: g.commerce || "" }, lg) + "\n\n" + t("con.coh.message", { commerce: g.commerce || "", ecarts: l.length ? l.map(x => "- " + x).join("\n") : "- …" }, lg); };
   const delai = d => !d ? `<p class="note">${t("con.delais.sans.objet")}</p>` : `<p><span class="etat${d.etat === "tenu" ? " actif" : ""}">${ETAT_DELAI[d.etat] || e(d.etat)}</span></p>${d.echeance ? `<p class="note">${t(d.fait_le ? "con.delais.fait" : "con.delais.avant", { d: dh(d.fait_le || d.echeance) })}</p>` : ""}`;
   // Saisie des dates d'un commerce (accès remis, photos reçues, cohérence, écarts, fiche optimisée) : la même dans « À faire » et dans la fiche du client.
+  // « Accès remis le » en date ET heure (26/10/2026) : posé à la minute par « Google vérifié », il démarre la garantie ; envoyé en heure exacte (ISO).
+  const dateHeureLocale = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return ""; const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const valeurDate = i => !i.value ? null : i.type === "datetime-local" && !isNaN(new Date(i.value)) ? new Date(i.value).toISOString() : i.value;
   const saisieDelais = g => `<div class="pile serre">
-            <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.acces_remis_le))}" data-d="acces_remis_le"></div>
+            <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="datetime-local" value="${e(dateHeureLocale(g.acces_remis_le))}" data-d="acces_remis_le"></div>
             <div class="f etroit"><label for="pho-${e(g.commerce_id)}">${t("con.delais.photos.lib")}</label><input id="pho-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.photos_recues_le))}" data-d="photos_recues_le"></div>
             <div class="f etroit"><label for="coh-${e(g.commerce_id)}">${t("con.coh.lib")}</label><input id="coh-${e(g.commerce_id)}" type="date" value="${e(jourDe(((g.fiche || {}).coherence || {}).verifiee_le))}" data-d="coherence_verifiee_le"></div>
             <div class="f etroit"><label for="eca-${e(g.commerce_id)}">${t("con.coh.ecarts.lib")}</label><textarea id="eca-${e(g.commerce_id)}" rows="3" maxlength="2000" data-d="coherence_ecarts" data-coh-ecarts translate="no">${e(((g.fiche || {}).coherence || {}).ecarts || "")}</textarea><p class="aide">${t("con.coh.ecarts.aide")}</p></div>
@@ -299,7 +345,8 @@
   const RELANCABLE = ["envoye", "en_montage", "refuse"];
   const relancable = d => RELANCABLE.includes(d.statut) && !d.rushes_effaces_le && !d.effacement_demande_le;
   const secDv = d => d == null ? "" : ", " + I.nombre(+d, +d % 1 ? 1 : 0) + " s";
-  const carteDepot = d => `<article class="carte${d.statut === "refuse" ? " attention" : ""}" data-depot="${e(d.id)}"><div class="carte-tete"><h2>${e(d.commerce || "")}</h2><span class="note">${dh(d.cree_le)}</span></div>
+  // Dépôt refusé (26/10/2026, constat 25) : c'est au commerçant de refilmer ; jamais « en retard », jamais en évidence, rangé dans « Vidéos ».
+  const carteDepot = d => `<article class="carte" data-depot="${e(d.id)}"><div class="carte-tete"><h2>${e(d.commerce || "")}</h2><span class="note">${dh(d.cree_le)}</span></div>
           <p class="note">${t("con.entree.videos")}</p>
           <p class="fort">${ST_DV[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}${d.essais ? `<p class="note">${t("con.essais", { n: d.essais })}</p>` : ""}
           ${d.nb_videos ? `<p class="note">${t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s)}</p>` : ""}${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}
@@ -315,35 +362,62 @@
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
   const TYPES_AF = ["alertes", "apublier", "avis", "videos", "garanties", "miseenroute", "options"];
   let afCtx = {};
+  // 26/10/2026 (garantie des 24 h tenue à deux) : les alertes prioritaires (avis sensibles, erreurs de workflow) passent avant tout, avec leur échéance ;
+  // un avis sensible reste dans la file jusqu'à sa publication ; un dépôt vidéo refusé n'est jamais « en retard » ; « Charge du jour » en haut ;
+  // « Je prends » sur chaque carte et le filtre « À moi ».
   async function afaire(filtreType) {
     const sur = p => p.catch(() => null);
     const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
-      sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : []]);
-    const T_ = x => x ? Date.parse(x) : NaN, items = [], ajout = (type, html, retard, quand, date) => items.push({ type, html, retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
-    (alertes || []).forEach(a => ajout("alertes", carteAlerte(a), false, NaN, T_(a.date)));
-    (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le)));
-    (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le)));
-    (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le)));
-    (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le)));
-    (file || []).filter(a => !a.traite_le || a.mode !== "equipe").forEach(a => ajout("avis", carteAvisFile(a), a.en_retard, a.traite_le ? NaN : T_(a.echeance), T_(a.recu_le)));
-    (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le)));
-    (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), d.statut === "refuse", NaN, T_(d.cree_le)));
-    (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech))); });
-    (dl || []).flatMap(g => (g.manquements || []).filter(m => m.statut === "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))).forEach(m => ajout("garanties", carteManquement(m), true, T_(m.echeance)));
-    cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le)));
-    (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance)));
-    items.sort((a, b) => (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
-    const n = Object.fromEntries(TYPES_AF.map(k => [k, items.filter(x => x.type === k).length])), f = TYPES_AF.includes(filtreType) ? filtreType : "";
-    const visibles = f ? items.filter(x => x.type === f) : items;
+      sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], lirePrises()]);
+    const T_ = x => x ? Date.parse(x) : NaN, items = [];
+    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, cle: o.cle || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
+    // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête.
+    const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id));
+    (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id))).forEach(a => { const ech = echeanceAlerte(a);
+      const cle = a.id != null ? "alerte:" + a.id : a.avis_id ? "avis:" + a.avis_id : a.commentaire_id ? "commentaire:" + a.commentaire_id : a.publication_id ? "publication:" + a.publication_id : null;
+      ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle }); });
+    (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le), NaN, { cle: "publication:" + x.id + ":" + x.reseau }));
+    (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id }));
+    (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id }));
+    (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id }));
+    (file || []).forEach(a => ajout(a.sensible ? "alertes" : "avis", carteAvisFile(a), retardAvis(a), a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
+      { cle: "avis:" + a.id, prio: !!a.sensible, types: a.sensible ? ["alertes", "avis"] : ["avis"] }));
+    (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le), { cle: "commentaire:" + x.id }));
+    (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), false, NaN, T_(d.cree_le), { cle: "depot:" + d.id }));
+    (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id }); });
+    (dl || []).flatMap(g => (g.manquements || []).filter(m => m.statut === "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))).forEach(m => ajout("garanties", carteManquement(m), true, T_(m.echeance), NaN, { cle: "manquement:" + m.id }));
+    cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id }));
+    (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id }));
+    items.sort((a, b) => (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
+    const avecMoi = !!(prises && moi), TYPES = avecMoi ? [...TYPES_AF, "moi"] : TYPES_AF;
+    const de = k => k === "moi" ? items.filter(x => aMoi(x.cle)) : items.filter(x => x.types.includes(k));
+    const n = Object.fromEntries(TYPES.map(k => [k, de(k).length])), f = TYPES.includes(filtreType) ? filtreType : "";
+    const visibles = f ? de(f) : items;
     afCtx = { pubs: pubs || [], dl: dl || [], cs };
     const erreurs = [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null);
-    vue.innerHTML = `${entete(t("con.entree.afaire"), t("con.afaire.chapo"))}<p class="msg" id="msg" role="status"></p>
-      <nav class="filtres compteurs" id="a-faire" aria-label="${t("con.afaire.types")}"><a href="#/afaire" data-type=""${f ? "" : ' aria-current="page"'}>${t("con.afaire.tout", { n: items.length })}</a>${TYPES_AF.map(k => `<a href="#/afaire/${k}" data-type="${k}" data-n="${n[k]}"${f === k ? ' aria-current="page"' : ""}>${t("con.af." + k)}, ${n[k]}</a>`).join("")}</nav>
+    // Charge du jour (constat 7) : toutes les actions de la file ; « en retard » et « avant <heure> » (échéance aujourd'hui, l'heure de la plus tardive).
+    const finJour = new Date(); finJour.setHours(23, 59, 59, 999);
+    const enRetard = items.filter(x => x.retard).length, duJour = items.filter(x => !x.retard && x.quand !== Infinity && x.quand <= finJour.getTime());
+    const charge = t("con.charge", { n: items.length, r: enRetard, m: duJour.length, h: duJour.length ? I.heure(Math.max(...duJour.map(x => x.quand))) : "" });
+    const noms = prises ? [...new Set(Object.values(prises).map(x => x.par))] : [];
+    const zoneMoi = !prises ? "" : moi ? `<p class="note moi" id="moi">${t("con.moi.est", { p: e(moi) })} <button type="button" class="lien" id="moi-changer">${t("con.moi.changer")}</button></p>`
+      : `<form class="moi" id="f-moi"><div class="f etroit"><label for="moi-prenom">${t("con.moi.lib")}</label><input id="moi-prenom" type="text" maxlength="40" autocomplete="given-name"${noms.length ? ' list="moi-noms"' : ""}></div>${noms.length ? `<datalist id="moi-noms">${noms.map(x => `<option value="${e(x)}">`).join("")}</datalist>` : ""}<button class="bouton second petit" type="submit">${t("con.moi.ok")}</button></form>`;
+    vue.innerHTML = `${entete(t("con.entree.afaire"), t("con.afaire.chapo"))}<p class="charge fort" id="charge">${charge}</p>${zoneMoi}<p class="msg" id="msg" role="status"></p>
+      <nav class="filtres compteurs" id="a-faire" aria-label="${t("con.afaire.types")}"><a href="#/afaire" data-type=""${f ? "" : ' aria-current="page"'}>${t("con.afaire.tout", { n: items.length })}</a>${TYPES.map(k => `<a href="#/afaire/${k}" data-type="${k}" data-n="${n[k]}"${f === k ? ' aria-current="page"' : ""}>${t("con.af." + k)}, ${n[k]}</a>`).join("")}</nav>
       ${erreurs ? `<p class="note">${t("con.afaire.erreur")}</p>` : ""}
-      ${visibles.length ? `<div class="pile" id="file-a-faire">${visibles.map(x => x.html.replace("<article ", `<article data-type="${x.type}" `)).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
+      ${visibles.length ? `<div class="pile" id="file-a-faire">${visibles.map(x => x.html.replace("<article ", `<article data-type="${f && x.types.includes(f) ? f : x.type}" data-types="${x.types.join(" ")}"${x.prio ? " data-prio" : ""} `)).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
     const fl = vue.querySelector(".compteurs"), fp = fl && fl.querySelector("[aria-current]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
+    const fm = $("f-moi"); if (fm) fm.onsubmit = ev => { ev.preventDefault(); const v = $("moi-prenom").value.trim(); if (!v) return; garderMoi(v); afaire(filtreType); };
+    const mc = $("moi-changer"); if (mc) mc.onclick = () => { garderMoi(""); afaire(filtreType === "moi" ? "" : filtreType); };
     brancherCartes(() => afaire(filtreType));
+  }
+  // Accès Google vérifié (mise en route « Google vérifié » ou « Accès vérifié » de la fiche Google, 26/10/2026, constat 24) : si la date de remise de
+  // l'accès (départ de la garantie) est vide, elle est notée à maintenant, modifiable ensuite dans Garanties. Plus de double saisie.
+  async function noterAccesGoogle(cid) {
+    try { const g = ((await D.adminGarantieDelais()) || []).find(x => x.commerce_id === cid); if (g && g.acces_remis_le) return null;
+      const maintenant = new Date().toISOString(); await D.adminDelais(cid, { acces_remis_le: maintenant }); return t("con.acces.depart", { d: dh(maintenant) }); }
+    catch (er) { return null; }
   }
   // Actions des cartes (À faire et fiche du client) : chaque bouton appelle la fonction de la base, puis l'écran est redessiné (apres) et le message
   // dit ce qui a été noté.
@@ -351,6 +425,10 @@
     const agir = async (f, ok, b) => { if (b) b.disabled = true; try { const m = await f(); if (m === null) { if (b) b.disabled = false; return; } await apres(); msg(ok != null ? ok : typeof m === "string" ? m : t("enregistre")); } catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
     const copier = async (x, ok) => { try { await navigator.clipboard.writeText(x.value); msg(t(ok)); } catch (er) { x.select(); msg(t("con.selectionnee")); } };
     const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => f(b, b.closest("[data-type], article, tr, section")); });
+    // Alertes de l'exploitant : « Traité » (admin_alerte_vue) ; prise en charge : « Je prends », « Je prends à la place », « Je laisse ».
+    sur("[data-alerte-vue]", b => agir(() => D.adminAlerteVue(b.closest("article").dataset.alerte), t("con.al.traite.ok"), b));
+    sur("[data-prendre]", b => { if (!moi) { msg(t("con.moi.dabord")); const i = $("moi-prenom"); if (i) i.focus(); return; }
+      agir(async () => { const r = await D.adminPrendre(b.closest("[data-prise]").dataset.prise, moi, b.dataset.prendre === "1"); return r && r.par ? t("con.prise.ok", { p: r.par }) : t("con.prise.laissee"); }, null, b); });
     // À publier à la main
     sur("[data-copier]", b => copier(b.closest("article").querySelector("[data-rep]"), "con.copiee"));
     sur("[data-publie]", b => agir(() => D.adminCommentairePublie(b.closest("article").dataset.id), t("con.publiee.equipe"), b));
@@ -370,7 +448,7 @@
     sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"); agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
     sur("[data-cm-d]", b => { const a = b.closest("article"); agir(() => D.adminCommentaireDecider(a.dataset.cm, b.dataset.cmD, b.dataset.cmD === "valide" ? a.querySelector("[data-cm-texte]").value : null)); });
     // Garanties : dates du commerce, message de cohérence, manquements, réseaux retenus, délégation, objectif interne
-    sur("[data-delais-enregistrer]", b => { const z = b.closest("[data-delais]"), p = {}; z.querySelectorAll("[data-d]").forEach(i => { p[i.dataset.d] = i.value || null; }); agir(() => D.adminDelais(z.dataset.delais, p)); });
+    sur("[data-delais-enregistrer]", b => { const z = b.closest("[data-delais]"), p = {}; z.querySelectorAll("[data-d]").forEach(i => { p[i.dataset.d] = valeurDate(i); }); agir(() => D.adminDelais(z.dataset.delais, p)); });
     sur("[data-coh-copier]", async b => { const z = b.closest("[data-delais]"), g = afCtx.dl.find(x => x.commerce_id === z.dataset.delais) || {}, m = z.querySelector("[data-coh-message]");
       m.value = messageCoherence(g, z.querySelector("[data-coh-ecarts]").value);
       try { await navigator.clipboard.writeText(m.value); msg(t("con.coh.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); } });
@@ -381,7 +459,10 @@
     sur("[data-gar-cartes]", b => agir(() => D.adminGarantie(b.closest("[data-gar]").dataset.gar, { cartes_en_place_le: window.RENOM_MAJ.aujourdhui() })));
     // Dépôts vidéo, mise en route, options
     sur("[data-relancer]", b => agir(() => D.adminRelancerMontage(b.closest("[data-depot]").dataset.depot), t("con.relance.ok"), b));
-    sur("[data-mer]", b => agir(() => D.adminMiseEnRoute(b.closest("[data-mer-commerce]").dataset.merCommerce, b.dataset.mer, "fait")));
+    sur("[data-mer]", b => { const cid = b.closest("[data-mer-commerce]").dataset.merCommerce;
+      agir(async () => { await D.adminMiseEnRoute(cid, b.dataset.mer, "fait"); return (b.dataset.mer === "google" && await noterAccesGoogle(cid)) || t("enregistre"); }, null, b); });
+    // Étape réseaux (27/10/2026, branche nuit-emails) : l'équipe note l'envoi du lien de connexion (admin_lien_reseaux).
+    sur("[data-mer-lien]", b => agir(() => D.adminLienReseaux(b.closest("[data-mer-commerce]").dataset.merCommerce, true)));
     sur("[data-opt-elements]", b => { const a = b.closest("article"); agir(async () => { const r = await D.adminCommandeOptionElements(a.dataset.opt, a.querySelector("[data-opt-date]").value); return t("con.opt.elements.ok", { d: I.dateLongue(r.livraison_prevue_le) }); }, null, b); });
     sur("[data-opt-livree]", b => { const a = b.closest("article"); agir(async () => { if (!window.confirm(t("con.opt.livree.confirmer"))) return null; const r = await D.adminCommandeOptionLivree(a.dataset.opt);
       return r.second_test_prevu_le ? t("con.opt.livree.ok.second", { d: I.dateLongue(r.second_test_prevu_le) }) : t("con.opt.livree.ok"); }, null, b); });
@@ -405,27 +486,36 @@
   }
   // Fiche d'un client : état et offre, santé et mise en route, accès aux réseaux, style et photos, garanties (délais, mois offerts, réseaux retenus,
   // délégation, objectif interne), options, dépôts vidéo et journal de CE client. Mêmes actions qu'avant, aux mêmes fonctions de la base.
-  async function client(cid) {
+  // Mise en route claire (27/10/2026) : nom du commerce à confirmer (aucune demande d'avis ne part avant), fiche Google à créer ou récupérer
+  // (la garantie démarre à sa vérification par Google). Rien sans le bloc SQL (colonnes absentes).
+  const merClient = c => !("nom_confirme_le" in c) ? "" : `${c.nom_confirme_le ? "" : `<div class="pile serre" id="nom-a-confirmer"><p class="fort">${t("con.nom.a.confirmer")}</p>
+      <div class="f"><label for="nom-console">${t("con.nom.lib")}</label><input id="nom-console" type="text" maxlength="120" value="${e(c.nom)}"></div><button type="button" class="bouton second petit" data-a="nom">${t("con.nom.confirmer")}</button></div>`}
+    ${c.fiche_google_demande_le && !c.fiche_google_verifiee_le ? `<div class="pile serre" id="fiche-a-creer"><p class="fort">${t(c.fiche_google_cas === "pas_a_mon_nom" ? "con.fiche.recuperer" : "con.fiche.creer", { d: I.date(c.fiche_google_demande_le) })}</p>
+      <div class="f etroit"><label for="fiche-verif">${t("con.fiche.verifiee.lib")}</label><input id="fiche-verif" type="date"></div><button type="button" class="bouton second petit" data-a="fiche-verifiee">${t("con.fiche.verifiee")}</button></div>`
+    : c.fiche_google_verifiee_le ? `<p class="note">${t("con.fiche.verifiee.le", { d: I.date(c.fiche_google_verifiee_le) })}</p>` : ""}`;
+  // 26/10/2026 : « Avis à traiter » (la file des avis de CE client, mêmes cartes et mêmes actions que dans « À faire ») ; #/client/<id>/avis y descend.
+  async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
-    const [cs, dl, gs, opts, depots, jl] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal())]);
+    const [cs, dl, gs, opts, depots, jl, fileAvis] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises()]);
     const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? (g.manquements || []).map(m => ({ ...m, commerce: g.commerce })) : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
-    const journalClient = (jl || []).filter(x => x.commerce_id === cid);
+    const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a></p><p class="msg" id="msg" role="status"></p>
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div></div>
-        <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></section>
+        <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${sante(c.sante)}<h3>${C_("mer")}</h3>${miseEnRoute(c.sante)}</section>
+      ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2></section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2><p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${ligneStyle(c)}</section>
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>
         <h3>${t("con.delais.titre")}</h3>${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
-          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="date" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
+          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="datetime-local" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
         ${mq.length ? `<h3>${t("con.mq.titre")}</h3><div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
         <h3>${t("con.ret.titre")}</h3><div class="pile serre" data-ret="${e(cid)}">${o.reseaux_sociaux ? `<div class="pile serre">${RESEAUX_RET.map(r => `<label class="option"><input type="checkbox" value="${r}" data-ret-res${ret.includes(r) ? " checked" : ""}><span>${NOM_RES[r]}</span></label>`).join("")}<button type="button" class="bouton second petit" data-ret-enregistrer>${t("enregistrer")}</button></div>` : `<p class="note">${t("con.ret.google.seul")}</p>`}
           ${o.delegation ? `<label class="option"><input type="checkbox" data-delegation${c.delegation_signee_le ? " checked" : ""}><span>${t(c.delegation_signee_le ? "con.ret.delegation.le" : "con.ret.delegation.non", { d: c.delegation_signee_le ? I.date(jourDe(c.delegation_signee_le)) : "" })}</span></label>` : `<p class="note">${t("con.ret.delegation.sans")}</p>`}</div>
@@ -446,14 +536,18 @@
     remplirJournal("jc", journalClient);
     const zc = $("client-etat");
     zc.querySelector("[data-a=pause]").onclick = async () => { try { await D.adminPause(cid, !c.en_pause); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    const zn = zc.querySelector("[data-a=nom]"); if (zn) zn.onclick = async () => { try { await D.adminConfirmerNom(cid, $("nom-console").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    const zf = zc.querySelector("[data-a=fiche-verifiee]"); if (zf) zf.onclick = async () => { try { await D.adminFicheGoogleVerifiee(cid, $("fiche-verif").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async () => { const r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
-      try { const x = await D.adminAccesReseau(cid, r, oui); await client(cid); msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 })); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
+      try { const x = await D.adminAccesReseau(cid, r, oui), dep = oui && r === "google" ? await noterAccesGoogle(cid) : null; await client(cid);
+        msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 }) + (dep ? " " + dep.replace(/^[^.]*\.\s*/, "") : "")); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     vue.querySelectorAll("[data-mc-enregistrer]").forEach(b => b.onclick = async () => { try { await D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value); await client(cid); msg(t("con.mc.ok")); } catch (er) { msg(ph(er.message)); } });
-    const fd = $("f-delais-client"); if (fd) fd.onsubmit = async ev => { ev.preventDefault(); try { await D.adminDelais(cid, { acces_remis_le: $("dl-acces").value }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    const fd = $("f-delais-client"); if (fd) fd.onsubmit = async ev => { ev.preventDefault(); try { await D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const fg = $("f-gar-client"); if (fg) fg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     brancherCartes(() => client(cid));
+    if (ancre === "avis") { const z = $("client-avis"); if (z) z.scrollIntoView({ block: "start" }); }
   }
   // Journal : libellé lisible (etape.* de i18n.js, les mêmes que l'historique de l'espace), le code en petit dessous pour le filtre et le support ;
   // détail : « clé : valeur » au lieu du JSON brut (24/10/2026). Le même tableau sert au journal de tous les clients et à celui d'un client.
@@ -472,15 +566,29 @@
     remplirJournal("tous", l);
   }
   // Nouveau client : créer le commerce et inviter son propriétaire, puis le suivi des invitations (anciens onglets Créer et Invitations).
-  async function nouveau() {
-    const l = await D.adminInvitations();
-    vue.innerHTML = `${entete(t("con.nouveau.client"), t("con.creer.titre"))}<p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a></p>
-      <section class="carte formulaire" id="creer"><form id="f"><div class="f"><label for="nom">${t("fiche.nom")}</label><input id="nom" type="text" required></div>
-      <div class="champs deux"><div class="f"><label for="metier">${t("fiche.metier")}</label><select id="metier">${Object.entries(METIERS).map(([k, x]) => `<option value="${k}">${x}</option>`).join("")}</select></div>
+  // 26/10/2026 (constat 35) : ville, lien de la fiche Google et langue des emails (fonction SQL admin_creer_client ; sans elle, admin_creer_commerce et
+  // un message le dit). #/nouveau/<prospect> : formulaire prérempli depuis un prospect (nom, ville, email, métier, langue, fiche par son identifiant de
+  // lieu) ; l'offre est choisie par l'équipe, rien n'est créé sans « Créer et inviter ». Le score de l'audit n'est pas gardé par la base.
+  const lienFicheDe = p => /^[A-Za-z0-9_-]+$/.test(p.place_id || "") ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.commerce || "") + "&query_place_id=" + p.place_id : "";
+  async function nouveau(pid) {
+    const [l, ps] = await Promise.all([D.adminInvitations(), pid ? D.adminProspects().catch(() => []) : []]), pr = pid ? ps.find(x => x.id === pid) : null;
+    const v = pr ? { nom: pr.commerce || "", ville: pr.ville || "", email: pr.email || "", metier: pr.metier || "", langue: ["fr", "en", "nl"].includes(pr.langue) ? pr.langue : "fr", fiche: lienFicheDe(pr) } : { langue: "fr" };
+    const sel = (a, b) => a === b ? " selected" : "";
+    vue.innerHTML = `${entete(t("con.nouveau.client"), t("con.creer.titre"))}<p class="retour-liste"><a href="#/${pr ? "prospects" : "clients"}">${t(pr ? "con.retour.prospects" : "con.sty.retour")}</a></p>
+      <section class="carte formulaire" id="creer">${pr ? `<p class="note fort" id="depuis-prospect">${t("con.nv.depuis", { p: e(pr.commerce || pr.email || "") })}</p><p class="note">${t("con.nv.score")}</p>` : ""}<form id="f"><div class="f"><label for="nom">${t("fiche.nom")}</label><input id="nom" type="text" required value="${e(v.nom || "")}"></div>
+      <div class="champs deux"><div class="f"><label for="metier">${t("fiche.metier")}</label><select id="metier">${Object.entries(METIERS).map(([k, x]) => `<option value="${k}"${sel(k, v.metier)}>${x}</option>`).join("")}</select></div>
       <div class="f"><label for="offre">${C_("offre")}</label><select id="offre">${Object.entries(OFFRES).filter(([k, o]) => !o.retiree).map(([k, o]) => `<option value="${k}">${e(I.offre(k))}</option>`).join("")}</select></div></div>
-      <div class="f"><label for="email">${t("con.email.proprio")}</label><input id="email" type="email" required></div><button class="bouton" type="submit">${t("con.creer.inviter")}</button><p class="msg" id="msg" role="status"></p></form></section>
-      <section class="carte tableau" id="invitations"><h2>${t("con.entree.invitations")}</h2><p class="texte2">${t("con.invitations.chapo")}</p>${l.length ? `<table class="tab"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("email")}</th><th>${C_("etat")}</th></tr></thead><tbody>${l.map(i => `<tr><td data-l="${C_("date")}">${dh(i.cree_le)}</td><td data-l="${C_("commerce")}">${e(i.commerce || "")}</td><td data-l="${C_("email")}" class="casse">${e(i.email)}</td><td data-l="${C_("etat")}">${INVITATION[i.statut] ? `<span class="fort">${INVITATION[i.statut]}</span> <span class="note">(${e(i.statut)})</span>` : e(i.statut)}</td></tr>`).join("")}</tbody></table>` : `<p class="texte2">${t("con.aucune.invitation")}</p>`}</section>`;
-    $("f").onsubmit = async ev => { ev.preventDefault(); try { await D.adminCreer($("nom").value, $("metier").value, $("offre").value, $("email").value); await nouveau(); msg(t("con.cree")); } catch (er) { msg(ph(er.message)); } };
+      <div class="champs deux"><div class="f"><label for="ville">${t("con.nv.ville")}</label><input id="ville" type="text" maxlength="120" autocomplete="off" value="${e(v.ville || "")}"></div>
+      <div class="f"><label for="langue">${t("con.nv.langue")}</label><select id="langue">${["fr", "en", "nl"].map(k => `<option value="${k}"${sel(k, v.langue)}>${t("con.nv.langue." + k)}</option>`).join("")}</select></div></div>
+      <div class="f"><label for="fiche">${t("con.nv.fiche")}</label><input id="fiche" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://maps.google.com/…" value="${e(v.fiche || "")}"><p class="aide">${t("con.nv.fiche.aide")}</p></div>
+      <div class="f"><label for="email">${t("con.email.proprio")}</label><input id="email" type="email" required value="${e(v.email || "")}"></div><button class="bouton" type="submit">${t("con.creer.inviter")}</button><p class="msg" id="msg" role="status"></p></form></section>
+      <section class="carte tableau" id="invitations"><h2>${t("con.entree.invitations")}</h2><p class="texte2">${t("con.invitations.chapo")}</p>${l.length ? `<table class="tab"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("email")}</th><th>${C_("etat")}</th></tr></thead><tbody>${l.map(i => `<tr><td data-l="${C_("date")}">${dh(i.cree_le)}</td><td data-l="${C_("commerce")}">${e(i.commerce || "")}</td><td data-l="${C_("email")}" class="casse">${e(i.email)}</td><td data-l="${C_("etat")}">${INVITATION[i.statut] ? `<span class="fort" data-statut="${e(i.statut)}">${INVITATION[i.statut]}</span>` : e(i.statut)}</td></tr>`).join("")}</tbody></table>` : `<p class="texte2">${t("con.aucune.invitation")}</p>`}</section>`;
+    $("f").onsubmit = async ev => { ev.preventDefault(); const b = ev.submitter || $("f").querySelector("button[type=submit]"); b.disabled = true;
+      const p = { nom: $("nom").value, metier: $("metier").value, offre: $("offre").value, email: $("email").value, ville: $("ville").value, langue: $("langue").value, fiche: $("fiche").value.trim() };
+      if (pr) p.prospect = pr.id;
+      try { const r = D.adminCreerClient ? await D.adminCreerClient(p) : await D.adminCreer(p.nom, p.metier, p.offre, p.email);
+        if (pr) history.replaceState(null, "", "#/nouveau"); await nouveau(); msg(t(r && r.partiel ? "con.nv.partiel" : "con.cree")); }
+      catch (er) { b.disabled = false; msg(ph(er.message)); } };
   }
   // ---------------- Style du commerce : le kit de marque est créé et réglé par BoostImpact ici (même écran et mêmes règles que « Votre style », marque.js).
   // Proposition automatique depuis le logo, sinon depuis les photos ; « Enregistrer » ou « Enregistrer et valider pour le client » (fonction SQL admin_regler_marque).
@@ -512,12 +620,12 @@
     if (s.motDePasseRequis || s.doubleAuth === "mot_de_passe") return choixMotDePasse(s);
     if (s.role !== "administrateur") return refuse();
     if (window.RENOM_ACCES.DOUBLE_AUTH_ADMIN && s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
-    const [r, param] = location.hash.replace("#/", "").split("/");
+    const [r, param, sous] = location.hash.replace("#/", "").split("/");
     if (ANCIENNES[r]) { history.replaceState(null, "", "#/" + ANCIENNES[r] + (param ? "/" + param : "")); return rendre(); }
     const ecran = ROUTES[r] ? r : "afaire";
     route = ONGLET[ecran]; connecte = true; dessinerNav();
-    const cle = ecran + "/" + (param || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
-    try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
+    const cle = ecran + "/" + (param || "") + "/" + (sous || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
+    try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined, sous ? decodeURIComponent(sous) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
   }
   document.addEventListener("click", async ev => { if (ev.target.closest("#sortir")) { await D.quitter(); location.hash = ""; rendre(); } });
   large.addEventListener("change", dessinerNav);

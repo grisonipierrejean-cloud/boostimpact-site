@@ -46,7 +46,9 @@
   { "id": "saint-sylvestre", "nom": "Saint-Sylvestre", "regle": { "type": "fixe", "mois": 12, "jour": 31 }, "metiers": ["restaurant", "beaute"], "source": "date fixe",
     "idee": { "titre": "Le soir du 31 décembre", "texte": "Restaurant : votre soirée et comment réserver. Institut : vos créneaux de la journée pour se préparer." } }
  ],
- "idee_ferie": { "titre": "Vos horaires du jour férié", "texte": "Ouvert ou fermé le {jour} ? Dites-le avant : vos clients le cherchent sur votre fiche Google et sur vos réseaux. BoostImpact peut aussi l'ajouter en horaires exceptionnels sur votre fiche, après votre accord." },
+ "idee_ferie": { "titre": "Vos horaires du jour férié", "texte": "Ouvert ou fermé le {jour} ? Dites-le avant : vos clients le cherchent sur votre fiche Google et sur vos réseaux. BoostImpact peut aussi l'ajouter en horaires exceptionnels sur votre fiche, après votre accord.",
+   "texte_google": "Ouvert ou fermé le {jour} ? Dites-le avant : vos clients le cherchent sur votre fiche Google. BoostImpact peut l'y ajouter en horaires exceptionnels, après votre accord.",
+   "_texte_google": "Offre sans réseaux sociaux (Essentiel, commerce.offre_id = essentiel) : jamais « vos réseaux » (audit du parcours du 26/10/2026, constat 31)." },
  "fenetre_ferie": [2, 8],
  "saisons": [
   { "id": "printemps", "nom": "printemps", "debut": { "mois": 3, "jour": 1 }, "idees": {

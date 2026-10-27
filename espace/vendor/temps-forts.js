@@ -67,7 +67,9 @@ function ideeDeLaSemaine(D, commerce, lundi, meteo, ville) {
   const candidats = [...tempsForts(D, metier, plus(L, a0), plus(L, a1)).filter(x => !x.ev.ferie), ...tempsForts(D, metier, plus(L, f0), plus(L, f1)).filter(x => x.ev.ferie)];
   if (candidats.length) {
     const { ev, date } = candidats[0];
-    const idee = ev.ferie ? { titre: D.idee_ferie.titre, texte: D.idee_ferie.texte.replace("{jour}", enLettres(date).replace(/ \d{4}$/, "") + " (" + ev.nom.replace(/ \(jour férié\)$/, "") + ")") } : ev.idee;
+    // Offre sans réseaux sociaux (Essentiel) : le texte ne parle que de la fiche Google (27/10/2026).
+    const texteFerie = commerce.offre_id === "essentiel" && D.idee_ferie.texte_google ? D.idee_ferie.texte_google : D.idee_ferie.texte;
+    const idee = ev.ferie ? { titre: D.idee_ferie.titre, texte: texteFerie.replace("{jour}", enLettres(date).replace(/ \d{4}$/, "") + " (" + ev.nom.replace(/ \(jour férié\)$/, "") + ")") } : ev.idee;
     return { titre: idee.titre, texte: idee.texte, origine: "calendrier", motif: `${ev.nom} : ${enLettres(date)}`, date_evenement: iso(date) };
   }
   const demain = iso(plus(L, 1)), m = meteo ? meteoDuLendemain(D, meteo, demain) : null;
