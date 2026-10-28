@@ -26,7 +26,7 @@ Plus affichées sur la page de vente, mais servies comme photos de fiches fictiv
 | img/methode.webp | Tests de l'audit (fiche fictive bien tenue) | Doğu Tuncer | https://www.pexels.com/photo/woman-hand-holding-smartphone-and-taking-pictures-of-cup-16309236/ | Pexels |
 | img/metier-restaurant.webp | Tests de l'audit (fiche fictive bien tenue) | Tima Miroshnichenko | https://www.pexels.com/photo/photo-of-an-appetizer-on-a-white-plate-6327536/ | Pexels |
 | img/metier-institut.webp | Tests de l'audit (fiche fictive négligée) | Marine Fougère | https://www.pexels.com/photo/cozy-spa-massage-table-with-candle-and-decor-35884499/ | Pexels |
-| img/demo-restaurant-avant.webp | Tests de l'audit (fiche fictive bien tenue) ; photo d'origine : Rachel Claire (spaghetti), attribution à confirmer par la personne qui a produit ce fichier | Rachel Claire | https://www.pexels.com/photo/close-up-of-spaghetti-on-plate-5531093/ | Pexels |
+| img/demo-restaurant-avant.webp | Tests de l'audit (fiche fictive bien tenue) ; remplacée le 28/10/2026 (l'ancienne attribution n'était pas confirmée) par un recadrage 480 x 720 de la photo de resto-assiette.webp | Nadin Sh | https://www.pexels.com/photo/gourmet-meal-on-a-restaurant-table-17749744/ | Pexels |
 
 Retirées le 13/10/2026 (plus utilisées nulle part, vérifié par recherche dans le dépôt) : img/sport.webp, img/autre.webp, img/creation-pates.webp, img/metier-studio.webp, img/demo-restaurant-apres.webp, img/demo-beaute-avant.webp, img/demo-beaute-apres.webp, img/demo-sport-avant.webp, img/demo-sport-apres.webp. Puis img/renom-photo-telephone.webp (ROMAN ODINTSOV, https://www.pexels.com/photo/crop-woman-taking-shot-of-food-on-mobile-phone-during-lunch-4552130/), remplacée dans l'avant / après par la même photo des deux côtés.
 
@@ -48,19 +48,22 @@ Photos de démonstration, Pexels, même licence. Elles servent uniquement d'« e
 
 ## Photos de la page de vente (direction « sobre et classe », 21/10/2026)
 
-Source : Pexels (https://www.pexels.com), licence Pexels : utilisation gratuite, y compris commerciale, sans attribution obligatoire
-(https://www.pexels.com/fr-fr/licence/). Sélection du 21/10/2026, centrée sur les restaurants ; aucune enseigne de commerce réel lisible.
-Fichiers d'origine téléchargés en 2400 px, convertis en WebP (1920 x 1280 ; démonstration 1080 x 1350, recadrage seul, aucune retouche).
+Remplacées le 28/10/2026 : les photos précédentes (Pexels 39604990, 262978, 30047126, 15790872, 9198282, 30488328) n'avaient pas de preuve de provenance gardée, et deux montraient le nom de vrais commerces (« MA BOURGOGNE », « Länt ») ou une personne reconnaissable (image de partage).
+Nouvelles photos choisies et regardées une par une le 28/10/2026 (aucun logo ni enseigne lisible), téléchargées le 28/10/2026 depuis le Chrome de PJ, avec son accord, depuis les adresses ci-dessous. Originaux (2400 ou 3200 px) gardés dans preuves/deploiement-2810/photos-originales/, empreintes SHA-256 dans preuves/deploiement-2810/empreintes.txt. Convertis en WebP qualité 80 (recadrage seul, aucune retouche).
+Licences, lues le 28/10/2026 :
+- Unsplash (https://unsplash.com/license) : « Unsplash grants you an irrevocable, nonexclusive, worldwide copyright license to download, copy, modify, distribute, perform, and use images from Unsplash for free, including for commercial purposes, without permission from or attributing the photographer or Unsplash. » Photos gratuites (« Free to use under the Unsplash License »), pas « Unsplash+ ».
+- Pexels (https://www.pexels.com/license/ : « All photos and videos on Pexels can be downloaded and used for free. » « Attribution is not required. » ; conditions générales https://www.pexels.com/terms-of-service/, section 5 : « …royalty-free right to download, use, copy, modify or adapt the Content for commercial or non-commercial purposes »). Interdit de laisser croire que les personnes photographiées approuvent un produit.
+Écartées au contrôle visuel : l'entrecôte « Café de Paris » d'Unsplash (d5EjL94rhZ0), qui porte le filigrane d'un générateur d'images IA (étoile à quatre branches en bas à droite) et aucune donnée d'appareil photo ; le poulet-frites Pexels 17568011, qui montre le nom d'un restaurant (« MAISO… ») sur un dessous de verre.
 
-| Fichier | Photo Pexels | Usage |
-|---|---|---|
-| img/resto-brasserie.webp | https://www.pexels.com/fr-fr/photo/39604990/ | premier écran, première photo (préchargée) |
-| img/resto-service.webp | https://www.pexels.com/fr-fr/photo/262978/ | premier écran, carrousel |
-| img/resto-dressage.webp | https://www.pexels.com/fr-fr/photo/30047126/ | premier écran, carrousel |
-| img/resto-bistrot.webp | https://www.pexels.com/fr-fr/photo/15790872/ | premier écran, carrousel |
-| img/resto-salle.webp | https://www.pexels.com/fr-fr/photo/9198282/ | premier écran, carrousel |
-| img/partage.jpg | https://www.pexels.com/fr-fr/photo/9198282/ (même photo que resto-salle.webp, assombrie, nom du site ajouté par outils/image_partage.py) | image de partage (og:image, twitter:image), 1200 x 630 |
-| img/resto-assiette.webp | https://www.pexels.com/fr-fr/photo/30488328/ | démonstration : « Votre photo » et la publication préparée |
+| Fichier | Photo d'origine | Auteur | Licence | Usage |
+|---|---|---|---|---|
+| img/resto-brasserie.webp | https://www.pexels.com/photo/grilled-beef-with-fries-and-sauce-on-black-ceramic-plate-1352264/ | Lukas Blazek | Pexels | premier écran, première photo (préchargée) |
+| img/partage.jpg | même photo que resto-brasserie.webp (Lukas Blazek, Pexels 1352264), assombrie, nom du site ajouté par outils/image_partage.py | Lukas Blazek | Pexels | image de partage (og:image, twitter:image), 1200 x 630 |
+| img/resto-service.webp | https://www.pexels.com/photo/a-waiter-holding-plates-with-salad-25809274/ | Matheus Bertelli | Pexels | premier écran, carrousel (clients de dos ou flous au fond) |
+| img/resto-dressage.webp | https://www.pexels.com/photo/hand-with-kitchen-spoon-over-plates-with-food-15671409/ | Luis Becerra | Pexels | premier écran, carrousel |
+| img/resto-bistrot.webp | https://unsplash.com/photos/a-cozy-restaurant-interior-with-string-lights-Wzo_34cS5bA | Raymond Yeung | Unsplash | premier écran, carrousel |
+| img/resto-salle.webp | https://unsplash.com/photos/clear-wine-glasses-on-top-of-dining-table-PCE0T5i4pDI | Ronan | Unsplash | premier écran, carrousel |
+| img/resto-assiette.webp | https://www.pexels.com/photo/gourmet-meal-on-a-restaurant-table-17749744/ | Nadin Sh | Pexels | démonstration : « Votre photo » et la publication préparée (4:5) |
 
 Aucune photo n'est présentée comme celle d'un client de BoostImpact (mention en bas de page). Les anciennes photos (img/renom-*.webp, sections
 plus bas) ne sont plus affichées par la page de vente.

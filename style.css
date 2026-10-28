@@ -607,3 +607,14 @@ body:has(#haut) .entete .logo::before{background:var(--ivoire);color:var(--nuit)
    de l'urgence réelle. Filet or sur bleu nuit : 8,1:1. Les autres filets restent blancs translucides : l'or reste rare. */
 #haut .haut-prix{border-top-color:var(--or)}
 .audit-urgence{border-top-color:var(--or)}
+
+/* ---------- Copy du 28/10/2026 (audit du copy, à valider par PJ) : titre du premier écran plus long (ce que nous faisons, sans promesse de résultat),
+   taille ajustée pour tenir dans le premier écran à 390 x 844 ; dans chaque carte, une ligne « Bientôt » séparée de ce qui est inclus (cadre en
+   pointillés, aucun trait coloré devant le libellé), les frais de mise en route et « De votre côté » (ce que le commerçant a à faire). */
+#haut h1{font-size:clamp(40px,10vw,92px);line-height:1;max-width:15ch}
+#haut h1 .g-chip{vertical-align:-0.12em;padding:2px 7px 3px}
+#haut h1 .g-chip img{height:.78em}
+.offre-bientot{font-size:14px;line-height:1.5;color:var(--texte-doux);border:1px dashed var(--trait-fort);border-radius:8px;padding:9px 12px}
+.offre-frais{font-size:14px;line-height:1.5;color:var(--texte-discret)}
+.offre-vous{font-size:15px;line-height:1.5;color:var(--texte);padding-top:12px;border-top:1px solid var(--trait)}
+.q p+p{margin-top:-8px}

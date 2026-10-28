@@ -493,6 +493,15 @@
     ${c.fiche_google_demande_le && !c.fiche_google_verifiee_le ? `<div class="pile serre" id="fiche-a-creer"><p class="fort">${t(c.fiche_google_cas === "pas_a_mon_nom" ? "con.fiche.recuperer" : "con.fiche.creer", { d: I.date(c.fiche_google_demande_le) })}</p>
       <div class="f etroit"><label for="fiche-verif">${t("con.fiche.verifiee.lib")}</label><input id="fiche-verif" type="date"></div><button type="button" class="bouton second petit" data-a="fiche-verifiee">${t("con.fiche.verifiee")}</button></div>`
     : c.fiche_google_verifiee_le ? `<p class="note">${t("con.fiche.verifiee.le", { d: I.date(c.fiche_google_verifiee_le) })}</p>` : ""}`;
+  // Fiche Google de chaque commerce (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : état, lien collé par le
+  // client (à ouvrir pour trouver la fiche), identifiant de lieu à poser ou corriger (admin_fiche_google_lieu). Sans le bloc SQL : rien.
+  const FG = window.RENOM_FICHE;
+  const ligneFiche = c => !FG.sql(c) ? "" : `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>
+      <p class="note" data-etat-fiche="${e(FG.etat(c))}">${t("con.fg.etat." + FG.etat(c))}</p>
+      ${c.fiche_google_lien ? `<p class="note casse">${t("con.fg.lien")} <a href="${e(c.fiche_google_lien)}" target="_blank" rel="noopener" translate="no" id="fg-lien-client">${e(c.fiche_google_lien)}</a></p>` : `<p class="note">${t("con.fg.aucun.lien")}</p>`}
+      <div class="f"><label for="fg-id">${t("con.fg.id.lib")}</label><input id="fg-id" type="text" autocomplete="off" maxlength="500" value="${e(c.google_place_id || "")}" aria-describedby="fg-aide" translate="no">
+        <p class="aide" id="fg-aide">${t("con.fg.aide")}${c.google_place_id && c.google_place_id_source ? " " + t("con.fg.source." + c.google_place_id_source) : ""}</p></div>
+      <button type="button" class="bouton second petit" data-a="fiche-lieu">${t("con.fg.enregistrer")}</button></div>`;
   // 26/10/2026 : « Avis à traiter » (la file des avis de CE client, mêmes cartes et mêmes actions que dans « À faire ») ; #/client/<id>/avis y descend.
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
@@ -510,7 +519,7 @@
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${sante(c.sante)}<h3>${C_("mer")}</h3>${miseEnRoute(c.sante)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2></section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
-      <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2><p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}</section>
+      <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2><p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${ligneStyle(c)}</section>
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>
         <h3>${t("con.delais.titre")}</h3>${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
@@ -544,6 +553,7 @@
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
       try { const x = await D.adminAccesReseau(cid, r, oui), dep = oui && r === "google" ? await noterAccesGoogle(cid) : null; await client(cid);
         msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 }) + (dep ? " " + dep.replace(/^[^.]*\.\s*/, "") : "")); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
+    const zl = vue.querySelector("[data-a=fiche-lieu]"); if (zl) zl.onclick = async () => { zl.disabled = true; try { await D.adminFicheGoogleLieu(cid, $("fg-id").value); await client(cid); msg(t("con.fg.ok")); } catch (er) { zl.disabled = false; msg(ph(er.message)); } };
     vue.querySelectorAll("[data-mc-enregistrer]").forEach(b => b.onclick = async () => { try { await D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value); await client(cid); msg(t("con.mc.ok")); } catch (er) { msg(ph(er.message)); } });
     const fd = $("f-delais-client"); if (fd) fd.onsubmit = async ev => { ev.preventDefault(); try { await D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const fg = $("f-gar-client"); if (fg) fg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };

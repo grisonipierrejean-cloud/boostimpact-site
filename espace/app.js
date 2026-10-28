@@ -26,6 +26,19 @@
   const merSql = c => !!c && "nom_confirme_le" in c;
   const nomAConfirmer = c => merSql(c) && !c.nom_confirme_le;
   const ficheDemandee = c => merSql(c) && !!c.fiche_google_demande_le && !c.fiche_google_verifiee_le;
+  // Lien de la fiche Google (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : le commerçant colle l'adresse de sa
+  // fiche (mise en route, étape Google, et Comptes) ; l'identifiant en est tiré ou cherché (jamais montré : pas de « place_id » côté client).
+  // Sans le bloc SQL (colonne fiche_google_lien_le absente) : aucun champ.
+  const FG = window.RENOM_FICHE;
+  const etatFiche = c => { const x = FG.etat(c); return x === "aucune" ? "" : t("fg.etat." + x); };
+  const blocFiche = (c, id) => !FG.sql(c) ? "" : `<form class="pile serre fiche-lien" id="${id}" novalidate>
+      <div class="f"><label for="${id}-champ">${t("fg.lib")}</label><input id="${id}-champ" type="url" inputmode="url" autocomplete="off" maxlength="500" value="${e(c.fiche_google_lien || "")}" placeholder="https://maps.app.goo.gl/…" aria-describedby="${id}-aide">
+        <p class="aide" id="${id}-aide">${t("fg.aide")}</p></div>
+      <div class="actions"><button class="bouton second" type="submit" id="${id}-ok">${t("fg.bouton")}</button></div><p class="note" id="${id}-etat" role="status" data-etat-fiche="${e(FG.etat(c))}">${etatFiche(c)}</p></form>`;
+  const brancherFiche = (id, apres) => { const f = $(id); if (!f) return;
+    f.onsubmit = async ev => { ev.preventDefault(); const b = $(id + "-ok"); b.disabled = true;
+      try { const r = await D.enregistrerFicheGoogle($(id + "-champ").value); await apres(); const z = $(id + "-etat"); if (z) z.textContent = (r && r.deja ? t("fg.deja") + " " : "") + t("fg.etat." + r.etat); }
+      catch (er) { b.disabled = false; const z = $(id + "-etat"); if (z) z.textContent = ph(er.message); } }; };
   // Avis sensible en Essentiel : réponse proposée par l'équipe, à approuver dans l'espace (decider_avis_sensible) ; l'accord vaut s'il suit la proposition.
   const accordDonne = x => x.decision_client === "approuve" && !!x.propose_le && !!x.decision_client_le && x.decision_client_le >= x.propose_le;
   const sensibleADecider = (x, c) => merSql(c) && !equipeRepond(c) && x.sensible && x.statut === "humain" && !!x.propose_le && !!String(x.reponse_proposee || "").trim()
@@ -61,7 +74,9 @@
     "EMAIL_MISE_EN_ROUTE", "EMAIL_RELANCE_VALIDATION", "EMAIL_RELANCE_PHOTOS", "EMAIL_OFFRE_SUPERIEURE", "DELEGATION_SIGNEE", "DELEGATION_RETIREE", "RESEAUX_RETENUS",
     "GARANTIE_MANQUEMENT", "MOIS_OFFERT_APPLIQUE", "RELEVE_MENSUEL", "OPTION_COMMANDEE", "OPTION_ELEMENTS_RECUS", "OPTION_LIVREE", "OPTION_SECOND_TEST_REMIS",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible »)
-    "NOM_CONFIRME", "RAPPEL_DEMANDE", "FICHE_GOOGLE_DEMANDEE", "FICHE_GOOGLE_DEMANDE_ANNULEE", "FICHE_GOOGLE_VERIFIEE", "PHOTOS_AUTORISATION_REFUSEE", "AVIS_REPONSE_APPROUVEE", "AVIS_EN_PARLER"]);
+    "NOM_CONFIRME", "RAPPEL_DEMANDE", "FICHE_GOOGLE_DEMANDEE", "FICHE_GOOGLE_DEMANDE_ANNULEE", "FICHE_GOOGLE_VERIFIEE", "PHOTOS_AUTORISATION_REFUSEE", "AVIS_REPONSE_APPROUVEE", "AVIS_EN_PARLER",
+    // Fiche Google du client venu du site et photos hors sujet (28/10/2026, bloc SQL du même nom)
+    "FICHE_GOOGLE_LIEN", "FICHE_GOOGLE_IDENTIFIEE", "FICHE_GOOGLE_A_IDENTIFIER", "PHOTO_HORS_SUJET"]);
   const ST_ABO = I.carte("abo.st", ["en_attente", "actif", "impaye", "resilie"]);
   const M = window.RENOM_MAJ;
   // Vidéo animée par IA (24/10/2026) : étiquette sobre sur la carte (texte seul, ni trait de couleur, ni majuscules d'étiquette).
@@ -543,7 +558,7 @@
           <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
           <button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
-          ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p></div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
+          ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p>${x.statut === "refusee" && ["hors_sujet", "doute"].includes(x.refus_motif) ? `<p class="texte2 refus-photo" data-refus="${e(x.refus_motif)}">${t("photo.refus." + x.refus_motif)}</p><p class="note">${t("photo.refus.conseil")}</p>` : ""}</div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
       ${await blocDepotVideo(c)}
       ${await blocVideoAvis(c)}`;
@@ -1081,7 +1096,8 @@
     // Offre sans réseaux (Essentiel, 26/10/2026) : seulement l'accès à la fiche Google ; Facebook, Instagram et TikTok ne la concernent pas.
     const [c, l0] = await Promise.all([D.commerce(), D.comptes()]), g = sansReseaux(c), l = g ? l0.filter(x => x.reseau === "google") : l0;
     vue.innerHTML = `${retour("#/reglages", "reg.retour")}${entete(t("groupe.reglages"), t(g ? "reg.comptes.google" : "ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t(g ? "comptes.chapo.google" : "comptes.chapo"))}
-      <div class="cartes comptes">${l.map(x => `<article class="carte"><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}</article>`).join("")}</div>`;
+      <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? blocFiche(c, "fiche-comptes") : ""}</article>`).join("")}</div>`;
+    brancherFiche("fiche-comptes", comptes);
   }
 
   // ---------------- Offre : ce qui est inclus (contenus originaux par mois, réseaux retenus), le prix (annuel, mensuel, frais de mise en route
@@ -1499,9 +1515,9 @@
     const tel = c.whatsapp_numero || (/^\s*(\+|00)/.test(c.contact || "") ? c.contact : "");
     const google = eg === "fait" ? `<p class="texte2">${t("mer2.google.fait")}</p>`
       : eg === "demande" ? `<div class="pile serre" id="fiche-demandee"><p class="texte2">${t("mer2.fiche.demandee", { d: date(c.fiche_google_demande_le) })}</p>
-          <ol class="pas">${[1, 2, 3].map(i => `<li>${t("mer2.fiche.suite." + i)}</li>`).join("")}</ol>
+          <ol class="pas">${(c.fiche_google_cas === "pas_a_mon_nom" ? ["nom.1", "nom.2", "3"] : ["1", "2", "3"]).map(i => `<li>${t("mer2.fiche.suite." + i)}</li>`).join("")}</ol>
           <p><button type="button" class="lien" id="fiche-annuler">${t("mer2.fiche.annuler")}</button></p></div>`
-      : `<p class="texte2">${t("mer2.google.chapo")}</p>
+      : `${blocFiche(c, "fiche-lien")}<p class="texte2">${t("mer2.google.chapo")}</p>
         <ol class="pas" id="pas-google">${PAS_GOOGLE.map(i => `<li>${t("mer2.google.pas." + i)}</li>`).join("")}</ol>
         ${eg === "declare" ? `<p class="note">${t("mer2.google.declare")}</p>` : `<div class="actions"><button type="button" class="bouton" data-declarer="google">${t("mer2.google.fait.bouton")}</button></div>`}
         ${merSql(c) && eg !== "declare" ? `<div class="sans-fiche"><label class="option"><input type="checkbox" id="sans-fiche"><span>${t("mer2.sans.fiche")}</span></label>
@@ -1529,7 +1545,8 @@
     vue.querySelectorAll("[data-declarer]").forEach(b => b.onclick = async () => { b.disabled = true; try { await D.declarerMiseEnRoute(b.dataset.declarer); await ecranEssentiel(await D.commerce()); msg(t("mer.merci")); majCompteurs(); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
     if ($("sans-fiche")) $("sans-fiche").onchange = () => { $("sans-fiche-choix").hidden = !$("sans-fiche").checked; };
     if ($("fiche-demander")) $("fiche-demander").onclick = async () => { const x = document.querySelector("input[name=fiche-cas]:checked");
-      try { await D.demanderFicheGoogle(x ? x.value : "pas_de_fiche"); await ecranEssentiel(await D.commerce()); msg(t("mer2.fiche.merci")); } catch (er) { msg(ph(er.message)); } };
+      try { await D.demanderFicheGoogle(x ? x.value : "pas_de_fiche"); await ecranEssentiel(await D.commerce()); msg(t(x && x.value === "pas_a_mon_nom" ? "mer2.fiche.merci.nom" : "mer2.fiche.merci")); } catch (er) { msg(ph(er.message)); } };
+    brancherFiche("fiche-lien", async () => ecranEssentiel(await D.commerce()));
     if ($("fiche-annuler")) $("fiche-annuler").onclick = async () => { try { await D.demanderFicheGoogle("annuler"); await ecranEssentiel(await D.commerce()); } catch (er) { msg(ph(er.message)); } };
     if ($("rappel-ouvrir")) $("rappel-ouvrir").onclick = () => { const f_ = $("rappel-f"), o = f_.hidden; f_.hidden = !o; $("rappel-ouvrir").setAttribute("aria-expanded", String(o)); if (o) $("rappel-tel").focus(); };
     if ($("rappel-f")) $("rappel-f").onsubmit = async ev => { ev.preventDefault(); const m = $("rappel-msg");

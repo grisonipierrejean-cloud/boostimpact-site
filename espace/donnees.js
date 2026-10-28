@@ -8,15 +8,15 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
-    standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
-    premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
+    premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
     croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
-  // (schema.sql) ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "27 octobre 2026";
+  // (schema.sql, bloc « CGV du 28 octobre 2026 ») ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "28 octobre 2026";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -60,6 +60,24 @@
     nom(v) { const n = String(v == null ? "" : v).replace(/\s+/g, " ").trim(); if (n.length < 2) throw new Error(MER.TEXTES.nom_vide); if (n.length > 120) throw new Error(MER.TEXTES.nom_long); return n; },
     telephone(v) { const n = numeroWhatsapp(v); if (!n) throw new Error(MER.TEXTES.telephone); return n; } };
   window.RENOM_MER = MER;
+  // ---- Fiche Google du client venu du site (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : mêmes règles et
+  // mêmes phrases que lien_fiche_google, place_id_de_lien et etat_fiche_google de schema.sql (et que moteur/audit/lien_google.py : FORMAT, extraire).
+  const FG = { TEXTES: { vide: "Collez le lien de votre fiche Google.",
+      format: "Ce lien ne vient pas de Google. Ouvrez votre fiche dans Google Maps, touchez « Partager », puis « Copier le lien ».",
+      identifiant: "Identifiant de lieu illisible : collez le place_id (ChIJ…) ou un lien Google Maps qui le contient (query_place_id=…)." },
+    GOOGLE: /^https?:\/\/(?:(?:www\.)?google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})\/(?:maps|search)(?:[\/?#]|$)|maps\.google\.(?:[a-z]{2,3}|co\.[a-z]{2}|com\.[a-z]{2})(?:[\/?#]|$)|(?:share\.google|g\.co|maps\.app\.goo\.gl|g\.page|business\.google\.com)\/|goo\.gl\/maps(?:[\/?#]|$))[^\s"<>]*$/i,
+    SANS_SCHEMA: /^(share\.google|g\.co|maps\.app\.goo\.gl|goo\.gl|g\.page|business\.google\.com|(www\.|maps\.)?google\.)/i,
+    ID: /^[A-Za-z0-9_-]{10,255}$/,
+    lien(v) { const t = String(v == null ? "" : v).replace(/\s+/g, " ").trim(), m = t.match(/https?:\/\/[^\s"<>]+/i);
+      let u = m ? m[0] : FG.SANS_SCHEMA.test(t) ? "https://" + t.split(" ")[0] : null; if (!u) return null; u = u.slice(0, 500); return FG.GOOGLE.test(u) ? u : null; },
+    placeId(u) { if (!u) return null; for (const re of [/[?&]query_place_id=([A-Za-z0-9_-]{10,255})(?:[&#]|$)/, /[?&]place_id=([A-Za-z0-9_-]{10,255})(?:[&#]|$)/,
+        /[?&](?:q|query)=place_id(?::|%3[Aa])(?:\+|%20)?([A-Za-z0-9_-]{10,255})(?:[&#]|$)/, /!19s(ChIJ[A-Za-z0-9_-]{10,255})/]) { const m = String(u).match(re); if (m) return m[1]; } return null; },
+    etat(c) { return !c ? "aucune" : c.fiche_google_a_identifier_le ? "equipe" : c.fiche_google_a_resoudre_le ? "recherche" : FG.ID.test(c.google_place_id || "") ? "reconnue" : c.fiche_google_lien ? "equipe" : "aucune"; },
+    // Le bloc SQL est-il appliqué ? (la colonne fiche_google_lien_le existe) : sinon, aucun champ dans l'espace ni dans la console.
+    sql: c => !!c && "fiche_google_lien_le" in c,
+    // Recherche automatique sans réponse depuis 2 h (n8n ou GitHub Actions en panne) : carte « Identifier la fiche Google » dans la console.
+    ATTENTE_HEURES: 2 };
+  window.RENOM_FICHE = FG;
   window.RENOM_WHATSAPP = { numero: numeroWhatsapp };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
@@ -410,17 +428,30 @@
     // Options commandées (22/10/2026, enregistrer_commande_option de schema.sql)
     OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
-    RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
+    RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
+    FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
     AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler",
     // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
     ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
+  // Titre d'une alerte (28/10/2026) : les tâches de la fiche Google portent le nom du commerce (« Identifier la fiche Google de <commerce> »,
+  // « Accompagner la création de la fiche Google de <commerce> »).
+  const titreAlerte = (a, nomC) => { const n = nomC || "ce commerce";
+    if (a.type === "FICHE_GOOGLE_A_IDENTIFIER" || a.type === "FICHE_GOOGLE_RECHERCHE_BLOQUEE") return "Identifier la fiche Google de " + n;
+    if (a.type === "FICHE_GOOGLE_A_CREER") return ((a.detail || {}).cas === "pas_a_mon_nom" ? "Accompagner la récupération de la fiche Google de " : "Accompagner la création de la fiche Google de ") + n;
+    return TYPES_ALERTE[a.type] || a.type; };
+  const MOTIFS_FICHE = { introuvable: "aucune fiche trouvée", ambigu: "plusieurs fiches possibles", nom: "le nom de la fiche trouvée ne correspond pas au commerce",
+    ville: "la fiche trouvée n'est pas dans la ville du commerce", sans_ville: "ville du commerce inconnue, recherche par nom impossible", cle_absente: "clé Google Places absente",
+    erreur_google: "erreur de Google Places", lien_illisible: "lien illisible", different: "le lien désigne une autre fiche que l'identifiant déjà posé", inconnu: "motif inconnu" };
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
     if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
-    if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : la récupérer" : "Pas de fiche : la créer"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
+    if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
+    // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
+    if (a.type === "FICHE_GOOGLE_A_IDENTIFIER") return `Recherche automatique sans résultat sûr (${MOTIFS_FICHE[d.motif] || d.motif || "motif inconnu"}). Lien collé par le commerçant : ${d.lien || "aucun"}.${(d.candidats || []).length ? " Fiches proches : " + d.candidats.join(", ") + "." : ""} Ouvrir le lien, trouver la fiche, puis coller son identifiant (place_id) dans la fiche du client, Comptes.`;
+    if (a.type === "FICHE_GOOGLE_RECHERCHE_BLOQUEE") return `Recherche automatique sans réponse depuis ${d.heures} h (n8n « RENOM, identification de la fiche Google » ou GitHub Actions). Lien collé : ${d.lien || "aucun"}. Coller l'identifiant (place_id) dans la fiche du client, Comptes.`;
     if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
     if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
     // Changement d'offre (27/10/2026) : ce qu'il reste à faire à la main, avec les noms des offres (moteur/offres.json) et les clés de prix du catalogue.
@@ -454,6 +485,11 @@
     if (a.type === "OPTION_SANS_COMMERCE") return `${d.option_nom || d.option || "Option"} payée sans commerce reconnu (session ${d.session || ""}) : la rattacher dans la console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
     if (/_A_EFFACER$/.test(a.type)) return `Toujours en attente d'une personne. Texte effacé le ${String(d.efface_le || "").slice(0, 10)} (règle des 30 jours) : à traiter avant.`;
     return JSON.stringify(d); };
+  // Commerces dont la recherche automatique de la fiche attend depuis plus de FG.ATTENTE_HEURES : carte « Identifier la fiche Google » (sans
+  // ligne en base : elle disparaît dès que la recherche répond ou que la console pose l'identifiant).
+  const rechercheBloquee = cs => (cs || []).filter(c => c && c.fiche_google_a_resoudre_le && Date.now() - Date.parse(c.fiche_google_a_resoudre_le) >= FG.ATTENTE_HEURES * 3600000)
+    .map(c => ({ type: "FICHE_GOOGLE_RECHERCHE_BLOQUEE", code: "FICHE_GOOGLE_RECHERCHE_BLOQUEE", commerce_id: c.id, date: c.fiche_google_a_resoudre_le,
+      detail: { heures: Math.floor((Date.now() - Date.parse(c.fiche_google_a_resoudre_le)) / 3600000), lien: c.fiche_google_lien || null } }));
   // ---- Paiement Stripe : lien du bouton « Payer / gérer mon abonnement » (adresses publiques de config.js, stripe : {liens, portail, fraisOffertsJusquAu},
   // écrites par outils/stripe_catalogue.py ; liens[offre][rythme][frais], rythme « mensuel » (sans engagement) ou « annuel » (12 mois payés d'avance), frais
   // « offerts » (Standard et Premium, souscription jusqu'au 30/11/2026 inclus), « factures » (190 € HT une fois) ou « sans_frais » (Essentiel). Abonnement en cours : portail client ; aucun abonnement ou
@@ -654,7 +690,8 @@
         return (cache = ok(await sb.from("commerces").select("*").eq("id", m.commerce_id).single()));
       },
       async enregistrer(ch) { const c = await self.commerce(); const m = {}; FICHE.forEach(k => { if (k in ch) m[k] = ch[k]; }); ok(await sb.from("commerces").update(m).eq("id", c.id)); cache = null; },
-      async photos() { const c = await self.commerce(); return ok(await sb.from("photos").select("id,nom_fichier,statut,cree_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      // « * » (28/10/2026) : refus_motif (photo hors sujet) quand le bloc SQL est appliqué, sans erreur avant.
+      async photos() { const c = await self.commerce(); return ok(await sb.from("photos").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Photos (17/10/2026 : SEUL chemin des photos, plus aucune par email). Envoi résumable TUS dans le seau « photos », directement dans le
       // dossier du commerce (<commerce>/<aléa>.<ext> : espace/web/envoi.js, même envoi que le dépôt de vidéos), puis la fonction deposer_photos
       // enregistre l'envoi entier : une ligne « photos » par fichier, qui lance la création de contenus (hook_photo -> n8n « RENOM, création de
@@ -822,6 +859,11 @@
       async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
       async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
       async adminConfirmerNom(cid, nom) { return ok(await sb.rpc("admin_confirmer_nom", { p_commerce: cid, p_nom: MER.nom(nom) })); },
+      // Fiche Google (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet »)
+      async adminFicheGoogleLieu(cid, valeur) { return ok(await sb.rpc("admin_fiche_google_lieu", { p_commerce: cid, p_valeur: String(valeur == null ? "" : valeur).trim() })); },
+      async enregistrerFicheGoogle(texte) {
+        if (!String(texte == null ? "" : texte).trim()) throw new Error(FG.TEXTES.vide); const u = FG.lien(texte); if (!u) throw new Error(FG.TEXTES.format);
+        const r = ok(await sb.rpc("enregistrer_fiche_google", { p_lien: u })); cache = null; return r; },
       async adminFicheGoogleVerifiee(cid, le) { return ok(await sb.rpc("admin_fiche_google_verifiee", { p_commerce: cid, p_le: le })); },
       async declarerMiseEnRoute(point) { return ok(await sb.rpc("declarer_mise_en_route", { p_point: point })); },
       async deciderIdee(id, decision) { ok(await sb.rpc("decider_idee", { p_id: id, p_decision: decision })); },
@@ -849,13 +891,17 @@
       // de l'exploitant (« Traité » : admin_alerte_vue, fonction du bloc « Automatisations de service ») ; une alerte traitée (vue_le) n'est plus lue.
       async adminAlertes() {
         const cs = ok(await sb.from("commerces").select("id,nom")), n = id => (cs.find(c => c.id === id) || {}).nom;
-        const av = ok(await sb.from("avis").select("*").eq("sensible", true).eq("statut", "humain")), j = ok(await sb.from("journal").select("*").in("type", ["REFUS", "LEGENDE_REFUSEE", "ECHEC_PUBLICATION", "SCHEMA_INCOMPLET"]).order("cree_le", { ascending: false }).limit(50)), p = ok(await sb.from("publications").select("*").eq("statut", "echec"));
+        const av = ok(await sb.from("avis").select("*").eq("sensible", true).eq("statut", "humain")), j = ok(await sb.from("journal").select("*").in("type", ["REFUS", "LEGENDE_REFUSEE", "PHOTO_HORS_SUJET", "ECHEC_PUBLICATION", "SCHEMA_INCOMPLET"]).order("cree_le", { ascending: false }).limit(50)), p = ok(await sb.from("publications").select("*").eq("statut", "echec"));
         const ae = ok(await sb.from("alertes_exploitant").select("*").is("vue_le", null).order("cree_le", { ascending: false }).limit(50));
+        // Recherche de fiche bloquée (28/10/2026) : colonne absente tant que le bloc SQL n'est pas appliqué -> rien (jamais d'erreur à l'écran).
+        const fb = await sb.from("commerces").select("id,fiche_google_lien,fiche_google_a_resoudre_le").lt("fiche_google_a_resoudre_le", new Date(Date.now() - FG.ATTENTE_HEURES * 3600000).toISOString())
+          .then(r => r.error ? [] : r.data || [], () => []);
         const cm = ok(await sb.from("commentaires").select("id,commerce_id,raisons,texte,cree_le").eq("categorie", "sensible").eq("statut", "humain"));
         return [...av.map(a => ({ type: "Avis sensible", code: "AVIS_SENSIBLE", avis_id: a.id, commerce_id: a.commerce_id, commerce: n(a.commerce_id), texte: (a.raisons || []).join(", ") + " : " + (a.texte || "").slice(0, 100), date: a.cree_le })),
           ...j.map(x => ({ type: x.type, code: x.type, journal: true, detail: x.detail, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: JSON.stringify(x.detail), date: x.cree_le })),
           ...p.map(x => ({ type: "Publication en échec", code: "PUBLICATION_ECHEC", publication_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: x.erreur || "", date: x.prevu_le })),
-          ...ae.map(a => ({ type: TYPES_ALERTE[a.type] || a.type, code: a.type, id: a.id, commerce_id: a.commerce_id || null, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le })),
+          ...ae.map(a => ({ type: titreAlerte(a, n(a.commerce_id)), code: a.type, id: a.id, commerce_id: a.commerce_id || null, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le })),
+          ...rechercheBloquee(fb).map(x => ({ ...x, commerce: n(x.commerce_id) || "", type: titreAlerte(x, n(x.commerce_id)), texte: texteAlerte(x) })),
           ...cm.map(x => ({ type: "Commentaire sensible", code: "COMMENTAIRE_SENSIBLE", commentaire_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: (x.raisons || []).join(", ") + " : " + (x.texte || "texte effacé après 30 jours").slice(0, 100), date: x.cree_le }))];
       },
       async adminAlerteVue(id) { ok(await sb.rpc("admin_alerte_vue", { p_id: id })); },
