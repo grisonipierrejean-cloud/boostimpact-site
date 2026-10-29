@@ -132,8 +132,12 @@
     commerces.forEach(c => {
       if (tests.has(c.id)) return; const a = aboDe[c.id];
       if (perdu(c)) { if (dansPeriode(a.maj_le || a.cree_le, debut, maintenant)) P.perdu.push({ id: c.id, nom: c.nom, quand: ms(a.maj_le || a.cree_le), de: "client" }); return; }
+      // Compte ouvert : le point de mise en route « compte » vaut « fait » (la base le pose dès que le commerçant est membre de son commerce,
+      // schema.sql). Le statut « acceptee » des invitations n'est écrit par aucun code (constat en ligne du 29/10/2026) : repli seulement.
       const paye = a && ["actif", "impaye"].includes(a.statut), invs = invitationsDe[c.id] || [];
-      if (paye && invs.length && !invs.some(i => i.statut === "acceptee")) return P.paye.push(c);
+      const pc = (((c.sante || {}).mise_en_route || {}).points || []).find(x => x.point === "compte");
+      const compteOuvert = pc ? pc.etat === "fait" : !invs.length || invs.some(i => i.statut === "acceptee");
+      if (paye && !compteOuvert) return P.paye.push(c);
       if (!merFinie(c) || !(delaisDe[c.id] && delaisDe[c.id].depart)) return P.onboarding.push(c);
       if (c.en_pause) pauses++;
       P.actif.push(c);
