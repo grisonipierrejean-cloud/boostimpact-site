@@ -46,6 +46,35 @@ Photos de démonstration, Pexels, même licence. Elles servent uniquement d'« e
 | Salle ou studio | tapis-panier | cottonbro studio | https://www.pexels.com/photo/black-round-plastic-tool-on-brown-plastic-basket-4325462/ |
 | Salle ou studio | halteres | Ivan S | https://www.pexels.com/photo/reflection-of-dumbbells-on-a-mirror-4164765/ |
 
+## Refonte du 29/10/2026 : photo du premier écran, logo, exemples de publications
+
+Photo du premier écran : Louis Hansel, Unsplash, https://unsplash.com/photos/cH5IPjaAYyo (« Lot de nourriture près des verres dans la photographie
+de gros plan de table », photo gratuite, pas « Unsplash+ »), téléchargée le 29/10/2026 depuis le Chrome de PJ, avec son accord : fichier
+louis-hansel-cH5IPjaAYyo-unsplash.jpg, 5184 x 3456, 2 809 353 octets, SHA-256 a0045f85818e8530… (empreinte complète dans preuves/refonte-2910/empreintes.txt).
+Licence Unsplash (https://unsplash.com/license) : usage commercial gratuit, modification autorisée, attribution non requise.
+Retouche (autorisée par la licence) : les sets de table imprimés portaient des textes et le nom d'un lieu, visibles aussi en reflet dans un verre ; ces zones sont adoucies (filtre
+morphologique puis flou) pour que plus aucun nom ni texte ne soit lisible. Aucun autre changement que le recadrage et la réduction.
+Aucune image générée par IA. Les personnes et le lieu ne sont pas des clients de BoostImpact.
+
+| Fichier | Photo d'origine | Auteur | Licence | Usage |
+|---|---|---|---|---|
+| img/hero-table.webp | https://unsplash.com/photos/cH5IPjaAYyo (retouchée comme dit plus haut), 1920 x 1280, WebP 80 | Louis Hansel | Unsplash | premier écran, ordinateur et tablette (préchargée) |
+| img/hero-table-portrait.webp | même photo, recadrage vertical sur l'assiette et les verres, 1000 x 1200 | Louis Hansel | Unsplash | premier écran, téléphone (préchargée) |
+| img/partage.jpg | même photo, assombrie, nom du site ajouté par outils/image_partage.py | Louis Hansel | Unsplash | image de partage (og:image, twitter:image), 1200 x 630 |
+| img/resto-brasserie.webp | voir la table du 28/10/2026 plus bas | Lukas Blazek | Pexels | exemple Instagram et fiche « après » (vignette) |
+| img/resto-dressage.webp | voir plus bas | Luis Becerra | Pexels | exemple Facebook et fiche « après » (vignette) |
+| img/resto-assiette.webp | voir plus bas | Nadin Sh | Pexels | démonstration, exemple de fiche Google, fiche « après » (vignette) |
+| img/renom-dressage.webp | voir plus bas | Aabouden Yassir | Pexels | exemple TikTok |
+
+Logo : img/logo-ivoire.png (sur bleu nuit) et img/logo-nuit.png (sur ivoire), img/favicon-32.png, img/apple-touch-icon.png, tirés du logo
+fourni par PJ (boostimpact-profil.png, 720 x 720, dossier BoostImpact-photos de son ordinateur) : lettres détourées, couleurs d'origine
+(ivoire #F6F4EF et point #B9C6DD) ou passées en bleu nuit #0F1C3A et point ardoise #3B5781 pour les en-têtes ivoire.
+
+Logo de Google retiré le 29/10/2026 (img/google-logo.svg supprimé) : PJ voulait le mot « Google » aux couleurs du site ; les règles de Google
+interdisent de recolorer leur logo. Le mot « Google » est donc écrit en texte, dans la police et les couleurs du site, sans logo.
+Retirée aussi : img/resto-bistrot.webp (plus affichée). img/resto-service.webp et img/resto-salle.webp restent pour la démonstration de
+outils/site_restaurant (comptoir-imaginaire.json), plus sur la page de vente.
+
 ## Photos de la page de vente (direction « sobre et classe », 21/10/2026)
 
 Remplacées le 28/10/2026 : les photos précédentes (Pexels 39604990, 262978, 30047126, 15790872, 9198282, 30488328) n'avaient pas de preuve de provenance gardée, et deux montraient le nom de vrais commerces (« MA BOURGOGNE », « Länt ») ou une personne reconnaissable (image de partage).

@@ -8,15 +8,15 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: false, delegation: false, avis_equipe: false, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
     standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
     premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
     croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
-  // (schema.sql, bloc « CGV du 28 octobre 2026 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "28 octobre 2026";
+  // (schema.sql, bloc « Essentiel et CGV du 29 octobre 2026 ») ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "29 octobre 2026";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -24,7 +24,7 @@
       alerte_avis_avant_heures: 4, contrepartie: "mois_suivant_offert" },
     avis: { collecte_minutes: 15, relances_client_heures: [4, 24] }, delegation: { publication_auto_heures: 48 }, annuel: { mois_couverts: 12, majoration_mensuel_pct: 20 },
     objectif_interne_pilotes: { nouveaux_avis: 10, jours: 60, rappel_jour: 45, en_vue_pct: 75, fermeture_prolonge_au_dela_de_jours: 7 },
-    mise_en_route: { prix_ht: 190, offerts_jusqu_au: "2026-11-30", offres: ["standard", "premium"] } };
+    mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"] } };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
   // (égalité testée par espace/test_ecrans.py et rls.test.mjs). Livraison : jours après le paiement ou la réception des éléments du client, le plus tardif.
   const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 14, second_test_jours: 90 },
@@ -496,7 +496,9 @@
   // abonnement résilié : lien de paiement de l'offre, avec l'identifiant du commerce (client_reference_id, relu par le webhook). Aucun code promotionnel.
   // Rien de configuré : pas de bouton (null). Source : https://docs.stripe.com/payment-links/url-parameters, lue le 14/10/2026.
   const STATUTS_ABONNEMENT = ["en_attente", "actif", "impaye", "resilie"];
-  const fraisOfferts = (maintenant, s) => (maintenant || new Date().toISOString().slice(0, 10)) <= ((s && s.fraisOffertsJusquAu) || CONDITIONS.mise_en_route.offerts_jusqu_au);
+  // Frais de mise en route (29/10/2026, décision de PJ ; site/legal.json « offerts_paiement ») : offerts en paiement annuel, facturés une fois en
+  // paiement mensuel, à toute date. stripe.fraisOffertsJusquAu (catalogue du 19/10/2026) n'est plus lu.
+  const fraisOfferts = rythme => rythme === CONDITIONS.mise_en_route.offerts_paiement;
   // Langue de la page de paiement Stripe : celle de l'espace (fr, en ou nl, toutes reconnues par Stripe), plus le français forcé (24/10/2026).
   const langueStripe = () => { const l = window.RENOM_I18N && window.RENOM_I18N.langue; return ["fr", "en", "nl"].includes(l) ? l : "fr"; };
   // fraisDejaPayes (montée d'offre, 27/10/2026) : le commerce a déjà payé (ou s'est vu offrir) la mise en route : variante « offerts » quelle que soit la date.
@@ -506,8 +508,8 @@
     if (ab && ab.statut !== "resilie") return https(s.portail);
     if (!OFFRES_EN_VENTE.includes(offre)) return null;   // offre retirée : aucun lien de paiement
     const r = ((s.liens || {})[offre] || {})[rythme === "annuel" ? "annuel" : "mensuel"] || {};
-    // Essentiel : aucuns frais de mise en route, un seul lien (« sans_frais ») ; Standard et Premium : « offerts » jusqu'au 30/11/2026 inclus, puis « factures ».
-    const base = https(!(OFFRES[offre] || {}).frais_mise_en_route ? r.sans_frais : fraisDejaPayes ? r.offerts : fraisOfferts(maintenant, s) ? (r.offerts || r.factures) : r.factures);
+    // Essentiel : aucuns frais de mise en route, un seul lien (« sans_frais ») ; Standard et Premium : « offerts » en paiement annuel, « factures » au mois.
+    const base = https(!(OFFRES[offre] || {}).frais_mise_en_route ? r.sans_frais : fraisDejaPayes ? r.offerts : fraisOfferts(rythme === "annuel" ? "annuel" : "mensuel") ? (r.offerts || r.factures) : r.factures);
     if (!base || !c || !/^[A-Za-z0-9_-]{1,200}$/.test(String(c.id || ""))) return null;
     return base + (base.includes("?") ? "&" : "?") + ["client_reference_id=" + encodeURIComponent(c.id), "locale=" + langueStripe()].join("&");
   }

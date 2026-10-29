@@ -1,17 +1,15 @@
-/* BoostImpact, page de vente et pages du parcours. Direction « sobre et classe » validée par PJ le 21/10/2026 : bleu nuit et ivoire,
-   vert citron retiré, un seul accent discret (bleu ardoise), photos réelles en grand.
-   Fonds : ivoire par défaut (premier écran, sections .fond-clair), blanc (.fond-blanc, pages légales body.clair), bleu nuit pour le bloc d'audit,
-   le résultat du simulateur et le pied (.sombre et sélecteurs listés plus bas). Les composants n'utilisent que les jetons --texte, --texte-doux,
-   --texte-discret, --trait, --trait-fort, --surface, --encart : chaque fond les redéfinit.
-   Contrastes (au pire) : sur ivoire --texte 15,6:1, --texte-doux 10,9:1, --texte-discret 5,9:1, ardoise 6,5:1 ; sur bleu nuit --doux 13,4:1,
-   --discret 7,6:1.
-   Troisième couleur (26/10/2026, PJ) : or champagne --or, accent rare et sur bleu nuit seulement (8,1:1) : point du mot-symbole de l'en-tête sombre,
-   montant du simulateur, deux filets fins, anneau de focus sur fond sombre. Jamais en texte sur ivoire ou blanc (1,9:1 et 2,1:1), jamais en aplat.
-   Titres : Source Serif 4 (axe opsz au plus grand, graisse 400), casse normale, jamais de majuscules forcées. Texte : Schibsted Grotesk 400 à 600.
-   Licence SIL OFL 1.1, polices hébergées dans fonts/ (fonts/OFL-source-serif-4.txt, fonts/OFL-schibsted-grotesk.txt).
-   Interdits : dégradé, pilule, ombre portée, trait coloré devant un libellé, orange ou terracotta, vert vif, majuscules d'étiquette, sur-titre,
-   « → » dans les boutons, animation d'entrée des sections. Seul mouvement automatique : le fondu enchaîné des photos du premier écran (site/app.js),
-   coupé par prefers-reduced-motion. */
+/* BoostImpact : page de vente et pages du parcours. Refonte du 29/10/2026 (GOAL de PJ : « niveau 2026 », sobre, classe, luxe éditorial, pas plat).
+   Charte inchangée : bleu nuit, ivoire et blanc, or champagne rare (sur bleu nuit seulement), Source Serif 4 pour les titres, Schibsted Grotesk
+   pour le texte (licence SIL OFL 1.1, fonts/). Pensée d'abord pour le téléphone (390 px), puis 760 px et 1040 px.
+   Rythme de la page d'accueil, comme les temps d'un repas : bleu nuit (premier écran), blanc (démonstration), bleu nuit (exemples de publications,
+   la pièce forte de la page), ivoire (fiche avant / après), puis ivoire et blanc en alternance, bleu nuit pour l'audit et le pied.
+   Profondeur sans ombre portée : surfaces superposées (carte blanche sur ivoire, carte bleu nuit claire sur bleu nuit), photo plein cadre, grands
+   titres. Rayons hiérarchisés : 14 px pour les maquettes d'écran, 12 px pour les cartes, 6 px pour les boutons et les champs.
+   Audit de cohérence du 29/10/2026 : les filets ivoire chaud (#DDD8CD, #C9C2B4, teinte 40°) lisaient comme un troisième or sur les boutons
+   à contour et les cadres « Bientôt » ; remplacés par deux gris bleutés tirés du bleu nuit (#D9DBE0, #B9BDC8), mêmes valeurs dans les emails et le
+   rapport d'audit. Un seul or : --or. #E8E6DF (texte sur bleu nuit) remplacé par --doux.
+   Interdits gardés : pilule, ombre portée, trait coloré devant un libellé, orange ou terracotta, vert vif, majuscules d'étiquette, sur-titre,
+   « → » dans les boutons, animation d'entrée des sections. Seul dégradé : le voile du premier écran (demande de PJ, 29/10/2026). */
 
 @font-face{font-family:'Source Serif 4';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/source-serif-4.woff2) format('woff2')}
 @font-face{font-family:'Schibsted Grotesk';font-weight:400 700;font-style:normal;font-display:swap;src:url(fonts/schibsted-grotesk.woff2) format('woff2')}
@@ -25,32 +23,32 @@
   --discret:#AEB2BE;
   --ardoise:#3B5781;
   --ardoise-clair:#B9C6DD;
-  /* Or champagne (26/10/2026, demande de PJ : troisième couleur de marque, « effet plus luxueux »). Seule définition de la valeur pour le site ;
-     mêmes valeurs dans espace/web/style.css (--or), moteur/audit/rapport.py (OR) et moteur/courriels/courriels.js (MISE_EN_PAGE.C.or), vérifiées
-     par moteur/tests/test_couleur_or.py. Teinte 44°, saturation 35 %, luminosité 65 % : le point de départ proposé (teinte 40°, saturation 43 %)
-     tirait vers l'orange (le détecteur d'orange d'espace/test_ecrans.py le classait orange) ; 4° de teinte en plus et 8 points de saturation en
-     moins le ramènent au champagne, à contraste égal. Accent rare, jamais en aplat. Texte or SEULEMENT sur bleu nuit :
-     8,1:1 sur --nuit, 7,0:1 sur --carte ; sur ivoire 1,9:1 et sur blanc 2,1:1, donc interdit sur fond clair. */
+  /* Or champagne (26/10/2026, demande de PJ). Seule définition de la valeur pour le site ; mêmes valeurs dans espace/web/style.css (--or),
+     moteur/audit/rapport.py (OR) et moteur/courriels/courriels.js (MISE_EN_PAGE.C.or), vérifiées par moteur/tests/test_couleur_or.py.
+     Teinte 44°, saturation 35 %, luminosité 65 %. Texte or SEULEMENT sur bleu nuit : 8,1:1 sur --nuit, 7,0:1 sur --carte ; sur ivoire 1,9:1 et
+     sur blanc 2,1:1, donc interdit sur fond clair. Jamais en aplat. */
   --or:#C4B385;
   --pierre:#5D6270;
-  --filet-clair:#DDD8CD;
-  --filet-clair-fort:#C9C2B4;
-  /* Noms gardés pour les pages et scripts existants : rôles inchangés, valeurs de la nouvelle charte (plus aucun vert). */
-  --bleu:var(--nuit);
+  /* Filets (29/10/2026) : gris bleutés tirés du bleu nuit, plus de beige. */
+  --filet-clair:#D9DBE0;
+  --filet-clair-fort:#B9BDC8;
   --bleu-fonce:#1B2D55;
+  /* Noms gardés pour les pages et scripts existants. */
+  --bleu:var(--nuit);
   --citron:var(--ardoise);
   --vert:var(--ardoise);
   --clair:var(--ivoire);
   --lien-survol:var(--ardoise);
   --filet:rgba(255,255,255,.14);
-  --filet-fort:rgba(255,255,255,.22);
+  --filet-fort:rgba(255,255,255,.24);
   --titre:'Source Serif 4',Georgia,'Times New Roman',serif;
   --sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
   --marge:16px;
-  --saut:72px;
+  --saut:76px;
   --r-btn:6px;
-  --r-carte:8px;
-  /* Couleurs de la page courante : claires par défaut (ivoire) */
+  --r-carte:12px;
+  --r-ecran:14px;
+  /* Couleurs du bloc courant : claires par défaut (ivoire). Chaque fond redéfinit ces jetons. */
   --fond:var(--ivoire);
   --texte:var(--nuit);
   --texte-doux:#2E3443;
@@ -61,30 +59,30 @@
   --encart:var(--blanc);
 }
 
+/* ---------- Base */
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;background:var(--ivoire);font-synthesis-weight:none}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;background:var(--ivoire);font-synthesis-weight:none;accent-color:var(--nuit);caret-color:var(--nuit);scrollbar-color:var(--filet-clair-fort) var(--ivoire)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{margin:0;background:var(--fond);color:var(--texte);font-family:var(--sans);font-size:17px;line-height:1.6;font-variant-numeric:lining-nums;overflow-x:clip}
 img{max-width:100%;height:auto;display:block}
 input,button,select,textarea{font-family:inherit}
-h1,h2,h3,p,ul,ol,figure{margin:0}
+h1,h2,h3,h4,p,ul,ol,figure,dl,dd{margin:0}
 ul,ol{padding:0}
 a{color:inherit;text-underline-offset:4px;text-decoration-thickness:1px}
 a:hover{color:var(--ardoise)}
 [hidden]{display:none!important}
-/* Surfaces du navigateur aux couleurs de la charte : sélection, curseur de saisie, cases, barre de défilement, chiffres des tableaux. */
 ::selection{background:var(--nuit);color:var(--ivoire)}
-html{accent-color:var(--nuit);caret-color:var(--nuit);scrollbar-color:var(--filet-clair-fort) var(--ivoire)}
-.prix-montant{font-variant-numeric:lining-nums}
 :focus-visible{outline:2px solid var(--ardoise);outline-offset:3px}
 sup{font-size:.6em;line-height:0;vertical-align:.6em}
-
-/* Source Serif 4 : axe optique au plus grand pour les titres (dessin fin, contrastes marqués), interlettrage légèrement resserré. */
-h1,h2{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 48;letter-spacing:-.022em;color:var(--texte);text-wrap:balance}
-h1{font-size:clamp(46px,6.4vw,92px);line-height:1.02}
-h2{font-size:clamp(34px,4.2vw,56px);line-height:1.08}
-h3{font-family:var(--sans);font-weight:600;font-size:20px;line-height:1.3;letter-spacing:-.005em;color:var(--texte)}
+li::marker{font-variant-numeric:normal}
+p{text-wrap:pretty}
 b,strong{font-weight:600}
+
+/* Titres : Source Serif 4, axe optique au plus grand, graisse 400, casse normale. */
+h1,h2{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 60;letter-spacing:-.025em;color:var(--texte);text-wrap:balance}
+h1{font-size:clamp(40px,10.4vw,88px);line-height:1.02}
+h2{font-size:clamp(32px,7.6vw,60px);line-height:1.06}
+h3{font-family:var(--sans);font-weight:600;font-size:20px;line-height:1.3;letter-spacing:-.005em;color:var(--texte)}
 .citron{color:var(--ardoise)}
 
 .wrap{max-width:1200px;margin:0 auto;padding-left:var(--marge);padding-right:var(--marge)}
@@ -92,246 +90,301 @@ b,strong{font-weight:600}
 .note{font-size:14px;line-height:1.5;color:var(--texte-discret)}
 .mention{font-size:13px;line-height:1.45;color:var(--texte-discret)}
 .hp{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-
 .evitement{position:absolute;left:var(--marge);top:-80px;background:var(--nuit);color:var(--blanc);padding:12px 16px;border-radius:var(--r-btn);z-index:30;font-weight:600}
 .evitement:focus{top:8px}
+.prix-montant{font-variant-numeric:lining-nums}
 
 /* ---------- Fonds */
 body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--ivoire);--encart:var(--ivoire)}
 .fond-clair{--fond:var(--ivoire);--surface:var(--blanc);--encart:var(--blanc)}
-.fond-blanc,.fond-clair{background:var(--fond);color:var(--texte);padding-bottom:var(--saut)}
-/* Bleu nuit : bloc d'audit, résultat du simulateur, pied de page, offre conseillée dans le comparatif */
-.sombre,.audit-section,.calc-resultat,.pied{--fond:var(--nuit);--texte:var(--ivoire);--texte-doux:var(--doux);--texte-discret:var(--discret);--trait:var(--filet);--trait-fort:var(--filet-fort);--surface:var(--carte);--encart:rgba(255,255,255,.06)}
-.sombre a:hover,.audit-section a:hover,.pied a:hover{color:var(--ardoise-clair)}
-/* Focus clavier sur bleu nuit : anneau or (8,1:1 sur --nuit, au-delà des 3:1 de WCAG 1.4.11), au lieu de l'ivoire (26/10/2026). */
-.sombre :focus-visible,.audit-section :focus-visible,.pied :focus-visible{outline-color:var(--or)}
+.fond-blanc,.fond-clair,.fond-nuit{background:var(--fond);color:var(--texte);padding-bottom:var(--saut)}
+/* Bleu nuit : premier écran, exemples de publications, offre conseillée, bloc d'audit, résultat du simulateur, pied */
+.sombre,.fond-nuit,.audit-section,.calc-resultat,.pied,.offre.reco,#haut{--fond:var(--nuit);--texte:var(--ivoire);--texte-doux:var(--doux);--texte-discret:var(--discret);--trait:var(--filet);--trait-fort:var(--filet-fort);--surface:var(--carte);--encart:rgba(255,255,255,.06)}
+.sombre a:hover,.fond-nuit a:hover,.audit-section a:hover,.pied a:hover{color:var(--ardoise-clair)}
+/* Focus clavier sur bleu nuit : anneau or (8,1:1 sur --nuit). */
+.sombre :focus-visible,.fond-nuit :focus-visible,.audit-section :focus-visible,.pied :focus-visible,.offre.reco :focus-visible,#haut :focus-visible{outline-color:var(--or)}
 
-/* ---------- Boutons : bleu nuit plein (action principale), contour fin (secondaire). Pas de couleur vive. */
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 22px;border:1px solid var(--nuit);border-radius:var(--r-btn);background:var(--nuit);color:var(--ivoire);font:inherit;font-size:16px;font-weight:600;line-height:1.25;letter-spacing:.005em;text-align:center;text-decoration:none;cursor:pointer;transition:background-color .15s ease,color .15s ease}
-.btn:hover{background:var(--bleu-fonce);border-color:var(--bleu-fonce);color:var(--ivoire)}
+/* ---------- Boutons : bleu nuit plein (action principale), contour bleu nuit (secondaire) ; sur bleu nuit, ivoire plein et contour ivoire. */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 22px;border:1.5px solid var(--nuit);border-radius:var(--r-btn);background:var(--nuit);color:var(--ivoire);font:inherit;font-size:16px;font-weight:600;line-height:1.25;letter-spacing:.005em;text-align:center;text-decoration:none;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.btn:hover,.btn-prim:hover{background:var(--bleu-fonce);border-color:var(--bleu-fonce);color:var(--ivoire)}
 .btn-prim{background:var(--nuit);border-color:var(--nuit);color:var(--ivoire)}
-.btn-prim:hover{background:var(--bleu-fonce);border-color:var(--bleu-fonce);color:var(--ivoire)}
 .btn-contour{background:transparent;border-color:var(--texte);color:var(--texte)}
 .btn-contour:hover{background:var(--texte);border-color:var(--texte);color:var(--fond)}
 .btn-blanc{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
 .btn-blanc:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
-/* Sur bleu nuit, l'action principale passe en ivoire */
-.sombre .btn-prim,.audit-section .btn-prim{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
-.sombre .btn-prim:hover,.audit-section .btn-prim:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
+.sombre .btn-prim,.fond-nuit .btn-prim,.audit-section .btn-prim,.offre.reco .btn-prim,#haut .btn-prim{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
+.sombre .btn-prim:hover,.fond-nuit .btn-prim:hover,.audit-section .btn-prim:hover,.offre.reco .btn-prim:hover,#haut .btn-prim:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
 .btn-grand{min-height:56px;padding:12px 28px;font-size:17px}
 .btn[disabled]{opacity:.6;cursor:default}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
+.lien-fort{display:inline-flex;align-items:center;min-height:44px;color:var(--texte);font-weight:500;text-decoration:underline;text-underline-offset:5px}
+.lien-fort:hover{color:var(--ardoise)}
 
-/* ---------- En-tête : ivoire, filet fin */
-.page{position:relative}
+/* ---------- En-tête. Logo fourni par PJ (img/logo-ivoire.png sur bleu nuit, img/logo-nuit.png sur ivoire, 29/10/2026). */
 .entete{position:relative;z-index:2;background:var(--ivoire);border-bottom:1px solid var(--filet-clair);color:var(--nuit)}
-.entete .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 16px;padding-top:12px;padding-bottom:4px}
-/* Mot-symbole « boostimpact.agency » en texte : minuscules, Schibsted Grotesk 700, point ardoise, « agency » en 400. */
-.logo{order:1;display:inline-flex;align-items:baseline;min-height:48px;padding-top:12px;font-family:var(--sans);font-weight:700;text-transform:none;font-size:23px;letter-spacing:-.025em;line-height:1;text-decoration:none;color:var(--nuit);white-space:nowrap}
-.logo-point{color:var(--ardoise)}
-.logo-suffixe{font-weight:400;letter-spacing:-.01em}
-.logo:hover{color:var(--nuit)}
+.entete .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 16px;min-height:64px;padding-top:10px;padding-bottom:6px}
+.logo{order:1;display:inline-flex;align-items:center;min-height:48px;text-decoration:none}
+.logo img{height:40px;width:auto}
 .btn-menu{order:3;min-height:44px;padding:8px 18px;font-size:15px}
-.menu{order:4;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:0 22px;font-size:15px;font-weight:500}
+.menu{order:4;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:0 20px;font-size:15px;font-weight:500}
 .menu a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;color:var(--nuit)}
 .menu a:hover{color:var(--ardoise);text-decoration:underline}
-.entete-photo{position:absolute;top:0;left:0;right:0;background:transparent;border-bottom:0}
-.entete-simple .wrap{flex-wrap:nowrap;min-height:72px;padding-top:0;padding-bottom:0}
+.entete-simple .wrap{flex-wrap:nowrap;min-height:68px;padding-top:0;padding-bottom:0;gap:0 12px}
+.entete-simple .logo img{height:36px}
 .retour{order:3;display:inline-flex;align-items:center;min-height:44px;font-size:15px;font-weight:500;color:var(--nuit)}
-.entete-simple .wrap{gap:0 12px}
-@media (max-width:480px){.entete-simple .logo{font-size:19px}.entete-simple .retour{font-size:14px}.entete-simple .wrap{gap:0 8px}}
-/* Sélecteur de langue « FR / EN / NL » (bloc legal:langues, outils/legal.py) : texte simple, la langue courante en gras (cible 44 px). */
+@media (max-width:480px){.entete-simple .retour{font-size:14px}.entete-simple .wrap{gap:0 8px}.entete-simple .logo img{height:32px}}
+@media (max-width:400px){.entete-simple .retour{font-size:13px}.entete-simple .wrap{gap:0 6px}.entete-simple .logo img{height:28px}}
+/* Langues « FR / EN / NL » (bloc legal:langues, outils/legal.py) : la langue courante en gras, cibles de 44 px. */
 .langues{order:2;margin-left:auto;display:flex;align-items:center;font-size:14px;font-weight:500;line-height:1;color:var(--pierre)}
-.langues a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--pierre);text-decoration:none}
+.langues a{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;color:var(--pierre);text-decoration:none}
 .langues a:hover{color:var(--nuit);text-decoration:underline}
-.langue-active{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--nuit);font-weight:700}
+.langue-active{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;color:var(--nuit);font-weight:700}
 .langues-sep{padding:0 1px;color:var(--filet-clair-fort)}
-@media (max-width:480px){.langues a,.langue-active{min-width:34px}}
-@media (max-width:400px){.entete-simple .logo{font-size:17px}.entete-simple .retour{font-size:13px}.entete-simple .wrap{gap:0 6px}}
-@media (max-width:380px){.entete-simple .langues a,.entete-simple .langue-active{min-width:30px}}
+@media (max-width:480px){.langues a,.langue-active{min-width:32px}}
+@media (max-width:380px){.entete-simple .langues a,.entete-simple .langue-active{min-width:28px}}
+/* Page d'accueil : en-tête bleu nuit, d'un seul tenant avec le premier écran. */
+body:has(#haut) .entete{background:var(--nuit);border-bottom-color:rgba(255,255,255,.1);color:var(--ivoire)}
+body:has(#haut) .entete .menu a{color:var(--ivoire)}
+body:has(#haut) .entete .menu a:hover{color:var(--ardoise-clair)}
+body:has(#haut) .entete .langues,body:has(#haut) .entete .langues a{color:var(--discret)}
+body:has(#haut) .entete .langue-active{color:var(--ivoire)}
+body:has(#haut) .entete .langues a:hover{color:var(--ivoire)}
+body:has(#haut) .entete .langues-sep{color:rgba(255,255,255,.3)}
+body:has(#haut) .entete :focus-visible{outline-color:var(--or)}
+body:has(#haut) .entete .btn-menu{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
+body:has(#haut) .entete .btn-menu:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
+@media (max-width:759px){
+  body:has(#haut) .entete .btn-menu{display:none}
+  .entete:not(.entete-simple) .wrap{padding-top:8px;padding-bottom:0}
+  .entete:not(.entete-simple) .logo img{height:36px}
+  .entete:not(.entete-simple) .menu{gap:0 18px;font-size:14px}
+  .entete:not(.entete-simple) .menu a{min-height:40px}
+  .entete:not(.entete-simple) .langues a,.entete:not(.entete-simple) .langue-active{min-width:30px}
+}
 
-/* ---------- Premier écran : ivoire, grand titre à gauche, une grande photo à droite ; l'aperçu du service posé sous la photo. */
-.haut{padding-top:28px;padding-bottom:40px;background:var(--ivoire)}
-.haut-grille{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:center}
-.haut-texte{display:flex;flex-direction:column;gap:16px;min-width:0}
-.chapo{font-size:19px;line-height:1.5;max-width:520px;color:var(--texte-doux)}
-.chapo strong{color:var(--texte)}
-.marque-symbole{font-family:var(--sans);font-weight:700;letter-spacing:-.025em;font-size:22px;line-height:1;color:var(--nuit)}
-.marque-symbole .logo-suffixe{font-weight:400}
+/* ---------- Premier écran : une photo plein cadre (Louis Hansel, Unsplash, CREDITS.md), voile bleu nuit en dégradé 58 / 42 / 66 % (demande de PJ,
+   29/10/2026 : l'aplat à 62 % éteignait la photo). Le texte se pose en bas, là où le voile est le plus dense. Contraste mesuré : preuves/refonte-2910. */
+#haut{position:relative;isolation:isolate;overflow:hidden;background:var(--nuit);color:var(--ivoire)}
+.haut-photo{position:absolute;inset:0;z-index:-1;display:block}
+.haut-photo img{width:100%;height:100%;object-fit:cover;object-position:42% 50%}
+.haut-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,28,58,.58) 0%,rgba(15,28,58,.44) 24%,rgba(15,28,58,.80) 44%,rgba(15,28,58,.86) 100%);pointer-events:none}
+#haut .haut-grille{display:flex;flex-direction:column;min-height:calc(100svh - 92px);padding-top:96px;padding-bottom:32px}
+.haut-texte{display:flex;flex-direction:column;gap:16px;max-width:680px;margin-top:auto;min-width:0}
+#haut h1{color:var(--ivoire);font-size:clamp(40px,10.6vw,88px);line-height:1.02;letter-spacing:-.03em;max-width:13.5ch}
+/* Titres anglais et néerlandais plus longs (11 et 10 mots) : corps réduit pour que tout le premier écran tienne à 390 x 844 et à 1440 x 900. */
+html:not([lang="fr"]) #haut h1{font-size:clamp(34px,8.6vw,68px);max-width:17ch}
+.chapo{font-size:18px;line-height:1.5;max-width:560px;color:var(--texte-doux)}
+#haut .chapo{color:var(--ivoire)}
 .haut-comment{font-size:17px;line-height:1.5;color:var(--texte)}
 .haut-comment strong{font-weight:500}
-.haut-prix{font-size:15px;line-height:1.55;color:var(--texte-discret);max-width:500px;padding-top:14px;border-top:1px solid var(--filet-clair)}
-.prix-repere{color:var(--nuit);font-weight:600}
+/* Filet or (sur bleu nuit, 8,1:1), pleine largeur du bloc, au-dessus du prix de départ. */
+.haut-prix{font-size:16px;line-height:1.55;color:var(--texte);max-width:520px;padding-top:14px;border-top:1px solid var(--or)}
+.prix-repere{color:var(--texte);font-weight:600}
 .actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;margin-top:6px}
-.lien-fort{display:inline-flex;align-items:center;min-height:44px;color:var(--nuit);font-weight:500;text-decoration:underline;text-underline-offset:5px}
-.lien-fort:hover{color:var(--ardoise)}
-.apercu{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
-/* Carrousel : cinq photos d'illustration en fondu enchaîné toutes les 5 s (site/app.js), libellé du métier discret, points et bouton pause
-   (cibles de 24 px au moins). Sans JavaScript : la première photo seule. prefers-reduced-motion : ni défilement automatique ni fondu. */
-.carrousel{position:relative;height:240px;border-radius:4px;overflow:hidden;background:var(--doux)}
-.diapos{list-style:none;position:absolute;inset:0}
-.diapo{position:absolute;inset:0;opacity:0;transition:opacity 1.4s ease}
-.diapo.est-active{opacity:1}
-.carrousel:not(.pret) .diapo:not(.est-active){display:none}
-.diapo img{width:100%;height:100%;object-fit:cover;object-position:60% 45%}
-.diapo:nth-child(2) img{object-position:60% 35%}
-.diapo:nth-child(3) img{object-position:45% 40%}
-.diapo:nth-child(4) img{object-position:75% 35%}
-.diapo:nth-child(5) img{object-position:50% 30%}
-.diapo-metier{position:absolute;left:14px;bottom:12px;padding:3px 9px;border-radius:3px;background:rgba(246,244,239,.92);color:var(--nuit);font-size:13px;font-weight:500;line-height:1.3}
-.carrousel-ctrl{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:2px;padding:2px 4px;border-radius:4px;background:rgba(246,244,239,.92)}
-.carrousel-points{display:flex}
-.carrousel-point,.carrousel-pause{display:inline-flex;align-items:center;justify-content:center;width:26px;height:28px;padding:0;border:0;background:transparent;cursor:pointer}
-.carrousel-point::after{content:"";width:7px;height:7px;border-radius:50%;border:1px solid var(--nuit)}
-.carrousel-point[aria-current="true"]::after{background:var(--nuit)}
-.carrousel-pause{width:30px}
-.carrousel-pause::after{content:"";width:8px;height:11px;border-left:2px solid var(--nuit);border-right:2px solid var(--nuit)}
-.en-pause .carrousel-pause::after{width:0;height:0;border-left:9px solid var(--nuit);border-right:0;border-top:6px solid transparent;border-bottom:6px solid transparent}
-@media (prefers-reduced-motion:reduce){.diapo{transition:none}}
-/* Aperçu du service : trois lignes sobres sous la photo, séparées par des filets (plus de cartes flottantes). */
-.apercu-fil{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);border-top:1px solid var(--filet-clair)}
-.apercu-carte{padding:10px 0;border-bottom:1px solid var(--filet-clair);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;min-width:0}
-.apercu-quoi{font-size:13px;font-weight:600;color:var(--nuit);min-width:9.5em}
-.apercu-ligne{display:flex;align-items:center;gap:8px;font-size:14px}
-.apercu-texte{font-size:14px;line-height:1.45;color:var(--texte-doux)}
-.apercu-action{font-size:13px;font-weight:500;color:var(--ardoise)}
-.apercu-carte:nth-child(2) .apercu-texte,.apercu-carte:nth-child(3) .apercu-texte{display:none}
-.apercu .mention{font-size:12px}
-.etoiles{display:inline-block;width:80px;height:14px;background:var(--nuit);
-  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'/%3E%3C/svg%3E") repeat-x left center/16px 14px;
-  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'/%3E%3C/svg%3E") repeat-x left center/16px 14px}
+#haut .lien-fort{color:var(--ivoire)}
+#haut .lien-fort:hover{color:var(--ardoise-clair)}
 
 /* ---------- Têtes de section */
-.tete{display:flex;flex-direction:column;gap:14px;max-width:760px;margin-bottom:40px}
-.tete-chapo{font-size:18px;line-height:1.55;color:var(--texte-doux);max-width:600px}
+.tete{display:flex;flex-direction:column;gap:14px;max-width:780px;margin-bottom:40px}
+.tete-chapo{font-size:18px;line-height:1.55;color:var(--texte-doux);max-width:620px}
 
-/* ---------- Démonstration : photo, publication, résultat. Trois colonnes séparées par des filets, sans boîtes. */
-.demo{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
-.demo-etape{display:flex;flex-direction:column;gap:14px;min-width:0;padding-top:16px;border-top:1px solid var(--texte)}
-.demo-num{font-weight:600;font-size:16px}
-.demo-etape>img{border-radius:3px;aspect-ratio:4/5;object-fit:cover;width:100%;max-height:360px}
-.demo-texte{font-size:15px;line-height:1.55;color:var(--texte-doux)}
-.mini-post{background:var(--blanc);color:var(--nuit);border:1px solid var(--trait);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:8px}
-.mini-post img{border-radius:2px;aspect-ratio:4/5;object-fit:cover;max-height:230px;width:100%}
+/* ---------- Démonstration : photo, publication préparée, résultat (vraie séquence, numérotée). */
+.demo{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:40px}
+.demo-etape{display:flex;flex-direction:column;gap:14px;min-width:0}
+.demo-num{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:24px;line-height:1.2;letter-spacing:-.01em}
+.demo-etape>img{border-radius:var(--r-carte);aspect-ratio:4/5;object-fit:cover;width:100%;max-height:420px}
+.demo-texte{font-size:16px;line-height:1.55;color:var(--texte-doux)}
+.mini-post{background:var(--ivoire);color:var(--nuit);border-radius:var(--r-carte);padding:14px;display:flex;flex-direction:column;gap:10px}
+.mini-post img{border-radius:8px;aspect-ratio:4/5;object-fit:cover;max-height:260px;width:100%}
 .mini-compte{display:flex;align-items:center;gap:8px;font-size:14px}
-.mini-avatar{width:26px;height:26px;border-radius:50%;background:var(--nuit);color:var(--ivoire);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.mini-avatar,.post-avatar{width:28px;height:28px;flex:none;border-radius:50%;background:var(--nuit);color:var(--ivoire);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
 .mini-legende{font-size:14px;line-height:1.45}
-.mini-bouton{align-self:flex-start;background:var(--nuit);color:var(--ivoire);border-radius:4px;padding:6px 14px;font-size:14px;font-weight:600}
-.resultat{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--trait)}
-.resultat-ligne{padding:12px 0;border-bottom:1px solid var(--trait);font-size:15px;line-height:1.5}
-.demonstration .mention,#demonstration .mention{margin-top:16px}
+.mini-bouton{align-self:flex-start;background:var(--nuit);color:var(--ivoire);border-radius:var(--r-btn);padding:7px 16px;font-size:14px;font-weight:600}
+.resultat{display:flex;flex-direction:column;background:var(--ivoire);border-radius:var(--r-carte);padding:6px 18px}
+.resultat-ligne{padding:14px 0;font-size:15px;line-height:1.5}
+.resultat-ligne+.resultat-ligne{border-top:1px solid var(--filet-clair)}
+#demonstration .mention{margin-top:20px}
 
-/* ---------- Trois services */
-.services{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-.service{border-top:1px solid var(--texte);padding:18px 0 6px;display:flex;flex-direction:column;gap:8px}
+/* ---------- Exemples de publications (29/10/2026) : maquettes fictives, interface évoquée sans aucun logo. Sur téléphone, une rangée qui défile
+   au doigt (la suivante dépasse au bord pour le montrer) ; dès 1040 px, les quatre côte à côte. */
+.posts{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:80%;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 10px;scroll-padding-left:var(--marge);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.24) transparent;align-items:start}
+.post{display:flex;flex-direction:column;gap:10px;scroll-snap-align:start;min-width:0}
+.post-reseau{font-size:15px;font-weight:600;color:var(--ivoire)}
+.post-offre{font-size:13px;line-height:1.45;color:var(--discret)}
+.post-cadre{position:relative;display:flex;flex-direction:column;background:var(--blanc);color:var(--nuit);border-radius:var(--r-ecran);overflow:hidden}
+.post-tete{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.post-qui{display:flex;flex-direction:column;font-size:14px;line-height:1.25;min-width:0}
+.post-qui strong{font-weight:600}
+.post-quand{font-size:12px;color:var(--pierre)}
+.post-photo{width:100%;aspect-ratio:1/1;object-fit:cover}
+.post-texte{padding:10px 14px 14px;font-size:14px;line-height:1.45}
+.post-icones{display:flex;gap:14px;padding:12px 14px 0}
+.post-icones svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.post-bouton{align-self:flex-start;margin:0 14px 16px;padding:7px 16px;border:1.5px solid var(--nuit);border-radius:var(--r-btn);font-size:14px;font-weight:600}
+.post-google .post-photo{aspect-ratio:16/10}
+.post-google .post-texte{padding-bottom:12px}
+.post-fb .post-texte{padding-top:0}
+.post-fb .post-photo{aspect-ratio:4/3}
+.post-fb .post-icones{padding-bottom:14px}
+.post-ig .post-texte{padding-top:8px}
+.post-ig .post-photo{object-position:70% 60%}
+.post-tt .post-cadre{background:var(--nuit);color:var(--ivoire);aspect-ratio:9/16;flex:none}
+.post-tt .post-photo{position:absolute;inset:0;height:100%;aspect-ratio:auto}
+.post-tt .post-cadre::after{content:"";position:absolute;inset:auto 0 0 0;height:46%;background:linear-gradient(0deg,rgba(15,28,58,.82),rgba(15,28,58,0));pointer-events:none}
+.post-incruste{position:absolute;left:14px;right:56px;top:18%;z-index:1;align-self:flex-start;background:var(--ivoire);color:var(--nuit);border-radius:4px;padding:5px 9px;font-size:15px;font-weight:600;line-height:1.3;width:max-content;max-width:calc(100% - 70px)}
+.post-lecture{position:absolute;left:50%;top:50%;z-index:1;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(15,28,58,.55);display:flex;align-items:center;justify-content:center}
+.post-lecture svg{width:22px;height:22px;fill:var(--ivoire);margin-left:3px}
+.post-tt .post-icones{position:absolute;right:10px;bottom:84px;z-index:1;flex-direction:column;gap:16px;padding:0;color:var(--ivoire)}
+.post-tt .post-icones svg{width:26px;height:26px}
+.post-tt .post-texte{position:absolute;left:0;right:48px;bottom:0;z-index:1;color:var(--ivoire)}
+#exemples .mention{margin-top:22px;color:var(--discret)}
+
+/* ---------- Fiche Google, avant / après (29/10/2026) : même note, même nombre d'avis des deux côtés. */
+.fiches{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
+.fiche{display:flex;flex-direction:column;gap:12px;min-width:0}
+.fiche-etat{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:28px;line-height:1.1;letter-spacing:-.015em}
+.fiche-carte{background:var(--blanc);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:20px 18px;display:flex;flex-direction:column;gap:10px}
+.fiche-apres .fiche-carte{border:2px solid var(--nuit);padding:19px 17px}
+.fiche-nom{font-size:20px;font-weight:600;line-height:1.25}
+.fiche-note{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--texte-doux)}
+.fiche-chiffre{font-weight:600;color:var(--texte)}
+.fiche-type{font-size:14px;color:var(--texte-discret)}
+.fiche-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0}
+.fiche-photos img,.fiche-photos span{aspect-ratio:1/1;width:100%;object-fit:cover;border-radius:6px}
+.fiche-photos-vides span{background:#E9EAEE}
+.fiche-photos-vides span:nth-child(n+2){opacity:.6}
+.fiche-infos{display:flex;flex-direction:column}
+.fiche-infos>div{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:12px;padding:10px 0;border-top:1px solid var(--filet-clair)}
+.fiche-infos dt{font-size:13px;line-height:1.5;color:var(--texte-discret)}
+.fiche-infos dd{font-size:15px;line-height:1.5}
+.fiche-avant .fiche-infos dd{color:var(--texte-discret)}
+.fiche-reponse{background:var(--ivoire);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.45}
+.fiche-reponse p+p{color:var(--texte-doux)}
+#fiche .mention{margin-top:22px}
+.etoiles{display:inline-block;width:80px;height:14px;flex:none;background:var(--texte);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'/%3E%3C/svg%3E") repeat-x left center/16px 14px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'/%3E%3C/svg%3E") repeat-x left center/16px 14px}
+/* 4,3 étoiles : 4 étoiles pleines et 30 % de la cinquième (aucune étoile arrondie à la hausse). */
+.etoiles-43{width:68.8px}
+
+/* ---------- Trois services : le mot « Google » en texte, aux couleurs du site (plus de logo en couleurs, 29/10/2026). */
+.services{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.service{background:var(--surface);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:10px}
+.service h3{font-family:var(--titre);font-variation-settings:'opsz' 60;font-weight:400;font-size:28px;line-height:1.12;letter-spacing:-.015em}
 .service p{font-size:16px;line-height:1.6;color:var(--texte-doux)}
 
 /* ---------- Fonctionnement en 3 étapes (vraie séquence : chiffres en serif) */
-.etapes{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-.etape{display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;align-items:start;padding:20px 0;border-top:1px solid var(--trait-fort)}
-.etape .etape-num{margin-top:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:44px;line-height:.9;color:var(--texte)}
+.etapes{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.etape{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:start;padding:24px 0;border-top:1px solid var(--trait)}
+.etape:last-child{border-bottom:1px solid var(--trait)}
+.etape .etape-num{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:52px;line-height:.86;color:var(--texte)}
 .etape p{font-size:16px;line-height:1.6;color:var(--texte-doux);margin-top:6px}
 
-/* ---------- Offres : trois cartes blanches sur ivoire, filet fin. L'offre conseillée (Croissance) : filet bleu nuit de 2 px, mention en ardoise. */
+/* ---------- Offres : cartes blanches sur ivoire ; l'offre conseillée (Croissance) en bleu nuit, prix en ivoire, mention en or (sur bleu nuit). */
+.perimetre{font-size:15px;color:var(--texte-discret)}
 .offres{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:stretch}
-.offre{background:var(--surface);color:var(--texte);border:1px solid var(--trait);border-radius:var(--r-carte);padding:28px 22px;display:flex;flex-direction:column;gap:18px;min-width:0}
-.offre.reco{border:2px solid var(--nuit);padding:27px 21px}
+.offre{background:var(--blanc);color:var(--texte);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:28px 20px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.offre.reco{background:var(--nuit);border-color:var(--nuit)}
 .offre-nom{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
-.offre-nom h3{font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:400;font-size:34px;line-height:1.05;letter-spacing:-.015em}
+.offre-nom h3{font-family:var(--titre);font-variation-settings:'opsz' 60;font-weight:400;font-size:36px;line-height:1.05;letter-spacing:-.02em}
 .reco-lib{font-size:14px;font-weight:500;color:var(--texte-discret)}
-.offre.reco .reco-lib{color:var(--ardoise)}
+.offre.reco .reco-lib{color:var(--or)}
 .offre-promesse{font-size:16px;line-height:1.55;color:var(--texte-doux)}
-.prix-bloc{display:flex;flex-direction:column;gap:4px;padding-top:16px;border-top:1px solid var(--trait)}
+.prix-bloc{display:flex;flex-direction:column;gap:4px;padding-top:18px;border-top:1px solid var(--trait)}
 .prix{display:flex;align-items:baseline;gap:8px}
-.prix-montant{font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:58px;line-height:1;letter-spacing:-.02em;color:var(--texte)}
+.prix-montant{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:58px;line-height:1;letter-spacing:-.025em;color:var(--texte)}
 .prix-unite{font-size:15px;font-weight:500;color:var(--texte-doux)}
 .prix-detail{font-size:14px;line-height:1.5;color:var(--texte-discret)}
 .prix-detail strong{color:var(--texte);font-weight:600}
 .prix-detail[data-rythme="annuel"]+.prix{margin-top:14px}
-/* Sélecteur Annuel / Mensuel : visible seulement avec JavaScript (attribut hidden retiré par app.js) ; sans lui, les deux rythmes restent affichés.
-   Choix actif en ivoire sur bleu nuit ; aucun trait coloré. Jetons seulement (aucune couleur écrite en dur ici). */
-.rythme{display:inline-flex;gap:2px;padding:3px;margin:0 0 24px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:var(--surface)}
-.rythme-choix{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border:0;border-radius:4px;background:transparent;color:var(--texte-doux);font-size:15px;font-weight:500;cursor:pointer}
-.rythme-choix:hover{color:var(--texte)}
-.rythme-choix[aria-pressed="true"]{background:var(--nuit);color:var(--ivoire)}
-.rythme-gain{font-size:13px;font-weight:600}
-.offre-autre{display:block;margin-top:12px;text-align:center;font-size:15px;color:var(--texte-doux);text-decoration:underline;text-underline-offset:3px}
-.offre-autre:hover{color:var(--texte)}
-.offres[data-rythme-actif="annuel"] [data-rythme="mensuel"],.offres[data-rythme-actif="mensuel"] [data-rythme="annuel"]{display:none}
+/* Prix et boutons (29/10/2026, demande de PJ) : prix annuel par mois en grand, prix au mois lisible juste dessous, puis deux boutons de même
+   taille et de même style (à l'année, au mois) collés au prix. */
+.prix[data-rythme="annuel"] .prix-montant{font-size:68px}
+.prix[data-rythme="mensuel"] .prix-montant{font-size:34px}
+.prix[data-rythme="mensuel"] .prix-unite{font-size:14px}
+.offre-payer{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.offre .offre-payer .btn{flex-direction:column;gap:2px;min-height:62px;padding:10px 8px;font-size:15px;line-height:1.25;text-align:center;width:100%}
+.offre-choisir-detail{font-size:13px;font-weight:500;opacity:.85}
+@media (max-width:340px){.offre-payer{grid-template-columns:minmax(0,1fr)}}
 .inclus{list-style:none;display:flex;flex-direction:column;gap:10px;flex:1}
 .inclus li{font-size:15px;line-height:1.5;padding-top:10px;border-top:1px solid var(--trait)}
 .inclus .inclus-tout{font-weight:600;border-top:0;padding-top:0}
 .offre-sans{font-size:14px;color:var(--texte-discret)}
-.offre .btn{width:100%}
-.offre .btn-contour{border-color:var(--trait-fort)}
-.offre .btn-contour:hover{border-color:var(--nuit)}
-.compare-cadre{margin-top:32px;overflow-x:auto;background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte)}
-.compare{width:100%;min-width:640px;border-collapse:collapse;font-size:15px;line-height:1.45}
-.compare th,.compare td{padding:13px 16px;border-top:1px solid var(--trait);text-align:left;vertical-align:top;font-weight:400}
+.offre-bientot{font-size:14px;line-height:1.5;color:var(--texte-doux);border:1px dashed var(--trait-fort);border-radius:8px;padding:9px 12px}
+.offre-frais{font-size:14px;line-height:1.5;color:var(--texte-discret)}
+.offre-vous{font-size:15px;line-height:1.5;color:var(--texte);padding-top:12px;border-top:1px solid var(--trait)}
+.offres-fiche strong{color:var(--texte)}
+/* Comparatif : lisible sur téléphone (29/10/2026 ; il était masqué sous 760 px). Sur téléphone, chaque ligne devient un bloc : son libellé, puis
+   les trois offres côte à côte, chacune nommée (data-l) ; une valeur identique pour les trois s'affiche une fois, « Les trois offres ». */
+.compare-cadre{margin-top:36px;background:var(--blanc);border:1px solid var(--filet-clair);border-radius:var(--r-carte);overflow:hidden}
+.compare{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45}
+.compare th,.compare td{padding:13px 16px;border-top:1px solid var(--filet-clair);text-align:left;vertical-align:top;font-weight:400}
 .compare thead th,.compare thead td{border-top:0;font-weight:600;font-size:15px}
 .compare tbody th{font-weight:500;color:var(--texte)}
 .compare td{color:var(--texte-doux)}
-.compare .reco{background:rgba(15,28,58,.035)}
+.compare .reco{background:rgba(15,28,58,.04)}
 .compare thead .reco{background:var(--nuit);color:var(--ivoire)}
-.urgence{margin-top:32px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:10px}
-.urgence-titre{font-size:18px;font-weight:600}
+@media (max-width:759px){
+  .compare,.compare tbody{display:block}
+  .compare thead{display:none}
+  .compare tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 10px;padding:14px 14px 16px;border-top:1px solid var(--filet-clair)}
+  .compare tbody tr:first-child{border-top:0}
+  .compare th,.compare td{display:block;border-top:0;padding:0;background:none}
+  .compare tbody th{grid-column:1 / -1;font-weight:600;margin-bottom:8px;font-size:15px}
+  .compare td{font-size:14px;line-height:1.4;color:var(--texte)}
+  .compare td::before{content:attr(data-l);display:block;font-size:12px;font-weight:500;color:var(--texte-discret);margin-bottom:2px}
+  .compare td.reco{background:none}
+  .compare td.reco::before{color:var(--nuit);font-weight:700}
+  .compare td.meme{display:none}
+  .compare td[data-l]:not(.meme):first-of-type:has(~ td.meme){grid-column:1 / -1}
+}
+.urgence{margin-top:32px;background:var(--blanc);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:10px}
+.urgence-titre{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:26px;line-height:1.15;letter-spacing:-.01em}
 .urgence p:not(.urgence-titre){font-size:15px;color:var(--texte-doux)}
 .offres-pied{margin-top:28px;display:flex;flex-direction:column;gap:8px}
 .offres-pied .garantie{font-size:17px;font-weight:600}
-/* Options ponctuelles (22/10/2026) : deux encarts sobres sous les offres, mêmes jetons que les cartes ; aucun trait coloré, aucune couleur en dur. */
-.options{margin-top:48px;padding-top:32px;border-top:1px solid var(--trait);display:flex;flex-direction:column;gap:12px}
-.options-titre{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:400;font-size:28px;line-height:1.15;letter-spacing:-.01em}
+.contrat{font-size:14px;color:var(--texte-doux)}
+/* Options ponctuelles (22/10/2026) */
+.options{margin-top:56px;display:flex;flex-direction:column;gap:12px}
+.options-titre{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 60;font-weight:400;font-size:32px;line-height:1.12;letter-spacing:-.015em}
 .options-chapo{font-size:16px;line-height:1.55;color:var(--texte-doux)}
 .options-liste{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:8px}
-.option{background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.option{background:var(--blanc);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:16px;min-width:0}
 .option-tete{display:flex;flex-direction:column;gap:4px}
-.option-tete h4{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:400;font-size:26px;line-height:1.1}
+.option-tete h4{margin:0;font-family:var(--titre);font-variation-settings:'opsz' 60;font-weight:400;font-size:26px;line-height:1.1}
 .option-prix{font-size:16px;font-weight:600;color:var(--texte)}
 .option-limite{font-size:14px;line-height:1.5;color:var(--texte-discret)}
 .option .btn{width:100%}
-.option .btn-contour{border-color:var(--trait-fort)}
-.option .btn-contour:hover{border-color:var(--nuit)}
 .options-note{margin-top:4px}
-.contrat{font-size:14px;color:var(--texte-doux)}
 
 /* ---------- Équipe et responsabilités (sans photo, sans avatar, sans icône) */
 .equipe{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:760px}
-.personne{border-top:1px solid var(--texte);padding-top:16px;display:flex;flex-direction:column;gap:6px}
+.personne,.responsabilite{background:var(--surface);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:8px}
 .personne p,.responsabilite p{font-size:16px;line-height:1.6;color:var(--texte-doux)}
-.responsabilite{margin-top:28px;max-width:760px;display:flex;flex-direction:column;gap:8px}
+.responsabilite{margin-top:12px;max-width:760px}
 .responsabilite a{color:var(--texte)}
-
-/* ---------- Simulateur (page secondaire, site/simulateur.html) */
-.simu{display:flex;flex-direction:column;gap:22px}
-.calc{display:flex;flex-direction:column;gap:16px}
-.calc-mode{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}
-.calc-mode legend{font-size:15px;font-weight:600;margin-bottom:8px}
-.calc-radio{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
-.calc-radio input{accent-color:var(--nuit)}
-.calc-trio{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-.calc-resultat{background:var(--nuit);color:var(--texte);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:12px}
-/* Montant estimé : chiffre clé sur bleu nuit, en or (8,1:1, grand texte : 3:1 exigé). */
-.calc-montant{font-family:var(--titre);font-variation-settings:'opsz' 48;font-size:52px;line-height:1;color:var(--or)}
-.calc-prudence,.calc-limite{font-size:15px;line-height:1.55;color:var(--doux)}
-.calc-limite{background:var(--surface);border:1px solid var(--trait);border-radius:4px;padding:14px 16px;color:var(--texte-doux)}
 
 /* ---------- Questions */
 .faq{max-width:860px;display:flex;flex-direction:column;gap:28px}
-.faq h2{font-size:clamp(34px,4vw,52px);line-height:1.08}
 .questions{border-top:1px solid var(--texte)}
 .q{border-bottom:1px solid var(--trait-fort)}
 .q summary{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:64px;padding:16px 0;font-size:18px;font-weight:500;cursor:pointer;list-style:none}
 .q summary::-webkit-details-marker{display:none}
-.q summary::after{content:"+";flex:none;font-size:24px;font-weight:300;line-height:1}
-.q[open] summary::after{content:"\2212"}
+.q summary::after{content:"+";flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--trait-fort);border-radius:50%;font-size:20px;font-weight:300;line-height:1}
+.q[open] summary::after{content:"\2212";background:var(--nuit);border-color:var(--nuit);color:var(--ivoire)}
 .q p{padding:0 0 22px;max-width:40em;font-size:17px;line-height:1.6;color:var(--texte-doux)}
+.q p+p{margin-top:-8px}
 
-/* ---------- Appel final et formulaire d'audit (section bleu nuit, champs blancs) */
+/* ---------- Appel final et formulaire d'audit (bleu nuit, champs blancs) */
 .audit-section{background:var(--nuit);color:var(--texte);padding-bottom:var(--saut)}
 .audit-bloc{display:grid;grid-template-columns:minmax(0,1fr);gap:36px;align-items:start;color:var(--texte)}
 .audit-texte{display:flex;flex-direction:column;gap:18px}
-.audit-texte h2{font-size:clamp(40px,5vw,72px);line-height:1.02}
+.audit-texte h2{font-size:clamp(40px,9.6vw,76px);line-height:1.02}
 .audit-texte p{font-size:19px;line-height:1.55;color:var(--doux)}
+/* Filet or (sur bleu nuit), pleine largeur, au-dessus de l'urgence réelle. */
+.audit-urgence{font-size:16px!important;font-weight:500;color:var(--ivoire)!important;border-top:1px solid var(--or);padding-top:14px}
+.audit-note{font-size:15px!important;color:var(--discret)!important}
 .form{display:flex;flex-direction:column;gap:16px;min-width:0}
 .champ{display:flex;flex-direction:column;gap:6px;min-width:0}
 .champ label,.lib-champ,.lib{font-size:14px;font-weight:600}
@@ -353,14 +406,26 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .ok a{color:inherit}
 .form .btn{width:100%;margin-top:4px}
 .audit-bloc .form .btn-prim{min-height:58px;font-size:17px}
-.audit-note{font-size:15px!important;color:var(--discret)!important}
-.mention-page{margin-top:24px}
+.mention-page{margin-top:28px}
 .err{background:var(--blanc);color:#9B1C1C;border:1px solid #E7C9C9;border-radius:var(--r-btn);padding:12px 14px;font-size:15px;font-weight:600}
 
-/* ---------- Pied de page (contenu géré par outils/legal.py : ne pas modifier entre les marqueurs) */
-/* Pied compact : « © 2026 BoostImpact », liens légaux, « Un service de Girlden LTD ». Identité complète (.pied-identite) seulement sur les pages
-   légales : 12 px, gris lisible (règle 20 du règlement britannique 2015/17 : lisible à l'œil nu). */
-.pied{background:var(--nuit);padding:18px 0 22px;font-size:14px;line-height:1.5;color:var(--discret)}
+/* ---------- Simulateur (page secondaire, site/simulateur.html) */
+.simu{display:flex;flex-direction:column;gap:22px}
+.calc{display:flex;flex-direction:column;gap:16px}
+.calc-mode{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px}
+.calc-mode legend{font-size:15px;font-weight:600;margin-bottom:8px}
+.calc-radio{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
+.calc-radio input{accent-color:var(--nuit)}
+.calc-trio{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.calc-resultat{background:var(--nuit);color:var(--texte);border-radius:var(--r-carte);padding:24px 22px;display:flex;flex-direction:column;gap:12px}
+/* Montant estimé : chiffre clé sur bleu nuit, en or (8,1:1). */
+.calc-montant{font-family:var(--titre);font-variation-settings:'opsz' 60;font-size:52px;line-height:1;color:var(--or)}
+.calc-prudence,.calc-limite{font-size:15px;line-height:1.55;color:var(--doux)}
+.calc-limite{background:var(--surface);border:1px solid var(--trait);border-radius:var(--r-btn);padding:14px 16px;color:var(--texte-doux)}
+
+/* ---------- Pied (contenu géré par outils/legal.py entre ses marqueurs) : « © 2026 BoostImpact », liens légaux, « Un service de Girlden LTD ».
+   Identité complète (.pied-identite) seulement sur les pages légales : 12 px, lisible. */
+.pied{background:var(--nuit);padding:22px 0 26px;font-size:14px;line-height:1.5;color:var(--discret);border-top:1px solid rgba(255,255,255,.1)}
 .pied .wrap{display:flex;flex-direction:column;gap:2px}
 .pied-ligne{display:flex;flex-wrap:wrap;align-items:center;gap:0 20px}
 .pied-copy{color:var(--doux);font-weight:500}
@@ -370,26 +435,31 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .pied-liens a{display:inline-flex;align-items:center;min-height:44px;color:var(--discret)}
 .pied-liens a:hover{color:var(--ivoire)}
 
-/* ---------- Pages du parcours (merci, mise en route) : ivoire, formulaire sur carte blanche */
+/* ---------- Pages du parcours (merci, simulateur) : ivoire, formulaire sur carte blanche */
 .simple{padding-top:56px;padding-bottom:88px;display:flex;flex-direction:column;gap:24px;max-width:760px}
-.simple h1{font-size:clamp(42px,5.6vw,72px)}
+.simple h1{font-size:clamp(40px,8.6vw,72px)}
 .simple .chapo{font-size:19px}
-.carte-form{background:var(--blanc);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 20px;gap:18px}
-.carte-form{display:flex;flex-direction:column}
+.carte-form{background:var(--blanc);border:1px solid var(--trait);border-radius:var(--r-carte);padding:24px 20px;gap:18px;display:flex;flex-direction:column}
 .carte-form .lib{color:var(--texte)}
 .carte-form .ok input{accent-color:var(--nuit)}
 .simple .note{color:var(--texte-discret)}
+.simple>.perimetre{color:var(--texte-discret);font-size:15px}
+.suite-etapes{padding-left:22px;display:flex;flex-direction:column;gap:10px;max-width:620px}
+fieldset.champ{border:0;margin:0;padding:0;min-width:0}
+fieldset.champ legend{padding:0;margin-bottom:6px}
+body:has(>main>.simple){min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
+body:has(>main>.simple)>main{flex:1 0 auto}
 
 /* ---------- Pages légales : fond blanc */
 body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
 .juridique{max-width:760px;padding-top:44px;padding-bottom:56px;display:flex;flex-direction:column;gap:16px;color:var(--texte-doux);overflow-wrap:anywhere}
-.juridique h1{font-size:clamp(38px,4.6vw,58px);line-height:1.05;color:var(--texte)}
+.juridique h1{font-size:clamp(38px,8vw,58px);line-height:1.05;color:var(--texte)}
 .juridique h2{font-size:30px;line-height:1.12;margin-top:24px;color:var(--texte)}
 .juridique h3{font-family:var(--sans);font-size:18px;margin-top:8px;color:var(--texte)}
 .juridique ul,.juridique ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
 .juridique .maj{color:var(--texte-discret);font-size:15px}
-.juridique .version-fr{padding:12px 16px;background:var(--ivoire);border-radius:4px;font-size:15px;color:var(--texte)}
-.juridique blockquote{margin:0;padding:16px 20px;background:var(--ivoire);border-radius:4px}
+.juridique .version-fr{padding:12px 16px;background:var(--ivoire);border-radius:var(--r-btn);font-size:15px;color:var(--texte)}
+.juridique blockquote{margin:0;padding:16px 20px;background:var(--ivoire);border-radius:var(--r-btn)}
 .juridique a{text-underline-offset:3px}
 .sommaire ol{columns:2 220px;column-gap:32px;display:block;font-size:15px}
 .sommaire li{margin-bottom:6px;break-inside:avoid}
@@ -398,7 +468,7 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
 .fiche-legale dt{font-size:14px;color:var(--texte-discret)}
 .fiche-legale dd{margin:0;color:var(--texte)}
 .a-completer{font-weight:600;color:var(--texte)}
-.tableau-legal{overflow-x:auto;border:1px solid var(--trait);border-radius:4px}
+.tableau-legal{overflow-x:auto;border:1px solid var(--trait);border-radius:var(--r-btn)}
 .tableau-legal table{width:100%;min-width:560px;border-collapse:collapse;font-size:15px;line-height:1.5}
 .tableau-legal th,.tableau-legal td{padding:10px 12px;border-top:1px solid var(--trait);text-align:left;vertical-align:top;font-weight:400}
 .tableau-legal thead th{border-top:0;font-size:14px;font-weight:600;color:var(--texte);background:var(--ivoire)}
@@ -409,7 +479,7 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
   .tableau-legal:not(:has(.offres-legales)) table{min-width:0}
   .tableau-legal:not(:has(.offres-legales)) thead{display:none}
   .tableau-legal:not(:has(.offres-legales)) tr,.tableau-legal:not(:has(.offres-legales)) th,.tableau-legal:not(:has(.offres-legales)) td{display:block}
-  .tableau-legal:not(:has(.offres-legales)) tr{border:1px solid var(--trait);border-radius:4px;margin-bottom:12px;padding:4px 0}
+  .tableau-legal:not(:has(.offres-legales)) tr{border:1px solid var(--trait);border-radius:var(--r-btn);margin-bottom:12px;padding:4px 0}
   .tableau-legal:not(:has(.offres-legales)) th,.tableau-legal:not(:has(.offres-legales)) td{border-top:0;padding:6px 14px}
   .tableau-legal td[data-l]::before{content:attr(data-l);display:block;font-size:13px;color:var(--texte-discret)}
   .offres-legales{font-size:13px;hyphens:auto}
@@ -417,22 +487,24 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
   .offres-legales th:first-child{padding-left:10px}
 }
 
-
 /* ---------- Tablette */
 @media (min-width:760px){
-  :root{--marge:32px;--saut:96px}
-  .entete .wrap{flex-wrap:nowrap;min-height:76px;padding-top:0;padding-bottom:0;gap:0 28px}
+  :root{--marge:32px;--saut:104px}
+  .entete .wrap{flex-wrap:nowrap;min-height:80px;padding-top:0;padding-bottom:0;gap:0 28px}
+  .logo img{height:46px}
   .menu{order:2;flex:0 1 auto;margin-left:auto;gap:0 28px;font-size:15px}
   .langues{order:3;margin-left:0}
-  .btn-menu{order:4;min-height:44px;padding:8px 20px;font-size:15px}
-  .haut{padding-top:48px;padding-bottom:56px}
-  .chapo{font-size:21px}
-  .btn-grand{min-height:56px;padding:12px 30px;font-size:17px}
-  .carrousel{height:380px}
-  .apercu-carte:nth-child(2) .apercu-texte,.apercu-carte:nth-child(3) .apercu-texte{display:block}
-  .demo{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .services{grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
-  .etapes{grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
+  .btn-menu{order:4}
+  .haut-photo::after{background:linear-gradient(90deg,rgba(15,28,58,.86) 0%,rgba(15,28,58,.80) 42%,rgba(15,28,58,.42) 68%,rgba(15,28,58,.50) 100%)}
+  #haut .haut-grille{min-height:min(calc(100svh - 81px),900px);padding-top:120px;padding-bottom:64px}
+  .chapo{font-size:20px}
+  .tete-chapo{font-size:20px}
+  .posts{grid-auto-columns:44%}
+  .fiches{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+  .services{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .etapes{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 32px}
+  .etape{grid-template-columns:minmax(0,1fr);gap:18px;border-bottom:0}
+  .etape:last-child{border-bottom:0}
   .rang{grid-template-columns:repeat(2,minmax(0,1fr))}
   .calc-trio{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pied-ligne{gap:0 28px}
@@ -440,181 +512,27 @@ body.clair main a:hover{color:var(--ardoise);text-decoration-thickness:2px}
   .carte-form{padding:32px}
   .juridique{padding-top:64px}
   .fiche-legale>div{grid-template-columns:220px minmax(0,1fr)}
+  .demo{grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
 }
 
-/* ---------- Ordinateur : texte à gauche, grande photo à droite, tout dans le premier écran (1440 x 900) */
+/* ---------- Ordinateur */
 @media (min-width:1040px){
-  :root{--marge:40px;--saut:120px}
-  .haut{padding-top:56px;padding-bottom:72px}
-  .haut-grille{grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:72px;align-items:center}
-  .haut-texte{gap:22px;padding-bottom:12px}
-  .marque-symbole{font-size:28px}
-  .apercu{display:grid}
-  .carrousel{height:540px}
-  .apercu-fil{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 20px;border-top:0}
-  .apercu-carte{flex-direction:column;align-items:flex-start;gap:3px;padding:12px 0 0;border-bottom:0;border-top:1px solid var(--filet-clair)}
-  .apercu-quoi{min-width:0}
+  :root{--marge:40px;--saut:128px}
+  .haut-photo img{object-position:50% 46%}
+  .posts{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;margin:0;padding:0;align-items:start}
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+  .offre{padding:34px 28px}
+  .offre-promesse{min-height:4.7em}
   .options-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-  .offre{padding:32px 28px}
-  .offre.reco{padding:31px 27px}
-  .urgence{padding:30px 32px}
+  .urgence{padding:32px}
+  .service{padding:32px 28px}
   .audit-bloc{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:80px}
   .audit-texte{position:sticky;top:32px}
   .rang{grid-template-columns:minmax(0,1fr)}
-}
-@media (min-width:1040px){.offre-promesse{min-height:4.7em}}
-/* Ordinateur, mise en page éditoriale (21/10/2026) : la photo du premier écran déborde jusqu'au bord droit de la fenêtre ; « Qui s'occupe de vous »
-   et « Vos questions » en deux colonnes, titre à gauche (collant), contenu à droite, au lieu d'une colonne étroite et d'un grand vide. */
-@media (min-width:1040px){
-  .apercu{margin-right:calc((min(100vw,1200px) - 100vw) / 2 - var(--marge))}
-  .carrousel{border-radius:4px 0 0 4px;height:600px}
-  .apercu-fil,.apercu .mention{margin-right:calc((100vw - min(100vw,1200px)) / 2 + var(--marge))}
+  /* Mise en page éditoriale : titre à gauche (collant), contenu à droite. */
   #equipe .wrap{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:80px;align-items:start}
   #equipe .tete{grid-row:1 / span 2;position:sticky;top:32px;margin-bottom:0}
   #equipe .equipe,#equipe .responsabilite{grid-column:2;max-width:none}
-  #equipe .responsabilite{margin-top:32px}
   .faq{max-width:1200px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:80px;align-items:start}
   .faq h2{position:sticky;top:32px}
 }
-fieldset.champ{border:0;margin:0;padding:0;min-width:0}
-fieldset.champ legend{padding:0;margin-bottom:6px}
-/* Pages de remerciement sans formulaire : étapes numérotées dans la marge du texte, pied de page en bas de l'écran. */
-.suite-etapes{padding-left:22px;display:flex;flex-direction:column;gap:10px;max-width:620px}
-/* Numéros de liste (24/10/2026) : Chrome donne des chiffres tabulaires aux puces, d'où « 1 . » ; chiffres proportionnels, comme le texte. */
-li::marker{font-variant-numeric:normal}
-.simple>.perimetre{color:var(--texte-discret);font-size:15px}
-body:has(>main>.simple){min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
-body:has(>main>.simple)>main{flex:1 0 auto}
-
-/* ======================================================================================================================================
-   Premier écran plein cadre (21/10/2026, après-midi, demande de PJ : « le logo n'est pas mis en valeur, le titre ne fait pas l'impact voulu »,
-   pensé d'abord pour le téléphone). Page d'accueil seulement (#haut) : en-tête bleu nuit, logo ivoire plus grand ; la photo du carrousel
-   couvre tout le premier écran sous un voile bleu nuit en aplat (aucun dégradé), le titre en ivoire, plus gras et plus grand ; l'aperçu du
-   service passe sous le texte, en ivoire sur la photo. Les pages secondaires gardent l'en-tête ivoire.
-   Contraste mesuré le 21/10/2026 (texte ivoire sur voile rgba(15,28,58,.62), luminance des pixels de chaque photo) : médiane de 6,6:1 à 16:1,
-   et au pire, sur les 5 % de pixels les plus clairs, 4,8:1 (resto-dressage, assiette blanche) à 11,5:1. Une photo plus claire demande un voile
-   plus dense. */
-body:has(#haut) .entete{background:var(--nuit);border-bottom-color:rgba(255,255,255,.1);color:var(--ivoire)}
-body:has(#haut) .entete .logo,body:has(#haut) .entete .logo:hover{color:var(--ivoire)}
-/* Point du mot-symbole en or sur l'en-tête bleu nuit (26/10/2026, 8,1:1). Sur l'en-tête ivoire des autres pages, il reste ardoise (l'or y ferait 1,9:1). */
-body:has(#haut) .entete .logo-point{color:var(--or)}
-body:has(#haut) .entete .menu a{color:var(--ivoire)}
-body:has(#haut) .entete .menu a:hover{color:var(--ardoise-clair)}
-body:has(#haut) .entete .langues,body:has(#haut) .entete .langues a{color:var(--discret)}
-body:has(#haut) .entete .langue-active{color:var(--ivoire)}
-body:has(#haut) .entete .langues a:hover{color:var(--ivoire)}
-body:has(#haut) .entete :focus-visible{outline-color:var(--or)}
-body:has(#haut) .entete .btn-menu{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
-body:has(#haut) .entete .btn-menu:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
-/* Logo : le mot « boostimpact » porte la marque (700, serré), « .agency » en retrait. */
-.logo{font-size:26px;letter-spacing:-.035em}
-.logo-suffixe{opacity:.62}
-/* En-tête du téléphone : une ligne logo + langues, une ligne de liens ; le bouton d'audit est déjà dans le premier écran. */
-@media (max-width:759px){
-  .entete:not(.entete-simple) .logo{font-size:22px}
-  .entete:not(.entete-simple) .langues a,.entete:not(.entete-simple) .langue-active{min-width:30px}
-  body:has(#haut) .entete .btn-menu{display:none}
-  .entete:not(.entete-simple) .wrap{padding-top:6px;padding-bottom:2px}
-  .entete:not(.entete-simple) .menu{gap:0 18px;font-size:14px}
-  .entete:not(.entete-simple) .menu a{min-height:40px}
-}
-
-#haut{position:relative;isolation:isolate;overflow:hidden;background:var(--nuit);color:var(--ivoire);padding-top:0;padding-bottom:0;
-  --texte:var(--ivoire);--texte-doux:#E8E6DF;--texte-discret:#C9CCD6;--trait:rgba(255,255,255,.22);--trait-fort:rgba(255,255,255,.32)}
-#haut .wrap.haut-grille{position:static;display:flex;flex-direction:column;align-items:stretch;gap:28px;padding-top:56px;padding-bottom:28px;min-height:calc(100svh - 104px)}
-#haut .haut-texte{gap:18px;max-width:720px;margin-top:auto}
-#haut h1{color:var(--ivoire);font-weight:560;font-size:clamp(60px,15vw,132px);line-height:.94;letter-spacing:-.035em}
-#haut .chapo{color:var(--ivoire);font-size:20px;line-height:1.45;max-width:520px}
-#haut .haut-comment{color:var(--ivoire)}
-#haut .haut-prix{color:#DCDDE3;border-top-color:rgba(255,255,255,.28)}
-#haut .prix-repere{color:var(--ivoire)}
-#haut .btn-prim{background:var(--ivoire);border-color:var(--ivoire);color:var(--nuit)}
-#haut .btn-prim:hover{background:var(--blanc);border-color:var(--blanc);color:var(--nuit)}
-#haut .lien-fort{color:var(--ivoire)}
-#haut .lien-fort:hover{color:var(--ardoise-clair)}
-#haut :focus-visible{outline-color:var(--or)}
-/* La figure garde son ordre dans le code (texte puis aperçu) ; seule la photo sort du flux pour couvrir la section. */
-#haut .apercu{position:static;margin:0;display:block}
-#haut .carrousel{position:absolute;inset:0;height:auto;border-radius:0;z-index:-1;background:var(--nuit)}
-#haut .carrousel::after{content:"";position:absolute;inset:0;background:rgba(15,28,58,.62);pointer-events:none}
-#haut .diapo img{object-position:50% 40%}
-#haut .diapo-metier{top:auto;bottom:16px;left:auto;right:calc(var(--marge) + 176px);z-index:1;background:rgba(246,244,239,.14);color:var(--ivoire);border:1px solid rgba(255,255,255,.28)}
-#haut .carrousel-ctrl{right:var(--marge);bottom:12px;z-index:1;background:rgba(246,244,239,.14);border:1px solid rgba(255,255,255,.28)}
-#haut .carrousel-point::after{border-color:var(--ivoire)}
-#haut .carrousel-point[aria-current="true"]::after{background:var(--ivoire)}
-#haut .carrousel-pause::after{border-left-color:var(--ivoire);border-right-color:var(--ivoire)}
-#haut .en-pause .carrousel-pause::after{border-left-color:var(--ivoire)}
-#haut .apercu-fil{margin:0 0 4px;border-top:1px solid rgba(255,255,255,.22)}
-#haut .apercu-carte{border-bottom:1px solid rgba(255,255,255,.18)}
-#haut .apercu-quoi,#haut .apercu-ligne{color:var(--ivoire)}
-#haut .apercu-texte{color:#E1E2E8}
-#haut .apercu-action{color:var(--ardoise-clair)}
-#haut .etoiles{background:var(--ivoire)}
-#haut .apercu .mention{margin:6px 0 56px;color:#C9CCD6}
-@media (max-width:759px){
-  #haut .wrap.haut-grille{padding-top:40px;min-height:0}
-  #haut .diapo-metier{display:none}
-  #haut .apercu .mention{margin-bottom:60px}
-}
-@media (min-width:1040px){
-  #haut .wrap.haut-grille{min-height:min(calc(100svh - 77px),860px);padding-top:72px}
-  #haut .apercu{margin-right:0}
-  #haut .apercu-fil{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 28px;border-top:0;max-width:900px;margin-right:0}
-  #haut .apercu-carte{border-bottom:0;border-top:1px solid rgba(255,255,255,.28)}
-  #haut .apercu .mention{margin-right:0;margin-bottom:28px}
-}
-@media (prefers-reduced-motion:reduce){#haut .diapo{transition:none}}
-
-/* ---------- AIDA, moins de texte (21/10/2026) : premier écran réduit à l'essentiel (titre, promesse, fonctionnement, prix de départ, action) ;
-   sur téléphone l'aperçu du service se lit dans la démonstration juste en dessous. Urgence réelle rappelée au moment d'agir (bloc d'audit). */
-p{text-wrap:pretty}
-.audit-urgence{font-size:16px!important;font-weight:500;color:var(--ivoire)!important;padding-left:0;border-top:1px solid rgba(255,255,255,.22);padding-top:14px}
-#haut .haut-prix{font-size:16px;color:var(--ivoire);padding-top:12px}
-@media (max-width:759px){#haut .apercu-fil{display:none}#haut .apercu .mention{margin-top:28px}}
-/* Téléphone : le comparatif (tableau à défilement horizontal, illisible à 390 px) est masqué ; les trois cartes portent les mêmes lignes,
-   reprises à l'identique des CGV. Il reste affiché dès 760 px. */
-@media (max-width:759px){.compare-cadre{display:none}}
-
-/* ---------- Retouches du 21/10/2026, 14 h (PJ) : titre plus fin (graisse 400, plus grand), logo mis en valeur (monogramme et taille),
-   bouton plein sur « Voir les trois offres » (l'audit reste en lien juste à côté), logo officiel de Google (fichier d'origine, gstatic) devant
-   « Votre fiche Google » : règles de Google pour parler de ses avis, logo officiel seulement, jamais d'étoiles à côté du nom ou du logo. */
-#haut h1{font-weight:400;font-size:clamp(64px,16vw,148px);line-height:.92;letter-spacing:-.03em}
-.logo{align-items:center}
-.logo::before{content:"b";display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;border-radius:7px;
-  background:var(--nuit);color:var(--ivoire);font-family:var(--titre);font-variation-settings:'opsz' 48;font-weight:600;font-size:25px;line-height:1;letter-spacing:0;padding-bottom:3px;margin-right:10px}
-body:has(#haut) .entete .logo::before{background:var(--ivoire);color:var(--nuit)}
-.logo{font-size:27px}
-.entete .wrap{min-height:72px}
-@media (min-width:760px){.entete .wrap{min-height:84px}.logo{font-size:30px}.logo::before{width:38px;height:38px;font-size:28px}}
-@media (max-width:759px){.entete:not(.entete-simple) .logo{font-size:21px}.entete:not(.entete-simple) .logo::before{width:28px;height:28px;font-size:20px;margin-right:8px}.entete:not(.entete-simple) .langues a,.entete:not(.entete-simple) .langue-active{min-width:26px}.entete:not(.entete-simple) .langues{font-size:13px}}
-@media (max-width:480px){.entete-simple .logo::before{width:24px;height:24px;font-size:18px;border-radius:5px;margin-right:6px}}
-@media (max-width:400px){.entete-simple .logo::before{width:21px;height:21px;font-size:16px;margin-right:5px}.entete-simple .logo{font-size:16px}}
-.marque-google{display:block;align-self:flex-start;height:26px;width:auto;margin-bottom:4px}
-/* Titre du 21/10/2026 (16 h) : « Soyez le restaurant qu'on choisit ce soir. », plus long, taille ajustée pour tenir en 4 lignes sur téléphone. */
-#haut h1{font-size:clamp(46px,11.5vw,108px);line-height:.98;max-width:12ch}
-
-/* ---------- Retouches du 21/10/2026 (16 h 45, PJ, sur téléphone) : monogramme « b » retiré du logo ; logo officiel de Google dans la promesse
-   (posé sur une pastille ivoire, le logo en couleurs reste sur fond clair) ; mention « Exemple fictif » du premier écran gardée seulement là où
-   l'aperçu (avis d'exemple) est affiché, donc pas sur téléphone (le pied de page porte la mention générale). */
-.logo::before,body:has(#haut) .entete .logo::before{content:none;display:none}
-.g-chip{display:inline-flex;align-items:center;vertical-align:-0.18em;background:var(--ivoire);border-radius:6px;padding:3px 8px 4px;margin:0 1px}
-.g-chip img{height:.95em;width:auto;display:block}
-@media (max-width:759px){#haut .apercu .mention{display:none}}
-
-/* ---------- Or champagne, filets fins sur bleu nuit (26/10/2026, demande de PJ). Deux filets d'un pixel seulement, en pleine largeur de leur bloc
-   (jamais un trait court devant ou au-dessus d'un libellé) : sous le titre du premier écran, au-dessus du prix de départ ; dans le bloc d'audit, au-dessus
-   de l'urgence réelle. Filet or sur bleu nuit : 8,1:1. Les autres filets restent blancs translucides : l'or reste rare. */
-#haut .haut-prix{border-top-color:var(--or)}
-.audit-urgence{border-top-color:var(--or)}
-
-/* ---------- Copy du 28/10/2026 (audit du copy, à valider par PJ) : titre du premier écran plus long (ce que nous faisons, sans promesse de résultat),
-   taille ajustée pour tenir dans le premier écran à 390 x 844 ; dans chaque carte, une ligne « Bientôt » séparée de ce qui est inclus (cadre en
-   pointillés, aucun trait coloré devant le libellé), les frais de mise en route et « De votre côté » (ce que le commerçant a à faire). */
-#haut h1{font-size:clamp(40px,10vw,92px);line-height:1;max-width:15ch}
-#haut h1 .g-chip{vertical-align:-0.12em;padding:2px 7px 3px}
-#haut h1 .g-chip img{height:.78em}
-.offre-bientot{font-size:14px;line-height:1.5;color:var(--texte-doux);border:1px dashed var(--trait-fort);border-radius:8px;padding:9px 12px}
-.offre-frais{font-size:14px;line-height:1.5;color:var(--texte-discret)}
-.offre-vous{font-size:15px;line-height:1.5;color:var(--texte);padding-top:12px;border-top:1px solid var(--trait)}
-.q p+p{margin-top:-8px}

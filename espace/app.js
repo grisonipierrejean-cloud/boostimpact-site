@@ -1154,9 +1154,9 @@
     const suiv = offreCible(c, voulue), s_ = O[suiv]; if (!s_) return "";
     // Lien de paiement de l'offre du dessus (jamais le portail : décision de PJ du 27/10/2026), même rythme que l'abonnement en cours.
     const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv) : null, enCours = !!(ab && ab.statut !== "resilie");
-    const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = window.RENOM_MAJ.aujourdhui() <= mer.offerts_jusqu_au;
+    const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
     // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
-    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) });
+    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
     const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2", "offre.dessus.std.3"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
@@ -1170,7 +1170,7 @@
   async function offre() {
     const [k, j, c, ab, g, cmds] = await Promise.all([D.compteur(), D.journal(), D.commerce(), D.abonnement ? D.abonnement().catch(() => null) : null, D.maGarantieDelais ? D.maGarantieDelais().catch(() => null) : null,
       D.mesCommandesOptions ? D.mesCommandesOptions().catch(() => []) : []]);
-    const o = window.RENOM_OFFRES[k.offre] || {}, mois = new Date(k.mois + "T12:00:00"), mer = COND.mise_en_route, offerts = window.RENOM_MAJ.aujourdhui() <= mer.offerts_jusqu_au;
+    const o = window.RENOM_OFFRES[k.offre] || {}, mois = new Date(k.mois + "T12:00:00"), mer = COND.mise_en_route;
     const gd = COND.garantie_delais, reseaux = window.RENOM_RESEAUX_AUTORISES(c), sociaux = reseaux.filter(r => r !== "google");
     // Abonnement Stripe : état écrit par le webhook (table abonnements) ; boutons seulement si les liens sont configurés (config.js, stripe).
     const portail = ab && ab.statut !== "resilie", lien = D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "mensuel") : null, lienA = !portail && D.lienAbonnement ? D.lienAbonnement(ab, c, k.offre, null, "annuel") : null;
@@ -1197,7 +1197,7 @@
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
         <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
         <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
-        <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : offerts ? t("offre.frais.offerts", { prix: euros(mer.prix_ht), date: I.dateLongue(mer.offerts_jusqu_au) }) : t("offre.frais.factures", { prix: euros(mer.prix_ht) })}</p>
+        <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
       <section class="carte" id="offre-garanties"><h2>${t("offre.garanties.titre")}</h2>
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>

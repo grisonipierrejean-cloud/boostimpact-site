@@ -95,29 +95,15 @@ var a=document.getElementById('suite-audit'),b=document.getElementById('suite-sa
 if(location.hash==='#sans-fiche'){a.hidden=true;b.hidden=false}
 })();
 
-// ---- Offres : sélecteur Annuel / Mensuel (formule annuelle du 16/10/2026). Sans JavaScript, le sélecteur reste masqué et les deux prix sont affichés.
+// ---- Offres : deux boutons par carte, à l'année et au mois (29/10/2026, demande de PJ : plus de sélecteur, les deux rythmes toujours visibles).
+// Liens écrits dans la page (règle des frais de mise en route, site/legal.json « offerts_paiement » : lien « offerts » à l'année, « factures » au mois ;
+// Essentiel sans frais). Langue de la page de paiement (27/10/2026) : paramètre « locale » de Stripe (docs.stripe.com/payment-links/customize) ; la base
+// en tire la langue des emails du nouveau client (moteur/paiement/stripe.js, client_en_ligne). Sans JavaScript : lien sans langue (français).
 (function(){
-var g=document.querySelector('.rythme'),o=document.querySelector('.offres');if(!g||!o)return;
-var choix=g.querySelectorAll('.rythme-choix');
-// Boutons « Choisir … » (21/10/2026, décision de PJ : paiement Stripe direct) : lien du rythme choisi ; frais de mise en route offerts jusqu'à la
-// date de .offres (heure de Paris, incluse), facturés ensuite ; Essentiel : un seul lien, sans frais. Sans JavaScript : lien annuel, frais offerts.
-var jusqu=o.getAttribute('data-frais-offerts-jusqu')||'',auj='';try{auj=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/Paris'})}catch(e){}
-var cas=(auj&&jusqu&&auj>jusqu)?'factures':'offerts',boutons=o.querySelectorAll('.offre-choisir');
-// Rythme écrit sur le bouton et lien direct vers l'autre rythme sous le bouton (25/10/2026, test de PJ : le sélecteur en haut de section passait
-// inaperçu et Stripe n'affiche qu'un seul rythme par lien ; le client voit maintenant au moment du clic ce qu'il paie et comment changer).
-var lg=(document.documentElement.lang||'fr').slice(0,2),T={fr:{annuel:"à l'année",mensuel:'au mois',ou_annuel:"Ou payer à l'année (2 mois offerts)",ou_mensuel:'Ou payer au mois, sans engagement'},
-en:{annuel:'yearly',mensuel:'monthly',ou_annuel:'Or pay yearly (2 months free)',ou_mensuel:'Or pay monthly, no commitment'},
-nl:{annuel:'per jaar',mensuel:'per maand',ou_annuel:'Of per jaar betalen (2 maanden gratis)',ou_mensuel:'Of per maand betalen, zonder verbintenis'}}[lg]||null;
-// Langue de la page de paiement (27/10/2026) : paramètre « locale » de Stripe (docs.stripe.com/payment-links/customize) ; la base en tire la langue
-// des emails du nouveau client dès son invitation (moteur/paiement/stripe.js, client_en_ligne). Sans JavaScript : lien sans langue (français).
-function lien(b,r){var u=b.getAttribute('data-'+r+'-'+cas)||b.getAttribute('data-'+r+'-sans-frais');return u&&T&&/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u)?u+'?locale='+lg:u}
-function liens(r){var autre=r==='annuel'?'mensuel':'annuel';for(var i=0;i<boutons.length;i++){var b=boutons[i],u=lien(b,r);if(u)b.setAttribute('href',u);
-if(!T)continue;if(!b.hasAttribute('data-texte'))b.setAttribute('data-texte',b.textContent);b.textContent=b.getAttribute('data-texte')+' '+T[r];
-var a=b.nextElementSibling;if(!a||!a.classList.contains('offre-autre')){a=document.createElement('a');a.className='offre-autre';b.parentNode.insertBefore(a,b.nextSibling)}
-var v=lien(b,autre);if(v){a.href=v;a.textContent=T['ou_'+autre];a.hidden=false}else a.hidden=true}}
-function choisir(r){o.setAttribute('data-rythme-actif',r);for(var i=0;i<choix.length;i++)choix[i].setAttribute('aria-pressed',choix[i].getAttribute('data-choix')===r?'true':'false');liens(r)}
-g.hidden=false;choisir('annuel');
-g.addEventListener('click',function(e){var b=e.target.closest('.rythme-choix');if(b)choisir(b.getAttribute('data-choix'))});
+if(!document.querySelector('.offre-payer'))return;
+var lg=(document.documentElement.lang||'fr').slice(0,2);if(['fr','en','nl'].indexOf(lg)<0)return;
+var b=document.querySelectorAll('.offre-payer .offre-choisir');
+for(var i=0;i<b.length;i++){var u=b[i].getAttribute('href');if(u&&/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u))b[i].setAttribute('href',u+'?locale='+lg)}
 })();
 
 // ---- Simulateur (page secondaire site/simulateur.html, en/simulator.html, nl/simulator.html ; retiré de la page de vente le 16/10/2026). Aucun réseau, rien n'est envoyé ni gardé.
