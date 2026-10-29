@@ -32,12 +32,14 @@
   // alertes, à publier à la main, avis de l'équipe, vidéos, garanties, mises en route, options), Clients (liste, fiche de chaque client, nouveau
   // client, journal) et Prospects. Barre latérale sur ordinateur, onglets du bas sur téléphone.
   const trait = d => `<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  // 29/10/2026 (demande de PJ) : « Cockpit » en tête, premier écran à l'ouverture ; les trois autres onglets inchangés.
   const ENTREES = [
+    ["cockpit", t("con.entree.cockpit"), trait('<path d="M4 15a8 8 0 0 1 16 0"></path><path d="M12 15l4-5"></path><path d="M4 19h16"></path>')],
     ["afaire", t("con.entree.afaire"), trait('<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8.5 12.5l2.5 2.5 4.5-5"></path>')],
     ["clients", t("con.entree.clients"), trait('<path d="M4 10l1.5-5h13L20 10"></path><path d="M5 10v10h14V10"></path><path d="M4 10h16M10 20v-5h4v5"></path>')],
     ["prospects", t("con.entree.prospects"), trait('<circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"></path><path d="M16 6.5h5M18.5 4v5"></path>')],
   ];
-  const large = window.matchMedia("(min-width: 900px)"); let route = "afaire", connecte = false;
+  const large = window.matchMedia("(min-width: 900px)"); let route = "cockpit", connecte = false;
   function dessinerNav() {
     document.body.classList.toggle("hors-session", !connecte);
     const lat = $("lat"), haut = $("haut"), onglets = $("onglets"); lat.innerHTML = haut.innerHTML = onglets.innerHTML = "";
@@ -334,11 +336,23 @@
           <ul class="liste raisons">${raisons.map(r => `<li><span>${C_({ fiche: "delais.fiche", premier_contenu: "delais.contenu", avis: "delais.avis" }[r.k])}</span><span class="fort">${t(r.retard ? "con.file.retard" : "con.file.avant", { d: dh(r.ech) })}</span></li>`).join("")}</ul>
           ${g.depart ? `<p class="note">${C_("delais.depart")}${t("deux.points")}${dh(g.depart)}</p>` : ""}${coherenceEtat(g.fiche)}
           ${saisieDelais(g)}</article>`;
-  const carteManquement = m => `<article class="carte attention" data-mq="${e(m.id)}"><div class="carte-tete"><h2>${e(m.commerce || "")}</h2><span class="etat">${t("con.mq.st." + m.statut)}</span></div>
+  // Un seul mois offert par client et par mois (CGV article 10 : « plusieurs délais manqués au cours d'un même mois donnent droit à un seul mois
+  // offert ») ; correctif du 29/10/2026 (bug « Appliqué » : une carte par manquement proposait d'appliquer deux fois le même mois dans Stripe).
+  // Les manquements à appliquer d'un même client et d'un même mois offert forment UNE carte ; « Mois offert appliqué dans Stripe » les clôt tous.
+  // Si ce mois a déjà été appliqué pour ce client, la carte le dit et propose seulement « Clore sans rien changer dans Stripe » (statut « écarté »,
+  // motif écrit : le journal ne dit jamais qu'un second mois a été offert). Mêmes règles que le cockpit (cockpit.js, mois offerts à appliquer).
+  const groupesManquements = g => { const ms = g.manquements || [], deja = new Set(ms.filter(m => m.statut === "applique").map(m => m.mois_offert)), gr = {};
+    ms.filter(m => m.statut === "a_appliquer").forEach(m => { const x = gr[m.mois_offert] || (gr[m.mois_offert] = { commerce: g.commerce, commerce_id: g.commerce_id, mois_offert: m.mois_offert, statut: "a_appliquer", ids: [], engagements: [], echeance: m.echeance, deja: deja.has(m.mois_offert) });
+      x.ids.push(m.id); x.engagements.push(m.engagement); if (Date.parse(m.echeance) < Date.parse(x.echeance)) x.echeance = m.echeance; });
+    return Object.values(gr); };
+  const carteManquement = m => { const ids = m.ids || [m.id], deja = !!m.deja, ouvert = m.statut === "a_appliquer", cle = e(ids.join("-"));
+    return `<article class="carte${ouvert && !deja ? " attention" : ""}" data-mq="${e(ids.join(","))}"${deja ? " data-mq-deja" : ""}><div class="carte-tete"><h2>${e(m.commerce || "")}</h2><span class="etat">${t(deja ? "con.mq.st.deja" : "con.mq.st." + m.statut)}</span></div>
           <p class="note">${t("con.mq.titre")}</p>
-          <p class="fort">${ENGAGEMENT[m.engagement] || e(m.engagement)}</p><p class="note">${t("con.mq.echeance", { d: dh(m.echeance) })} · ${C_("mq.mois")}${t("deux.points")}${I.date(m.mois_offert)}</p>
-          ${m.statut === "a_appliquer" ? `<div class="pile serre"><button type="button" class="bouton petit" data-mq-d="applique">${t("con.mq.appliquer")}</button>
-            <div class="f etroit"><label for="mq-${e(m.id)}">${t("con.mq.motif")}</label><input id="mq-${e(m.id)}" type="text" maxlength="500" data-mq-motif></div><button type="button" class="bouton second petit" data-mq-d="ecarte">${t("con.mq.ecarter")}</button></div>` : m.motif ? `<p class="note casse">${e(m.motif)}</p>` : ""}</article>`;
+          <p class="fort">${(m.engagements || [m.engagement]).map(k => ENGAGEMENT[k] || e(k)).join(", ")}</p><p class="note">${t("con.mq.echeance", { d: dh(m.echeance) })} · ${C_("mq.mois")}${t("deux.points")}${I.date(m.mois_offert)}</p>
+          ${ouvert && deja ? `<p class="note fort" data-mq-explication>${t("con.mq.deja", { m: nomMois(m.mois_offert) })}</p><div class="pile serre"><button type="button" class="bouton petit" data-mq-d="deja">${t("con.mq.clore")}</button></div>`
+          : ouvert ? `${ids.length > 1 ? `<p class="note fort" data-mq-explication>${t("con.mq.groupe", { n: ids.length, m: nomMois(m.mois_offert) })}</p>` : ""}<div class="pile serre"><button type="button" class="bouton petit" data-mq-d="applique">${t("con.mq.appliquer")}</button>
+            <div class="f etroit"><label for="mq-${cle}">${t("con.mq.motif")}</label><input id="mq-${cle}" type="text" maxlength="500" data-mq-motif></div><button type="button" class="bouton second petit" data-mq-d="ecarte">${t("con.mq.ecarter")}</button></div>`
+          : m.motif ? `<p class="note casse">${e(m.motif)}</p>` : ""}</article>`; };
   const C_ = k => t("con.col." + k);
   // Dépôts de vidéos : statut, motif ; relance du montage (fonction SQL admin_relancer_montage, qui revérifie tout).
   const ST_DV = I.carte("dv.st", window.RENOM_DEPOT_VIDEO.STATUTS);
@@ -365,51 +379,59 @@
   // 26/10/2026 (garantie des 24 h tenue à deux) : les alertes prioritaires (avis sensibles, erreurs de workflow) passent avant tout, avec leur échéance ;
   // un avis sensible reste dans la file jusqu'à sa publication ; un dépôt vidéo refusé n'est jamais « en retard » ; « Charge du jour » en haut ;
   // « Je prends » sur chaque carte et le filtre « À moi ».
-  async function afaire(filtreType) {
+  // Collecte de la file (29/10/2026, extraite de afaire) : la file « À faire » et le cockpit comptent EXACTEMENT les mêmes tâches, avec les mêmes
+  // règles de retard ; chaque tâche porte le commerce concerné (cid), pour la file de travail par client du cockpit.
+  async function collecterAFaire() {
     const sur = p => p.catch(() => null);
     const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
       sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], lirePrises()]);
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
-    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, cle: o.cle || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
+    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
     // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête.
     const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id));
     (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id))).forEach(a => { const ech = echeanceAlerte(a);
       const cle = a.id != null ? "alerte:" + a.id : a.avis_id ? "avis:" + a.avis_id : a.commentaire_id ? "commentaire:" + a.commentaire_id : a.publication_id ? "publication:" + a.publication_id : null;
-      ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle }); });
-    (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le), NaN, { cle: "publication:" + x.id + ":" + x.reseau }));
-    (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id }));
-    (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id }));
-    (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id }));
+      ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle, cid: a.commerce_id }); });
+    (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le), NaN, { cle: "publication:" + x.id + ":" + x.reseau, cid: x.commerce_id }));
+    (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id, cid: x.commerce_id }));
+    (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
+    (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id, cid: x.commerce_id }));
     (file || []).forEach(a => ajout(a.sensible ? "alertes" : "avis", carteAvisFile(a), retardAvis(a), a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
-      { cle: "avis:" + a.id, prio: !!a.sensible, types: a.sensible ? ["alertes", "avis"] : ["avis"] }));
-    (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le), { cle: "commentaire:" + x.id }));
-    (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), false, NaN, T_(d.cree_le), { cle: "depot:" + d.id }));
-    (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id }); });
-    (dl || []).flatMap(g => (g.manquements || []).filter(m => m.statut === "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))).forEach(m => ajout("garanties", carteManquement(m), true, T_(m.echeance), NaN, { cle: "manquement:" + m.id }));
-    cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id }));
-    (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id }));
+      { cle: "avis:" + a.id, prio: !!a.sensible, types: a.sensible ? ["alertes", "avis"] : ["avis"], cid: a.commerce_id }));
+    (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
+    (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), false, NaN, T_(d.cree_le), { cle: "depot:" + d.id, cid: d.commerce_id }));
+    (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id, cid: g.commerce_id }); });
+    // Mois offerts : une carte par client et par mois offert ; un mois déjà offert reste à clore, sans être « en retard » (aucun geste Stripe).
+    (dl || []).flatMap(groupesManquements).forEach(m => ajout("garanties", carteManquement(m), !m.deja, T_(m.echeance), NaN, { cle: "manquement:" + m.ids[0], cid: m.commerce_id }));
+    cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }));
+    (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
     items.sort((a, b) => (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
+    return { items, alertes, pubs, dl, cs, erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null) };
+  }
+  // Prénom de l'appareil (compte partagé) : la même zone dans « À faire » et dans le cockpit.
+  const zoneMoi = () => { if (!prises) return ""; const noms = [...new Set(Object.values(prises).map(x => x.par))];
+    return moi ? `<p class="note moi" id="moi">${t("con.moi.est", { p: e(moi) })} <button type="button" class="lien" id="moi-changer">${t("con.moi.changer")}</button></p>`
+      : `<form class="moi" id="f-moi"><div class="f etroit"><label for="moi-prenom">${t("con.moi.lib")}</label><input id="moi-prenom" type="text" maxlength="40" autocomplete="given-name"${noms.length ? ' list="moi-noms"' : ""}></div>${noms.length ? `<datalist id="moi-noms">${noms.map(x => `<option value="${e(x)}">`).join("")}</datalist>` : ""}<button class="bouton second petit" type="submit">${t("con.moi.ok")}</button></form>`; };
+  const brancherMoi = refaire => { const fm = $("f-moi"); if (fm) fm.onsubmit = ev => { ev.preventDefault(); const v = $("moi-prenom").value.trim(); if (!v) return; garderMoi(v); refaire(); };
+    const mc = $("moi-changer"); if (mc) mc.onclick = () => { garderMoi(""); refaire(true); }; };
+  async function afaire(filtreType) {
+    const { items, pubs, dl, cs, erreurs } = await collecterAFaire();
     const avecMoi = !!(prises && moi), TYPES = avecMoi ? [...TYPES_AF, "moi"] : TYPES_AF;
     const de = k => k === "moi" ? items.filter(x => aMoi(x.cle)) : items.filter(x => x.types.includes(k));
     const n = Object.fromEntries(TYPES.map(k => [k, de(k).length])), f = TYPES.includes(filtreType) ? filtreType : "";
     const visibles = f ? de(f) : items;
     afCtx = { pubs: pubs || [], dl: dl || [], cs };
-    const erreurs = [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null);
     // Charge du jour (constat 7) : toutes les actions de la file ; « en retard » et « avant <heure> » (échéance aujourd'hui, l'heure de la plus tardive).
     const finJour = new Date(); finJour.setHours(23, 59, 59, 999);
     const enRetard = items.filter(x => x.retard).length, duJour = items.filter(x => !x.retard && x.quand !== Infinity && x.quand <= finJour.getTime());
     const charge = t("con.charge", { n: items.length, r: enRetard, m: duJour.length, h: duJour.length ? I.heure(Math.max(...duJour.map(x => x.quand))) : "" });
-    const noms = prises ? [...new Set(Object.values(prises).map(x => x.par))] : [];
-    const zoneMoi = !prises ? "" : moi ? `<p class="note moi" id="moi">${t("con.moi.est", { p: e(moi) })} <button type="button" class="lien" id="moi-changer">${t("con.moi.changer")}</button></p>`
-      : `<form class="moi" id="f-moi"><div class="f etroit"><label for="moi-prenom">${t("con.moi.lib")}</label><input id="moi-prenom" type="text" maxlength="40" autocomplete="given-name"${noms.length ? ' list="moi-noms"' : ""}></div>${noms.length ? `<datalist id="moi-noms">${noms.map(x => `<option value="${e(x)}">`).join("")}</datalist>` : ""}<button class="bouton second petit" type="submit">${t("con.moi.ok")}</button></form>`;
-    vue.innerHTML = `${entete(t("con.entree.afaire"), t("con.afaire.chapo"))}<p class="charge fort" id="charge">${charge}</p>${zoneMoi}<p class="msg" id="msg" role="status"></p>
+    vue.innerHTML = `${entete(t("con.entree.afaire"), t("con.afaire.chapo"))}<p class="charge fort" id="charge">${charge}</p>${zoneMoi()}<p class="msg" id="msg" role="status"></p>
       <nav class="filtres compteurs" id="a-faire" aria-label="${t("con.afaire.types")}"><a href="#/afaire" data-type=""${f ? "" : ' aria-current="page"'}>${t("con.afaire.tout", { n: items.length })}</a>${TYPES.map(k => `<a href="#/afaire/${k}" data-type="${k}" data-n="${n[k]}"${f === k ? ' aria-current="page"' : ""}>${t("con.af." + k)}, ${n[k]}</a>`).join("")}</nav>
       ${erreurs ? `<p class="note">${t("con.afaire.erreur")}</p>` : ""}
       ${visibles.length ? `<div class="pile" id="file-a-faire">${visibles.map(x => x.html.replace("<article ", `<article data-type="${f && x.types.includes(f) ? f : x.type}" data-types="${x.types.join(" ")}"${x.prio ? " data-prio" : ""} `)).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
     const fl = vue.querySelector(".compteurs"), fp = fl && fl.querySelector("[aria-current]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
-    const fm = $("f-moi"); if (fm) fm.onsubmit = ev => { ev.preventDefault(); const v = $("moi-prenom").value.trim(); if (!v) return; garderMoi(v); afaire(filtreType); };
-    const mc = $("moi-changer"); if (mc) mc.onclick = () => { garderMoi(""); afaire(filtreType === "moi" ? "" : filtreType); };
+    brancherMoi(change => afaire(change && filtreType === "moi" ? "" : filtreType));
     brancherCartes(() => afaire(filtreType));
   }
   // Accès Google vérifié (mise en route « Google vérifié » ou « Accès vérifié » de la fiche Google, 26/10/2026, constat 24) : si la date de remise de
@@ -452,7 +474,10 @@
     sur("[data-coh-copier]", async b => { const z = b.closest("[data-delais]"), g = afCtx.dl.find(x => x.commerce_id === z.dataset.delais) || {}, m = z.querySelector("[data-coh-message]");
       m.value = messageCoherence(g, z.querySelector("[data-coh-ecarts]").value);
       try { await navigator.clipboard.writeText(m.value); msg(t("con.coh.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); } });
-    sur("[data-mq-d]", b => { const z = b.closest("[data-mq]"), m = z.querySelector("[data-mq-motif]"); agir(() => D.adminManquement(z.dataset.mq, b.dataset.mqD, m ? m.value : null)); });
+    // Un geste pour tout le mois : chaque manquement de la carte reçoit la même décision (« déjà offert » : écarté, avec le motif de l'article 10).
+    sur("[data-mq-d]", b => { const z = b.closest("[data-mq]"), m = z.querySelector("[data-mq-motif]"), d = b.dataset.mqD, ids = z.dataset.mq.split(",").filter(Boolean);
+      agir(async () => { for (const id of ids) await D.adminManquement(id, d === "deja" ? "ecarte" : d, d === "deja" ? t("con.mq.deja.motif", {}, "fr") : m ? m.value : null);
+        return d === "deja" ? t("con.mq.clos") : undefined; }, null, b); });   // undefined : « Enregistré » (null voudrait dire « annulé »)
     sur("[data-ret-enregistrer]", b => { const z = b.closest("[data-ret]"); agir(() => D.adminReseaux(z.dataset.ret, [...z.querySelectorAll("[data-ret-res]:checked")].map(i => i.value))); });
     sur("[data-delegation]", i => agir(() => D.adminDelegation(i.closest("[data-ret]").dataset.ret, i.checked)));
     sur("[data-gar-releve]", b => { const z = b.closest("[data-gar]"), v = z.querySelector("[data-releve]").value; agir(() => D.adminGarantie(z.dataset.gar, { avis_releve: v })); });
@@ -508,7 +533,7 @@
     const [cs, dl, gs, opts, depots, jl, fileAvis] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises()]);
     const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
-    const k = c.compteur || {}, mq = g ? (g.manquements || []).map(m => ({ ...m, commerce: g.commerce })) : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
+    const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
@@ -617,11 +642,114 @@
     })());
     x.oublier(); await x.rendre();
   }
+  // ================= Cockpit (29/10/2026, demande de PJ) : premier écran de la console. En quelques secondes : chaque client est-il bien servi,
+  // dans les délais garantis, sans rien oublier ? Calculs : cockpit.js (RENOM_COCKPIT.calculer), sur les lectures de la base (aucune écriture ici,
+  // sauf « Je prends », la même fonction admin_prendre que la file). Ordre de lecture : la phrase d'état, les indicateurs (le retard d'abord), les
+  // garanties en danger, les contrôles techniques, le pipeline, la file de travail par client, la provenance.
+  const CK = window.RENOM_COCKPIT;
+  const duree = x => { const m = Math.max(1, Math.round(Math.abs(x) / 60000)); return m < 60 ? t("con.ck.min", { n: m }) : m < 48 * 60 ? t("con.ck.h", { n: Math.round(m / 60) }) : t("con.ck.j", { n: Math.round(m / 1440) }); };
+  const nomMois = iso => { const [a, m] = String(iso).split("-").map(Number); return I.mois()[m - 1] + " " + a; };
+  const euros = x => t("con.ck.euros", { x: I.nombre(x, x % 1 ? 2 : 0) });
+  const lienClient = (cid, texte) => cid ? `<a href="#/client/${encodeURIComponent(cid)}">${e(texte)}</a>` : e(texte);
+  // Glyphes d'état des contrôles (traits seuls, aucune couleur d'accent ; le rouge seulement pour « À régler »).
+  const GLYPHE = { ok: '<path d="M5 12.5l4.5 4.5L19 7.5"></path>', alerte: '<path d="M12 6v8"></path><path d="M12 18h.01"></path>', a_verifier: '<circle cx="12" cy="12" r="7.5"></circle><path d="M12 9v4"></path><path d="M12 15.8h.01"></path>', inconnu: '<path d="M7 12h10"></path>' };
+  const glyphe = k => `<svg class="ck-glyphe" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${GLYPHE[k] || GLYPHE.inconnu}</svg>`;
+
+  function verdictTexte(r) { const v = r.verdict;
+    if (r.niveau === "rouge") { const parts = [v.retard ? t("con.ck.v.retard", { n: v.retard }) : "", v.depasses ? t("con.ck.v.depasses", { n: v.depasses }) : "",
+        v.a_appliquer ? t("con.ck.v.appliquer", { n: v.a_appliquer }) : "", v.systeme ? t("con.ck.v.systeme", { n: v.systeme }) : ""].filter(Boolean);
+      const s = I.liste(parts); return s.charAt(0).toUpperCase() + s.slice(1) + "."; }
+    if (r.niveau === "or") return v.risques ? t("con.ck.v.risques", { n: v.risques }) : v.attente_longue ? t("con.ck.v.attente", { n: v.attente_longue }) : t("con.ck.v.verifier", { n: r.controles.filter(c => c.etat === "a_verifier").length });
+    return t(r.niveau === "vide" ? "con.ck.v.vide" : "con.ck.v.calme"); }
+
+  const kpi = (k, lien, val, det, o = {}) => `<a class="kpi${o.alerte ? " kpi-alerte" : ""}${o.vide ? " kpi-vide" : ""}" href="${lien}" data-kpi="${k}"><span class="kpi-lib">${t("con.ck.k." + k)}${o.sous ? `<span class="kpi-sous">${o.sous}</span>` : ""}</span><span class="kpi-val">${val}</span><span class="kpi-det">${det}</span></a>`;
+  function blocKpi(r) { const k = r.kpi, per = t("con.ck.per." + r.periode);
+    return `<section class="kpis" id="kpis" aria-label="${t("con.ck.kpis")}">
+      ${kpi("retard", "#/afaire", I.nombre(k.retard.n), k.retard.n ? (k.retard.garanties ? t("con.ck.k.retard.gar", { n: k.retard.garanties }) : t("con.ck.k.retard.det")) : k.retard.total ? t("con.ck.k.retard.aucun", { n: k.retard.total }) : t("con.ck.k.retard.vide"), { alerte: k.retard.n > 0 })}
+      ${kpi("clients", "#/clients", k.clients.n ? I.nombre(k.clients.n) : t("con.ck.aucun"), k.clients.n ? [k.clients.mise_en_route ? t("con.ck.k.clients.mer", { n: k.clients.mise_en_route }) : t("con.ck.k.clients.servis"), k.clients.pause ? t("con.ck.k.clients.pause", { n: k.clients.pause }) : ""].filter(Boolean).join(", ") : t("con.ck.k.clients.vide"), { vide: !k.clients.n })}
+      ${kpi("mrr", "#/clients", k.mrr.n ? euros(k.mrr.total) : t("con.ck.pas.encore"), k.mrr.n ? t("con.ck.k.mrr.det", { n: k.mrr.n }) + (k.mrr.estime ? " " + t("con.ck.k.mrr.estime") : "") + (k.mrr.impayes ? " " + t("con.ck.k.mrr.impayes", { n: k.mrr.impayes }) : "") + (k.mrr.remplaces ? " " + t("con.ck.k.mrr.remplaces", { n: k.mrr.remplaces }) : "") : t("con.ck.k.mrr.vide"), { vide: !k.mrr.n, alerte: k.mrr.impayes > 0 })}
+      ${kpi("audits", "#/prospects", k.audits.n ? I.nombre(k.audits.n) : t("con.ck.aucun"), k.audits.n ? (k.audits.a_envoyer ? t("con.ck.k.audits.envoyer", { n: k.audits.a_envoyer }) : t("con.ck.k.audits.envoyes")) : t("con.ck.k.audits.vide"), { vide: !k.audits.n })}
+      ${kpi("avis", "#/afaire/avis", k.avis.n ? I.nombre(k.avis.n) : t("con.ck.aucun"), (k.avis.n ? t("con.ck.k.avis.det", { a: k.avis.dans24, b: k.avis.n }) : t("con.ck.k.avis.vide")) + ", " + per, { vide: !k.avis.n })}
+    </section>`; }
+
+  const ENG = { fiche: "con.ck.g.fiche", premier_contenu: "con.ck.g.contenu", avis: "con.ck.g.avis" };
+  function blocGaranties(r) { const g = r.garanties, now = r.maintenant;
+    const barre = d => { const total = d.echeance - (d.debut || d.echeance), fait = total > 0 ? Math.min(1, Math.max(0, (now - d.debut) / total)) : 1;
+      return `<div class="ck-barre" role="img" aria-label="${t("con.ck.g.ecoule", { p: Math.round(fait * 100) })}"><span style="width:${Math.round(fait * 1000) / 10}%"></span></div>`; };
+    const ligne = d => `<li class="ck-g ck-${d.etat}${d.pause ? " ck-pause" : ""}" data-garantie="${e(d.engagement)}" data-etat="${d.etat}" data-client="${e(d.cid)}">
+        <div class="ck-g-tete"><p class="fort">${lienClient(d.cid, d.nom)}</p><p class="ck-g-etat">${d.etat === "depasse" ? t("con.ck.g.depasse", { d: duree(now - d.echeance) }) : t("con.ck.g.reste", { d: duree(d.echeance - now) })}</p></div>
+        <p class="ck-g-eng">${t(ENG[d.engagement], { n: d.note })}<span class="note">${t("con.ck.g.echeance", { d: dh(d.echeance) })}</span></p>${barre(d)}
+        <p class="note">${d.pause ? t("con.ck.g.pause") : t(d.etat === "depasse" ? "con.ck.g.mois.depasse" : "con.ck.g.mois.risque", { m: nomMois(d.mois_offert) })}</p></li>`;
+    const vide = !g.danger.length ? `<p class="texte2 ck-vide" id="garanties-vide">${g.suivis ? t("con.ck.g.calme", { n: g.suivis }) : t("con.ck.g.aucune")}</p>` : "";
+    const appl = g.a_appliquer.length ? `<h3>${t("con.ck.g.appliquer.titre")}</h3><ul class="ck-liste" id="mois-a-appliquer">${g.a_appliquer.map(m => `<li class="ck-g ${m.deja ? "ck-attente" : "ck-depasse"}" data-mois="${e(m.mois_offert)}"${m.deja ? " data-deja" : ""}>
+        <p class="fort">${lienClient(m.cid, m.nom)}</p><p>${t(m.deja ? "con.ck.g.appliquer.deja" : "con.ck.g.appliquer", { m: nomMois(m.mois_offert) })}</p>
+        <p class="note">${t("con.ck.g.appliquer.det", { l: I.liste(m.engagements.map(k => C_({ fiche_7j: "delais.fiche", premier_contenu_72h: "delais.contenu", avis_24h: "delais.avis" }[k]).toLowerCase())) })} ${m.deja ? "" : t(m.rythme === "annuel" ? "con.ck.g.appliquer.annuel" : "con.ck.g.appliquer.mensuel")}</p>
+        <p><a href="#/afaire/garanties">${t("con.ck.g.appliquer.ouvrir")}</a></p></li>`).join("")}</ul>` : "";
+    const att = g.attente.length ? `<h3>${t("con.ck.g.attente.titre")}</h3><ul class="ck-liste" id="delais-attente">${g.attente.map(a => `<li class="ck-g ck-attente${a.long ? " ck-long" : ""}" data-client="${e(a.cid)}">
+        <div class="ck-g-tete"><p class="fort">${lienClient(a.cid, a.nom)}</p>${a.jours != null ? `<p class="ck-g-etat">${t("con.ck.g.attente.depuis", { n: a.jours })}</p>` : ""}</div>
+        <p class="note">${I.liste(a.raisons.map(x => t("con.ck.g.raison." + x)))}${a.long ? ". " + t("con.ck.g.attente.long") : "."}</p></li>`).join("")}</ul>` : "";
+    return `<section class="carte ck-bloc" id="garanties"><h2>${t("con.ck.g.titre")}</h2><p class="note ck-chapo">${t("con.ck.g.chapo")}</p>
+      ${g.danger.length ? `<ul class="ck-liste" id="garanties-danger">${g.danger.map(ligne).join("")}</ul>` : vide}${appl}${att}</section>`; }
+
+  const ligneControle = (c, x) => { const qui = x.nom ? lienClient(x.cid, x.nom) : "", q = x.quand ? dh(x.quand) : "";
+    const k = I.a("con.ck.c.i." + c.k + "." + x.cle) ? "con.ck.c.i." + c.k + "." + x.cle : "con.ck.c.i." + c.k + ".defaut";
+    return `<li>${t(k, { qui, d: q, texte: x.texte ? `<span class="casse" translate="no">${e(String(x.texte).slice(0, 160))}</span>` : "" })}</li>`; };
+  function blocControles(r) {
+    return `<section class="carte ck-bloc" id="controles"><h2>${t("con.ck.c.titre")}</h2><p class="note ck-chapo">${t("con.ck.c.chapo")}</p>
+      <ul class="ck-controles">${r.controles.map(c => `<li class="ck-c ck-c-${c.etat}" data-controle="${c.k}" data-etat="${c.etat}">${glyphe(c.etat)}<div>
+        <p class="ck-c-tete"><span class="fort">${t("con.ck.c." + c.k)}</span><span class="ck-c-etat">${t("con.ck.etat." + c.etat)}</span></p>
+        ${c.etat === "ok" ? `<p class="note">${t("con.ck.c.ok." + c.k)}</p>` : c.k === "donnees" ? `<p class="note">${t("con.ck.c.i.donnees", { l: e(c.details.map(d => d.texte).join(", ")) })}</p>`
+          : `<ul class="ck-c-det">${c.details.slice(0, 5).map(x => ligneControle(c, x)).join("")}${c.details.length > 5 ? `<li class="note">${t("con.ck.c.plus", { n: c.details.length - 5 })}</li>` : ""}</ul>${I.a("con.ck.c.pourquoi." + c.k) ? `<p class="note">${t("con.ck.c.pourquoi." + c.k)}</p>` : ""}`}
+      </div></li>`).join("")}</ul></section>`; }
+
+  function blocPipeline(r) { const total = r.pipeline.reduce((s, x) => s + x.n, 0);
+    const det = x => x.k === "relance" && r.rdv ? t("con.ck.p.rdv", { n: r.rdv }) : x.k === "actif" && r.pauses ? t("con.ck.p.pause", { n: r.pauses }) : x.k === "perdu" ? t("con.ck.per." + r.periode) : "";
+    return `<section class="carte ck-bloc" id="pipeline"><h2>${t("con.ck.p.titre")}</h2><p class="note ck-chapo">${t("con.ck.p.chapo")}</p>
+      <ol class="ck-etapes">${r.pipeline.map(x => `<li class="ck-etape${x.n ? "" : " ck-zero"}${x.k === "perdu" ? " ck-perdu" : ""}" data-etape="${x.k}" data-n="${x.n}"><span class="ck-etape-n">${I.nombre(x.n)}</span><span class="ck-etape-lib">${t("con.ck.p." + x.k)}</span>${det(x) ? `<span class="note">${det(x)}</span>` : ""}${x.noms.filter(Boolean).length ? `<span class="note ck-noms">${e(x.noms.filter(Boolean).join(", "))}${x.n > x.noms.length ? "…" : ""}</span>` : ""}</li>`).join("")}</ol>
+      ${total ? "" : `<p class="texte2 ck-vide">${t("con.ck.p.vide")}</p>`}</section>`; }
+
+  function blocFile(r) {
+    const qui = g => !g.cle || !prises ? "" : blocPrise(g.cle);
+    return `<section class="carte ck-bloc" id="file-travail"><h2>${t("con.ck.f.titre")}</h2><p class="note ck-chapo">${t("con.ck.f.chapo")}</p>${zoneMoi()}
+      ${r.file.length ? `<table class="tab ck-tab"><thead><tr><th>${C_("commerce")}</th><th>${t("con.ck.f.taches")}</th><th>${t("con.ck.f.retard")}</th><th>${t("con.ck.f.prochaine")}</th>${prises ? `<th>${t("con.ck.f.qui")}</th>` : ""}</tr></thead><tbody>
+        ${r.file.map(g => `<tr data-file-client="${e(g.cid || "")}"><td data-l="${C_("commerce")}"><p class="fort">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`}</p>${g.prises ? `<p class="note">${t("con.ck.f.cartes.prises", { n: g.prises })}</p>` : ""}</td>
+          <td data-l="${t("con.ck.f.taches")}">${I.nombre(g.n)}</td><td data-l="${t("con.ck.f.retard")}"${g.retard ? ' class="ck-rouge fort"' : ""}>${I.nombre(g.retard)}</td>
+          <td data-l="${t("con.ck.f.prochaine")}">${g.prochaine !== Infinity ? dh(g.prochaine) : `<span class="note">${t("con.ck.f.sans.echeance")}</span>`}</td>${prises ? `<td data-l="${t("con.ck.f.qui")}">${qui(g)}</td>` : ""}</tr>`).join("")}</tbody></table>
+        <p><a class="bouton second petit" href="#/afaire">${t("con.ck.f.ouvrir")}</a></p>` : `<p class="texte2 ck-vide">${t("con.ck.f.vide")}</p>`}</section>`; }
+
+  function blocProvenance(r) { const p = r.provenance, ligne = (k, n, max) => `<li data-source="${k}"><span class="ck-src-lib">${t("con.ck.s." + k)}</span><span class="ck-src-n">${I.nombre(n)}</span><span class="ck-src-barre"><span style="width:${max ? Math.round(n / max * 100) : 0}%"></span></span></li>`;
+    const gr = (titre, o) => { const max = Math.max(0, ...Object.values(o)); return `<h3>${titre}</h3><ul class="ck-sources">${Object.entries(o).map(([k, n]) => ligne(k, n, max)).join("")}</ul>`; };
+    const rien = !Object.values(p.prospects).some(Boolean) && !Object.values(p.clients).some(Boolean);
+    return `<section class="carte ck-bloc" id="provenance"><h2>${t("con.ck.s.titre")}</h2><p class="note ck-chapo">${t("con.ck.per.long." + r.periode)}</p>
+      ${rien ? `<p class="texte2 ck-vide">${t("con.ck.s.vide")}</p>` : gr(t("con.ck.s.prospects"), p.prospects) + gr(t("con.ck.s.clients"), p.clients)}</section>`; }
+
+  async function cockpit(periodeDemandee) {
+    const periode = CK.periodeValide(periodeDemandee), sur = p => p.catch(() => null), maintenant = Date.now();
+    const debut = CK.PERIODES[periode] == null ? null : maintenant - CK.PERIODES[periode] * 864e5;
+    const [col, prospectsL, brut] = await Promise.all([collecterAFaire(), sur(D.adminProspects()), D.adminCockpit ? sur(D.adminCockpit(debut)) : null]);
+    const r = CK.calculer({ maintenant, periode, commerces: col.cs, delais: col.dl, prospects: prospectsL, alertes: col.alertes, afaire: col.items, prises,
+      afaireIllisible: !!col.erreurs, prospectsTronques: Array.isArray(prospectsL) && prospectsL.length >= 200,   // adminProspects lit 200 prospects au plus
+      brut: brut || { illisible: ["cockpit"] }, offres: OFFRES, conditions: window.RENOM_CONDITIONS, stripe: (window.RENOM_CONFIG || {}).stripe || null, mode: D.mode,
+      etatFiche: FG && FG.sql ? (c => FG.sql(c) ? FG.etat(c) : (/^[A-Za-z0-9_-]{10,255}$/.test(c.google_place_id || "") ? "reconnue" : "aucune")) : null });
+    afCtx = { pubs: [], dl: col.dl || [], cs: col.cs };
+    vue.innerHTML = `<div class="entete ck-entete"><h1>${t("con.entree.cockpit")}</h1>
+        <nav class="filtres ck-periode" id="periode" aria-label="${t("con.ck.periode")}">${Object.keys(CK.PERIODES).map(k => `<a href="#/cockpit/${k}" data-periode="${k}"${k === periode ? ' aria-current="page"' : ""}>${t("con.ck.per.bouton." + k)}</a>`).join("")}</nav></div>
+      <p class="ck-verdict ck-verdict-${r.niveau}" id="verdict" data-niveau="${r.niveau}">${e(verdictTexte(r))}</p>
+      <p class="note ck-lu" id="lu">${t("con.ck.lu", { h: I.heure(maintenant) })} <button type="button" class="lien" id="relire">${t("con.ck.relire")}</button></p><p class="msg" id="msg" role="status"></p>
+      ${blocKpi(r)}
+      <div class="ck-grille">${blocGaranties(r)}${blocControles(r)}</div>
+      ${blocPipeline(r)}
+      <div class="ck-grille">${blocFile(r)}${blocProvenance(r)}</div>`;
+    $("relire").onclick = () => cockpit(periode);
+    brancherMoi(() => cockpit(periode));
+    brancherCartes(() => cockpit(periode));
+  }
+
   // Routes. Anciennes adresses (emails d'alerte, workflows n8n, favoris) : chacune ouvre le même contenu à sa nouvelle place, sans étape d'historique.
-  const ROUTES = { afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient };
+  const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient };
   const ANCIENNES = { commerces: "clients", alertes: "afaire/alertes", apublier: "afaire/apublier", garanties: "afaire/garanties", videos: "afaire/videos", invitations: "nouveau", creer: "nouveau" };
   // Onglet allumé pour chaque écran.
-  const ONGLET = { afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", prospects: "prospects" };
+  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", prospects: "prospects" };
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
@@ -633,7 +761,7 @@
     if (window.RENOM_ACCES.DOUBLE_AUTH_ADMIN && s.doubleAuth !== "ok") return doubleAuth(s, s.doubleAuth === "code" ? "code" : "activer");
     const [r, param, sous] = location.hash.replace("#/", "").split("/");
     if (ANCIENNES[r]) { history.replaceState(null, "", "#/" + ANCIENNES[r] + (param ? "/" + param : "")); return rendre(); }
-    const ecran = ROUTES[r] ? r : "afaire";
+    const ecran = ROUTES[r] ? r : "cockpit";
     route = ONGLET[ecran]; connecte = true; dessinerNav();
     const cle = ecran + "/" + (param || "") + "/" + (sous || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
     try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined, sous ? decodeURIComponent(sous) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }

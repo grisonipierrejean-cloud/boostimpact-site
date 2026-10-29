@@ -956,6 +956,29 @@
       async adminGarantie(cid, p) { return ok(await sb.rpc("admin_garantie", { p_commerce: cid, p: p || {} })); },
       async adminPause(id, pause) { ok(await sb.rpc("admin_mettre_en_pause", { p_commerce: id, p_pause: !!pause })); },
       async adminInvitations() { const cs = ok(await sb.from("commerces").select("id,nom")); return ok(await sb.from("invitations").select("*").order("cree_le", { ascending: false })).map(i => ({ ...i, commerce: (cs.find(c => c.id === i.commerce_id) || {}).nom })); },
+      // Cockpit (29/10/2026) : lectures SEULES, sur les tables déjà ouvertes à l'administrateur (règles abonnements_lecture, invitations_lecture,
+      // envois_service_admin, alertes_whatsapp_admin, avis_lecture, journal_lecture, alertes_exploitant_admin de schema.sql). Aucune fonction SQL
+      // nouvelle. Une table illisible (bloc SQL pas encore collé, panne) ne casse pas l'écran : son nom part dans « illisible » et le cockpit le dit.
+      async adminCockpit(depuis) {
+        const illisible = [], d7 = new Date(Date.now() - 7 * 864e5).toISOString(), d30 = new Date(Date.now() - 30 * 864e5).toISOString();
+        const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
+        // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
+        const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA] = await Promise.all([
+          lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
+          lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
+          lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
+          lire("alertes_whatsapp", sb.from("alertes_whatsapp").select("id,commerce_id,type,statut,erreur,cree_le").in("statut", ["echec", "abandonne"]).gte("cree_le", d7)),
+          lire("avis", depuis ? avis.or(`traite_le.gte.${new Date(depuis).toISOString()},repondu_le.gte.${new Date(depuis).toISOString()}`) : avis.or("traite_le.not.is.null,repondu_le.not.is.null")),
+          lire("journal", sb.from("journal").select("commerce_id,type,detail,cree_le").eq("type", "COMMERCE_CREE").limit(5000)),
+          // Mode test de Stripe : chaque événement reçu avec livemode faux porte « test » : true (appliquer_evenement_stripe, client_en_ligne).
+          lire("journal", sb.from("journal").select("commerce_id,type,detail,cree_le").eq("detail->>test", "true").gte("cree_le", d7).limit(20)),
+          // Alerte de test déjà notée « Traité » (vue_le) : plus comptée.
+          lire("alertes_exploitant", sb.from("alertes_exploitant").select("commerce_id,type,detail,cree_le").eq("detail->>test", "true").is("vue_le", null).gte("cree_le", d30).limit(20)),
+        ]);
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
+          tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
+      },
     };
     return self;
   }
