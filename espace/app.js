@@ -130,10 +130,12 @@
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = a.dataset.contenu, act = b.dataset.a, zone = a.querySelector("[data-zone]"), choix = a.querySelector("[data-choix]");
       if (!["approuve", "modif", "fermer-modif", "envoyer-modif", "refuse"].includes(act)) return;
       try {
-        if (act === "modif") { zone.hidden = false; choix.hidden = true; a.querySelector("[data-mot]").focus(); return; }
+        if (act === "modif") { zone.hidden = false; choix.hidden = true; a.querySelector("[data-mot]").focus({ preventScroll: true }); zone.scrollIntoView({ block: "start" }); return; }   // clavier : « Envoyer la demande » reste visible
         if (act === "fermer-modif") { zone.hidden = true; choix.hidden = false; return; }
-        if (act === "envoyer-modif") await D.valider(id, "modification", a.querySelector("[data-mot]").value);
-        else await D.valider(id, act);
+        if (b.disabled) return;
+        a.querySelectorAll("[data-a]").forEach(x => { x.disabled = true; });
+        try { if (act === "envoyer-modif") await D.valider(id, "modification", a.querySelector("[data-mot]").value); else await D.valider(id, act); }
+        catch (er) { a.querySelectorAll("[data-a]").forEach(x => { x.disabled = false; }); throw er; }
         approuveRecent = act === "approuve" ? { id, p: await publicationDe(id) } : null;
         const p = approuveRecent && approuveRecent.p;
         // 27/10/2026 (constat 32) : ce qui se passe ensuite, pas seulement « Enregistré ».
@@ -465,13 +467,14 @@
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p>${ligneSemaine(c, av, cal, cm)}${offreAccueil(c)}</div>
-        <div class="gestes-accueil"><a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
-          ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div></div>
+      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p>${offreAccueil(c)}</div></div>
       <p class="msg" id="msg" role="status"></p>
       <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
-        ${actions.length ? `<ul class="actions-attente">${actions.map(a => `<li>${a.vers ? `<button type="button" class="bouton second" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
-          : `<a class="bouton second" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : `<p class="texte2" id="a-faire-rien">${t("acc.a.jour")}</p>`}</section>
+        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li>${a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
+          : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : `<p class="texte2" id="a-faire-rien">${t("acc.a.jour")}</p>`}</section>
+      <div class="gestes-accueil"><a class="bouton grand${actions.length ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
+        ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
+      ${ligneSemaine(c, av, cal, cm)}
       ${blocMiseEnRoute(mr, c)}
       ${ligneAutorisation(c)}
       ${carteStyle(c, true)}
@@ -482,6 +485,8 @@
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
       </section>
       ${blocIdeeSemaine(idee)}`;
+    // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
+    vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
     brancherAutomatisations(vue, accueil);
     if ($("aut-non")) $("aut-non").onclick = async () => { try { await D.refuserAutorisationPhotos(); await accueil(); msg(t("aut.non.merci")); } catch (er) { msg(ph(er.message)); } };
@@ -558,7 +563,6 @@
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}${versVideo}
       ${plein ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: (new Date().getMonth() + 1) % 12 })}</p>
         <p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
-      ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       <div class="rangee">
         <section class="carte moitie"><h2>${t("photos.deposer")}</h2>
           <form id="f"><div class="f"><div class="depot">
@@ -571,12 +575,15 @@
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
           ${l.length ? `<ul class="liste">${l.map(x => `<li><div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p>${x.statut === "refusee" && ["hors_sujet", "doute"].includes(x.refus_motif) ? `<p class="texte2 refus-photo" data-refus="${e(x.refus_motif)}">${t("photo.refus." + x.refus_motif)}</p><p class="note">${t("photo.refus.conseil")}</p>` : ""}</div><span class="etat">${ST_PHOTO[x.statut] || e(x.statut)}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
+      ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
       ${await blocDepotVideo(c)}
       ${await blocVideoAvis(c)}`;
     brancherAutorisation(photos);
     // Deux façons de choisir (appareil photo, galerie ou fichiers de l'ordinateur) ; l'envoi reste le même pour les deux.
     const choisies = () => [...$("appareil").files, ...$("fichiers").files];
-    $("appareil").onchange = $("fichiers").onchange = () => { const fs = choisies(); $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length }); };
+    $("appareil").onchange = $("fichiers").onchange = () => { const fs = choisies(); $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length });
+      // Photo choisie : le bouton « Envoyer » vient sous le pouce s'il est sous le pli (barre d'onglets comprise).
+      const b_ = $("ph-envoyer"); if (fs.length && b_.getBoundingClientRect().bottom > innerHeight - 90) b_.scrollIntoView({ block: "center" }); };
     $("f").onsubmit = async ev => {
       ev.preventDefault(); if (phEnvoi.encours) return;
       const fs = choisies();
@@ -607,6 +614,8 @@
       finally { phEnvoi.encours = false; }
       await photos(); msg((deposees ? t("photos.deposees", { n: deposees }) : t("photos.aucune.enregistree")) + (erreurs.length ? t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") }) : ""));
       if (deposees) await suitePhotos(c);
+      // Le résultat de l'envoi reste sous les yeux (l'écran est redessiné) : message et suite amenés au milieu de l'écran s'ils en sont sortis.
+      const m_ = $("msg"); if (m_) { const r_ = m_.getBoundingClientRect(); if (r_.top < 0 || r_.bottom > innerHeight - 90) m_.scrollIntoView({ block: "center" }); }
       majCompteurs();
     };
     brancherDepotVideo(); await brancherVideoAvis();
@@ -744,9 +753,9 @@
       ${dvOuvert && !dv.envoi ? `<div class="alerte dv-ouvert" role="status"><div><p class="fort">${t("dv.ouvert.titre")}</p><p>${t("dv.ouvert.texte", { d: I.dateHeureDans(dvOuvert.cree_le) })}</p>
         <p><button type="button" class="lien" id="dv-annuler">${t("dv.annuler")}</button></p></div></div>` : ""}
       <div class="dv-grille">
-        <div class="dv-guide"><h3>${t("dv.guide.titre")}</h3><ol class="dv-points" id="dv-guide-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
+        <details class="dv-guide repliable sous" id="dv-guide"${large.matches ? " open" : ""}><summary><h3>${t("dv.guide.titre")}</h3></summary><div class="dv-guide-corps"><ol class="dv-points" id="dv-guide-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
           <p class="note" id="dv-guide-accord">${t("dv.guide.accord")}</p>
-          <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div>
+          <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div></details>
         ${plein ? `<div><p class="texte2" id="dv-plein">${t("dv.plafond")}</p><p class="msg" id="dv-msg" role="status" aria-live="polite"></p></div>` : `<form id="fv" class="dv-form" novalidate><div class="f"><div class="depot">
             <span class="depot-choix"><input id="filmer" class="vh" type="file" accept="video/*" capture="environment"><label for="filmer" class="bouton second appareil-photo">${CAMERA}<span>${t("dv.filmer")}</span></label></span>
             <span class="depot-choix"><input id="videos" class="vh" type="file" accept="video/*" multiple><label for="videos" class="bouton second">${FILM}<span>${t("dv.choisir")}</span></label></span>
@@ -764,7 +773,8 @@
     D.depotsVideo().then(dvSurveiller).catch(() => {});
     if (!$("fv")) return;
     dvDessinerListe();
-    ["filmer", "videos", "photos-depot"].forEach(id => { $(id).onchange = async () => { const l = [...$(id).files]; $(id).value = ""; if (l.length) await ajouterFichiers(l); }; });
+    ["filmer", "videos", "photos-depot"].forEach(id => { $(id).onchange = async () => { const l = [...$(id).files]; $(id).value = ""; if (l.length) await ajouterFichiers(l);
+      const b_ = $("dv-envoyer"); if (l.length && b_ && b_.getBoundingClientRect().bottom > innerHeight - 90) b_.scrollIntoView({ block: "center" }); }; });
     $("dv-fichiers").onclick = ev => { const b = ev.target.closest("[data-dv-retirer]"); if (!b || dv.envoi) return; dv.fichiers = dv.fichiers.filter(x => x.id !== b.dataset.dvRetirer); dvDessinerListe(); };
     if ($("dv-note")) $("dv-note").oninput = () => { dv.note = $("dv-note").value; };
     $("fv").onsubmit = ev => { ev.preventDefault(); envoyerDepot(dvOuvert); };
@@ -779,7 +789,7 @@
   const famille = x => FILTRES.some(f => f[0] === x.statut) ? x.statut : "autres";
   let filtre = null;
   // Les idées sont fusionnées dans Contenus : bouton « Proposer des idées », qui ouvre le panneau des idées.
-  let ideesOuvertes = false;
+  let ideesOuvertes = false, versCarte = false;
   async function panneauIdees(c) {
     // Hors plafond depuis le 22/10/2026 (décision de PJ) : une demande ne consomme plus de publication ; la base en accepte une par 24 heures.
     const [k, l] = await Promise.all([D.compteur(), D.idees()]);
@@ -821,6 +831,7 @@
     if ($("fermer-idees")) $("fermer-idees").onclick = async () => { ideesOuvertes = false; await contenus(); $("proposer-idees").focus(); };
     if ($("demande")) $("demande").onclick = async () => { try { await D.demanderIdees(); await contenus(); msg(t("idees.enregistree")); majCompteurs(); } catch (er) { $("msg-idees").textContent = ph(er.message); } };
     brancherDecisions(vue, contenus); brancherAutomatisations(vue, contenus);
+    if (versCarte) { versCarte = false; const a = vue.querySelector('[data-contenu]'); if (a && filtre === "a_valider") a.scrollIntoView({ block: "start" }); }
   }
 
   // ---------------- Calendrier

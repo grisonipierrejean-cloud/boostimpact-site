@@ -76,6 +76,13 @@ textarea:focus-visible{border-color:#121614}
 .pied-legal{font-size:12px;line-height:1.5;padding:18px 2px 0;color:var(--discret);display:flex;flex-direction:column;gap:2px}
 .pied-legal .liens-legaux{display:flex;flex-wrap:wrap;gap:0 16px}
 .pied-legal a{color:inherit;display:inline-flex;align-items:center;min-height:44px;text-underline-offset:3px}
+/* Téléphone (30/10/2026, fluidité) : pour un contenu, la décision reste sous le pouce pendant la lecture (barre collée en bas, même carte) :
+   « Approuver » en grand, « Demander une modification » et « Refuser » dessous, côte à côte. Retirée dès que la zone du mot s'ouvre (clavier). */
+@media (max-width:599px){#page.collante #decision{position:sticky;bottom:0;z-index:5;border-radius:8px 8px 0 0;margin:0 -16px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -1px 0 var(--filet)}
+  #page.collante #boutons{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center}
+  #page.collante #approuver{grid-column:1/-1;min-height:52px}
+  #page.collante #modifier{min-height:46px;font-size:16px;padding:8px 12px}
+  #page.collante #refuser{min-height:46px}}
 @media (min-width:600px){main{padding-top:48px}h1{font-size:42px}.carte{padding:24px}.actions{flex-direction:row;flex-wrap:wrap;align-items:center}.actions .bouton{width:auto}}
 /* Vidéo animée par IA (24/10/2026) : étiquette sobre, texte seul en casse normale ; ni trait ni barre de couleur, aucun orange. */
 .etiquette-ia{display:inline-block;margin:8px 0;padding:5px 10px;font-size:14px;font-weight:var(--graisse-forte);line-height:1.35;color:var(--texte2);background:var(--releve);border:1px solid var(--filet);border-radius:6px;text-transform:none;letter-spacing:normal;max-width:100%}

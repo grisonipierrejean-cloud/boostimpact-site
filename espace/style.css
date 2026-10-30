@@ -64,6 +64,7 @@ details.repliable>summary::after{content:"+";flex:none;color:var(--discret);font
 details.repliable[open]>summary::after{content:"\2212"}
 details.repliable[open]>summary{margin-bottom:12px}
 details.repliable.sous>summary h3{margin:0}
+details.repliable>summary,details.formats>summary,details.dernieres>summary,details.va-refus>summary{min-height:44px;cursor:pointer}   /* cible tactile de 44 px (30/10/2026) */
 .carte.replis{gap:0;padding-top:6px;padding-bottom:6px}
 .carte.replis>details.repliable+details.repliable{border-top:1px solid var(--filet)}
 .carte.replis>details.repliable>summary{min-height:52px}
@@ -94,6 +95,7 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .haut-note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Sous 420 px, l'offre (espace) ou « Console » ne tient plus qu'en « Offre Premi… » ou « C… » : masquée (24/10/2026). L'offre reste sur l'accueil et l'écran Offre. */
 @media (max-width:419px){.haut-note{display:none}.haut .logo-img{height:26px}}
+@media (max-width:419px){html[lang=nl] .haut .logo-img{height:22px}.haut .logo{min-width:0;flex:0 1 auto}}   /* « Instellingen » : plus aucun débordement à 390 px (30/10/2026) */
 .connexion-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-6px -6px -6px 0}
 .lat-pied{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 0 12px}
 .lat-pied .quitter{margin-top:0;padding:0 4px}
@@ -267,6 +269,16 @@ legend{padding:0;margin-bottom:4px}
 .gestes-accueil{display:flex;flex-wrap:wrap;gap:8px}
 /* Offre souscrite sous le titre de l'accueil (26/10/2026) : un filet fin, le nom, une ligne, un lien. Ni badge, ni couleur d'accent. */
 .offre-accueil{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--filet);max-width:640px;font-size:15px;line-height:1.45}
+/* Fluidité téléphone (30/10/2026) : offre en deux lignes (nom et lien sur la première, ce qu'elle comprend dessous, en plus petit) ;
+   « Cette semaine » passe sous les deux gestes. L'action du jour arrive au premier écran. */
+@media (max-width:899px){.entete-accueil .offre-accueil{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;margin-top:4px;padding-top:4px}
+  .entete-accueil .offre-accueil>p:last-child{grid-row:1;grid-column:2}
+  .entete-accueil #offre-accueil-inclus{grid-column:1/-1;font-size:14px;line-height:1.4;color:var(--discret)}}
+#offre-accueil-lien{display:inline-flex;align-items:center;min-height:44px}
+#vue>.semaine{margin:0;font-size:15px}
+[data-contenu]{scroll-margin-top:8px}
+/* Avis sensible sur l'accueil, téléphone : même texte, carte plus serrée (l'action du jour remonte d'un demi-écran). */
+@media (max-width:899px){#alerte-avis-sensibles{padding:12px 14px;gap:8px}#alerte-avis-sensibles p+p{font-size:14px;line-height:1.45}#alerte-avis-sensibles .bouton{min-height:44px;padding:8px 14px;font-size:15px}}
 .apercu{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:start}
 .apercu.avec-video{grid-template-columns:minmax(0,1fr)}
 .apercu.avec-video .media{max-width:240px}
@@ -732,6 +744,11 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .dv-grille{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
 .dv-guide{background:var(--creux);border:1px solid var(--filet);border-radius:var(--r-image);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
 .dv-guide h3{font-size:15px;font-weight:var(--graisse-forte);line-height:1.3}
+/* Guide « Bien filmer » replié par défaut sur téléphone (30/10/2026) : les boutons Filmer et Choisir montent d'un écran. */
+details.dv-guide{display:block;padding:4px 16px}
+details.dv-guide[open]{padding-bottom:16px}
+details.dv-guide[open]>summary{margin-bottom:4px}
+.dv-guide-corps{display:flex;flex-direction:column;gap:8px}
 .dv-guide h3+ol,.dv-guide h3+ul{margin-top:-2px}
 .dv-points{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px;color:var(--texte2)}
 .dv-points+h3,#dv-guide-accord+h3{margin-top:8px}

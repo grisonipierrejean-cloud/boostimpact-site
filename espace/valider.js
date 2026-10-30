@@ -56,8 +56,10 @@
     $("boutons").innerHTML = `<button type="button" class="bouton" id="approuver">${t("dec.approuver")}</button><button type="button" class="bouton second" id="modifier">${t("val.demander.modif")}</button><button type="button" class="lien" id="refuser">${t("refuser")}</button>`;
     $("approuver").onclick = () => decider("approuve");
     $("refuser").onclick = () => decider("refuse");
-    $("modifier").onclick = () => { $("boutons").hidden = true; $("zone-mot").hidden = false; $("mot").focus(); };
-    $("annuler-mot").onclick = () => { $("boutons").hidden = false; $("zone-mot").hidden = true; msg(""); };
+    // Barre de décision collée en bas sur téléphone (valider.html, #page.collante) ; retirée pendant la saisie du mot.
+    $("page").classList.add("collante");
+    $("modifier").onclick = () => { $("page").classList.remove("collante"); $("boutons").hidden = true; $("zone-mot").hidden = false; $("mot").focus({ preventScroll: true }); $("decision").scrollIntoView({ block: "start" }); };   // en haut de l'écran : le clavier ne cache pas « Envoyer la demande »
+    $("annuler-mot").onclick = () => { $("page").classList.add("collante"); $("boutons").hidden = false; $("zone-mot").hidden = true; msg(""); };
     $("envoyer-mot").onclick = () => { const x = $("mot").value.trim(); if (!x) { msg(t("val.ecrire.mot")); $("mot").focus(); return; } decider("modification", x); };
   }
   function avis(o) {
