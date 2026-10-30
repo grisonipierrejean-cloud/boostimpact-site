@@ -28,16 +28,16 @@ var T=RENOM_NL?{
   commerce:'Vul de naam van uw zaak in.',ville:'Vul uw gemeente in, zodat we het juiste profiel vinden.',email:'Dit e-mailadres lijkt onvolledig.',
   tel:'Dit telefoonnummer lijkt niet te kloppen: alleen cijfers, spaties en + ( ) . / -, bijvoorbeeld +32 470 12 34 56. Laat het veld leeg als u dat liever hebt.',
   maps:'Plak de link die u kopieerde via Google of Google Maps (knop Delen).',
-  mapsVide:'Plak de link naar uw Google-bedrijfsprofiel: zoek uw zaak op Google, tik op Delen en kopieer de link.',
+  mapsVide:'Plak de link naar uw Google-profiel: zoek uw zaak op Google, tik op Delen en kopieer de link.',
   ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html',
   metier:'Kies uw sector, zodat we uw profiel kunnen voorbereiden.',boutonSans:'Mijn profiel laten aanmaken'
 }:EN?{
-  commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right listing.',email:'This email address looks incomplete.',
+  commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right profile.',email:'This email address looks incomplete.',
   tel:'This phone number doesn\u2019t look right: digits, spaces and + ( ) . / - only, for example +33 6 12 34 56 78. Leave it empty if you prefer.',
   maps:'Paste the link copied from Google or Google Maps (Share button).',
-  mapsVide:'Paste the link to your Google listing: search for your business on Google, tap Share, then copy the link.',
+  mapsVide:'Paste the link to your Google profile: search for your business on Google, tap Share, then copy the link.',
   ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html',
-  metier:'Choose your trade, so we can prepare your listing.',boutonSans:'Have my listing created'
+  metier:'Choose your trade, so we can prepare your profile.',boutonSans:'Have my profile created'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
   tel:'Ce numéro ne semble pas valide : chiffres, espaces et + ( ) . / - seulement, par exemple 06 12 34 56 78. Laissez le champ vide si vous préférez.',
