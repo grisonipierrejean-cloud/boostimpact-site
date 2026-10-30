@@ -49,7 +49,7 @@ sup{font-size:.62em;line-height:0;vertical-align:.55em}
    « agency » en 400, en retrait. */
 .logo{font-family:var(--sans);font-size:21px;font-weight:var(--graisse-forte);text-transform:none;line-height:1.2;letter-spacing:-.03em;text-decoration:none;color:var(--encre);white-space:nowrap}
 /* Logo du site (30/10/2026) : img icones/logo-ligne-encre.png, sur une ligne, couleur du texte ; jamais réduit par le flex. */
-.logo-img{display:block;height:22px;width:auto;max-width:none;flex-shrink:0}
+.logo-img{display:block;height:32px;width:auto;max-width:none;flex-shrink:0}
 /* Barre du haut sur téléphone : « boostimpact. » seul, pour laisser la place à l'offre, à la langue et à « Se déconnecter ». */
 
 a.logo{display:inline-flex;align-items:center;min-height:44px}
