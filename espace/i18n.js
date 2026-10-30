@@ -782,8 +782,7 @@
     // Réseaux des publications : Instagram, Facebook et TikTok dans les deux offres (décision du 15/10/2026, 16 h 22), plus les actualités de la fiche Google
     "offre.inc.reseaux": ["Où nous publions",
       "Where we publish", "Waar we publiceren"],
-    "offre.inc.avis": ["Réponses aux avis Google", "Replies to Google reviews", "Antwoorden op Google-reviews"], "offre.inc.commentaires": ["Bientôt&nbsp;: réponses à vos commentaires Instagram et Facebook, sans supplément", "Coming soon: replies to your Instagram and Facebook comments, at no extra cost", "Binnenkort: antwoorden op uw reacties op Instagram en Facebook, zonder meerprijs"],
-    "offre.inc.concurrents": ["Comparaison avec 3 concurrents de votre quartier", "Comparison with 3 competitors in your area", "Vergelijking met 3 concurrenten in uw buurt"], "offre.inc.bilan": ["Bilan du mois par email, le 1<sup>er</sup>", "Monthly summary by email, on the 1<sup>st</sup>", "Maandrapport per e-mail, op de 1<sup>e</sup>"],
+    "offre.inc.avis": ["Réponses aux avis Google", "Replies to Google reviews", "Antwoorden op Google-reviews"], "offre.inc.bilan": ["Bilan du mois par email, le 1<sup>er</sup>", "Monthly summary by email, on the 1<sup>st</sup>", "Maandrapport per e-mail, op de 1<sup>e</sup>"],
     "offre.idees.compte": ["Les demandes d'idées et l'avis de la semaine ne comptent pas.", "Requests for ideas and the review of the week don't count.", "Aanvragen van ideeën en de review van de week tellen niet mee."], "offre.prix.titre": ["Prix de votre offre", "Your plan's price", "Prijs van uw formule"], "offre.ht.mois": ["HT par mois", "excl. VAT per month", "excl. btw per maand"], "offre.ht.mois.annuel": ["HT par mois, en paiement annuel", "excl. VAT per month, billed annually", "excl. btw per maand, bij jaarlijkse betaling"],
     "offre.annuel": ["Soit {total} HT par an, payés d'avance pour 12 mois&nbsp;: {gain} économisés par an par rapport au paiement mensuel.", "That is {total} excl. VAT a year, paid in advance for 12 months: {gain} saved a year compared with monthly billing.", "Of {total} excl. btw per jaar, 12 maanden vooraf betaald: {gain} bespaard per jaar vergeleken met maandelijkse betaling."],
     "offre.mensuel": ["Au mois&nbsp;: {prix} HT par mois, sans engagement.", "Monthly: {prix} excl. VAT per month, no commitment.", "Maandelijks: {prix} excl. btw per maand, zonder verbintenis."],
@@ -803,8 +802,9 @@
       "Listing optimised within {n} days.", "Profiel geoptimaliseerd binnen {n} dagen."],
     "offre.garantie.contenu": ["Premier contenu proposé sous {n} h.",
       "First content proposed within {n} hours.", "Eerste post voorgesteld binnen {n} uur."],
-    "offre.garantie.avis24": ["Chaque nouvel avis traité sous {n} h : réponse publiée, ou proposée à votre validation.",
-      "Every new review handled within {n} hours: reply published, or submitted for your approval.", "Elke nieuwe review behandeld binnen {n} uur: antwoord gepubliceerd, of ter goedkeuring aan u voorgelegd."],
+    // 30/10/2026 (CGV art. 8 : dans les trois offres, la réponse est publiée sans validation du client).
+    "offre.garantie.avis24": ["Chaque nouvel avis a sa réponse publiée sous {n} h.",
+      "Every new review gets its reply published within {n} hours.", "Elke nieuwe review krijgt binnen {n} uur een gepubliceerd antwoord."],
     "offre.garantie.contrepartie": ["Sinon, le mois suivant vous est offert. Délais comptés à partir de la remise des accès et de vos premières photos.",
       "Otherwise, the following month is free. Times count from when you give us access and your first photos.", "Zo niet, dan is de volgende maand gratis. De termijnen lopen vanaf het moment dat u de toegang en uw eerste foto's bezorgt."],
     // 26/10/2026 (décision de PJ, CGV article 10) : en Essentiel, les délais partent de l'accès à la fiche Google seul ; les photos y sont facultatives.
@@ -1884,7 +1884,6 @@
     "offre.dessus.titre": ["Ce que l'offre {nom} ajoute", "What the {nom} plan adds", "Wat de formule {nom} toevoegt"],
     "offre.dessus.std.1": [v => `Vos photos deviennent aussi des publications Instagram et Facebook : ${v.n} contenus par mois.`, v => `Your photos also become Instagram and Facebook posts: ${v.n} pieces of content a month.`, v => `Uw foto's worden ook posts op Instagram en Facebook: ${v.n} posts per maand.`],
     "offre.dessus.std.2": ["Un bilan du mois avec nos conseils, et votre première publication proposée sous 72 h.", "A monthly report with our advice, and your first post proposed within 72 hours.", "Een maandrapport met ons advies, en uw eerste post binnen 72 uur voorgesteld."],
-    "offre.dessus.std.3": ["Les réponses aux commentaires Instagram et Facebook.", "Replies to Instagram and Facebook comments.", "Antwoorden op reacties op Instagram en Facebook."],
     "offre.dessus.prem.1": [v => `${v.n} contenus par mois, dont ${v.v} vidéos.`, v => `${v.n} pieces of content a month, including ${v.v} videos.`, v => `${v.n} posts per maand, waarvan ${v.v} video's.`],
     "offre.dessus.prem.2": ["Le bilan commenté et un point de 30 minutes avec l'équipe chaque mois.", "A commented summary and a 30-minute call with the team every month.", "Een rapport met toelichting en elke maand een gesprek van 30 minuten met het team."],
     "offre.dessus.prem.3": [v => `Le mode délégation, si vous le choisissez : sans réponse de votre part ${v.h} h après l'envoi, nous publions.`, v => `Delegation mode, if you choose it: with no reply from you ${v.h} hours after it's sent, we publish.`, v => `De delegatiemodus, als u die kiest: zonder antwoord van u ${v.h} uur na verzending publiceren wij.`],

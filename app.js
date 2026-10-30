@@ -28,21 +28,18 @@ var T=RENOM_NL?{
   commerce:'Vul de naam van uw zaak in.',ville:'Vul uw gemeente in, zodat we het juiste profiel vinden.',email:'Dit e-mailadres lijkt onvolledig.',
   tel:'Dit telefoonnummer lijkt niet te kloppen: alleen cijfers, spaties en + ( ) . / -, bijvoorbeeld +32 470 12 34 56. Laat het veld leeg als u dat liever hebt.',
   maps:'Plak de link die u kopieerde via Google of Google Maps (knop Delen).',
-  mapsVide:'Plak de link naar uw Google-profiel: zoek uw zaak op Google, tik op Delen en kopieer de link.',
   ok:'Vink het vakje aan, zodat we u de audit kunnen sturen.',envoi:'Bezig met verzenden…',bouton:'Ontvang mijn gratis audit',merci:'bedankt.html',
   metier:'Kies uw sector, zodat we uw profiel kunnen voorbereiden.',boutonSans:'Mijn profiel laten aanmaken'
 }:EN?{
   commerce:'Enter the name of your business.',ville:'Enter your town or city, so we find the right profile.',email:'This email address looks incomplete.',
   tel:'This phone number doesn\u2019t look right: digits, spaces and + ( ) . / - only, for example +33 6 12 34 56 78. Leave it empty if you prefer.',
   maps:'Paste the link copied from Google or Google Maps (Share button).',
-  mapsVide:'Paste the link to your Google profile: search for your business on Google, tap Share, then copy the link.',
   ok:'Tick the box so we can send you the audit.',envoi:'Sending…',bouton:'Get my free audit',merci:'thank-you.html',
   metier:'Choose your trade, so we can prepare your profile.',boutonSans:'Have my profile created'
 }:{
   commerce:'Indiquez le nom de votre commerce.',ville:"Indiquez votre ville, pour qu'on trouve la bonne fiche.",email:'Cette adresse email semble incomplète.',
   tel:'Ce numéro ne semble pas valide : chiffres, espaces et + ( ) . / - seulement, par exemple 06 12 34 56 78. Laissez le champ vide si vous préférez.',
   maps:'Collez le lien copié depuis Google ou Google Maps (bouton Partager).',
-  mapsVide:'Collez le lien de votre fiche Google : sur Google, cherchez votre commerce, touchez Partager, puis copiez le lien.',
   ok:"Cochez la case pour qu'on puisse vous envoyer l'audit.",envoi:'Envoi en cours…',bouton:'Recevoir mon audit gratuit',merci:'merci.html',
   metier:'Choisissez votre métier, pour qu\'on prépare votre fiche.',boutonSans:'Faire créer ma fiche'
 };
@@ -75,8 +72,9 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   var t=form.telephone?form.telephone.value.replace(/\s+/g,' ').trim():'';if(t&&!TEL.test(t))return erreur(T.tel,form.telephone);
   var s=sansFiche(),brut=form.lien_maps.value.trim(),m=lienGoogle(brut);
   if(s){if(!form.metier.value)return erreur(T.metier,form.metier)}
-  else{if(!brut)return erreur(T.mapsVide,form.lien_maps);
-    if(!GOOGLE.test(m))return erreur(T.maps,form.lien_maps)}
+  // 30/10/2026 : lien facultatif. Vide : envoyé vide, le moteur cherche la fiche par nom et ville (moteur/audit/audit_places.py, trouver_fiche) ;
+  // fiche introuvable ou ambiguë : email « fiche à confirmer » (n8n). Donné mais pas Google : message clair, rien n'est envoyé.
+  else if(brut&&!GOOGLE.test(m))return erreur(T.maps,form.lien_maps)
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
   var d=boostDonnees(form);if(s)delete d.lien_maps;else{d.lien_maps=m;delete d.metier}
   btn.disabled=true;btn.textContent=T.envoi;
@@ -95,7 +93,7 @@ var a=document.getElementById('suite-audit'),b=document.getElementById('suite-sa
 if(location.hash==='#sans-fiche'){a.hidden=true;b.hidden=false}
 })();
 
-// ---- Offres : deux boutons par carte, à l'année et au mois (29/10/2026, demande de PJ : plus de sélecteur, les deux rythmes toujours visibles).
+// ---- Offres : deux boutons par carte, à l'année et au mois (29/10/2026 : plus de sélecteur, les deux rythmes toujours visibles).
 // Liens écrits dans la page (règle des frais de mise en route, site/legal.json « offerts_paiement » : lien « offerts » à l'année, « factures » au mois ;
 // Essentiel sans frais). Langue de la page de paiement (27/10/2026) : paramètre « locale » de Stripe (docs.stripe.com/payment-links/customize) ; la base
 // en tire la langue des emails du nouveau client (moteur/paiement/stripe.js, client_en_ligne). Sans JavaScript : lien sans langue (français).

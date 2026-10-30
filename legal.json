@@ -35,10 +35,10 @@
     }
   },
   "documents": {
-    "version": "29 octobre 2026"
+    "version": "30 octobre 2026"
   },
   "facturation": {
-    "premier_mois": "en entier ; l'abonnement court ensuite de date à date, chaque mois ou chaque année selon le rythme de paiement choisi",
+    "premier_mois": "le premier mois, ou la première année en paiement annuel, est facturé en entier le jour de la souscription, sans calcul au prorata ; l'abonnement se renouvelle ensuite de date à date, chaque mois ou chaque année selon le rythme de paiement choisi",
     "moyen_paiement": "carte bancaire, par Stripe",
     "taux_penalites": "taux de refinancement le plus récent de la Banque centrale européenne, majoré de 10 points"
   },

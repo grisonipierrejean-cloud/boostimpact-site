@@ -121,3 +121,11 @@ Polices de la page de vente (site/style.css, 18/10/2026) : Instrument Serif 400 
 Fichiers plus utilisés par la page, gardés dans fonts/ :
 - Source Serif 4 et Schibsted Grotesk (ancienne direction), licence SIL OFL 1.1 : fonts/OFL-source-serif-4.txt, fonts/OFL-schibsted-grotesk.txt.
 - Instrument Sans (le rapport d'audit, moteur/audit/rapport.py, l'embarque avec Instrument Serif).
+
+### Répartition des photos sur la page d'accueil (30/10/2026)
+
+Pour qu'aucune photo ne revienne plus de deux fois sur l'accueil (FR, EN, NL), outils/maquettes.py utilise désormais :
+img/metier-restaurant.webp (publication sur la fiche Google), img/resto-service.webp (grande photo de la fiche « après »),
+img/renom-chef.webp (vignette « mises à jour » de la fiche « après »). img/resto-assiette.webp reste deux fois, dans la démonstration
+(la photo envoyée, puis la même photo devenue publication). Auteurs et licences : voir les tableaux ci-dessus.
+

@@ -297,11 +297,11 @@
     sous.innerHTML = secs.length > 1 ? secs.map(r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : r === "avis" && route === "collecte" ? ' aria-current="true"' : ""}><span>${ECRANS[r]}</span>${COMPTE_ECRAN[r] ? compte(COMPTE_ECRAN[r]) : ""}</a>`).join("") : "";
     sous.setAttribute("aria-label", actif.nom);
     if (large.matches) {
-      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
+      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
         <div class="groupe groupe-reglages">${lienGroupe(REGLAGES)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
       return;
     }
-    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}<nav class="haut-reglages" aria-label="${REGLAGES.nom}">${lienGroupe(REGLAGES, true)}</nav>`;
+    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}<nav class="haut-reglages" aria-label="${REGLAGES.nom}">${lienGroupe(REGLAGES, true)}</nav>`;
     onglets.setAttribute("aria-label", t("nav.espace"));
     onglets.innerHTML = GROUPES.map(g => lienGroupe(g, true)).join("");
   }
@@ -1163,7 +1163,7 @@
     const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
     // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
     const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
-    const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2", "offre.dessus.std.3"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
+    const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
       <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(s_.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
@@ -1191,14 +1191,14 @@
         <section class="carte" id="offre-mois"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
           ${mesure(t("offre.pub.utilisees"), k.publications_utilisees, k.publications_plafond)}
           ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
-          ${o.reseaux_sociaux === false ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
+          ${o.reseaux_sociaux === false || !o.commentaires_disponible ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter ; 30/10/2026 : compteur masqué tant que offres.json dit commentaires_disponible faux (aucun « bientôt » à l'écran) */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
       ${offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1])}
         <section class="carte" id="offre-inclus"><h2>${t("offre.inclus")}</h2><ul class="liste">
           <li id="offre-contenus"><span>${t("offre.inc.contenus")}</span><span class="fort">${o.videos ? t("offre.contenus.dont.videos", { n: contenus, v: o.videos }) : t("offre.contenus.n", { n: contenus })}</span></li>
           <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
-          <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>${o.reseaux_sociaux === false ? "" : `<li><span>${t("offre.inc.commentaires")}</span><span class="fort">${t(k.commentaires_inclus ? "comprises" : "non.comprises")}</span></li>`}
-          <li><span>${t("offre.inc.concurrents")}</span><span class="fort">${t("comprise")}</span></li><li><span>${t(o.delegation ? "offre.inc.bilan.premium" : "offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
+          <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>
+          <li><span>${t(o.delegation ? "offre.inc.bilan.premium" : "offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
           <p class="note pied">${t(o.reseaux_sociaux === false ? "offre.contenus.unite.google" : "offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="prix-offre"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
         <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
@@ -1822,7 +1822,7 @@
   // (déconnexion, puis le formulaire de connexion). Même écran que la console pour un commerçant (console.js, refuse).
   function reserveCommercants() {
     connecte = false; derniere = null; dessinerNav();
-    vue.innerHTML = `<div class="connexion"><div class="carte" id="acces-reserve"><div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div>
+    vue.innerHTML = `<div class="connexion"><div class="carte" id="acces-reserve"><div class="connexion-tete"><p class="logo" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></p>${I.selecteur()}</div>
       <div class="entete"><h1>${t("con.refuse.titre")}</h1><p class="chapo">${t("esp.admin.texte")}</p></div>
       <a class="bouton plein" href="${I.lien("console.html")}">${t("esp.admin.console")}</a><button type="button" class="bouton second plein" id="autre-compte">${t("acces.autre.compte")}</button></div></div>`;
     $("autre-compte").onclick = async () => { await D.quitter(); aller("accueil"); };

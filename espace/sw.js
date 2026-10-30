@@ -6,15 +6,15 @@
    ni une VIDÉO (requête de plage « Range », destination video ou audio, extension .mp4 .mov .m4v .webm .3gp), même de la même origine.
    Réseau d'abord pour les pages, scripts, styles et données : une mise à jour arrive dès la visite suivante ;
    le cache ne sert que hors connexion. Cache d'abord pour les polices et les icônes, qui ne changent pas. */
-const CACHE = "renom-espace-v10";   // v10 (22/10/2026) : charte du site (Source Serif 4, Schibsted Grotesk, bleu nuit et ivoire) ; v9 (17/10/2026) : mot de passe obligatoire (acces.js, écrans de connexion) ; v8 (17/10/2026) : néerlandais (i18n.js, manifest-nl.webmanifest) ; v7 (16/10/2026) : marque BoostImpact (icônes, couleurs) ; v6 (16/10/2026) : bibliothèque Supabase locale (vendor/supabase.js) ; v5 (14/10/2026) : dépôt de vidéos (envoi.js, vendor/tus.min.js) ; v4 : kit de marque (marque.js, polices du kit) ; v3 : textes en français et en anglais
+const CACHE = "renom-espace-v11";   // v11 (30/10/2026) : direction « A · Plein jour », polices Young Serif et Hanken Grotesk ; v10 (22/10/2026) : charte du site (Source Serif 4, Schibsted Grotesk, bleu nuit et ivoire) ; v9 (17/10/2026) : mot de passe obligatoire (acces.js, écrans de connexion) ; v8 (17/10/2026) : néerlandais (i18n.js, manifest-nl.webmanifest) ; v7 (16/10/2026) : marque BoostImpact (icônes, couleurs) ; v6 (16/10/2026) : bibliothèque Supabase locale (vendor/supabase.js) ; v5 (14/10/2026) : dépôt de vidéos (envoi.js, vendor/tus.min.js) ; v4 : kit de marque (marque.js, polices du kit) ; v3 : textes en français et en anglais
 const RESEAU_DABORD = ["", "index.html", "app.js", "i18n.js", "acces.js", "donnees.js", "config.js", "style.css", "manifest.webmanifest", "manifest-en.webmanifest", "manifest-nl.webmanifest",
   "vendor/qrcode.js", "vendor/temps-forts.js", "vendor/temps-forts.json", "marque.js", "fonts/couples.json", "envoi.js", "vendor/tus.min.js", "vendor/supabase.js"];
-const CACHE_DABORD = ["fonts/source-serif-4.woff2", "fonts/schibsted-grotesk.woff2",
+const CACHE_DABORD = ["fonts/young-serif.woff2", "fonts/hanken-grotesk.woff2",
   "fonts/bricolage.ttf", "fonts/figtree.ttf", "fonts/playfair.ttf", "fonts/dmsans.ttf", "fonts/fraunces.ttf", "fonts/nunito.ttf", "fonts/oswald.ttf",
   "fonts/karla.ttf", "fonts/dmserif.ttf", "fonts/manrope.ttf", "fonts/fredoka.ttf", "fonts/zillaslab.ttf",
-  "icones/icone-192.png", "icones/icone-512.png", "icones/apple-touch-icon.png", "icones/favicon-32.png"];
+  "icones/icone-192.png", "icones/icone-512.png", "icones/apple-touch-icon.png", "icones/favicon-32.png", "icones/logo-ligne-encre.png"];
 const PRECHARGE = ["index.html", "app.js", "i18n.js", "acces.js", "marque.js", "donnees.js", "config.js", "style.css", "manifest.webmanifest", "vendor/qrcode.js", "vendor/temps-forts.js", "vendor/supabase.js",
-  "fonts/source-serif-4.woff2", "fonts/schibsted-grotesk.woff2", "icones/icone-192.png", "icones/apple-touch-icon.png"];
+  "fonts/young-serif.woff2", "fonts/hanken-grotesk.woff2", "icones/icone-192.png", "icones/apple-touch-icon.png"];
 const PORTEE = new URL("./", self.location).href;
 
 self.addEventListener("install", ev => {

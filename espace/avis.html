@@ -3,25 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0F1C3A">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
 <title data-i18n-titre="avis.pub.titre.page">Votre avis</title>
-<link rel="preload" href="fonts/source-serif-4.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/young-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Page publique de dépôt d'avis. La même pour tous les clients : rien ici ne dépend de la note choisie, sauf le dessin des étoiles
    et la phrase « Votre note ». Le bouton Google est dans la page dès l'affichage et n'est jamais masqué, déplacé ni restylé.
-   Charte du site, comme l'espace (22/10/2026 : bleu nuit et ivoire, Source Serif 4 pour le titre, Schibsted Grotesk pour le reste, coins de 6 à 8 px, aucune pilule) ;
+   Charte du site, comme l'espace (30/10/2026, direction « A · Plein jour » : fond clair, texte #121614, vert sapin #0A6847 pour l'action, police par --police-*, aucune pilule) ;
    couleurs du commerce (fond, texte, accent) quand il les a choisies : les cartes et les textes secondaires en découlent,
    ce qui garde le contraste vérifié par avis.js (texte sur fond au moins 4,5:1). */
-:root{color-scheme:dark;--fond:#0F1C3A;--texte:#F6F4EF;--accent:#F6F4EF;--sur-accent:#0F1C3A;--etoile:#F6F4EF;
-  --surface:#18284B;--discret:#AEB2BE;--bord:#7C8396;--filet:rgba(255,255,255,.14);
-  --titre:'Source Serif 4',Georgia,'Times New Roman',serif;--sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+:root{color-scheme:light;--fond:#F2F3F1;--texte:#121614;--texte2:#2E3431;--accent:#0A6847;--sur-accent:#FFFFFF;--etoile:#121614;
+  --surface:#FFFFFF;--discret:#4E5652;--bord:#7A817D;--filet:rgba(18,22,20,.12);
+  --police-titre:'Young Serif',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte)}
 @supports (color:color-mix(in srgb,red 50%,blue)){:root{--surface:color-mix(in srgb,var(--texte) 7%,var(--fond));--discret:color-mix(in srgb,var(--texte) 74%,var(--fond));
   --bord:color-mix(in srgb,var(--texte) 45%,var(--fond));--filet:color-mix(in srgb,var(--texte) 14%,var(--fond))}}
-@font-face{font-family:'Source Serif 4';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/source-serif-4.woff2) format('woff2')}
-@font-face{font-family:'Schibsted Grotesk';font-weight:400 700;font-style:normal;font-display:swap;src:url(fonts/schibsted-grotesk.woff2) format('woff2')}
+@font-face{font-family:'Young Serif';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/young-serif.woff2) format('woff2')}@font-face{font-family:'Hanken Grotesk';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/hanken-grotesk.woff2) format('woff2')}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -30,35 +29,35 @@ h1,h2,p{margin:0}
 main{max-width:480px;margin:0 auto;padding:28px 16px calc(32px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 #page,#erreur{display:flex;flex-direction:column;gap:14px}
 .tete{display:flex;flex-direction:column;gap:10px;padding:0 2px 4px}
-.commerce{font-size:17px;font-weight:700;overflow-wrap:anywhere}
-h1{font-family:var(--titre);font-weight:400;font-variation-settings:'opsz' 48;font-size:34px;line-height:1.08;letter-spacing:-.018em;text-wrap:balance}
+.commerce{font-size:17px;font-weight:var(--graisse-forte);overflow-wrap:anywhere}
+h1{font-family:var(--titre);font-weight:var(--graisse-titre);font-size:34px;line-height:1.08;letter-spacing:-.018em;text-wrap:balance;font-stretch:var(--largeur-titre);font-variant-numeric:lining-nums}
 .carte{background:var(--surface);color:var(--texte);border:1px solid var(--filet);border-radius:8px;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
-h2{font-family:var(--sans);font-size:19px;font-weight:700;line-height:1.25}
+h2{font-family:var(--sans);font-size:19px;font-weight:var(--graisse-forte);line-height:1.25}
 .note{font-size:15px;color:var(--discret)}
 .etoiles{display:flex;justify-content:space-between;gap:4px;max-width:340px;width:100%;margin:0 auto}
 .etoile{width:58px;height:58px;padding:0;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:10px;color:var(--discret);cursor:pointer}
 .etoile svg{width:42px;height:42px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
 .etoile.pleine{color:var(--etoile)}
 .etoile.pleine svg{fill:currentColor;stroke:var(--etoile)}
-#etat-note{text-align:center;font-size:16px;font-weight:600;color:var(--texte);min-height:1.5em}
-.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:600;line-height:1.25;text-align:center;text-decoration:none;background:var(--accent);color:var(--sur-accent);border:1px solid var(--accent);border-radius:6px;padding:14px 14px;min-height:58px;cursor:pointer}
+#etat-note{text-align:center;font-size:16px;font-weight:var(--graisse-forte);color:var(--texte);min-height:1.5em}
+.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:var(--graisse-forte);line-height:1.25;text-align:center;text-decoration:none;background:var(--accent);color:var(--sur-accent);border:1px solid var(--accent);border-radius:6px;padding:14px 14px;min-height:58px;cursor:pointer}
 .bouton.second{background:transparent;color:var(--texte);border-color:var(--bord)}
 .bouton:disabled{opacity:.55;cursor:default}
 :focus-visible{outline:2px solid var(--texte);outline-offset:2px}
 form{display:flex;flex-direction:column;gap:14px;padding-top:4px}
 .f{display:flex;flex-direction:column;gap:6px}
-label{font-size:15px;font-weight:600;color:var(--texte)}
+label{font-size:15px;font-weight:var(--graisse-forte);color:var(--texte)}
 input,textarea{font:inherit;font-size:16px;line-height:1.45;color:var(--texte);background:var(--fond);border:1px solid var(--bord);border-radius:10px;padding:11px 14px;min-height:50px;width:100%}
 textarea{min-height:120px;resize:vertical}
-.msg{font-size:16px;font-weight:600;color:var(--texte)}
+.msg{font-size:16px;font-weight:var(--graisse-forte);color:var(--texte)}
 .msg:empty{display:none}
-.fort{font-weight:700}
+.fort{font-weight:var(--graisse-forte)}
 .pied{font-size:14px;line-height:1.5;padding:6px 2px 0;display:flex;flex-direction:column;gap:6px;color:var(--discret)}
 .pied-legal{font-size:12px;line-height:1.5;padding:18px 2px 0;display:flex;flex-direction:column;gap:2px;color:var(--discret)}
 .pied-legal .liens-legaux{display:flex;flex-wrap:wrap;gap:0 16px}
 .pied-legal a{color:inherit;display:inline-flex;align-items:center;min-height:44px;text-underline-offset:3px}
 .langues{display:inline-flex;align-items:center;gap:2px}
-.langues button{font:inherit;font-size:14px;font-weight:600;letter-spacing:.04em;min-width:44px;min-height:44px;padding:0 8px;background:none;border:0;border-radius:10px;color:var(--discret);cursor:pointer;text-decoration:none}
+.langues button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);letter-spacing:.04em;min-width:44px;min-height:44px;padding:0 8px;background:none;border:0;border-radius:10px;color:var(--discret);cursor:pointer;text-decoration:none}
 .langues button[aria-pressed=true]{color:var(--texte,var(--encre));text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1.5px}
 .langues button:hover{color:var(--texte,var(--encre))}
 .langues-pied{margin-left:-8px}

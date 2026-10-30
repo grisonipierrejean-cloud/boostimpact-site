@@ -137,7 +137,7 @@
   A.jeton = jetonRecu(racine.location.search);
   const $ = id => document.getElementById(id);
   const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const tete = I => `<div class="connexion-tete"><p class="logo" translate="no">boostimpact<span class="logo-point">.</span><span class="logo-suffixe">agency</span></p>${I.selecteur()}</div>`;
+  const tete = I => `<div class="connexion-tete"><p class="logo" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></p>${I.selecteur()}</div>`;
   const EMAIL = /^[^\s@]+@[^\s@]+$/;   // contrôle léger : Supabase valide l'adresse ; les adresses de démonstration n'ont pas de point dans le domaine
   const texteErreur = (I, er) => er && er.code && I.a("acc.err." + er.code) ? I.t("acc.err." + er.code) : I.phrase(er && er.message || "");
   const message = x => { const m = $("msg"); if (m) m.textContent = x; };
