@@ -12,13 +12,13 @@
    dans le CSS ne nomme une police ou une graisse du site. Fichiers Fontsource, licence SIL OFL 1.1 : fonts/OFL-young-serif.txt (titres, une seule
    graisse, 400) et fonts/OFL-hanken-grotesk.txt (texte, fichier variable, 400 / 500 / 600 utilisées).
    Chiffres : Young Serif a des chiffres elzéviriens par défaut (« 190 € » se lirait « 1go € ») : lining-nums sur les titres et les prix. */
-@font-face{font-family:'Young Serif';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/young-serif.woff2) format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:200 800;font-style:normal;font-display:swap;src:url(fonts/newsreader.woff2) format('woff2')}
 @font-face{font-family:'Hanken Grotesk';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/hanken-grotesk.woff2) format('woff2')}
 
 :root{
-  --police-titre:'Young Serif',Georgia,'Times New Roman',serif;
+  --police-titre:'Newsreader',Georgia,'Times New Roman',serif;
   --police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
-  --largeur-titre:100%;     /* Young Serif n'a pas d'axe de largeur */
+  --largeur-titre:100%;
   --largeur-texte:100%;
   --graisse-titre:400;      /* titres (police de titre) */
   --graisse-texte:400;
@@ -55,17 +55,17 @@
   --t-6:2.986rem;      /* 47,8 */
   --t-7:3.583rem;      /* 57,3 */
   --t-8:4.3rem;        /* 68,8 */
-  --i-display:1.15;
+  --i-display:1.1;
   --i-titre:1.2;
   --i-h:1.25;
   --i-corps:1.55;
   --i-2:1.5;
-  --a-display:-.01em;
-  --a-titre:-.005em;
+  --a-display:-.022em;
+  --a-titre:-.012em;
   --marge:16px;
   --saut:72px;
-  --r-btn:4px;
-  --r-carte:8px;
+  --r-btn:2px;
+  --r-carte:2px;
   --r-ecran:14px;
   /* Couleurs du bloc courant : blanc par défaut. Chaque fond redéfinit ces jetons. */
   --fond:var(--blanc);
@@ -169,10 +169,10 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 /* ---------- Premier écran (30/10/2026) : titre, bandeau photo d'un plat (Pexels, CREDITS.md), texte, prix, deux boutons. Sur téléphone, la photo
    passe entre le titre et le texte et les boutons restent dans le premier écran à 390 x 844 ; dès 1040 px, la photo occupe la colonne de droite. */
 #haut{background:var(--blanc);color:var(--encre)}
-#haut .haut-grille{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:16px;padding-top:20px;padding-bottom:40px}
+#haut .haut-grille{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;gap:16px;padding-top:24px;padding-bottom:40px}
 .haut-photo{display:block;margin:0 calc(-1 * var(--marge))}
-.haut-photo img{width:100%;height:128px;object-fit:cover;object-position:28% 80%}
-#haut h1{color:var(--encre);font-size:2.125rem;line-height:var(--i-display);letter-spacing:var(--a-display);max-width:13.5ch}
+.haut-photo img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:40% 62%}
+#haut h1{color:var(--encre);font-size:2.5rem;line-height:var(--i-display);letter-spacing:var(--a-display);max-width:13.5ch}
 /* Titres anglais et néerlandais plus longs (11 et 10 mots) : corps réduit pour que les boutons tiennent dans le premier écran. */
 html:not([lang="fr"]) #haut h1{font-size:var(--t-3);max-width:20ch}
 .chapo{font-size:var(--t-1);line-height:1.5;max-width:560px;color:var(--texte-doux)}
@@ -214,69 +214,95 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
    (la suivante dépasse au bord) ; dès 1040 px, les quatre côte à côte. */
 @font-face{font-family:'Roboto';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/roboto-400.woff2) format('woff2')}
 @font-face{font-family:'Roboto';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/roboto-500.woff2) format('woff2')}
-.posts{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:80%;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+.posts{list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:84%;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
   margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 12px;scroll-padding-left:var(--marge);scrollbar-width:thin;scrollbar-color:var(--filet-clair-fort) transparent;align-items:start}
 .post{display:flex;flex-direction:column;gap:12px;scroll-snap-align:start;min-width:0}
 .post-reseau{font-size:var(--t-corps);font-weight:var(--graisse-forte);color:var(--encre)}
 .post-offre{font-size:var(--t-2);line-height:var(--i-2);color:var(--gris)}
-.maq{position:relative;display:flex;flex-direction:column;background:#FFFFFF;color:#000000;border:1px solid var(--filet-clair);border-radius:14px;overflow:hidden;
+.maq{position:relative;display:flex;flex-direction:column;background:#FFFFFF;color:#000000;border:1px solid rgba(18,22,20,.16);border-radius:22px;overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-stretch:100%;letter-spacing:0;font-variation-settings:normal}
 .maq .ico{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 .maq .ico-pts{fill:currentColor;stroke:none;margin-left:auto}
 .maq-photo{display:block;width:100%;object-fit:cover}
+/* Barre d'état du téléphone */
+.maq-etat{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 20px 0 26px;font-size:14px;font-weight:600;letter-spacing:-.01em;color:#000000;flex:none}
+.maq-etat-ico{display:flex;align-items:center;gap:5px}
+.maq-etat-ico svg{height:11px;width:auto;fill:currentColor}
+.maq-etat-clair{position:absolute;top:0;left:0;right:0;z-index:2;color:#FFFFFF}
 /* Instagram */
+.ig-nav{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;padding:2px 8px 8px;font-size:16px;text-align:center}
+.ig-nav strong{font-weight:600}
+.ig-nav .ico{width:26px;height:26px;stroke-width:2}
+.ig-aime{padding:0 12px 4px;font-size:14px;line-height:1.35}
+.ig-aime strong{font-weight:600}
+.ig-plus{color:#737373}
 .ig-tete{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .ig-avatar{width:34px;height:34px;flex:none;border-radius:50%;padding:2px;border:1.5px solid #C7C7C7;display:flex}
-.ig-avatar span{flex:1;border-radius:50%;background:#121614;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.ig-avatar span{flex:1;border-radius:50%;background:#1E2B24;color:#F3EFE6;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:15px;font-weight:400}
 .ig-qui{display:flex;flex-direction:column;font-size:13px;line-height:1.25;min-width:0}
 .ig-qui strong{font-weight:600}
 .ig-qui span{font-size:12px;color:#262626}
 .maq-ig .maq-photo{aspect-ratio:4/5;object-position:62% 55%}
 .ig-actions{display:flex;align-items:center;gap:16px;padding:10px 12px 6px}
 .ig-espace{flex:1}
-.ig-texte{padding:0 12px;font-size:14px;line-height:1.4}
+.ig-texte{padding:0 12px;font-size:14px;line-height:1.35}
 .ig-texte strong{font-weight:600}
 .ig-tags{color:#00376B}
 .ig-quand{padding:6px 12px 14px;font-size:12px;color:#737373}
 /* Facebook */
 .maq-fb{color:#050505}
 .fb-tete{display:flex;align-items:center;gap:8px;padding:12px 12px 8px}
-.fb-avatar{width:40px;height:40px;flex:none;border-radius:50%;background:#121614;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600}
+.fb-avatar{width:40px;height:40px;flex:none;border-radius:50%;background:#1E2B24;color:#F3EFE6;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:19px;font-weight:400}
+.maq-fb .ico-croix{width:22px;height:22px;color:#65676B;margin-left:10px;stroke-width:2}
+.fb-compteurs{display:flex;align-items:center;gap:6px;padding:10px 12px;font-size:14px;color:#65676B}
+.fb-bulles{display:flex}
+.fb-b{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #FFFFFF;box-sizing:content-box}
+.fb-b+.fb-b{margin-left:-4px}
+.fb-b .ico{width:11px;height:11px;fill:#FFFFFF;stroke:#FFFFFF;stroke-width:1}
+.fb-b-pouce{background:#0866FF}
+.fb-b-coeur{background:#F33E58}
 .fb-qui{display:flex;flex-direction:column;font-size:15px;line-height:1.3;min-width:0}
 .fb-qui strong{font-weight:600}
 .fb-qui span{display:flex;align-items:center;gap:3px;font-size:13px;color:#65676B}
 .maq .ico-globe{width:12px;height:12px;stroke-width:2}
 .maq-fb .ico-pts{color:#65676B}
-.fb-texte{padding:0 12px 10px;font-size:15px;line-height:1.35}
-.maq-fb .maq-photo{aspect-ratio:1/1}
-.fb-actions{display:flex;margin:0 12px;padding:4px 0;border-top:1px solid #CED0D4}
-.fb-actions span{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;min-height:40px;font-size:13px;font-weight:600;color:#65676B;white-space:nowrap}
-.fb-actions .ico{width:19px;height:19px}
+.fb-texte{padding:0 12px 12px;font-size:15px;line-height:1.35}
+.maq-fb .maq-photo{aspect-ratio:4/5}
+.fb-actions{display:flex;gap:4px;margin:0 12px;padding:2px 0 6px;border-top:1px solid #CED0D4}
+.fb-actions span{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;min-height:40px;font-size:13px;font-weight:600;color:#65676B;white-space:nowrap}
+.fb-actions .ico{width:18px;height:18px}
 /* TikTok (le voile sombre du bas est celui de l'application : il rend le texte lisible sur la vidéo) */
 .maq-tt{background:#000000;color:#FFFFFF;aspect-ratio:9/16;border-color:#000000}
 .maq-tt .maq-photo{position:absolute;inset:0;height:100%;object-position:50% 40%}
-.maq-tt::after{content:"";position:absolute;inset:auto 0 0 0;height:48%;background:linear-gradient(0deg,rgba(0,0,0,.72),rgba(0,0,0,0));pointer-events:none}
-.tt-onglets{position:absolute;top:12px;left:0;right:0;z-index:1;display:flex;justify-content:center;gap:18px;font-size:15px;font-weight:600;color:rgba(255,255,255,.72);text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.maq-tt::after{content:"";position:absolute;inset:auto 0 52px 0;height:44%;background:linear-gradient(0deg,rgba(0,0,0,.72),rgba(0,0,0,0));pointer-events:none}
+.tt-onglets{position:absolute;top:40px;align-items:center;left:0;right:0;z-index:1;display:flex;justify-content:center;gap:18px;font-size:15px;font-weight:600;color:rgba(255,255,255,.72);text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .tt-actif{color:#FFFFFF;position:relative}
 .tt-actif::after{content:"";position:absolute;left:30%;right:30%;bottom:-6px;height:2px;border-radius:1px;background:#FFFFFF}
 .tt-incruste{position:absolute;top:24%;left:50%;transform:translateX(-50%);z-index:1;background:#FFFFFF;color:#000000;border-radius:6px;padding:4px 10px;font-size:15px;font-weight:600;white-space:nowrap}
-.tt-rail{position:absolute;right:8px;bottom:96px;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px}
+.tt-rail{position:absolute;right:8px;bottom:150px;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px}
 .tt-avatar{position:relative;width:42px;height:42px;border-radius:50%;border:1.5px solid #FFFFFF;background:#121614;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;margin-bottom:4px}
 .tt-plus{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#FE2C55;display:flex;align-items:center;justify-content:center}
 .tt-plus .ico{width:12px;height:12px;stroke-width:3}
 .maq .ico-plein{width:30px;height:30px;fill:#FFFFFF;stroke:#FFFFFF;stroke-width:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
-.tt-bas{position:absolute;left:12px;right:60px;bottom:16px;z-index:1;display:flex;flex-direction:column;gap:5px;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.tt-bas{position:absolute;left:12px;right:60px;bottom:66px;z-index:1;display:flex;flex-direction:column;gap:5px;text-shadow:0 1px 2px rgba(0,0,0,.45)}
 .tt-qui{font-size:15px;font-weight:600}
 .tt-texte{font-size:14px;line-height:1.35}
 .tt-tags{font-weight:600}
 .tt-son{display:flex;align-items:center;gap:6px;font-size:13px}
 .tt-son .ico{width:14px;height:14px}
 .tt-son span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tt-barre{position:absolute;left:0;right:0;bottom:0;z-index:1;height:2px;background:linear-gradient(90deg,#FFFFFF 35%,rgba(255,255,255,.3) 35%)}
+.tt-barre{position:absolute;left:0;right:0;bottom:52px;z-index:1;height:2px;background:linear-gradient(90deg,#FFFFFF 35%,rgba(255,255,255,.3) 35%)}
+.tt-loupe{position:absolute;right:12px;width:24px!important;height:24px!important;stroke-width:2.2!important;color:#FFFFFF}
+.tt-nav{position:absolute;left:0;right:0;bottom:0;z-index:2;height:52px;background:#000000;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:9px;color:rgba(255,255,255,.75);text-align:center}
+.tt-nav span{display:flex;flex-direction:column;align-items:center;gap:2px;white-space:nowrap;overflow:hidden}
+.tt-nav span:first-child{color:#FFFFFF}
+.tt-nav .ico{width:20px;height:20px;stroke-width:1.9}
+.tt-creer{justify-self:center;width:40px;height:26px;border-radius:7px;background:#FFFFFF;color:#000000;display:flex!important;align-items:center;justify-content:center}
+.tt-creer .ico{width:18px;height:18px;stroke-width:2.6}
 /* Publication sur la fiche Google (actualité) et fiche Google : Roboto, couleurs de l'interface de Google (aucun logo). */
 .maq-google,.maq-gm{font-family:Roboto,Arial,sans-serif;color:#1F1F1F}
 .g-tete{display:flex;align-items:center;gap:12px;padding:14px 14px 10px}
-.g-avatar,.gm-avatar{width:40px;height:40px;flex:none;border-radius:50%;background:#121614;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500}
+.g-avatar,.gm-avatar{width:40px;height:40px;flex:none;border-radius:50%;background:#1E2B24;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500}
 .g-qui{display:flex;flex-direction:column;font-size:16px;line-height:1.3;min-width:0}
 .g-qui strong{font-weight:500}
 .g-qui span{font-size:13px;color:#444746}
@@ -350,8 +376,8 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 
 /* ---------- Trois services : cartes blanches sur gris, filet. */
 .services{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
-.service{background:var(--surface);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:12px}
-.service h3{font-weight:var(--graisse-titre);font-size:var(--t-2b);line-height:var(--i-titre);letter-spacing:var(--a-titre)}
+.service{background:none;border-top:1px solid var(--encre);padding:20px 0 8px;display:flex;flex-direction:column;gap:12px}
+.service h3{font-weight:var(--graisse-titre);font-size:var(--t-3);line-height:var(--i-titre);letter-spacing:var(--a-titre)}
 .service p{font-size:var(--t-corps);line-height:var(--i-corps);color:var(--texte-doux)}
 
 /* ---------- Fonctionnement en 3 étapes (vraie séquence : chiffres en police de titre) */
@@ -427,7 +453,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 
 /* ---------- Équipe et responsabilités (sans photo, sans avatar, sans icône) ; contact direct WhatsApp (30/10/2026). */
 .equipe{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:760px}
-.personne,.responsabilite{background:var(--surface);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:8px}
+.personne,.responsabilite{background:none;border-top:1px solid var(--encre);padding:20px 0 8px;display:flex;flex-direction:column;gap:8px}
 .personne p,.responsabilite p{font-size:var(--t-corps);line-height:var(--i-corps);color:var(--texte-doux)}
 .personne .btn{align-self:flex-start;margin-top:8px}
 .responsabilite{margin-top:12px;max-width:760px}
@@ -569,7 +595,7 @@ body.clair main a:hover{color:var(--accent);text-decoration-thickness:2px}
   #haut .actions .btn{width:auto}
   .chapo{font-size:var(--t-1)}
   .tete-chapo{font-size:var(--t-1)}
-  .posts{grid-auto-columns:44%}
+  .posts{grid-auto-columns:minmax(300px,46%)}
   .fiches{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
   .services{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
   .etapes{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 32px}
@@ -595,13 +621,14 @@ body.clair main a:hover{color:var(--accent);text-decoration-thickness:2px}
   .haut-photo img{height:100%;min-height:560px;max-height:680px;object-position:40% 60%}
   #haut h1{font-size:var(--t-7)}
   html:not([lang="fr"]) #haut h1{font-size:var(--t-6)}
-  .posts{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;margin:0;padding:0;align-items:start}
+  .posts{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,340px));justify-content:start;gap:40px 32px;overflow:visible;margin:0;padding:0;align-items:start}
+  #haut h1{letter-spacing:-.028em}
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
   .offre{padding:36px 28px}
   .offre-promesse{min-height:4.7em}
   .options-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
   .urgence{padding:32px}
-  .service{padding:32px 28px}
+  .service{padding:24px 0 8px}
   .audit-bloc{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:80px}
   .audit-texte{position:sticky;top:32px}
   .rang{grid-template-columns:minmax(0,1fr)}
@@ -611,4 +638,10 @@ body.clair main a:hover{color:var(--accent);text-decoration-thickness:2px}
   #equipe .equipe,#equipe .responsabilite{grid-column:2;max-width:none}
   .faq{max-width:1200px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:80px;align-items:start}
   .faq h2{position:sticky;top:32px}
+}
+
+/* Grand écran : les quatre maquettes côte à côte, à taille de téléphone, la rangée déborde la colonne de texte. */
+@media (min-width:1320px){
+  .posts{grid-template-columns:repeat(4,minmax(0,1fr));width:min(1320px,calc(100vw - 80px));position:relative;left:50%;transform:translateX(-50%);gap:24px}
+  #exemples .mention{margin-top:32px}
 }
