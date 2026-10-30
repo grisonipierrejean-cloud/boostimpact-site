@@ -13,7 +13,7 @@
 /* Page publique de désinscription (desinscription.html#<jeton>), ouverte depuis un email de demande d'avis ou de relance d'audit : sans connexion.
    Rien n'est fait à l'ouverture (un antivirus de messagerie peut ouvrir les liens) : la personne confirme d'un clic. Styles repris de valider.html.
    Charte du site, comme l'espace (style.css, 30/10/2026, direction « A · Plein jour ») : fond clair, texte #121614, vert sapin #0A6847 pour l'action, police par --police-* (provisoire), coins de 4 à 8 px. Ni dégradé, ni pilule, ni trait coloré. */
-:root{color-scheme:light;--fond:#F2F3F1;--surface:#FFFFFF;--releve:#E8EAE7;--creux:#F2F3F1;--encre:#121614;--texte2:#2E3431;--discret:#4E5652;--bord:#7A817D;--filet:rgba(18,22,20,.12);--marque:#0A6847;--accent:#0A6847;--accent-fonce:#08553A;--attention:#7A5C00;--danger:#A61B1B;
+:root{color-scheme:light;--fond:#F2F3F1;--surface:#FFFFFF;--releve:#E8EAE7;--creux:#F2F3F1;--encre:#121614;--texte2:#2E3431;--discret:#4E5652;--bord:#7A817D;--filet:rgba(18,22,20,.12);--marque:#7CCE12;--accent:#7CCE12;--accent-fonce:#6CB80E;--attention:#7A5C00;--danger:#A61B1B;
   --police-titre:'Newsreader',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte)}
 @font-face{font-family:'Newsreader';font-weight:200 800;font-style:normal;font-display:swap;src:url(fonts/newsreader.woff2) format('woff2')}@font-face{font-family:'Hanken Grotesk';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/hanken-grotesk.woff2) format('woff2')}
 *,*::before,*::after{box-sizing:border-box}
@@ -44,20 +44,20 @@ video.visuel,img.visuel.vertical{object-fit:contain;background:#000}
 .reseau{font-size:13px;font-weight:var(--graisse-forte);color:var(--discret)}
 .texte{white-space:pre-line;overflow-wrap:anywhere;color:var(--texte2)}
 .citation{color:var(--texte2);overflow-wrap:anywhere}
-.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:var(--graisse-forte);line-height:1.25;text-align:center;text-decoration:none;background:var(--marque);color:#FFFFFF;border:1px solid var(--marque);border-radius:6px;padding:13px 18px;min-height:56px;cursor:pointer}
-.bouton:hover{background:#08553A;border-color:#08553A;color:#FFFFFF}
+.bouton{display:flex;align-items:center;justify-content:center;width:100%;font:inherit;font-size:18px;font-weight:var(--graisse-forte);line-height:1.25;text-align:center;text-decoration:none;background:var(--marque);color:#121614;border:1px solid var(--marque);border-radius:6px;padding:13px 18px;min-height:56px;cursor:pointer}
+.bouton:hover{background:#6CB80E;border-color:#6CB80E;color:#121614}
 .bouton.second{background:transparent;color:var(--encre);border-color:rgba(18,22,20,.55)}
 .bouton.second:hover{background:var(--encre);border-color:var(--encre);color:#FFFFFF}
 .lien{font:inherit;font-size:16px;font-weight:var(--graisse-forte);background:none;border:0;padding:8px 4px;min-height:44px;color:var(--texte2);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .bouton:disabled{opacity:.55;cursor:default}
-:focus-visible{outline:2px solid #0A6847;outline-offset:2px}
+:focus-visible{outline:2px solid #121614;outline-offset:2px}
 a{color:var(--encre);text-underline-offset:3px}
 .carte p>a{display:inline-flex;align-items:center;min-height:44px;font-weight:var(--graisse-forte)}
 .actions{display:flex;flex-direction:column;gap:10px}
 .f{display:flex;flex-direction:column;gap:6px}
 label{font-size:15px;font-weight:var(--graisse-forte);color:var(--texte2)}
 textarea{font:inherit;font-size:16px;line-height:1.45;color:var(--encre);background:var(--creux);border:1px solid var(--bord);border-radius:6px;padding:11px 14px;min-height:132px;width:100%;resize:vertical}
-textarea:focus-visible{border-color:#0A6847}
+textarea:focus-visible{border-color:#121614}
 #reponse{min-height:220px}
 .msg{font-size:16px;font-weight:var(--graisse-forte);color:var(--texte2)}
 .msg:empty{display:none}

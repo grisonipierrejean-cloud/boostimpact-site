@@ -17,8 +17,8 @@
   --fond:#F2F3F1;--surface:#FFFFFF;--releve:#E8EAE7;--creux:#F2F3F1;--nuit-fonce:#FFFFFF;
   --encre:#121614;--texte2:#2E3431;--discret:#4E5652;--groupe:#4E5652;
   --filet:rgba(18,22,20,.12);--bord:#7A817D;--bord-fort:rgba(18,22,20,.55);
-  --marque:#0A6847;--marque-survol:#08553A;--sur-marque:#FFFFFF;--vert:#0A6847;--bleu-texte:#0A6847;--teinte:#E8EAE7;--citron:#121614;--sur-citron:#FFFFFF;
-  --accent:#0A6847;--accent-fonce:#08553A;--attention:#7A5C00;--danger:#A61B1B;
+  --marque:#7CCE12;--marque-survol:#6CB80E;--sur-marque:#121614;--vert:#0A6847;--bleu-texte:#121614;--teinte:#E8EAE7;--citron:#121614;--sur-citron:#FFFFFF;
+  --accent:#7CCE12;--accent-fonce:#6CB80E;--attention:#7A5C00;--danger:#A61B1B;
   --focus:var(--accent);
   --r-carte:8px;--r-grande:10px;--r:6px;--r-image:8px;
   --police-titre:'Newsreader',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte);
@@ -642,7 +642,7 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .sante{display:inline-block;font-size:13px;font-weight:var(--graisse-forte);line-height:1.4;border-radius:6px;padding:2px 8px;border:1px solid var(--bord);background:var(--releve);color:var(--encre)}
 /* Santé (24/10/2026) : teintes de la charte, le mot reste écrit. Vert : contour ardoise, texte ardoise clair (8,4:1) ; orange : pastille pleine
    ardoise clair, texte bleu nuit (9,8:1) ; rouge inchangé (seule alerte forte). */
-.sante-vert{background:transparent;border-color:var(--accent);color:var(--accent)}
+.sante-vert{background:transparent;border-color:var(--accent);color:var(--encre)}
 .sante-orange{background:#FFFFFF;border-color:var(--attention);color:var(--attention)}
 .sante-rouge{background:#FBEAEA;border-color:#E7C9C9;color:var(--danger)}
 .raisons{list-style:none;margin:6px 0 0;padding:0;font-size:14px;line-height:1.4;color:var(--texte2)}
@@ -663,7 +663,7 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .a-valider [data-choix] .bouton{min-height:54px;font-size:17px}
 .a-valider[data-contenu] .bouton.second:hover{background:var(--encre);color:var(--surface)}
 .a-valider[data-contenu] .cadre{background:var(--creux);border-color:var(--filet)}
-.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:var(--accent);text-decoration-thickness:2px}
+.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:var(--encre);text-decoration-thickness:2px}
 .groupe-lib,.carte-tete h2,.entete h1{text-wrap:balance}
 @media (min-width:900px){
   .carte.a-valider{padding:34px;gap:22px}

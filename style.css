@@ -34,8 +34,8 @@
   --encre:#121614;
   --gris:#4E5652;
   --gris-clair:#F2F3F1;     /* surface : un pas de gris sous le blanc */
-  --accent:#0A6847;         /* vert sapin : actions seulement */
-  --accent-fonce:#08553A;   /* survol */
+  --accent:#7CCE12;         /* vert du logo boostimpact.agency : aplats d'action seulement (jamais en texte sur blanc) */
+  --accent-fonce:#6CB80E;   /* survol */
   --filet-clair:rgba(18,22,20,.12);
   --filet-clair-fort:rgba(18,22,20,.28);
   --champ-bord:#7A817D;     /* bord des champs : 4,0:1 sur blanc */
@@ -88,10 +88,10 @@ input,button,select,textarea{font-family:inherit}
 h1,h2,h3,h4,p,ul,ol,figure,dl,dd{margin:0}
 ul,ol{padding:0}
 a{color:inherit;text-underline-offset:4px;text-decoration-thickness:1px}
-a:hover{color:var(--accent)}
+a:hover{color:var(--encre);text-decoration-thickness:2px}
 [hidden]{display:none!important}
 ::selection{background:var(--encre);color:var(--blanc)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+:focus-visible{outline:2px solid var(--encre);outline-offset:3px}
 sup{font-size:.75em;line-height:0;vertical-align:.5em}
 li::marker{font-variant-numeric:normal}
 p{text-wrap:pretty}
@@ -103,7 +103,7 @@ h1,h2{font-weight:var(--graisse-titre);letter-spacing:var(--a-display);color:var
 h1{font-size:clamp(var(--t-5),9vw + .4rem,var(--t-8));line-height:var(--i-display)}
 h2{font-size:clamp(var(--t-4),5vw + .6rem,var(--t-6));line-height:var(--i-display)}
 h3{font-weight:var(--graisse-titre);font-size:var(--t-1);line-height:var(--i-h);letter-spacing:0;color:var(--texte)}
-.citron{color:var(--accent)}
+.citron{color:var(--encre)}
 
 .wrap{max-width:1200px;margin:0 auto;padding-left:var(--marge);padding-right:var(--marge)}
 .section{padding-top:var(--saut)}
@@ -120,9 +120,9 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 .fond-blanc,.fond-clair,.fond-nuit{background:var(--fond);color:var(--texte);padding-bottom:var(--saut)}
 
 /* ---------- Boutons : vert sapin plein (action principale), contour encre (secondaire). */
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 24px;border:1.5px solid var(--accent);border-radius:var(--r-btn);background:var(--accent);color:var(--blanc);font:inherit;font-size:var(--t-corps);font-weight:var(--graisse-moyenne);line-height:1.25;text-align:center;text-decoration:none;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
-.btn:hover,.btn-prim:hover{background:var(--accent-fonce);border-color:var(--accent-fonce);color:var(--blanc)}
-.btn-prim{background:var(--accent);border-color:var(--accent);color:var(--blanc)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 24px;border:1.5px solid var(--accent);border-radius:var(--r-btn);background:var(--accent);color:var(--encre);font:inherit;font-size:var(--t-corps);font-weight:var(--graisse-moyenne);line-height:1.25;text-align:center;text-decoration:none;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.btn:hover,.btn-prim:hover{background:var(--accent-fonce);border-color:var(--accent-fonce);color:var(--encre)}
+.btn-prim{background:var(--accent);border-color:var(--accent);color:var(--encre)}
 .btn-contour{background:var(--blanc);border-color:var(--encre);color:var(--encre)}
 .btn-contour:hover{background:var(--encre);border-color:var(--encre);color:var(--blanc)}
 .btn-blanc{background:var(--blanc);border-color:var(--encre);color:var(--encre)}
@@ -131,7 +131,7 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 .btn[disabled]{opacity:.6;cursor:default}
 @media (prefers-reduced-motion:reduce){.btn{transition:none}}
 .lien-fort{display:inline-flex;align-items:center;min-height:44px;color:var(--texte);font-weight:var(--graisse-moyenne);text-decoration:underline;text-underline-offset:5px}
-.lien-fort:hover{color:var(--accent)}
+.lien-fort:hover{color:var(--encre)}
 
 /* ---------- En-tête : blanc, filet dessous. Logo sur UNE ligne, couleur du texte (img/logo-ligne-encre.png, outils/logo_ligne.py),
    jamais réduit par le flex (flex-shrink:0). */
@@ -142,7 +142,7 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 .btn-menu{order:3;min-height:44px;padding:8px 20px;font-size:var(--t-2)}
 .menu{order:4;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:0 20px;font-size:var(--t-2);font-weight:var(--graisse-moyenne)}
 .menu a{display:inline-flex;align-items:center;min-height:40px;text-decoration:none;color:var(--encre)}
-.menu a:hover{color:var(--accent);text-decoration:underline}
+.menu a:hover{color:var(--encre);text-decoration:underline}
 .entete-simple .wrap{flex-wrap:nowrap;min-height:64px;padding-top:0;padding-bottom:0;gap:0 12px}
 .entete-simple .logo img{height:30px}
 .retour{order:3;display:inline-flex;align-items:center;min-height:44px;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--encre)}
@@ -203,7 +203,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 .mini-compte{display:flex;align-items:center;gap:8px;font-size:14px}
 .mini-avatar,.post-avatar{width:28px;height:28px;flex:none;border-radius:50%;background:var(--encre);color:var(--blanc);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
 .mini-legende{font-size:14px;line-height:1.45}
-.mini-bouton{align-self:flex-start;background:var(--accent);color:var(--blanc);border-radius:var(--r-btn);padding:7px 16px;font-size:14px;font-weight:500}
+.mini-bouton{align-self:flex-start;background:var(--accent);color:var(--encre);border-radius:var(--r-btn);padding:7px 16px;font-size:14px;font-weight:500}
 .resultat{display:flex;flex-direction:column;background:var(--gris-clair);border-radius:var(--r-carte);padding:8px 20px}
 .resultat-ligne{padding:16px 0;font-size:var(--t-corps);line-height:1.5}
 .resultat-ligne+.resultat-ligne{border-top:1px solid var(--filet-clair)}
@@ -396,7 +396,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 .offre-nom{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
 .offre-nom h3{font-weight:var(--graisse-titre);font-size:var(--t-4);line-height:var(--i-display);letter-spacing:var(--a-display)}
 .reco-lib{font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte-discret)}
-.offre.reco .reco-lib{color:var(--accent)}
+.offre.reco .reco-lib{color:var(--encre);font-weight:var(--graisse-forte);text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:4px}
 .offre-promesse{font-size:var(--t-corps);line-height:1.55;color:var(--texte-doux)}
 .prix-bloc{display:flex;flex-direction:column;gap:4px;padding-top:20px;border-top:1px solid var(--trait)}
 .prix{display:flex;align-items:baseline;gap:8px}
@@ -489,7 +489,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],select,textarea{font:inherit;font-size:var(--t-corps);color:var(--encre);background:var(--blanc);border:1px solid var(--champ-bord);border-radius:var(--r-btn);padding:12px 16px;min-height:52px;width:100%}
 input::placeholder{color:#6B716E}
 textarea{min-height:112px;line-height:var(--i-2);resize:vertical}
-input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--encre);outline-offset:1px;border-color:var(--encre)}
 .choix{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .choix .m-choix{min-height:48px;padding:8px 12px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:var(--blanc);color:var(--texte);font:inherit;font-size:var(--t-corps);font-weight:var(--graisse-moyenne);line-height:1.25;text-align:left;cursor:pointer}
 .choix .m-choix:hover{border-color:var(--texte)}
@@ -526,7 +526,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .pied-identite{font-size:var(--t-meta);line-height:1.5;color:var(--discret);max-width:820px;padding-bottom:4px}
 .pied-liens{display:flex;flex-wrap:wrap;gap:0 20px}
 .pied-liens a{display:inline-flex;align-items:center;min-height:44px;color:var(--gris)}
-.pied-liens a:hover{color:var(--accent)}
+.pied-liens a:hover{color:var(--encre)}
 
 /* ---------- Pages du parcours (merci, simulateur) : blanc, formulaire sur carte grise */
 .simple{padding-top:56px;padding-bottom:88px;display:flex;flex-direction:column;gap:24px;max-width:760px}
@@ -543,7 +543,7 @@ body:has(>main>.simple){min-height:100vh;min-height:100svh;display:flex;flex-dir
 body:has(>main>.simple)>main{flex:1 0 auto}
 
 /* ---------- Pages légales : fond blanc */
-body.clair main a:hover{color:var(--accent);text-decoration-thickness:2px}
+body.clair main a:hover{color:var(--encre);text-decoration-thickness:2px}
 .juridique{max-width:760px;padding-top:44px;padding-bottom:56px;display:flex;flex-direction:column;gap:16px;color:var(--texte-doux);overflow-wrap:anywhere}
 .juridique h1{font-size:clamp(var(--t-4),6vw + .8rem,var(--t-6));line-height:var(--i-display);color:var(--texte)}
 .juridique h2{font-size:var(--t-3);line-height:var(--i-titre);margin-top:24px;color:var(--texte)}
@@ -737,7 +737,7 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 #services h2{color:var(--blanc);font-size:clamp(2.2rem,8.6vw,2.8rem);line-height:1.04;letter-spacing:-.03em;max-width:16ch;font-variation-settings:"opsz" 72}
 #services .services{counter-reset:svc;gap:0}
 #services .service{counter-increment:svc;border-top:1px solid rgba(255,255,255,.22);padding:28px 0 28px;gap:12px}
-#services .service::before{content:counter(svc,decimal-leading-zero);font-family:var(--police-titre);font-size:var(--t-5);line-height:1;color:#7FBF9F;font-variant-numeric:lining-nums}
+#services .service::before{content:counter(svc,decimal-leading-zero);font-family:var(--police-titre);font-size:var(--t-5);line-height:1;color:var(--accent);font-variant-numeric:lining-nums}
 #services .service h3{color:var(--blanc);font-size:var(--t-3);line-height:1.15}
 #services .service p{color:rgba(255,255,255,.76)}
 @media (min-width:760px){
