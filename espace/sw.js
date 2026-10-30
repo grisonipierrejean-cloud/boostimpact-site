@@ -12,7 +12,7 @@ const RESEAU_DABORD = ["", "index.html", "app.js", "i18n.js", "acces.js", "donne
 const CACHE_DABORD = ["fonts/newsreader.woff2", "fonts/hanken-grotesk.woff2",
   "fonts/bricolage.ttf", "fonts/figtree.ttf", "fonts/playfair.ttf", "fonts/dmsans.ttf", "fonts/fraunces.ttf", "fonts/nunito.ttf", "fonts/oswald.ttf",
   "fonts/karla.ttf", "fonts/dmserif.ttf", "fonts/manrope.ttf", "fonts/fredoka.ttf", "fonts/zillaslab.ttf",
-  "icones/icone-192.png", "icones/icone-512.png", "icones/apple-touch-icon.png", "icones/favicon-32.png", "icones/logo-ligne-encre.png"];
+  "icones/icone-192.png", "icones/icone-512.png", "icones/apple-touch-icon.png", "icones/favicon-32.png", "icones/logo-ligne-encre.png?v=pascal"];
 const PRECHARGE = ["index.html", "app.js", "i18n.js", "acces.js", "marque.js", "donnees.js", "config.js", "style.css", "manifest.webmanifest", "vendor/qrcode.js", "vendor/temps-forts.js", "vendor/supabase.js",
   "fonts/newsreader.woff2", "fonts/hanken-grotesk.woff2", "icones/icone-192.png", "icones/apple-touch-icon.png"];
 const PORTEE = new URL("./", self.location).href;

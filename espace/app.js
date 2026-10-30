@@ -297,11 +297,11 @@
     sous.innerHTML = secs.length > 1 ? secs.map(r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : r === "avis" && route === "collecte" ? ' aria-current="true"' : ""}><span>${ECRANS[r]}</span>${COMPTE_ECRAN[r] ? compte(COMPTE_ECRAN[r]) : ""}</a>`).join("") : "";
     sous.setAttribute("aria-label", actif.nom);
     if (large.matches) {
-      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
+      lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
         <div class="groupe groupe-reglages">${lienGroupe(REGLAGES)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
       return;
     }
-    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}<nav class="haut-reglages" aria-label="${REGLAGES.nom}">${lienGroupe(REGLAGES, true)}</nav>`;
+    haut.innerHTML = `<a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><span class="haut-note" id="haut-offre">${offreNom ? t("offre.nom", { nom: e(offreNom) }) : ""}</span>${I.selecteur()}<nav class="haut-reglages" aria-label="${REGLAGES.nom}">${lienGroupe(REGLAGES, true)}</nav>`;
     onglets.setAttribute("aria-label", t("nav.espace"));
     onglets.innerHTML = GROUPES.map(g => lienGroupe(g, true)).join("");
   }
@@ -1822,7 +1822,7 @@
   // (déconnexion, puis le formulaire de connexion). Même écran que la console pour un commerçant (console.js, refuse).
   function reserveCommercants() {
     connecte = false; derniere = null; dessinerNav();
-    vue.innerHTML = `<div class="connexion"><div class="carte" id="acces-reserve"><div class="connexion-tete"><p class="logo" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png" width="482" height="80" alt="boost impact."></p>${I.selecteur()}</div>
+    vue.innerHTML = `<div class="connexion"><div class="carte" id="acces-reserve"><div class="connexion-tete"><p class="logo" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></p>${I.selecteur()}</div>
       <div class="entete"><h1>${t("con.refuse.titre")}</h1><p class="chapo">${t("esp.admin.texte")}</p></div>
       <a class="bouton plein" href="${I.lien("console.html")}">${t("esp.admin.console")}</a><button type="button" class="bouton second plein" id="autre-compte">${t("acces.autre.compte")}</button></div></div>`;
     $("autre-compte").onclick = async () => { await D.quitter(); aller("accueil"); };
