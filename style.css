@@ -778,7 +778,7 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 @media (min-width:1040px){#haut .haut-prix{font-size:var(--t-1)}}
 #haut .btn-contour:hover{background:var(--accent);color:var(--encre);border-color:var(--accent)}
 /* Maquettes : nom du commerce flouté, comme une vraie capture anonymisée. */
-.g-qui strong,.ig-qui strong,.fb-qui strong,.tt-qui,.tt-son span,.ig-texte>strong:first-child,.gm-nom,.mini-compte strong,.g-avatar,.ig-avatar span,.fb-avatar,.tt-avatar,.mini-avatar{filter:blur(5px);user-select:none}
+.g-qui strong,.ig-qui strong,.fb-qui strong,.tt-qui,.tt-son span,.ig-texte>strong:first-child,.gm-nom,.gm-flou,.mini-compte strong,.g-avatar,.ig-avatar span,.fb-avatar,.tt-avatar,.mini-avatar{filter:blur(5px);user-select:none}
 /* Offres : liste, notes et « De votre côté » dans un même bloc ; plus de trou au milieu d'une carte. */
 .offre-bas{display:flex;flex-direction:column;gap:20px}
 @media (min-width:1040px){
@@ -800,7 +800,10 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 .wa-bouton svg path+path{fill:currentColor;stroke:none}
 .wa-bouton span{display:none}
 @media (min-width:1040px){.wa-bouton span{display:inline}.wa-bouton{padding:0 16px;min-height:44px}}
+/* Mobile (31/10) : pas de pastille WhatsApp dans l'en-tête ; un lien texte sous les boutons du haut. */
+.wa-lien{display:none}
 @media (max-width:759px){
-  .entete:not(.entete-simple) .menu{flex:1 0 calc(100% - 56px);align-items:center}
-  .entete:not(.entete-simple) .wa-bouton{order:5;margin-left:auto;min-height:40px;min-width:44px;padding:0 12px}
+  .entete:not(.entete-simple) .wa-bouton{display:none}
+  .wa-lien{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;color:#fff;font-size:var(--t-corps);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+  .wa-lien svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 }
