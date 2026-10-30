@@ -4,10 +4,10 @@
    blanc, jamais orange), « en retard / rouge » en #A61B1B (--danger). Plus d'or, plus de bleu nuit. Un seul thème, clair.
    Contrastes sur blanc : encre 18,3:1, gris 7,6:1, vert 6,8:1 ; sur le fond #F2F3F1 : 16,4:1, 6,8:1, 6,1:1 ; filet des champs #7A817D 4,0:1 sur blanc, 3,6:1 sur le fond (WCAG 1.4.11).
    (Les noms --marque, --citron et --vert sont gardés : mêmes rôles, valeurs de la nouvelle charte.)
-   POLICE (choix de PJ du 30/10/2026) : Young Serif pour les titres (400 seulement, fonts/young-serif.woff2) et Hanken Grotesk pour le texte
-   (400 / 500 / 600, fonts/hanken-grotesk.woff2), licences SIL OFL 1.1 (fonts/OFL-young-serif.txt, fonts/OFL-hanken-grotesk.txt), nommées
+   POLICE (31/10/2026, alignée sur le site) : Newsreader pour les titres (400, fonts/newsreader.woff2, OFL : fonts/OFL-newsreader.txt) et Hanken Grotesk pour le texte
+   (400 / 500 / 600, fonts/hanken-grotesk.woff2), licences SIL OFL 1.1 (fonts/OFL-newsreader.txt, fonts/OFL-hanken-grotesk.txt), nommées
    seulement par --police-titre / --police-texte ; graisses --graisse-titre / --graisse-texte / --graisse-moyenne / --graisse-forte. Chiffres
-   alignés (lining-nums) sur les titres : les chiffres de Young Serif sont elzéviriens par défaut. Changer de police = remplacer les woff2,
+   alignés (lining-nums) sur les titres : chiffres alignés imposés. Changer de police = remplacer les woff2,
    les @font-face et ces variables, rien d'autre.
    Les polices des aperçus de marque du commerce (Bricolage, Figtree, couples.json) ne sont pas celles de l'interface et ne changent pas.
    Interdits (charte du site) : dégradé décoratif, pilule, ombre portée, trait coloré devant un libellé, orange ou terracotta, effet verre,
@@ -21,10 +21,10 @@
   --accent:#0A6847;--accent-fonce:#08553A;--attention:#7A5C00;--danger:#A61B1B;
   --focus:var(--accent);
   --r-carte:8px;--r-grande:10px;--r:6px;--r-image:8px;
-  --police-titre:'Young Serif',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte);
+  --police-titre:'Newsreader',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte);
   --serif:var(--titre);
 }
-@font-face{font-family:'Young Serif';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/young-serif.woff2) format('woff2')}@font-face{font-family:'Hanken Grotesk';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/hanken-grotesk.woff2) format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:200 800;font-style:normal;font-display:swap;src:url(fonts/newsreader.woff2) format('woff2')}@font-face{font-family:'Hanken Grotesk';font-weight:400 600;font-style:normal;font-display:swap;src:url(fonts/hanken-grotesk.woff2) format('woff2')}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%;background:var(--fond);font-synthesis-weight:none}
