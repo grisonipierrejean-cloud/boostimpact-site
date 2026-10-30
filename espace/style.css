@@ -813,7 +813,7 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 
 /* ---------- Cockpit de la console (29/10/2026, demande de PJ). Premier écran : une phrase d'état en Source Serif 4 (le seul élément fort de la page),
    puis des chiffres posés sur une seule bande (pas de cartes empilées), des blocs sobres. Couleurs de la charte seulement : ivoire, gris, ardoise
-   claire #B9C6DD pour « en ordre », or #C4B385 pour « bientôt » (texte et filet de 4 px, jamais en aplat), rouge #FFB0B0 de la santé « Rouge » pour
+   claire #B9C6DD pour « en ordre », or (var(--or)) pour « bientôt » (texte et filet de 4 px, jamais en aplat), rouge #FFB0B0 de la santé « Rouge » pour
    « en retard » (8,4:1 sur la surface). Aucun trait coloré devant un libellé, aucune majuscule d'étiquette, aucun dégradé. */
 .ck-entete{flex-direction:row;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
 .ck-periode{align-self:auto;flex:0 1 auto}
@@ -857,7 +857,7 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 .ck-g-eng{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;font-size:15px}
 .ck-barre{height:4px;border-radius:2px;background:rgba(246,244,239,.12);overflow:hidden}
 .ck-barre span{display:block;height:100%;background:var(--texte2)}
-.ck-risque .ck-barre span{background:var(--or)}
+.ck-risque .ck-barre span{height:0;border-top:4px solid var(--or)}   /* filet or de 4 px, jamais un aplat (moteur/tests/test_couleur_or.py) */
 .ck-depasse .ck-barre span{background:#FFB0B0}
 .ck-pause .ck-barre span{background:var(--discret)}
 /* Contrôles : glyphe d'état, titre, état en clair, détail. */

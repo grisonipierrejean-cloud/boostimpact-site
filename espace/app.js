@@ -159,11 +159,15 @@
   // Un cadre sobre qui rappelle la publication sur chaque réseau. Aucun logo de marque : le nom du réseau suffit.
   const ORDRE_RES = ["instagram", "facebook", "google", "tiktok"];
   const vus = new Map(), choixRes = {};   // contenu affiché (id -> {x, u, v}) ; réseau choisi par contenu
-  let nomCommerce = "";
+  let nomCommerce = "", commerceVu = null;
+  // Réseaux d'un contenu pour le commerce affiché (30/10/2026, bug vu par PJ) : format ET offre ET réseaux retenus. Essentiel : la fiche Google seule,
+  // donc aucun onglet ni aucune mention d'Instagram, Facebook ou TikTok. Croissance et Premium : leurs réseaux retenus, plus la fiche Google.
+  const resDe = x => M.reseauxDuContenu(x, commerceVu ? window.RENOM_RESEAUX_AUTORISES(commerceVu) : null);
+  const resChoisi = id => { const l = resDe(vus.get(id).x); return l.includes(choixRes[id]) ? choixRes[id] : ORDRE_RES.find(k => l.includes(k)) || "google"; };
   function cadre(id) {
-    const { x, u: u45, v, u9 } = vus.get(id), r = choixRes[id] || "instagram", f = M.formatDe(x), vertical = f !== "publication" || r === "tiktok";
+    const { x, u: u45, v, u9 } = vus.get(id), r = resChoisi(id), f = M.formatDe(x), vertical = f !== "publication" || r === "tiktok";
     const u = r === "tiktok" && M.photoPublication(x) ? u9 : u45;   // TikTok : le visuel 9:16 qui part réellement, jamais le 4:5 dans un cadre vertical
-    if (!M.reseauxPour(x).includes(r)) return `<div class="cadre-vide"><p class="texte2">${t(f === "video" ? "cadre.video.google" : "cadre.story.google")}</p><p class="note">${t("cadre.choisir")}</p></div>`;
+    if (!resDe(x).includes(r)) return `<div class="cadre-vide"><p class="texte2">${t(f === "video" ? "cadre.video.google" : "cadre.story.google")}</p><p class="note">${t("cadre.choisir")}</p></div>`;
     const l = M.legendeDe(x, r), n = M.longueur(l), lim = r === "google" ? M.LIMITE_GOOGLE : 0;
     const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
     const tete = `<div class="cadre-tete"><span class="avatar" aria-hidden="true">${e((nomCommerce || "R").charAt(0).toUpperCase())}</span><span class="cadre-nom">${e(nomCommerce)}</span><span class="cadre-res">${RES[r]}${f === "story" ? t("cadre.story") : ""}</span></div>`;
@@ -173,12 +177,13 @@
       <p class="note" data-compte>${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) + (n > lim ? t("car.trop.google") : "") : ""}</p>`;
   }
   function blocReseaux(x, u, v, u9) {
-    vus.set(x.id, { x, u, v, u9 }); const r = choixRes[x.id] || "instagram", modifiable = (x.statut === "a_valider" || x.statut === "approuve") && M.reseauxPour(x).includes(r);
+    vus.set(x.id, { x, u, v, u9 }); const r = resChoisi(x.id), modifiable = (x.statut === "a_valider" || x.statut === "approuve") && resDe(x).includes(r);
     // Onglets : seulement les réseaux où ce format peut partir (24/10/2026) : ni vidéo ni story sur la fiche Google, donc pas d'onglet « Fiche Google ».
-    const ordre = ORDRE_RES.filter(k => M.reseauxPour(x).includes(k));
+    // Un seul réseau (Essentiel : la fiche Google) : aucun onglet, le cadre seul.
+    const ordre = ORDRE_RES.filter(k => resDe(x).includes(k)), onglets = ordre.length > 1;
     return `<div class="reseaux" data-reseaux="${e(x.id)}">
-      <div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}">${RES[k]}</button>`).join("")}</div>
-      <div class="res-panneau" role="tabpanel" aria-labelledby="t-${e(x.id)}-${r}">${cadre(x.id)}</div>
+      ${onglets ? `<div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}">${RES[k]}</button>`).join("")}</div>` : ""}
+      <div class="res-panneau"${onglets ? ` role="tabpanel" aria-labelledby="t-${e(x.id)}-${r}"` : ""}>${cadre(x.id)}</div>
       ${modifiable ? `<div class="f" data-edition hidden><label for="leg-${e(x.id)}">${t("leg.pour", { res: RES[r] })}</label><textarea id="leg-${e(x.id)}" class="haut-texte" data-texte-legende${lc()}></textarea>
         <p class="note" data-compte-edition aria-live="polite"></p>
         <div class="actions"><button type="button" class="bouton petit" data-a="leg-enregistrer">${t("leg.enregistrer")}</button><button type="button" class="lien" data-a="leg-annuler">${t("annuler")}</button></div></div>
@@ -189,7 +194,8 @@
   // 4:5 pour Instagram, Facebook et Google ; 9:16 pour TikTok (metricool_api.chemin_media). Story et vidéo : un seul fichier, rien à montrer de plus.
   const fig = (u, alt, res, fmt, cls) => `<figure class="format ${cls}">${u ? `<img src="${e(u)}" alt="${alt}">` : `<div class="format-vide"><p class="note">${t("apercu.indispo")}</p></div>`}
     <figcaption><span class="fort">${res}</span><span class="note">${fmt}</span></figcaption></figure>`;
-  const formatsPublies = (x, u, u9) => M.photoPublication(x) ? `<details class="formats" aria-label="${t("fmt.titre")}"><summary class="fort">${t("fmt.titre")}</summary>
+  // Sans TikTok (Essentiel : fiche Google seule ; ou TikTok non retenu) : un seul visuel part, pas de bloc « Ce qui part sur chaque réseau ».
+  const formatsPublies = (x, u, u9) => M.photoPublication(x) && resDe(x).includes("tiktok") ? `<details class="formats" aria-label="${t("fmt.titre")}"><summary class="fort">${t("fmt.titre")}</summary>
     <div class="formats-rangee">${fig(u, t("fmt.alt.45"), t("fmt.res.45"), t("fmt.45"), "f45")}${fig(u9, t("fmt.alt.916"), t("fmt.res.916"), t("fmt.916"), "f916")}</div>
     <p class="note">${t("fmt.note")}</p></details>` : "";
   const compteEdition = (r, x) => { const n = M.longueur(x), lim = r === "google" ? M.LIMITE_GOOGLE : 0; return `${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) : ""}${lim && n > lim ? t("car.trop.google.phrase") : ""}`; };
@@ -201,7 +207,7 @@
   async function programmerAuto(id) {
     const [x, cpt] = await Promise.all([D.contenus().then(l => l.find(y => y.id === id)), D.comptes()]);
     if (!x) throw new Error(t("err.contenu.introuvable"));
-    const res = cpt.filter(k => k.etat === "connecte").map(k => k.reseau).filter(r => M.reseauxPour(x).includes(r));
+    const res = cpt.filter(k => k.etat === "connecte").map(k => k.reseau).filter(r => resDe(x).includes(r));
     if (!res.length) throw new Error(t("err.aucun.reseau"));
     const quand = await D.programmerAuto(id, res); approuveRecent = null;
     return t("auto.programme", { quand: I.dateHeureDans(quand), res: res.map(r => RES[r]).join(", ") });
@@ -226,12 +232,12 @@
     const auto = ev.target.closest("[data-auto]");
     if (auto) { auto.disabled = true; try { const m = await programmerAuto(auto.dataset.auto); await ecranCourant(); msg(m); majCompteurs(); } catch (er) { auto.disabled = false; msg(ph(er.message)); } return; }
     const a = ev.target.closest("[data-a^='leg-']"); if (!a) return;
-    const b = a.closest("[data-reseaux]"), id = b.dataset.reseaux, r = choixRes[id] || "instagram", ed = b.querySelector("[data-edition]"), ta = b.querySelector("[data-texte-legende]"), bt = b.querySelector(".leg-modifier");
+    const b = a.closest("[data-reseaux]"), id = b.dataset.reseaux, r = resChoisi(id), ed = b.querySelector("[data-edition]"), ta = b.querySelector("[data-texte-legende]"), bt = b.querySelector(".leg-modifier");
     if (a.dataset.a === "leg-modifier") { ta.value = M.legendeDe(vus.get(id).x, r); b.querySelector("[data-compte-edition]").textContent = compteEdition(r, ta.value); ed.hidden = false; bt.hidden = true; ta.focus(); return; }
     if (a.dataset.a === "leg-annuler") { ed.hidden = true; bt.hidden = false; bt.focus(); return; }
     try { await D.modifierLegende(id, r, ta.value); await ecranCourant(); msg(t("leg.enregistree", { res: RES[r] })); } catch (er) { msg(ph(er.message)); }
   });
-  vue.addEventListener("input", ev => { const ta = ev.target.closest("[data-texte-legende]"); if (!ta) return; const b = ta.closest("[data-reseaux]"); b.querySelector("[data-compte-edition]").textContent = compteEdition(choixRes[b.dataset.reseaux] || "instagram", ta.value); });
+  vue.addEventListener("input", ev => { const ta = ev.target.closest("[data-texte-legende]"); if (!ta) return; const b = ta.closest("[data-reseaux]"); b.querySelector("[data-compte-edition]").textContent = compteEdition(resChoisi(b.dataset.reseaux), ta.value); });
   vue.addEventListener("keydown", ev => {
     const k = ev.target.closest("[data-res]"); if (!k || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(ev.key)) return; ev.preventDefault();
     const b = k.closest("[data-reseaux]"), ordre = [...b.querySelectorAll("[role=tab][data-res]")].map(x => x.dataset.res), n = ordre.length, i = ordre.indexOf(k.dataset.res);
@@ -434,7 +440,7 @@
     const nonLus = await retoursNonLus();
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
-    nomCommerce = c.nom;
+    nomCommerce = c.nom; commerceVu = c;
     const aValider = ct.filter(x => x.statut === "a_valider"), reponses = av.filter(x => x.statut === "a_valider" && !x.sensible), humains = av.filter(x => x.statut === "humain");
     const prochaines = cal.filter(x => x.statut === "programme").slice(0, 3), vign = await Promise.all(prochaines.map(x => urlSure(x.contenu)));
     // Sous-titre : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires) et leur durée (environ 40 secondes chacune).
@@ -779,7 +785,7 @@
   }
   async function contenus() {
     const [c, l] = await Promise.all([D.commerce(), D.contenus()]), nbf = Object.fromEntries(FILTRES.map(f => [f[0], l.filter(x => famille(x) === f[0]).length]));
-    nomCommerce = c.nom;
+    nomCommerce = c.nom; commerceVu = c;
     if (!filtre) filtre = (FILTRES.find(f => nbf[f[0]]) || FILTRES[0])[0];
     const liste = l.filter(x => famille(x) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
