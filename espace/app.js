@@ -466,7 +466,8 @@
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p>${ligneSemaine(c, av, cal, cm)}${offreAccueil(c)}</div>
-        <a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div>
+        <div class="gestes-accueil"><a class="bouton grand" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
+          ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div></div>
       <p class="msg" id="msg" role="status"></p>
       <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map(a => `<li>${a.vers ? `<button type="button" class="bouton second" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
@@ -550,7 +551,11 @@
   async function photos() {
     const [c, l, k] = await Promise.all([D.commerce(), D.photos(), D.compteur().catch(() => null)]);
     const g = sansReseaux(c), plein = g && k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond;
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}
+    // Raccourci vers la carte vidéo (30/10/2026) : sur téléphone, elle est à plus d'un écran sous les photos ; offre sans vidéo : vers son explication.
+    const versVideo = g || !k ? "" : +k.videos_plafond > 0
+      ? `<p class="texte2" id="vers-video">${t("photos.vers.video", { a: k.videos_utilisees || 0, b: k.videos_plafond })} <a href="#/photos?video" data-vers-video>${t("photos.vers.video.lien")}</a></p>`
+      : `<p class="note" id="vers-video">${t("photos.vers.video.sans")} <a href="#/photos?video" data-vers-video>${t("photos.vers.video.sans.lien")}</a></p>`;
+    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}${versVideo}
       ${plein ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: (new Date().getMonth() + 1) % 12 })}</p>
         <p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
       ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>
@@ -605,6 +610,8 @@
       majCompteurs();
     };
     brancherDepotVideo(); await brancherVideoAvis();
+    document.querySelectorAll("[data-vers-video]").forEach(a => { a.onclick = ev => { if (!$("depot-video")) return; ev.preventDefault(); $("depot-video").scrollIntoView({ block: "start" }); }; });
+    if (/video/.test(paramRoute) && $("depot-video")) $("depot-video").scrollIntoView({ block: "start" });
     if (/autorisation/.test(paramRoute) && $("autorisation-photos")) { $("autorisation-photos").scrollIntoView({ block: "start" }); $("aut-case").focus({ preventScroll: true }); }
   }
   // Après un envoi réussi : la suite en une phrase, avec le lien vers les contenus de l'onglet « À valider ». Délai : seulement celui que l'offre promet (« Premier contenu proposé

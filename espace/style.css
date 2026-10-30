@@ -93,7 +93,7 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .haut .langues+.quitter{margin-left:0}
 .haut-note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Sous 420 px, l'offre (espace) ou « Console » ne tient plus qu'en « Offre Premi… » ou « C… » : masquée (24/10/2026). L'offre reste sur l'accueil et l'écran Offre. */
-@media (max-width:419px){.haut-note{display:none}}
+@media (max-width:419px){.haut-note{display:none}.haut .logo-img{height:26px}}
 .connexion-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-6px -6px -6px 0}
 .lat-pied{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 0 12px}
 .lat-pied .quitter{margin-top:0;padding:0 4px}
@@ -264,6 +264,7 @@ legend{padding:0;margin-bottom:4px}
 /* ---------- Accueil */
 .entete-accueil{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 24px}
 .entete-accueil .entete{flex:1 1 280px}
+.gestes-accueil{display:flex;flex-wrap:wrap;gap:8px}
 /* Offre souscrite sous le titre de l'accueil (26/10/2026) : un filet fin, le nom, une ligne, un lien. Ni badge, ni couleur d'accent. */
 .offre-accueil{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--filet);max-width:640px;font-size:15px;line-height:1.45}
 .apercu{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;align-items:start}

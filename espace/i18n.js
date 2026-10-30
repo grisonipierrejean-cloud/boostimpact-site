@@ -1677,9 +1677,16 @@
     "con.sty.ligne.demandes": [v => v.n > 1 ? `${v.n} changements demandés` : "Changement demandé", v => v.n > 1 ? `${v.n} changes requested` : "Change requested", v => v.n > 1 ? `${v.n} wijzigingen gevraagd` : "Wijziging gevraagd"],
     "con.sty.ouvrir": ["Style du commerce", "Business style", "Stijl van de zaak"],
     // ---- Dépôt de vidéos (écran Photos et vidéos, console)
-    "dv.titre": ["Déposer des vidéos", "Upload videos", "Video's opladen"],
-    "dv.chapo": ["Filmez quelques plans courts : nous les montons en une vidéo verticale pour Instagram, Facebook et TikTok. Elle arrive dans « À valider », comme vos autres contenus.",
-      "Film a few short shots: we edit them into one vertical video for Instagram, Facebook and TikTok. It arrives in “To approve”, like your other content.", "Film enkele korte shots: wij monteren ze tot één verticale video voor Instagram, Facebook en TikTok. Ze komt bij “Goed te keuren” terecht, zoals uw andere posts."],
+    "dv.titre": ["Créer une vidéo (réel)", "Create a video (reel)", "Een video maken (reel)"],
+    "dv.chapo": ["Filmez quelques plans courts avec votre téléphone et envoyez-les ici : nous en faisons le montage, une vidéo verticale au format des réels Instagram, Facebook et TikTok. Elle arrive dans « À valider », comme vos autres contenus.",
+      "Film a few short shots with your phone and send them here: we edit them into one vertical video in the reel format of Instagram, Facebook and TikTok. It arrives in “To approve”, like your other content.", "Film enkele korte shots met uw telefoon en stuur ze hier: wij monteren ze tot één verticale video in het reelformaat van Instagram, Facebook en TikTok. Ze komt bij “Goed te keuren” terecht, zoals uw andere posts."],
+    // Raccourci vers la carte vidéo (30/10/2026, constat du fondateur : « je ne trouve pas comment créer une vidéo ») : bouton de l'accueil et ligne en
+    // haut de l'écran Photos ; la carte vidéo est sous les photos, à plus d'un écran de défilement sur téléphone.
+    "acc.creer.video": ["Créer une vidéo", "Create a video", "Een video maken"],
+    "photos.vers.video": [v => `Une vidéo pour vos réseaux (réel) ? Filmez quelques plans, nous faisons le montage. Ce mois-ci : ${v.a} sur ${v.b}.`, v => `A video for your social media (reel)? Film a few shots, we do the editing. This month: ${v.a} of ${v.b}.`, v => `Een video voor uw sociale media (reel)? Film enkele shots, wij doen de montage. Deze maand: ${v.a} van ${v.b}.`],
+    "photos.vers.video.lien": ["Créer une vidéo", "Create a video", "Een video maken"],
+    "photos.vers.video.sans": ["Les vidéos (réels) ne sont pas comprises dans votre offre : elles le sont dans l'offre {offre:premium}.", "Videos (reels) aren't included in your plan: they are in the {offre:premium} plan.", "Video's (reels) zijn niet inbegrepen in uw formule: wel in de formule {offre:premium}."],
+    "photos.vers.video.sans.lien": ["En savoir plus", "Learn more", "Meer weten"],
     "dv.compteur": ["Vidéos ce mois-ci : {a} sur {b}", "Videos this month: {a} of {b}", "Video's deze maand: {a} van {b}"], "dv.compteur.attente": [v => `, dont ${v.n} en préparation`, v => `, including ${v.n} in progress`, v => `, waarvan ${v.n} in voorbereiding`],
     "dv.sans.titre": ["Vidéos", "Videos", "Video's"],
     "dv.sans.texte": ["Votre offre {offre} ne comprend pas de vidéo. L'offre {offre:premium} en comprend {v} par mois, de 60 secondes au plus : vous filmez, nous montons.",
@@ -1764,6 +1771,9 @@
       "Videos filmed by businesses, to be edited. A stuck or rejected upload can be restarted as long as its original videos haven't been deleted.", "Video's die de handelaars hebben gefilmd, te monteren. Een vastgelopen of geweigerde upload kan opnieuw gestart worden zolang de originele video's niet gewist zijn."],
     "con.col.depot": ["Dépôt", "Upload", "Upload"], "con.col.fichiers": ["Fichiers", "Files", "Bestanden"], "con.col.statut": ["Statut", "Status", "Status"],
     "con.relancer": ["Relancer le montage", "Restart editing", "Montage opnieuw starten"], "con.relance.ok": ["Montage relancé.", "Editing restarted.", "Montage opnieuw gestart."], "con.aucun.depot": ["Aucun dépôt de vidéos.", "No video uploads.", "Geen video-uploads."],
+    "con.videos.client": [v => `Le client demande ses vidéos lui-même, dans son espace : onglet Photos, carte « Créer une vidéo (réel) » (${v.b} par mois dans son offre). Le montage est automatique ; ici, vous suivez ses dépôts et relancez un montage bloqué.`,
+      v => `The client requests videos themselves, in their space: Photos tab, “Create a video (reel)” card (${v.b} a month in their plan). Editing is automatic; here you follow their uploads and restart a stuck edit.`,
+      v => `De klant vraagt zijn video's zelf aan, in zijn ruimte: tabblad Foto's, kaart “Een video maken (reel)” (${v.b} per maand in zijn formule). De montage is automatisch; hier volgt u zijn uploads en start u een vastgelopen montage opnieuw.`],
     "con.essais": [v => `${v.n} ${pl(v.n, "relance", "relances")}`, v => `${v.n} ${en1(v.n, "restart", "restarts")}`, v => `${v.n} keer opnieuw gestart`],
     // ---- Mise en route claire et travail visible (27/10/2026, audit du parcours, constats 1, 3, 8 à 12, 14, 21 à 23, 31 à 34)
     "nom.offre": ["Votre offre activée", "Your active plan", "Uw actieve formule"],
