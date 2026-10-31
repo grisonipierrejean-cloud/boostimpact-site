@@ -305,6 +305,9 @@ legend{padding:0;margin-bottom:4px}
 .filtres a{flex:0 0 auto;display:inline-flex;align-items:center;white-space:nowrap;font-weight:var(--graisse-forte);border-radius:8px;padding:8px 14px;min-height:44px;color:var(--discret);text-decoration:none}
 .filtres a:hover{color:var(--encre);background:var(--releve)}
 .filtres a[aria-current]{color:var(--sur-marque);font-weight:var(--graisse-forte);background:var(--marque)}
+/* Sélecteur « Photos » / « Vidéo » en haut de l'écran Photos (31/10/2026) : deux moitiés égales, 48 px de haut (cible tactile au moins 44 px). */
+.filtres.bascule{display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:visible}
+.filtres.bascule a{justify-content:center;min-height:48px;padding:8px 16px}
 /* « À faire » (26/10/2026, garantie des 24 h tenue à deux) : charge du jour, prénom de l'appareil, « Je prends ». Séparation par un filet neutre,
    jamais de trait coloré devant un libellé. */
 .console .charge{margin:4px 0 2px;font-size:17px;line-height:1.4}
@@ -429,6 +432,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
   .demo{grid-column:2;grid-row:1;padding:0 40px}
   .demo-long{display:inline}
   #vue{grid-column:2;grid-row:3;padding:40px 40px 64px;gap:24px;max-width:1280px}
+  #vue-photos,#vue-video{gap:24px}
   .sous:not(:empty)+#vue{padding-top:24px}
   .carte-tete .bouton.petit{padding:8px 14px;font-size:15px}
   .hors-session #vue{max-width:none;padding:48px 24px 56px}
@@ -535,7 +539,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 /* Aperçu au format du réseau */
 .reseaux{display:flex;flex-direction:column;gap:10px;min-width:0}
 .res-onglets{display:flex;flex-wrap:wrap;gap:0 16px;border-bottom:1px solid var(--filet)}
-.res-onglets button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;min-height:44px;color:var(--discret);cursor:pointer}
+.res-onglets button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;min-height:44px;min-width:44px;color:var(--discret);cursor:pointer}
 .res-onglets button:hover{color:var(--encre)}
 .res-onglets button[aria-selected=true]{color:var(--encre);font-weight:var(--graisse-forte);border-bottom-color:var(--accent)}
 .res-panneau{display:flex;flex-direction:column;gap:6px;min-width:0}

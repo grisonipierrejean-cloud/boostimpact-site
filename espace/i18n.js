@@ -386,6 +386,9 @@
     "car.sur": [" sur {lim} au plus", " (max. {lim})", " (max. {lim})"], "car.trop.google": [", trop long pour la fiche Google", ", too long for the Google profile", ", te lang voor het Google-profiel"],
     "car.trop.google.phrase": [". Trop long pour la fiche Google.", ". Too long for the Google profile.", ". Te lang voor het Google-profiel."],
     "res.onglets": ["Aperçu par réseau", "Preview by network", "Voorbeeld per netwerk"], "leg.pour": ["Légende pour {res}", "Caption for {res}", "Bijschrift voor {res}"], "leg.enregistrer": ["Enregistrer la légende", "Save caption", "Bijschrift opslaan"],
+    "res.memes": ["Même légende sur {res}.", "Same caption on {res}.", "Hetzelfde bijschrift op {res}."], "cadre.story.seule": ["Story", "Story", "Story"],
+    "leg.commune": ["Légende pour tous ces réseaux", "Caption for all these networks", "Bijschrift voor al deze netwerken"], "leg.modifier.commune": ["Modifier la légende", "Edit the caption", "Het bijschrift aanpassen"], "leg.un.reseau": ["Modifier un seul réseau", "Edit one network only", "Eén netwerk aanpassen"],
+    "leg.enregistree.commune": ["Légende enregistrée pour {res}.", "Caption saved for {res}.", "Bijschrift opgeslagen voor {res}."],
     "leg.modifier": ["Modifier la légende {res}", "Edit the {res} caption", "Het bijschrift voor {res} aanpassen"], "leg.enregistree": ["Légende {res} enregistrée.", "{res} caption saved.", "Bijschrift voor {res} opgeslagen."],
     "err.contenu.introuvable": ["Contenu introuvable.", "Content not found.", "Post niet gevonden."],
     "err.aucun.reseau": ["Aucun réseau connecté pour ce contenu. Connectez un réseau dans « Comptes connectés ».", "No connected network for this content. Connect one under “Connected accounts”.", "Geen gekoppeld netwerk voor deze post. Koppel een netwerk onder “Gekoppelde accounts”."],
@@ -1683,10 +1686,7 @@
     // Raccourci vers la carte vidéo (30/10/2026, constat du fondateur : « je ne trouve pas comment créer une vidéo ») : bouton de l'accueil et ligne en
     // haut de l'écran Photos ; la carte vidéo est sous les photos, à plus d'un écran de défilement sur téléphone.
     "acc.creer.video": ["Créer une vidéo", "Create a video", "Een video maken"],
-    "photos.vers.video": [v => `Une vidéo pour vos réseaux (réel) ? Filmez quelques plans, nous faisons le montage. Ce mois-ci : ${v.a} sur ${v.b}.`, v => `A video for your social media (reel)? Film a few shots, we do the editing. This month: ${v.a} of ${v.b}.`, v => `Een video voor uw sociale media (reel)? Film enkele shots, wij doen de montage. Deze maand: ${v.a} van ${v.b}.`],
-    "photos.vers.video.lien": ["Créer une vidéo", "Create a video", "Een video maken"],
-    "photos.vers.video.sans": ["Les vidéos (réels) ne sont pas comprises dans votre offre : elles le sont dans l'offre {offre:premium}.", "Videos (reels) aren't included in your plan: they are in the {offre:premium} plan.", "Video's (reels) zijn niet inbegrepen in uw formule: wel in de formule {offre:premium}."],
-    "photos.vers.video.sans.lien": ["En savoir plus", "Learn more", "Meer weten"],
+    "photos.bascule": ["Photos ou vidéo", "Photos or video", "Foto's of video"], "photos.bascule.photos": ["Photos", "Photos", "Foto's"], "photos.bascule.video": ["Vidéo", "Video", "Video"],
     "dv.compteur": ["Vidéos ce mois-ci : {a} sur {b}", "Videos this month: {a} of {b}", "Video's deze maand: {a} van {b}"], "dv.compteur.attente": [v => `, dont ${v.n} en préparation`, v => `, including ${v.n} in progress`, v => `, waarvan ${v.n} in voorbereiding`],
     "dv.sans.titre": ["Vidéos", "Videos", "Video's"],
     "dv.sans.texte": ["Votre offre {offre} ne comprend pas de vidéo. L'offre {offre:premium} en comprend {v} par mois, de 60 secondes au plus : vous filmez, nous montons.",
