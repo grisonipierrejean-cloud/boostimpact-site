@@ -241,6 +241,10 @@ legend{padding:0;margin-bottom:4px}
 .liste li{display:flex;justify-content:space-between;align-items:center;gap:6px 16px;padding:12px 0;border-bottom:1px solid var(--filet)}
 .liste li:last-child{border-bottom:0}
 .liste li>div{min-width:0}
+/* Plans d'un dépôt (console, montage à la main, 31/10/2026) : le nom du fichier passe sous le plan, le bouton à la ligne si l'écran est étroit */
+#dp-liens li{flex-wrap:wrap}
+#dp-liens li>div{flex:1 1 160px}
+#dp-liens li>a.bouton{flex:0 0 auto;min-height:44px}
 .liste li:has(>a){padding:2px 0}
 .liste li>a{flex:1 1 auto;display:flex;align-items:center;min-height:44px}
 .liste li>.fort,.liste li>.etat,.liste li>.note{flex:0 0 auto;text-align:right}
@@ -919,3 +923,36 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
   .ck-bloc .tab th:last-child,.ck-bloc .tab td:last-child{padding-right:0}
 }
 @media (min-width:1180px){.ck-grille{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}}
+/* ---------- Fluidité téléphone (31/10/2026) */
+/* À valider : l'aperçu ne dépasse pas 40 % de l'écran, Approuver et Modifier restent visibles sans défiler ; un tap affiche l'image entière. */
+@media (max-width:899px){
+  .contenu .cadre img.visuel,.contenu .media img.visuel{max-height:40vh;object-fit:cover;cursor:zoom-in}
+  .contenu .cadre img.visuel.entier,.contenu .media img.visuel.entier{max-height:none;cursor:zoom-out}
+  .contenu .cadre.vertical img.visuel:not(.entier){object-fit:cover}
+  .contenu video.visuel{max-height:40vh}
+  /* Filtres : retour à la ligne plutôt qu'un défilement qui coupe « Programmés ». */
+  .filtres{flex-wrap:wrap;overflow-x:visible}
+  .filtres.deborde{-webkit-mask-image:none;mask-image:none}
+  .filtres button{flex:1 1 auto;padding:8px 12px}
+  /* Accueil : l'offre passe sous « À faire maintenant ». */
+  .entete-accueil.offre-sous .offre-accueil{margin-top:0}
+}
+/* Confirmation flottante, au-dessus de la barre d'onglets, environ 3 s. */
+.toast{position:fixed;left:16px;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;margin:0 auto;max-width:560px;padding:12px 16px;border-radius:var(--r);background:#FFFFFF;color:#121614;border:1px solid #7CCE12;font-size:15px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.24)}
+.toast[hidden]{display:none}
+@media (min-width:900px){.toast{bottom:24px}}
+/* Cibles tactiles d'au moins 44 x 44 px, sans changer le visuel. */
+.langues button{min-width:44px}
+@media (max-width:420px){.haut .langues button{min-width:44px;padding:0}}
+.haut-reglages a{min-width:44px;justify-content:center}
+.retour-liste a{display:inline-flex;align-items:center;min-height:44px}
+p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
+/* Cases à cocher : toute la ligne (label) est cliquable ; la case elle-même reçoit une zone de 44 px. */
+.option input[type=checkbox],.option input[type=radio]{position:relative}
+.option input[type=checkbox]::after,.option input[type=radio]::after{content:"";position:absolute;inset:-12px}
+/* Photos : « Envoyer » et le reste du contenu ne passent jamais sous la barre d'onglets. */
+@media (max-width:899px){#vue :is(button,a,input,label){scroll-margin-bottom:calc(88px + env(safe-area-inset-bottom))}}
+/* Photos : raccourci vidéo en bouton secondaire de 44 px. */
+#vers-video{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+#vers-video .bouton{min-height:44px}
+@media (max-width:899px){#ph-envoyer{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:2}}

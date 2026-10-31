@@ -121,6 +121,49 @@
     $("ph-retirer").onclick = async () => { if (!window.confirm(t("con.ph.retirer") + " ?")) return;
       try { await D.adminRetirerAutorisationPhotos(cid); await photosClient(cid); msg(t("con.ph.retire")); } catch (er) { msg(ph(er.message)); } };
   }
+  // Écran d'un dépôt (31/10/2026, montage à la main) : plans du client (liens signés de 10 minutes, admin_plans_depot) et dépôt d'un MP4 fini
+  // (envoi dans « contenus », puis admin_deposer_montage_main : contenu « à valider », même notification, aucun nouveau montage, place de l'offre
+  // déjà réservée). sous = « plans » : les liens sont demandés à l'ouverture ; « main » : le formulaire prend le focus.
+  async function depotClient(id, sous) {
+    const d = id && (await D.adminDepotsVideo()).find(x => x.id === id); if (!d) { location.hash = "#/afaire/videos"; return; }
+    const ST = I.carte("dv.st", window.RENOM_DEPOT_VIDEO.STATUTS), R = window.RENOM_ENVOI.REGLES;
+    const remplace = ["a_valider", "modification"].includes(d.contenu_statut), quota = remplace ? "con.dp.quota.remplace" : d.statut === "refuse" ? "con.dp.quota.refuse" : "con.dp.quota.reserve";
+    const plansEtat = d.rushes_effaces_le ? t("con.dp.plans.effaces", { d: I.date(d.rushes_effaces_le) }) : d.effacement_demande_le ? t("con.dp.plans.efface.demande") : !(d.nb_fichiers > 0) ? t("con.dp.plans.aucun") : "";
+    vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.videos")}</p><h1>${e(d.commerce || "")}</h1><p class="chapo">${t("con.dp.chapo")}</p></div>
+      <p class="retour-liste"><a href="#/client/${encodeURIComponent(d.commerce_id)}">${t("con.client.retour")}</a></p>
+      <section class="carte" id="dp-etat"><div class="carte-tete"><h2>${t("con.dp.depot", { d: dh(d.cree_le) })}</h2></div>
+        <p class="fort">${ST[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}
+        ${d.nb_videos ? `<p class="note">${t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s)}</p>` : ""}${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}</section>
+      <section class="carte" id="dp-plans"><h2>${t("con.dp.plans.titre")}</h2>
+        ${plansEtat ? `<p class="texte2">${plansEtat}</p>` : `<p class="note">${t("con.dp.plans.note", { m: MM.LIEN_S / 60 })}</p><div class="actions"><button type="button" class="bouton second" id="dp-plans-ok">${t("con.plans")}</button></div><ul class="liste" id="dp-liens"></ul>`}</section>
+      <section class="carte" id="dp-main"><h2>${t("con.main")}</h2>
+        ${MM.possible(d) ? `<form id="dp-f" class="pile serre"><div class="f"><label for="dp-fichier">${t("con.dp.fichier", { s: R.DUREE_MAX_S, mo: R.VIDEO_MAX_MO })}</label><input id="dp-fichier" type="file" accept="video/mp4,.mp4,.m4v"></div>
+          <div class="f"><label for="dp-legende">${t("con.dp.legende")}</label><textarea id="dp-legende" rows="5" maxlength="2200" translate="no">${e(d.contenu_legende || "")}</textarea><p class="note">${t(d.contenu_legende ? "con.dp.legende.reprise" : "con.dp.legende.note")}</p></div>
+          <p class="note fort" id="dp-quota">${t(quota)}</p><p class="note">${t("con.dp.notif")}</p>
+          <div class="actions"><button class="bouton" type="submit" id="dp-ok">${t("con.dp.deposer")}</button></div></form>`
+        : `<p class="texte2" id="dp-ferme">${t("con.dp.ferme", { s: ST[d.statut] || e(d.statut) })}</p>`}
+        <p class="msg" id="msg" role="status"></p></section>`;
+    const plans = async () => { const b = $("dp-plans-ok"); if (!b) return; b.disabled = true;
+      try { const l = await D.adminPlansDepot(d.id), u = $("dp-liens");
+        u.innerHTML = l.length ? l.map((x, i) => `<li><div><p class="fort">${t("con.dp.plan", { n: i + 1 })}${x.duree_s != null ? secDv(x.duree_s) : ""}</p><p class="note casse" translate="no">${e(x.nom || "")}</p></div>
+          ${x.url ? `<a class="bouton second petit" href="${e(x.url)}" download="${e(x.fichier || "")}" rel="noopener">${t("con.dp.telecharger")}</a>` : `<span class="note">${t("con.dp.plans.demo")}</span>`}</li>`).join("") : `<li><p class="note">${t("con.dp.plans.aucun")}</p></li>`;
+        msg(l.some(x => x.url) ? t("con.dp.plans.ok", { n: l.length, m: MM.LIEN_S / 60 }) : "");
+      } catch (er) { msg(ph(er.message)); } finally { b.disabled = false; } };
+    if ($("dp-plans-ok")) $("dp-plans-ok").onclick = plans;
+    if (sous === "plans") plans();
+    if (!$("dp-f")) return;
+    if (sous === "main") { $("dp-main").scrollIntoView({ block: "start" }); $("dp-fichier").focus({ preventScroll: true }); }
+    $("dp-f").onsubmit = async ev => {
+      ev.preventDefault(); const f = $("dp-fichier").files[0]; if (!f) { msg(t("con.dp.choisir")); return; }
+      const l = MM.legende($("dp-legende").value, d.contenu_legende); if (l.raison) { msg(MM.PHRASES[l.raison]); return; }
+      $("dp-ok").disabled = true; msg(t("con.dp.controle"));
+      try {
+        const r = await D.adminEnvoyerMontageMain(d.id, f, { onProgress: (a, n) => msg(t("con.dp.envoi", { p: n ? Math.floor(a * 100 / n) : 0 })) });
+        const x = await D.adminDeposerMontageMain(d.id, r.chemin, l.legende, r.infos);
+        await depotClient(d.id); msg(t("con.dp.ok", { v: x.version }));
+      } catch (er) { msg(ph(er.message)); if ($("dp-ok")) $("dp-ok").disabled = false; }
+    };
+  }
   // Accès vérifié (22/10/2026, admin_acces_reseau) : par réseau compris dans l'offre (et retenu), l'état réel et le bouton « Accès vérifié » (l'équipe a
   // accepté l'invitation : fiche Google, Meta Business Suite, TikTok) ou « Accès retiré » (le client a retiré l'accès). Sans réseau « connecté »,
   // la base ne programme rien et la file « Contenus à publier » reste vide.
@@ -359,12 +402,18 @@
   const RELANCABLE = ["envoye", "en_montage", "refuse"];
   const relancable = d => RELANCABLE.includes(d.statut) && !d.rushes_effaces_le && !d.effacement_demande_le;
   const secDv = d => d == null ? "" : ", " + I.nombre(+d, +d % 1 ? 1 : 0) + " s";
+  // Montage à la main (31/10/2026) : filet de sécurité quand le montage automatique échoue ou ne plaît pas. « Télécharger les plans » (tant que
+  // les vidéos d'origine existent) et « Déposer un montage fait à la main » ouvrent l'écran du dépôt (#/depot/<id>/plans ou /main).
+  const MM = window.RENOM_MONTAGE_MAIN;
+  const lienDepot = (d, sous, cle) => `<a class="bouton second petit" href="#/depot/${encodeURIComponent(d.id)}/${sous}" data-${sous === "plans" ? "plans" : "main"}>${t(cle)}</a>`;
+  const actionsDepot = d => [relancable(d) ? `<button type="button" class="bouton second petit" data-relancer>${t("con.relancer")}</button>` : "",
+    MM.plansDispo(d) ? lienDepot(d, "plans", "con.plans") : "", MM.possible(d) ? lienDepot(d, "main", "con.main") : ""].join("");
   // Dépôt refusé (26/10/2026, constat 25) : c'est au commerçant de refilmer ; jamais « en retard », jamais en évidence, rangé dans « Vidéos ».
   const carteDepot = d => `<article class="carte" data-depot="${e(d.id)}"><div class="carte-tete"><h2>${e(d.commerce || "")}</h2><span class="note">${dh(d.cree_le)}</span></div>
           <p class="note">${t("con.entree.videos")}</p>
           <p class="fort">${ST_DV[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}${d.essais ? `<p class="note">${t("con.essais", { n: d.essais })}</p>` : ""}
           ${d.nb_videos ? `<p class="note">${t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s)}</p>` : ""}${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}
-          ${relancable(d) ? `<div class="actions"><button type="button" class="bouton second petit" data-relancer>${t("con.relancer")}</button></div>` : ""}</article>`;
+          ${actionsDepot(d) ? `<div class="actions">${actionsDepot(d)}</div>` : ""}</article>`;
   // Mise en route bloquée : pas finie 5 jours après la création (même seuil que l'alerte MISE_EN_ROUTE_BLOQUEE et le score de santé), ou un point
   // déclaré fait par le commerçant, que l'équipe doit vérifier.
   const ageJours = c => c.cree_le ? Math.floor((Date.now() - Date.parse(c.cree_le)) / 86400000) : null;
@@ -566,7 +615,7 @@
         `<tr data-depot="${e(d.id)}"><td data-l="${C_("depot")}"><p>${dh(d.cree_le)}</p>${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}</td>
           <td data-l="${C_("fichiers")}">${d.nb_videos ? t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s) : ""}${d.rushes_effaces_le ? `<p class="note">${t("dv.efface.le", { d: I.date(d.rushes_effaces_le) })}</p>` : ""}</td>
           <td data-l="${C_("statut")}"><p class="fort">${ST_DV[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}${d.essais ? `<p class="note">${t("con.essais", { n: d.essais })}</p>` : ""}</td>
-          <td data-l="${C_("actions")}">${relancable(d) ? `<button type="button" class="bouton second petit" data-relancer>${t("con.relancer")}</button>` : ""}</td></tr>`).join("")}</tbody></table></section>` : ""}
+          <td data-l="${C_("actions")}">${actionsDepot(d) ? `<div class="pile serre">${actionsDepot(d)}</div>` : ""}</td></tr>`).join("")}</tbody></table></section>` : ""}
       <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${tableJournal("jc")}</details>`;
     remplirJournal("jc", journalClient);
     const zc = $("client-etat");
@@ -747,10 +796,10 @@
   }
 
   // Routes. Anciennes adresses (emails d'alerte, workflows n8n, favoris) : chacune ouvre le même contenu à sa nouvelle place, sans étape d'historique.
-  const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient };
+  const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient, depot: depotClient };
   const ANCIENNES = { commerces: "clients", alertes: "afaire/alertes", apublier: "afaire/apublier", garanties: "afaire/garanties", videos: "afaire/videos", invitations: "nouveau", creer: "nouveau" };
   // Onglet allumé pour chaque écran.
-  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", prospects: "prospects" };
+  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", depot: "clients", prospects: "prospects" };
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();

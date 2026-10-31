@@ -323,6 +323,56 @@
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : /réservé à l'administrateur/.test(x) ? "Réservé à l'administrateur." : x; };
   // ---- fin des règles communes du dépôt de vidéos
 
+  // ---- Montage à la main (31/10/2026, console) : filet de sécurité de l'administrateur. Mêmes règles que les fonctions admin_plans_depot et
+  // admin_deposer_montage_main (schema.sql, bloc « Montage à la main ») dans les deux adaptateurs. Valeurs du dépôt du commerçant
+  // (RENOM_ENVOI.REGLES : 1 à 60 s, VIDEO_MAX_MO), plus : MP4 seulement (seau « contenus », storage.sql), vertical 9:16 à 2 % près.
+  const MONTAGE_MAIN = {
+    STATUTS: ["envoye", "en_montage", "a_valider", "refuse"],   // dépôts qui reçoivent un montage fait à la main
+    TOLERANCE: 0.02, LIEN_S: 600,                                 // écart au 9:16 ; durée des liens signés des plans (10 minutes)
+    PHRASES: { format: "Format non accepté : un montage fait à la main est un fichier MP4.", lourde: "Fichier trop lourd pour le stockage.",
+      longue: "Montage trop long : 60 secondes au plus.", courte: "Montage trop court : 1 seconde au moins.",
+      vertical: "Vidéo non verticale : un réel est en 9:16 (par exemple 1080 x 1920).", legende: "Légende obligatoire.",
+      legende_longue: "Légende trop longue : 2 200 caractères au plus (Instagram, TikTok).", statut: "Ce dépôt ne reçoit pas de montage fait à la main (déjà validé, annulé ou abandonné).",
+      efface: "Vidéos d'origine déjà effacées : plans indisponibles.", recu: "Fichier non reçu : recommencez l'envoi.", hors: "Fichier hors du dossier de montage de ce dépôt.",
+      introuvable: "Dépôt introuvable.", admin: "Réservé à l'administrateur." },
+    plansDispo: d => !!d && (d.nb_fichiers || 0) > 0 && !d.rushes_effaces_le && !d.effacement_demande_le,
+    possible: d => !!d && MONTAGE_MAIN.STATUTS.includes(d.statut),
+    // Durée et dimensions lues par un élément vidéo (métadonnées seulement). null si le navigateur ne sait pas les lire : la base contrôle alors
+    // ce qu'elle reçoit (chemin, fichier présent) et la vidéo est vérifiée par l'équipe, qui l'a faite.
+    lire(f, delai) {
+      return new Promise(res => {
+        let fini = false, url = null; const v = document.createElement("video");
+        const fin = m => { if (fini) return; fini = true; try { v.removeAttribute("src"); v.load(); } catch (e) {} if (url) URL.revokeObjectURL(url); res(m); };
+        v.preload = "metadata"; v.muted = true; v.playsInline = true;
+        v.onloadedmetadata = () => fin({ duree_s: isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration * 10) / 10 : null, largeur: v.videoWidth || null, hauteur: v.videoHeight || null });
+        v.onerror = () => fin({ duree_s: null, largeur: null, hauteur: null });
+        setTimeout(() => fin({ duree_s: null, largeur: null, hauteur: null }), delai || 8000);
+        try { url = URL.createObjectURL(f); v.src = url; } catch (e) { fin({ duree_s: null, largeur: null, hauteur: null }); }
+      });
+    },
+    // Contrôle d'un fichier avant envoi : rend { infos, raison } (raison : clé de PHRASES, ou null).
+    async controler(f) {
+      const R = window.RENOM_ENVOI.REGLES, x = window.RENOM_ENVOI.extension(f), t = String(f.type || "").toLowerCase(), taille = +f.size || 0;
+      const infos = { nom: String(f.name || "").slice(0, 200), taille, duree_s: null, largeur: null, hauteur: null };
+      if (!["mp4", "m4v"].includes(x) || (t && !["video/mp4", "video/x-m4v"].includes(t))) return { infos, raison: "format" };
+      if (taille > R.VIDEO_MAX_MO * window.RENOM_ENVOI.MO) return { infos, raison: "lourde" };
+      Object.assign(infos, await MONTAGE_MAIN.lire(f));
+      if (infos.duree_s != null && Math.round(infos.duree_s) > R.DUREE_MAX_S) return { infos, raison: "longue" };
+      if (infos.duree_s != null && infos.duree_s < R.DUREE_MIN_S) return { infos, raison: "courte" };
+      if (infos.largeur && infos.hauteur && Math.abs(infos.largeur * 16 - infos.hauteur * 9) > MONTAGE_MAIN.TOLERANCE * infos.hauteur * 9) return { infos, raison: "vertical" };
+      return { infos, raison: null };
+    },
+    // Légende : saisie, ou celle du contenu déjà lié (reprise) ; obligatoire quand il n'y en a aucune.
+    legende(texte, reprise) { const l = String(texte || "").trim(); if (!l && !String(reprise || "").trim()) return { raison: "legende" }; if (l.length > 2200) return { raison: "legende_longue" }; return { legende: l || null, raison: null }; },
+    chemin: (cid, depot) => cid + "/montage-" + depot + "/main-" + Date.now() + ".mp4",
+    nomPlan: (d, x, i) => { const n = String(x.nom || x.chemin.split("/").pop()).replace(/[^\w.-]+/g, "-"); return String(d.commerce || "commerce").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) + "-plan-" + String(i + 1).padStart(2, "0") + "-" + n; },
+  };
+  const phraseMontageMain = m => { const P = MONTAGE_MAIN.PHRASES, x = String(m || "");
+    return /réservé à l'administrateur/.test(x) ? P.admin : /dépôt introuvable/.test(x) ? P.introuvable : /déjà effacées/.test(x) ? P.efface : /reçoit un montage fait à la main/.test(x) ? P.statut
+      : /fichier non reçu/.test(x) ? P.recu : /hors du dossier de montage/.test(x) ? P.hors : /1 à 60 secondes/.test(x) ? P.longue : /9:16/.test(x) ? P.vertical
+      : /légende obligatoire/.test(x) ? P.legende : /légende refusée/.test(x) ? P.legende_longue : /commerce en pause/.test(x) ? "Ce commerce est en pause." : phraseDepot(x); };
+  // ---- fin des règles communes du montage à la main
+
   // Demande d'idées : hors plafond depuis le 22/10/2026, une par 24 heures au plus (verifier_plafond, schema.sql). Même phrase dans les deux adaptateurs.
   const PHRASE_IDEES_JOUR = "Vous avez déjà demandé des idées aujourd'hui. Réessayez demain.";
   // ---- Photos déposées dans l'espace (17/10/2026 : SEUL chemin des photos, plus aucune par email) : mêmes règles et mêmes refus que la fonction
@@ -821,8 +871,34 @@
       },
       async finaliserDepotVideo(depot, details) { const r = await sb.rpc("finaliser_depot_video", { p_depot: depot, p_details: details }); if (r.error) throw new Error(phraseDepot(r.error.message)); return r.data; },
       async annulerDepotVideo(depot) { const r = await sb.rpc("annuler_depot_video", { p_depot: depot }); if (r.error) throw new Error(phraseDepot(r.error.message)); },
-      async adminDepotsVideo() { const cs = ok(await sb.from("commerces").select("id,nom")); return ok(await sb.from("depots_video").select("*").order("cree_le", { ascending: false }).limit(200)).map(d => ({ ...d, commerce: (cs.find(c => c.id === d.commerce_id) || {}).nom })); },
+      // contenu_legende, contenu_statut : légende reprise par « Déposer un montage fait à la main » (lecture des contenus par l'administrateur, contenus_lecture).
+      async adminDepotsVideo() { const cs = ok(await sb.from("commerces").select("id,nom")), ds = ok(await sb.from("depots_video").select("*").order("cree_le", { ascending: false }).limit(200));
+        const ids = [...new Set(ds.map(d => d.contenu_id).filter(Boolean))], cts = ids.length ? ok(await sb.from("contenus").select("id,legende,statut").in("id", ids)) : [];
+        return ds.map(d => { const ct = cts.find(x => x.id === d.contenu_id); return { ...d, commerce: (cs.find(c => c.id === d.commerce_id) || {}).nom, contenu_legende: ct ? ct.legende || null : null, contenu_statut: ct ? ct.statut : null }; }); },
       async adminRelancerMontage(id) { const r = await sb.rpc("admin_relancer_montage", { p_depot: id }); if (r.error) throw new Error(phraseDepot(r.error.message)); return r.data; },
+      // ---- Montage à la main (31/10/2026) : admin_plans_depot (liste des rushes encore présents), liens signés de 10 minutes (règle
+      // photos_seau_admin_lecture), envoi TUS du MP4 dans « contenus » (règle contenus_seau_montage_main), puis admin_deposer_montage_main.
+      async adminPlansDepot(id) {
+        const r = await sb.rpc("admin_plans_depot", { p_depot: id }); if (r.error) throw new Error(phraseMontageMain(r.error.message));
+        const l = r.data || [], d = { commerce: ((await sb.from("depots_video").select("commerce_id").eq("id", id).single()).data || {}).commerce_id };
+        const cs = d.commerce ? ok(await sb.from("commerces").select("nom").eq("id", d.commerce)) : [], nomC = (cs[0] || {}).nom;
+        return Promise.all(l.map(async (x, i) => { const fichier = MONTAGE_MAIN.nomPlan({ commerce: nomC }, x, i);
+          const s = await sb.storage.from("photos").createSignedUrl(x.chemin, MONTAGE_MAIN.LIEN_S, { download: fichier });
+          return { ...x, fichier, url: s.data ? s.data.signedUrl : null }; }));
+      },
+      async adminEnvoyerMontageMain(depot, f, o = {}) {
+        const P = MONTAGE_MAIN.PHRASES, d = ok(await sb.from("depots_video").select("id,commerce_id,statut").eq("id", depot)).find(Boolean); if (!d) throw new Error(P.introuvable);
+        if (!MONTAGE_MAIN.possible(d)) throw new Error(P.statut);
+        const k = await MONTAGE_MAIN.controler(f); if (k.raison) throw new Error(P[k.raison]);
+        const chemin = MONTAGE_MAIN.chemin(d.commerce_id, d.id);
+        const jeton = async () => { const { data } = await sb.auth.getSession(); return data && data.session ? data.session.access_token : null; };
+        await window.RENOM_ENVOI.envoyer({ fichier: f, seau: "contenus", objet: chemin, url: cfg.supabaseUrl, cle: cfg.publishableKey, jeton, onProgress: o.onProgress, onEtat: o.onEtat, signal: o.signal });
+        return { chemin, infos: k.infos };
+      },
+      async adminDeposerMontageMain(depot, chemin, legende, infos = {}) {
+        const r = await sb.rpc("admin_deposer_montage_main", { p_depot: depot, p_chemin: chemin, p_legende: String(legende || "").trim() || null, p_infos: infos || {} });
+        if (r.error) throw new Error(phraseMontageMain(r.error.message)); return r.data;
+      },
       async demandesVideoAvis() { const c = await self.commerce(); return ok(await sb.from("videos_avis_demandes").select("id,avis_ids,fond,style,statut,motif,contenu_id,cree_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(20)); },
       async demanderVideoAvis({ avis_ids, fond, style }) { vaControle(avis_ids, fond, style); const c = await self.commerce(); ok(await sb.from("videos_avis_demandes").insert({ commerce_id: c.id, avis_ids, fond, style })); },
       // ---- Mise à jour de l'espace membre : uniquement les tables et fonctions du contrat (ordres/CONTRAT-MAJ-MEMBRE.md)
@@ -990,7 +1066,7 @@
   }
 
   window.RENOM_DATA = cfg.supabaseUrl && cfg.publishableKey ? (window.supabase && window.supabase.createClient ? supabase() : indisponible()) : demo();
-  window.RENOM_OPTIONS = OPTIONS; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO;
+  window.RENOM_OPTIONS = OPTIONS; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO; window.RENOM_MONTAGE_MAIN = MONTAGE_MAIN;
   // ---- Collecte : ce dont la page publique a besoin (aucune session, aucune bibliothèque), et la règle du lien d'avis pour l'espace
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;

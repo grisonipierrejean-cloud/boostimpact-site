@@ -97,6 +97,11 @@
 
   const cut = (s, n) => s.length > n ? s.slice(0, s.lastIndexOf(" ", n)) + "…" : s;
   const msg = x => { const m = $("msg"); if (m) m.textContent = x; };
+  // Confirmation flottante au-dessus de la barre d'onglets (31/10/2026) : après une décision, #msg est souvent hors de l'écran sur téléphone.
+  let toastMinuteur = 0;
+  const toast = x => { let el = $("toast"); if (!el) { el = document.createElement("p"); el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el); }
+    el.textContent = x; el.hidden = !x; clearTimeout(toastMinuteur); if (x) toastMinuteur = setTimeout(() => { el.hidden = true; el.textContent = ""; }, 3000); };
+  addEventListener("hashchange", () => { const el = $("toast"); if (el) { clearTimeout(toastMinuteur); el.hidden = true; el.textContent = ""; } });
   const urlSure = async (x, reseau) => { try { return x ? await D.urlVisuel(x, reseau) : null; } catch (er) { return null; } };
   // Visuel 9:16 envoyé à TikTok : seulement pour une publication photo (la story et la vidéo ont un seul fichier pour tous les réseaux).
   const url916 = x => M.photoPublication(x) ? urlSure(x, "tiktok") : Promise.resolve(null);
@@ -127,6 +132,8 @@
   const publicationDe = async id => { try { return (await D.calendrier()).find(x => x.contenu_id === id && x.statut === "programme") || null; } catch (er) { return null; } };
   function brancherDecisions(racine, apres) {
     racine.querySelectorAll("[data-contenu]").forEach(a => a.addEventListener("click", async ev => {
+      // Téléphone : l'aperçu est réduit pour garder Approuver à l'écran ; un tap l'affiche en entier, un second le réduit.
+      const img = ev.target.closest("img.visuel"); if (img && a.contains(img)) { const ouvert = img.classList.toggle("entier"); img.setAttribute("aria-expanded", String(ouvert)); return; }
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = a.dataset.contenu, act = b.dataset.a, zone = a.querySelector("[data-zone]"), choix = a.querySelector("[data-choix]");
       if (!["approuve", "modif", "fermer-modif", "envoyer-modif", "refuse"].includes(act)) return;
       try {
@@ -139,7 +146,7 @@
         approuveRecent = act === "approuve" ? { id, p: await publicationDe(id) } : null;
         const p = approuveRecent && approuveRecent.p;
         // 27/10/2026 (constat 32) : ce qui se passe ensuite, pas seulement « Enregistré ».
-        await apres(); msg(act === "approuve" ? (p ? t("dec.valide.prevu", { quand: I.dateHeureDans(p.prevu_le) }) : t("dec.valide")) : act === "envoyer-modif" ? t("dec.modif.envoyee") : t("dec.refuse.msg")); majCompteurs();
+        await apres(); const conf = act === "approuve" ? (p ? t("dec.valide.prevu", { quand: I.dateHeureDans(p.prevu_le) }) : t("dec.valide")) : act === "envoyer-modif" ? t("dec.modif.envoyee") : t("dec.refuse.msg"); msg(conf); toast(conf); majCompteurs();
       } catch (er) { msg(ph(er.message)); }
     }));
   }
@@ -467,11 +474,12 @@
     vue.innerHTML = `${pauseBandeau(c)}
       ${humains.length ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p>${offreAccueil(c)}</div></div>
+      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <p class="msg" id="msg" role="status"></p>
       <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li>${a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
           : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : `<p class="texte2" id="a-faire-rien">${t("acc.a.jour")}</p>`}</section>
+      ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       <div class="gestes-accueil"><a class="bouton grand${actions.length ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
         ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
       ${ligneSemaine(c, av, cal, cm)}
@@ -558,8 +566,8 @@
     const g = sansReseaux(c), plein = g && k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond;
     // Raccourci vers la carte vidéo (30/10/2026) : sur téléphone, elle est à plus d'un écran sous les photos ; offre sans vidéo : vers son explication.
     const versVideo = g || !k ? "" : +k.videos_plafond > 0
-      ? `<p class="texte2" id="vers-video">${t("photos.vers.video", { a: k.videos_utilisees || 0, b: k.videos_plafond })} <a href="#/photos?video" data-vers-video>${t("photos.vers.video.lien")}</a></p>`
-      : `<p class="note" id="vers-video">${t("photos.vers.video.sans")} <a href="#/photos?video" data-vers-video>${t("photos.vers.video.sans.lien")}</a></p>`;
+      ? `<p class="texte2" id="vers-video">${t("photos.vers.video", { a: k.videos_utilisees || 0, b: k.videos_plafond })} <a class="bouton second petit" href="#/photos?video" data-vers-video>${t("photos.vers.video.lien")}</a></p>`
+      : `<p class="note" id="vers-video">${t("photos.vers.video.sans")} <a class="bouton second petit" href="#/photos?video" data-vers-video>${t("photos.vers.video.sans.lien")}</a></p>`;
     vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(g ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : t("photos.chapo"))}${versVideo}
       ${plein ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: (new Date().getMonth() + 1) % 12 })}</p>
         <p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
