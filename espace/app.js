@@ -288,12 +288,12 @@
     { id: "avalider", ecrans: ["avalider", "contenus", "avis", "commentaires", "collecte"], sections: ["contenus", "avis", "commentaires"], compte: "avalider" },
     { id: "resultats", ecrans: ["resultats"] },
   ];
-  const REGLAGES = { id: "reglages", ecrans: ["reglages", "offre", "comptes", "notifications", "style", "fiche", "fichegoogle", "demarrage"] };
+  const REGLAGES = { id: "reglages", ecrans: ["reglages", "offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"] };
   GROUPES.concat(REGLAGES).forEach(g => { g.nom = t("groupe." + g.id); });
   const ECRANS = I.carte("ecran", ["accueil", "resultats", "photos", "avalider", "contenus", "calendrier", "avis", "commentaires", "collecte", "fichegoogle", "fiche", "offre", "comptes",
-    "notifications", "demarrage", "videoavis", "style", "reglages"]);
+    "notifications", "demarrage", "videoavis", "publications", "reglages"]);
   // Anciennes adresses : elles mènent toujours quelque part (aucun lien cassé).
-  const ANCIENNES = { idees: "contenus" };
+  const ANCIENNES = { idees: "contenus", style: "publications" };   // #/style : ancien « Votre style » (31/10/2026)
   const groupeDe = r => GROUPES.concat(REGLAGES).find(g => g.ecrans.includes(r)) || GROUPES[0];
   const trait = d => `<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const APPAREIL = trait('<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>');
@@ -498,13 +498,14 @@
       <section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li>${a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
           : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : `<p class="texte2" id="a-faire-rien">${t("acc.a.jour")}</p>`}</section>
+      ${carteStyle(c)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       <div class="gestes-accueil"><a class="bouton grand${actions.length ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
         ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
+      ${lienPublications(c)}
       ${ligneSemaine(c, av, cal, cm)}
       ${blocMiseEnRoute(mr, c)}
       ${ligneAutorisation(c)}
-      ${carteStyle(c, true)}
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
         ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${x.reseaux.map(r => RES[r]).join(", ")}</p></div></li>`).join("")}</ul>`
@@ -520,11 +521,11 @@
   }
 
   // ---------------- Réglages (25/10/2026) : tout ce qui se règle une fois, rangé derrière un seul lien de l'en-tête. Chaque écran garde son adresse.
-  const ENTREES_REGLAGES = ["offre", "comptes", "notifications", "style", "fiche", "fichegoogle", "demarrage"];
+  const ENTREES_REGLAGES = ["offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"];
   async function reglages() {
     const c = await D.commerce();
     vue.innerHTML = `${entete("", t("ecran.reglages"), t("reg.chapo"))}
-      ${carteStyle(c, false)}
+      ${carteStyle(c)}
       <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.map(r => { const g = r === "comptes" && sansReseaux(c) ? ".google" : "";
         return `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r + g)}</span><span class="note">${t("reg." + r + ".texte" + g)}</span></span></a></li>`; }).join("")}</ul></nav>
       ${large.matches ? "" : `<p class="pied-reglages"><button type="button" id="sortir" class="bouton second">${t("quitter")}</button></p>`}`;
@@ -559,7 +560,7 @@
           <p class="aide">${t("fiche.reglage.aide")}</p></div></section>
       <section class="carte" id="fiche-style"><h2>${t("fiche.couleurs")}</h2>
         <div class="style-accueil-corps"><p class="texte2">${t("fiche.couleurs.style")}</p><div class="style-nuancier" aria-hidden="true">${[co.accent, co.fond, co.texte].filter(Boolean).map(x => `<span style="background:${e(x)}"></span>`).join("")}</div></div>
-        <p class="pied"><a class="bouton second" href="#/style">${t("fiche.couleurs.lien")}</a></p></section>
+        <p class="pied"><a class="bouton second" href="#/publications">${t("fiche.couleurs.lien")}</a></p></section>
       <div class="actions pied-formulaire"><button class="bouton" type="submit">${t("enregistrer")}</button><p class="msg" id="msg" role="status"></p></div></form>`;
     const liste = id => $(id).value.split(",").map(s => s.trim()).filter(Boolean);
     $("f").onsubmit = async ev => {
@@ -1630,7 +1631,7 @@
       // Fin des questions : la suite, puis l'autorisation photos et les alertes WhatsApp, repliées et facultatives (27/10/2026, constat 3).
       vue.innerHTML = `${entete(t("dem5.fini"), e(c.nom), t("dem5.fini.chapo"))}<p class="msg" id="msg-aut" role="status"></p>
         <section class="carte style-accueil" id="dem-style"><h2>${t("dem5.style.titre")}</h2><p class="texte2">${t("dem5.style.texte")}</p>
-          <p class="pied"><a class="bouton" href="#/style">${t("dem5.style.bouton")}</a></p></section>
+          <p class="pied"><a class="bouton" href="#/publications">${t("dem5.style.bouton")}</a></p></section>
         <section class="carte"><h2>${t("dem5.maintenant")}</h2><p class="texte2">${sansReseaux(c) ? t("dem5.maintenant.texte.google", { n: pubGoogle(c) }) : t("dem5.maintenant.texte")}</p>
           <div class="actions"><button type="button" class="bouton" id="dem-accueil">${t("dem5.accueil")}</button><a class="bouton second" href="#/fiche">${t("dem5.voir.fiche")}</a></div></section>
         ${autorisationAJour(c) ? "" : `<details class="carte repli" id="repli-autorisation"><summary>${t("dem5.repli.autorisation")}</summary>${carteAutorisation(c)}</details>`}
@@ -1848,34 +1849,62 @@
   }
   // ---- fin du bloc Vidéo d'avis ------------------------------------------------------------------------------------
 
-  // ---- Votre style (kit de marque) ---------------------------------------------------------------------------------
-  // Le style est créé par BoostImpact (console, panneau « Style du commerce ») à partir du logo et des photos. Écran du groupe « Mon commerce » :
-  // le style montré sur les photos du commerce (aperçus des 3 gabarits), le logo à déposer, « Ça me plaît », « Je voudrais un changement »,
-  // et les expressions maison / à éviter en option repliée. Aucune couleur, police ni ambiance à choisir ici.
-  // Tant que rien n'est validé, les contenus partent avec le style proposé. Écran partagé avec la console : marque.js, fonction ecran.
+  // ---- Vos publications (kit de marque) -----------------------------------------------------------------------------
+  // 31/10/2026 (décision produit) : le restaurateur ne « designe » pas, il VOIT ses publications et valide. Écran du groupe Réglages, entrée visible
+  // sur l'accueil tant qu'il n'a pas validé : sa grille Instagram dessinée avec SES photos, le seul réglage « Texte sur vos photos » (jamais,
+  // seulement pour vos annonces, souvent : marque.texte_photos, lu par le moteur), ses annonces, ses vidéos, ses couleurs et son logo (changement
+  // par une demande à champs fixes, circuit demander_changement_style). Couleurs, polices et modèles : BoostImpact (console « Style du commerce »).
+  // Écran partagé avec la console : marque.js, fonction ecran.
   const MQ = window.RENOM_MARQUE;
   Object.assign(ETAPES, I.carte("etape", ["MARQUE_PROPOSEE", "MARQUE_ENREGISTREE", "MARQUE_VALIDEE", "MARQUE_REGLEE_RENOM", "MARQUE_VALIDEE_RENOM", "STYLE_CHANGEMENT_DEMANDE",
     "MARQUE_APERCUS", "LOGO_ILLISIBLE", "VIDEO_GENEREE_REFUSEE"]));
-  const styleEcran = MQ.ecran({ vue, I, mode: "commercant", entete: () => retour("#/reglages", "reg.retour") + entete(t("groupe.reglages"), t("ecran.style"), t("sty.chapo")),
+  // Envoi de photos depuis « Vos publications » (aucune photo encore) : même chaîne que l'écran Photos (envoi.js, D.envoyerPhoto, D.deposerPhotos).
+  async function envoyerDesPhotos(fs, dire) {
+    const bonnes = [], erreurs = [];
+    for (const f of fs) { const k = await EN.controler(f); if (k.genre !== "photo") erreurs.push(f.name); else if (k.raison) erreurs.push(f.name); else bonnes.push(f); }
+    if (!bonnes.length) throw new Error(t("photos.aucune.envoyee"));
+    const ens = EN.controlerPhotos(bonnes.length); if (ens) throw new Error(t("photos.ens." + ens.code, { n: ens.n, max: EN.REGLES.PHOTOS_MAX }));
+    const recus = [];
+    for (let i = 0; i < bonnes.length; i++) {
+      const f = bonnes[i]; dire(t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length }));
+      try { const r = await D.envoyerPhoto(f, { nom: EN.nomPhoto(f) }); recus.push({ chemin: r.chemin, nom: f.name, taille: f.size }); } catch (er) { erreurs.push(f.name); }
+    }
+    if (!recus.length) throw new Error(t("photos.aucune.enregistree"));
+    const r = await D.deposerPhotos(recus); majCompteurs();
+    return { deposees: r.nb_photos, erreurs };
+  }
+  // En-tête selon la provenance (31/10/2026, test client) : arrivé de l'accueil, retour à l'accueil et pas de surtitre « Réglages ».
+  let pubDepuis = "reglages";
+  const styleEcran = MQ.ecran({ vue, I, mode: "commercant", entete: () => pubDepuis === "accueil" ? retour("#/accueil", "cal.retour") + entete("", t("ecran.publications"), t("pub.chapo"))
+    : retour("#/reglages", "reg.retour") + entete(t("groupe.reglages"), t("ecran.publications"), t("pub.chapo")),
     commerce: () => D.commerce(), marque: () => D.marque(), deposerLogo: f => D.deposerLogo(f),
-    regler: (p, v) => D.reglerMaMarque(p, v), demander: x => D.demanderChangementStyle(x), apres: async () => majCompteurs() });
-  // Carte du style : « Votre style est prêt » quand BoostImpact l'a validé, « Nous créons votre style » avant ; rien une fois que le commerçant l'a validé.
-  // Accueil (25/10/2026) : seulement « prêt » (le commerçant a quelque chose à regarder) ; Réglages : les deux états.
-  const carteStyle = (c, surAccueil) => {
-    const m = c.marque, pret = !!(m && m.verrouille && m.valide_par === "renom");
-    if (m && m.verrouille && !pret) return "";
-    if (surAccueil && !pret) return "";
-    const k = pret ? "acc.style.pret" : "acc.style";
-    return `<section class="carte style-accueil" id="carte-style" aria-labelledby="carte-style-titre"><div class="style-accueil-corps">
-      <div><h2 id="carte-style-titre">${t(k + ".titre")}</h2><p class="texte2">${t(k + ".texte")}</p></div>
-      ${m && m.couleurs ? `<div class="style-nuancier" aria-hidden="true">${["principale", "secondaire", "fond", "texte"].map(x => `<span style="background:${e(m.couleurs[x])}"></span>`).join("")}</div>` : ""}</div>
-      <p class="pied"><a class="bouton" href="#/style">${t("acc.style.bouton")}</a></p></section>`;
-  };
+    regler: (p, v) => D.reglerMaMarque(p, v), demander: x => D.demanderChangementStyle(x), apres: async () => majCompteurs(),
+    envoyerPhotos: envoyerDesPhotos, offre: c => offreDe(c),
+    // Ce que l'écran montre en plus des photos : les publications déjà rendues par le moteur (jamais une photo brute : la démonstration en crée
+    // avec la photo seule, en data:), la dernière légende écrite, et la dernière vidéo montée (Premium).
+    publications: async () => {
+      const l = await D.contenus(), vivants = y => ["a_valider", "approuve", "programme", "publie"].includes(y.statut);
+      const photos = l.filter(y => y.type !== "video" && (y.format || "publication") === "publication" && vivants(y)).slice(0, 12);
+      const rendus = (await Promise.all(photos.map(async y => ({ url: await D.urlVisuel(y, "instagram").catch(() => null), gabarit: y.gabarit || null }))))
+        .filter(x => x.url && !/^data:/.test(x.url));
+      // Vidéo montée de préférence (dépôt de vidéos, ou vidéo tirée d'une photo) ; à défaut, la dernière vidéo (vidéo d'avis).
+      const videos = l.filter(y => y.type === "video" && vivants(y)), v = videos.find(y => y.depot_video_id || y.photo_id) || videos[0];
+      const video = v ? { url: await D.urlVideo(v).catch(() => null), image: v.visuel_url && !/^data:/.test(v.visuel_url) ? v.visuel_url : null } : null;
+      return { rendus, legende: (photos[0] && photos[0].legende) || "", video: video && video.url ? video : null };
+    } });
+  // Entrée « Vos publications » : sur l'accueil (juste sous « À faire maintenant ») et dans Réglages tant que le commerçant n'a pas validé son
+  // réglage « Texte sur vos photos » (marque.texte_photos posé et kit validé) ; ensuite une ligne discrète sur l'accueil (lienPublications)
+  // et l'entrée de la liste des Réglages, pour modifier.
+  const publicationsVues = c => !!(c.marque && c.marque.verrouille && c.marque.texte_photos);
+  const carteStyle = c => publicationsVues(c) ? "" : `<section class="carte style-accueil" id="carte-style" aria-labelledby="carte-style-titre"><div class="style-accueil-corps">
+      <div><h2 id="carte-style-titre">${t("acc.pub.titre")}</h2><p class="texte2">${t("acc.pub.texte")}</p></div></div>
+      <p class="pied"><a class="bouton" href="#/publications" id="voir-publications">${t("acc.pub.bouton")}</a></p></section>`;
+  const lienPublications = c => publicationsVues(c) ? `<p class="lien-accueil"><a class="lien-seul" href="#/publications" id="lien-publications">${t("acc.pub.lien")}</a></p>` : "";
   const style = () => styleEcran.rendre();
   // ---- fin du bloc Votre style ------------------------------------------------------------------------------------
 
   // ---------------- Routage
-  const ROUTES = { connexion, accueil, resultats, fiche, photos, avalider, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, style, reglages };
+  const ROUTES = { connexion, accueil, resultats, fiche, photos, avalider, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, publications: style, reglages };
   // Administrateur arrivé dans l'espace des commerçants (25/10/2026) : il le dit, avec « Ouvrir la console » et « Se connecter avec un autre compte »
   // (déconnexion, puis le formulaire de connexion). Même écran que la console pour un commerçant (console.js, refuse).
   function reserveCommercants() {
@@ -1908,6 +1937,7 @@
       try { const c = await D.commerce(); langueCommerce = I.langueValide(c && c.langue) || "fr"; langueLue = s.email; if (I.depuisCommerce(langueCommerce)) return; } catch (er) {}
     }
     connecte = true; route = ECRANS[r] ? r : "accueil"; dessinerNav();
+    if (route === "publications" && derniere !== route) pubDepuis = derniere === "accueil" ? "accueil" : "reglages";
     if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; if (route !== "videoavis") vaOuvert = false; if (derniere === "demarrage") { dem.vue = null; if (dem.fini) dem.pour = null; } } derniere = route;
     ecranCourant = ROUTES[route];
     try { await ROUTES[route](); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }

@@ -960,3 +960,63 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 #vers-video{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 #vers-video .bouton{min-height:44px}
 @media (max-width:899px){#ph-envoyer{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:2}}
+/* Vos publications, côté commerçant (31/10/2026) : grille Instagram dessinée avec ses photos, choix du texte sur les photos, annonces dans le cadre
+   d'Instagram et d'une actualité Google (visuel entier, rien de coupé), vidéo 9:16, couleurs et logo sur une ligne. Aucun logo de réseau dessiné :
+   le nom du réseau en texte. Grille de 4 px, cibles de 44 px. */
+.post{max-width:400px;margin:0 auto;background:#FFFFFF;border:1px solid var(--filet);border-radius:var(--r-image);overflow:hidden}
+.post-tete{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.post-tete>span:last-child{display:grid;line-height:1.25;font-size:14px;min-width:0}
+.post-tete .note{font-size:12px}
+.post-avatar{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;overflow:hidden;font-size:14px;font-weight:var(--graisse-forte);border:1px solid var(--filet)}
+.post-avatar img{width:100%;height:100%;object-fit:contain;background:#FFFFFF}
+.post-media{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;background:var(--creux)}
+.post-actions{display:flex;gap:16px;padding:8px 12px 0;font-size:13px;font-weight:var(--graisse-forte);color:var(--discret)}
+.post-legende{padding:4px 12px 12px;font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.post-fb .post-legende{padding:0 12px 8px}
+.post-fb .post-actions{justify-content:space-around;border-top:1px solid var(--filet);margin-top:0;padding:8px 12px}
+.post-google .post-legende{padding-top:8px;padding-bottom:4px}
+.post-media.entier{object-fit:contain}
+.pub .carte>h2{margin:0}
+.pub-profil{display:flex;align-items:center;gap:12px;margin:12px 0}
+.pub-profil .post-avatar{width:48px;height:48px;font-size:20px}
+.pub-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;margin:0 -4px;background:var(--surface)}
+.pub-grille canvas,.pub-grille img{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;background:var(--releve)}
+.pub-decision{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:16px}
+.pub-decision .bouton{flex:1 1 220px}
+.pub-choix-liste{display:grid;gap:8px;border:0;padding:0;margin:12px 0;min-width:0}
+.pub-choix{display:grid;grid-template-columns:88px minmax(0,1fr);align-items:center;gap:12px;padding:8px;min-height:44px;background:var(--surface);border:1px solid var(--bord);border-radius:var(--r-image);cursor:pointer}
+.pub-choix input{position:absolute;opacity:0;width:1px;height:1px}
+.pub-choix canvas{display:block;width:88px;height:110px;border-radius:4px;background:var(--releve)}
+.pub-choix-texte{display:grid;gap:4px;justify-items:start;line-height:1.35}
+.pub-choix:has(input:checked){border-color:var(--encre);box-shadow:inset 0 0 0 1px var(--encre)}
+.pub-choix:has(input:checked) .fort{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.pub-choix:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
+.pub-reco{display:inline-block;padding:0 8px;font-size:13px;line-height:24px;font-weight:var(--graisse-forte);color:var(--sur-marque);background:var(--marque);border-radius:4px}
+.pub-cadres{display:grid;gap:16px;margin-top:12px}
+.pub-cadre-nom{padding:0 12px 12px}
+.pub-reel{position:relative;max-width:280px;margin:12px auto 8px;aspect-ratio:9/16;background:#121614;border-radius:12px;overflow:hidden}
+.pub-reel video{display:block;width:100%;height:100%;object-fit:cover}
+.pub-reel.vide,.pub-reel.verrou{display:grid;align-content:center;justify-items:center;gap:16px;padding:24px;text-align:center;background:var(--releve);border:1px solid var(--filet)}
+.pub-reel.verrou .fort{font-size:17px;line-height:1.35}
+.pub-marque{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin:12px 0}
+.pub-logo{display:block;height:44px;width:auto;max-width:160px;object-fit:contain;background:#FFFFFF;border:1px solid var(--filet);border-radius:4px;padding:4px}
+/* Pastilles nommées (31/10/2026, test client) : chaque couleur porte son nom (Principale, Secondaire, Fond, Texte). */
+.pub-pastilles{display:flex;flex-wrap:wrap;gap:8px 12px;list-style:none;margin:0;padding:0}
+.pub-pastilles li{display:grid;justify-items:center;gap:4px;min-width:64px}
+.pub-pastille-c{display:block;flex:none;width:32px;height:32px;border-radius:6px;border:1px solid var(--bord-fort)}
+.pub-attente{display:grid;gap:8px;margin:0 0 12px}
+.pub-attente-liste{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.pub-attente-liste li{display:flex;align-items:center;gap:12px;min-height:32px}
+.pub-attente-liste .pub-pastille-c{width:28px;height:28px}
+.pub-actuel{display:inline-flex;align-items:center;min-height:44px;margin:0}
+.pub-demande{display:grid;gap:12px;margin-top:12px}
+.lien-accueil{margin:0}
+/* Case de couleur en ligne avec son libellé : .f empile ses enfants (flex-direction:column), d'où la règle plus précise ici. */
+.f.pub-couleur{display:flex;flex-direction:row;align-items:center;gap:12px}
+.pub-couleur input[type=color]{width:56px;height:44px;padding:2px;border:1px solid var(--bord);border-radius:var(--r);background:var(--surface)}
+@media (min-width:700px){.pub-cadres{grid-template-columns:repeat(2,minmax(0,1fr))}.pub-choix{grid-template-columns:120px minmax(0,1fr)}.pub-choix canvas{width:120px;height:150px}}
+/* En-tête du téléphone (31/10/2026) : le logo ne chevauche plus « FR » (375, 390 et 430 px). Avant : l'image (max-width:none, flex-shrink:0)
+   débordait de son lien, que le flex rétrécissait. Le lien garde maintenant la largeur du logo (flex:none), un peu plus petit sous 440 px ;
+   « Réglages » ne garde que son icône sous 390 px (règle plus haut, son nom reste lu par les lecteurs d'écran). */
+@media (max-width:439px){.haut{gap:4px}.haut .logo,html[lang=nl] .haut .logo{flex:none;min-width:auto}.haut .logo-img,html[lang=nl] .haut .logo-img{height:21px}
+  .haut .langues button{min-width:36px;padding:0 2px}}

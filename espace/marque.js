@@ -7,10 +7,20 @@
 (function (racine) {
   const STYLES_PHOTO = ["lumineux", "chaleureux", "sombre_contraste", "naturel"], GABARITS = ["plein", "editorial", "annonce"];
   const CLES = ["version", "verrouille", "verrouille_le", "auto", "source", "logo", "logo_fond", "couleurs", "palette", "couple", "police_titres", "police_texte",
-    "style_photo", "gabarit_prefere", "gabarit_impose", "mots_signature", "a_eviter", "maj", "valide_par"];
+    "style_photo", "gabarit_prefere", "gabarit_impose", "mots_signature", "a_eviter", "maj", "valide_par", "texte_photos"];
+  // « Texte sur vos photos » (31/10/2026, écran « Vos publications ») : jamais, annonces (défaut, recommandé), souvent. Lu par le moteur
+  // (moteur/marque.choisir_gabarit) : jamais = toujours la photo seule (gabarit « photo ») ; annonces = la photo seule, le gabarit « annonce » pour
+  // les annonces seulement ; souvent = modèle préféré et rotation comme avant.
+  const TEXTE_PHOTOS = ["jamais", "annonces", "souvent"], TEXTE_PHOTOS_DEFAUT = "annonces";
   const AUTEURS = ["commercant", "renom"];   // marque.valide_par : qui a enregistré le kit (posé par la base, voir admin_regler_marque dans schema.sql)
   const MAX_MOTS = 5, MAX_EVITER = 10, MAX_CAR = 60, CONTRASTE_TEXTE = 4.5, CONTRASTE_GRAPHIQUE = 3;
   const STYLE_METIER = { restaurant: "chaleureux", beaute: "lumineux", sport: "naturel", autre: "naturel" };
+  // Directions de style proposées au commerçant (31/10/2026) : trois façons de montrer ses publications, avec SES couleurs et son logo (réglés par
+  // BoostImpact). Une direction = un modèle préféré (gabarit_prefere, varié 1 fois sur 3 par moteur/marque.choisir_gabarit) + un couple de polices
+  // de couples.json. Seules ces clés changent ; la base contrôle le couple (fonction SQL couple_marque_valide, regler_ma_marque).
+  const DIRECTIONS = ["photo", "magazine", "affiche"], GAB_DIRECTION = { photo: "plein", magazine: "editorial", affiche: "annonce" };
+  const COUPLES_DIRECTION = { restaurant: { magazine: "elegant", affiche: "bistrot" }, beaute: { magazine: "raffine", affiche: "epure" },
+    sport: { magazine: "epure", affiche: "franc" }, autre: { magazine: "elegant", affiche: "franc" } };
 
   // ---------------------------------------------------------------- Couleurs
   const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -129,6 +139,7 @@
     k.gabarit_impose = !!k.gabarit_impose && k.gabarit_prefere !== null;
     [["mots_signature", MAX_MOTS], ["a_eviter", MAX_EVITER]].forEach(([x, n]) => { k[x] = (Array.isArray(k[x]) ? k[x] : []).map(s => String(s).trim().slice(0, MAX_CAR)).filter(Boolean).slice(0, n); });
     k.version = +m.version || 0; k.verrouille = !!m.verrouille;
+    k.texte_photos = TEXTE_PHOTOS.includes(m.texte_photos) ? m.texte_photos : TEXTE_PHOTOS_DEFAUT;
     return k;
   }
   // Fautes d'un kit : mêmes règles que la fonction SQL marque_fautes (la base a le dernier mot). Messages en clés i18n (marque.f.*).
@@ -147,9 +158,19 @@
     if (!liste(m.mots_signature, MAX_MOTS)) f.push("mots_signature");
     if (!liste(m.a_eviter, MAX_EVITER)) f.push("a_eviter");
     if (m.valide_par != null && !AUTEURS.includes(m.valide_par)) f.push("valide_par");
+    if (m.texte_photos != null && !TEXTE_PHOTOS.includes(m.texte_photos)) f.push("texte_photos");
     if (m.logo != null && !new RegExp("^" + cid + "/marque/[A-Za-z0-9._-]{1,80}\\.(png|jpg|jpeg|webp)$").test(m.logo)) f.push("logo");
     return [...new Set(f)];
   }
+  // Les trois directions d'un commerce : [{id, couple, police_titres, police_texte, gabarit_prefere, gabarit_impose}].
+  function directions(metier, ton, cat) {
+    const m = COUPLES_DIRECTION[metier] ? metier : "autre", photo = couplePropose(cat, m, ton);
+    return DIRECTIONS.map(id => { const cp = cat.couples.find(x => x.id === (id === "photo" ? photo : COUPLES_DIRECTION[m][id])) || cat.couples[0];
+      return { id, couple: cp.id, police_titres: cp.titres, police_texte: cp.texte, gabarit_prefere: GAB_DIRECTION[id], gabarit_impose: false }; });
+  }
+  // Direction du kit (null : un style réglé autrement par BoostImpact, ou pas encore de modèle préféré).
+  const directionDu = (k, dirs) => (k && dirs.find(d => d.gabarit_prefere === k.gabarit_prefere && d.police_titres === k.police_titres && d.police_texte === k.police_texte)) || null;
+  const avecDirection = (k, d) => d ? { ...k, couple: d.couple, police_titres: d.police_titres, police_texte: d.police_texte, gabarit_prefere: d.gabarit_prefere, gabarit_impose: false } : k;
   const couleursCommerce = k => ({ fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale });
   // Couleurs déjà choisies par le commerçant (différentes des couleurs par défaut du schéma) : gardées par une proposition tirée des photos,
   // comme dans le moteur (rendu_cloud.proposer_kit). Un logo déposé, lui, donne les couleurs de la marque.
@@ -255,12 +276,22 @@
     x.drawImage(logo.canvas, px, py, lw, lh); x.restore();
     return gauche;
   }
+  // Gabarit « photo » (comme moteur/gabarits.gabarit_photo) : logo petit, en bas à droite (bord droit `droite`, bas `bas`), pastille aux couleurs du
+  // kit si le logo se lit mal sur la couleur moyenne de la photo à cet endroit. Sans logo : rien.
+  function logoDiscret(x, logo, k, droite, bas, hauteur) {
+    if (!logo) return;
+    let fond = [128, 128, 128];
+    try { const d = x.getImageData(Math.max(0, droite - 260), Math.max(0, bas - hauteur - 20), 260, hauteur + 20).data; let n = 0; const s = [0, 0, 0];
+      for (let i = 0; i < d.length; i += 64) { s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; n++; } if (n) fond = s.map(v => Math.floor(v / n)); } catch (er) {}
+    poserLogo(x, logo, k, droite, bas - Math.floor(hauteur / 2) - 10, hauteur, fond, 220);
+  }
   // textes : {texte_visuel, accroche, annonce: [..]} ; photo : image ou null ; logo : preparerLogo(...) ou null.
   function dessiner(canvas, gabarit, { kit, nom, photo, logo, textes }) {
     canvas.width = W; canvas.height = H; const x = canvas.getContext("2d"), k = kit;
     const c = { fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale, secondaire: k.couleurs.secondaire };
     const titre = t => policeTitre(k, t), corps = (t, g = 500) => policeTexte(k, t, g), fond = rgb(c.fond), accent = rgb(c.accent);
     x.clearRect(0, 0, W, H);
+    if (gabarit === "photo") { photoRect(x, photo, 0, 0, W, H); logoDiscret(x, logo, k, W - 48, H - 120, 52); return; }
     if (gabarit === "plein") {
       photoRect(x, photo, 0, 0, W, H);
       const marge = 56, pad = 40, [pt, tt, lignes] = ajuste(x, textes.texte_visuel, titre, W - 2 * marge - 2 * pad, 84, 52, 3), pn = corps(26, 700);
@@ -294,6 +325,42 @@
     }
   }
 
+  // ---- Visuel photo 9x16 (1080 x 1920, Reels et TikTok) : règles de moteur/gabarits.py (gabarit_plein, editorial_tiktok, annonce_tiktok) :
+  // photo pleine page, texte dans la zone lisible sous l'interface des réseaux (zone_tiktok : x 60 à 940, y 250 à 1440).
+  const H9 = 1920, ZONE9 = [60, 250, 940, 1440];
+  function dessiner916(canvas, gabarit, { kit, nom, photo, logo, textes }) {
+    canvas.width = W; canvas.height = H9; const x = canvas.getContext("2d"), k = kit, [x0, yh, x1, yb] = ZONE9;
+    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale, secondaire: k.couleurs.secondaire };
+    const titre = t => policeTitre(k, t), corps = (t, g = 500) => policeTexte(k, t, g), fond = rgb(c.fond), accent = rgb(c.accent), ink = css(encreSur(fond, c));
+    x.clearRect(0, 0, W, H9); photoRect(x, photo, 0, 0, W, H9);
+    if (gabarit === "photo") { logoDiscret(x, logo, k, x1, yb, 56); return; }
+    if (gabarit === "plein") {
+      const pad = 40, [pt, tt, lignes] = ajuste(x, textes.texte_visuel, titre, x1 - x0 - 2 * pad, 92, 52, 3), pn = corps(26, 700);
+      const ch = pad + 30 + 18 + lignes.length * Math.floor(tt * 1.12) + pad, y0 = yb - ch - 1;
+      x.fillStyle = css(fond, 242 / 255); x.fillRect(x0, y0, x1 - x0, ch + 1);
+      const gauche = poserLogo(x, logo, k, x1 - pad, y0 + pad + 7, 46, fond, 240);
+      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, y0 + pad - 6, pn, css(couleurLibelle(fond, c)));
+      let y = y0 + pad + 40; for (const l of lignes) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.12); }
+    } else if (gabarit === "editorial") {
+      const pad = 44, larg = x1 - x0 - 2 * pad, pn = corps(24, 700), [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, larg, 80, 48, 3), pp = corps(32, 500);
+      const petit = coupe(x, textes.accroche, pp, larg).slice(0, 3), ch = pad + 28 + 20 + lt.length * Math.floor(tt * 1.1) + 24 + 2 + 22 + petit.length * Math.floor(32 * 1.4) + pad - 10, y0 = yb - ch - 1;
+      x.fillStyle = css(fond); x.fillRect(x0, y0, x1 - x0, yb - y0);
+      let y = y0 + pad; const gauche = poserLogo(x, logo, k, x1 - pad, y + 12, 44, fond, 220);
+      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, y, pn, css(couleurLibelle(fond, c)));
+      y += 48; for (const l of lt) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.1); }
+      y += 48; for (const l of petit) { ecrire(x, l, x0 + pad, y, pp, ink); y += Math.floor(32 * 1.4); }
+    } else {
+      const pad = 48, larg = x1 - x0 - 2 * pad, barre = 104, pn = corps(28, 700), [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, larg, 100, 60, 3), pp = corps(34, 600);
+      const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche]).slice(0, 4).flatMap(t => coupe(x, t, pp, larg)).slice(0, 5);
+      const corpsH = 40 + lt.length * Math.floor(tt * 1.08) + 28 + info.length * Math.floor(34 * 1.5) + 30;
+      x.fillStyle = css(accent); x.fillRect(x0, yh, x1 - x0, barre); x.fillStyle = css(fond); x.fillRect(x0, yh + barre, x1 - x0, corpsH);
+      const gauche = poserLogo(x, logo, k, x1 - pad, yh + barre / 2, 60, accent, 260);
+      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, yh + barre / 2 - 17, pn, css(encreSur(accent, c)));
+      let y = yh + barre + 40; for (const l of lt) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.08); }
+      y += 28; for (const l of info) { ecrire(x, l, x0 + pad, y, pp, ink); y += Math.floor(34 * 1.5); }
+    }
+  }
+
   // ---------------------------------------------------------------- Écran du kit
   // Le style est créé par BoostImpact. Un seul écran, deux usages :
   //  * mode « renom » (console, panneau « Style du commerce ») : tous les réglages (logo, proposition de couleurs depuis le logo ou les photos,
@@ -311,7 +378,8 @@
     const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const msg = x => { const m = $("msg"); if (m) m.textContent = x; };
     const C4 = ["principale", "secondaire", "fond", "texte"];
-    const sty = { pour: null, c: null, kit: null, brut: null, demandes: [], images: [], photo: 0, logo: null, logoImg: null, logoUrl: null, attente: 0, ouvert: false };
+    const sty = { pour: null, c: null, kit: null, brut: null, demandes: [], images: [], photo: 0, logo: null, logoImg: null, logoUrl: null, attente: 0, ouvert: false,
+      pubs: null, reglage: null };
     const langueDe = c => I.langueValide(c && c.langue) || "fr";
     // Commerçant en offre sans réseaux (Essentiel, 26/10/2026) : ses textes ne parlent pas de vidéos (clé « .google » quand elle existe).
     const gx = cle => !renom && ((window.RENOM_OFFRES || {})[(sty.c || {}).offre_id] || {}).reseaux_sociaux === false && I.a(cle + ".google") ? cle + ".google" : cle;
@@ -338,7 +406,7 @@
       return [t("sty.etat.preparation"), t("sty.etat.preparation.texte")];
     }
     async function dessinerTout() {
-      const k = sty.kit, c = sty.c; if (!k || !$("sty-grille")) return;
+      const k = sty.kit, c = sty.c; if (!k || (renom && !$("sty-grille"))) return;
       await polices(k);
       const photo = sty.images[sty.photo] || null, tx_ = textesApercu(c);
       GABARITS.forEach(g => { const cv = $("sty-apercu-" + g); if (cv) dessiner(cv, g, { kit: k, nom: c.nom, photo, logo: sty.logo, textes: tx_ }); });
@@ -373,17 +441,198 @@
         <div class="f"><label for="sty-eviter">${t("sty.mots.eviter")}</label><textarea id="sty-eviter" rows="3"${lc}>${e((k.a_eviter || []).join("\n"))}</textarea><p class="aide">${t("sty.mots.eviter.aide")}</p></div>`;
     const listeDemandes = () => sty.demandes.length ? `<ul class="liste sty-demandes">${sty.demandes.slice(0, renom ? 10 : 3).map(x => `<li><p class="note">${t(x.traitee_le ? "sty.demande.traitee" : "sty.demande.attente", { d: I.date(x.cree_le), t: I.date(x.traitee_le || x.cree_le) })}</p><p class="casse">${e(x.texte)}</p></li>`).join("")}</ul>` : "";
 
+    // ---- Commerçant : « Vos publications » (31/10/2026). Il ne règle ni couleurs, ni polices, ni modèles : il voit ses publications et valide.
+    // Ordre : a. sa grille Instagram (9 visuels dessinés ici avec SES photos, selon le réglage) ; b. « Du texte sur vos photos ? » (3 choix, un
+    // exemple chacun sur sa photo) ; c. ses annonces (cadre Instagram et actualité de la fiche Google, visuel entier) ; d. ses vidéos (Premium) ;
+    // e. couleurs et logo sur une ligne, changement par une demande à champs fixes. Sans photo : l'envoi de 3 photos, rien d'autre à regarder.
+    // Textes des visuels : tirés de SES données (spécialités, horaires, nom, dernière légende), jamais un texte d'exemple.
+    const TUILE_W = 360, TUILE_H = 450;
+    const majuscule = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+    // Titres tirés de la fiche, vrais pour n'importe laquelle de ses photos, variés d'une vignette à l'autre (31/10/2026, test client : avec
+    // « Souvent », le nom du commerce revenait sur une vignette sur deux) : la phrase d'ensemble de ses spécialités (« Cuisine de saison préparée
+    // sur place » dans « Cuisine de saison préparée sur place : pâtes fraîches, … »), ce qui le distingue (une ligne chacune), sa phrase de
+    // présentation, ses spécialités en liste, puis ses horaires. Jamais un plat précis seul posé sur la photo d'un autre plat. Le nom du commerce
+    // n'est qu'un petit surtitre (nomCommerce dans dessiner) ; il ne devient le titre que si la fiche ne donne rien d'autre.
+    function sujets(c) {
+      const net = x => majuscule(String(x || "").trim().replace(/[.!;]+$/, "").trim()), court = x => x.length >= 3 && x.length <= 60;
+      const s_ = String(c.specialites || "").split("\n")[0].trim(), deux = s_.indexOf(":");
+      const tete = net(deux >= 0 ? s_.slice(0, deux) : s_), liste = deux >= 0 ? net(s_.slice(deux + 1)) : "";
+      const dm = c.demarrage || {}, distinctions = String(dm.distinctions || "").split("\n").map(net);
+      const l = [tete, ...distinctions, net(dm.phrase), liste, net(horairesDe(c))].filter(x => x && court(x) && x !== c.nom);
+      const vus = new Set(), uniques = l.filter(x => { const k = x.toLowerCase(); if (vus.has(k)) return false; vus.add(k); return true; });
+      return uniques.length ? uniques : [c.nom];
+    }
+    const horairesDe = c => { const h = String(c.horaires || "").split("\n")[0].trim(); return h && h.length <= 70 ? h : ""; };
+    // Textes d'une annonce n (0, 1…) et d'un visuel avec texte, en langue du commerce.
+    function textesDe(c, n) {
+      const su = sujets(c), titre = su[n % su.length], h = horairesDe(c), ou = c.nom + (c.ville ? ", " + c.ville : "");
+      // Accroche : les horaires, sauf quand le titre les reprend déjà.
+      const acc = h && !titre.toLowerCase().startsWith(h.toLowerCase().replace(/[.!;]+$/, "")) ? h : ou;
+      return { texte_visuel: titre, accroche: acc, annonce: [acc] };
+    }
+    const legendeAnnonce = c => { const tx_ = textesDe(c, 0), h = horairesDe(c);
+      return t("pub.annonce.legende", { titre: tx_.texte_visuel, nom: c.nom, h: h ? " " + h : "" }, langueDe(c)); };
+    // Grille de 9 selon le réglage : jamais = 9 photos seules ; annonces = 7 photos seules et 2 annonces ; souvent = modèle préféré et rotation.
+    function sequence(reglage, k) {
+      if (reglage === "jamais") return Array(9).fill("photo");
+      if (reglage === "annonces") return ["photo", "photo", "annonce", "photo", "photo", "photo", "annonce", "photo", "photo"];
+      const p = GABARITS.includes(k.gabarit_prefere) ? k.gabarit_prefere : "plein", autre = p === "plein" ? "editorial" : "plein";
+      return [p, p, "annonce", p, autre, p, p, "annonce", autre];
+    }
+    // Dessin d'un visuel 4:5 dans une petite toile (dessin à 1080 x 1350 dans une toile commune, puis réduit : 9 tuiles sans 9 grandes toiles).
+    let grande = null;
+    async function tuile(cv, g, photo, textes) {
+      if (!cv) return;
+      grande = grande || document.createElement("canvas");
+      await polices(sty.kit); dessiner(grande, g, { kit: sty.kit, nom: sty.c.nom, photo, logo: sty.logo, textes });
+      const x = cv.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(grande, 0, 0, cv.width, cv.height);
+    }
+    const reglageVu = () => sty.reglage || (sty.brut && TEXTE_PHOTOS.includes(sty.brut.texte_photos) ? sty.brut.texte_photos : TEXTE_PHOTOS_DEFAUT);
+    const valide = () => !!(sty.brut && sty.brut.verrouille && sty.brut.texte_photos);
+    const compte = c => String(c.nom || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 24);
+    const avatar = c => { const k = sty.kit, enc = css(encreSur(rgb(k.couleurs.principale), { texte: k.couleurs.texte, fond: k.couleurs.fond }));
+      return `<span class="post-avatar" aria-hidden="true" style="background:${e(k.couleurs.principale)};color:${enc}">${sty.logoUrl ? `<img src="${e(sty.logoUrl)}" alt="">` : e(String(c.nom || "?").trim().charAt(0).toUpperCase())}</span>`; };
+    async function dessinerGrille() {
+      const c = sty.c, seq = sequence(reglageVu(), sty.kit), n = sty.images.length; let a = 0, p = 0;
+      if (!n) return;
+      for (let i = 0; i < 9; i++) { const g = seq[i], txt = g === "annonce" ? textesDe(c, a++) : textesDe(c, p + 1); if (g !== "annonce") p++;
+        // Photos en décalé d'une rangée à l'autre : avec 3 photos, jamais la même photo l'une au-dessus de l'autre.
+        await tuile($("pub-t-" + i), g, sty.images[(i + Math.floor(i / 3)) % n], txt); }
+    }
+    async function dessinerExemples() {
+      const c = sty.c, img = sty.images[0] || null; if (!img) return;
+      await tuile($("pub-ex-jamais"), "photo", img, textesDe(c, 0));
+      await tuile($("pub-ex-annonces"), "annonce", sty.images[1 % sty.images.length], textesDe(c, 0));
+      await tuile($("pub-ex-souvent"), GABARITS.includes(sty.kit.gabarit_prefere) && sty.kit.gabarit_prefere !== "annonce" ? sty.kit.gabarit_prefere : "plein", img, textesDe(c, 1));
+    }
+    async function dessinerAnnonces() {
+      const c = sty.c, img = sty.images[1 % Math.max(1, sty.images.length)] || null; if (!img) return;
+      for (const id of ["pub-an-ig", "pub-an-g"]) await tuile($(id), "annonce", img, textesDe(c, 0));
+    }
+    // Grille faite des visuels déjà rendus par le moteur (aucune photo d'origine lisible) : ceux qui correspondent au réglage.
+    const rendusDuReglage = () => { const r = reglageVu(), l = ((sty.pubs || {}).rendus || []);
+      const bons = l.filter(x => !x.gabarit || (r === "jamais" ? x.gabarit === "photo" : r === "annonces" ? ["photo", "annonce"].includes(x.gabarit) : true));
+      return (bons.length ? bons : l).slice(0, 9); };
+    function htmlPublications(c) {
+      const offre = (o.offre && o.offre(c)) || {}, social = offre.reseaux_sociaux !== false, premium = +offre.videos > 0 && social;
+      const lgc = langueDe(c), lc = ` lang="${lgc}"`, nom = e(c.nom), cpt = e(compte(c) || c.nom), r = reglageVu(), k = sty.kit;
+      const sansPhoto = !sty.images.length, rendus = sansPhoto ? rendusDuReglage() : [];
+      const envoi = `<section class="carte pub-envoi" aria-labelledby="pub-envoi-titre"><h2 id="pub-envoi-titre">${t("pub.vide.titre")}</h2><p class="texte2">${t("pub.vide.texte")}</p>
+          <div class="actions"><span class="depot-choix"><input id="pub-photos" class="vh" type="file" accept="image/*" multiple><label for="pub-photos" class="bouton">${t("pub.vide.bouton")}</label></span></div>
+          <p class="msg" id="pub-envoi-msg" role="status"></p></section>`;
+      const grille = sansPhoto ? (rendus.length ? `<div class="pub-grille" role="img" aria-label="${t("pub.grille.alt")}">${rendus.map(x => `<img src="${e(x.url)}" alt="">`).join("")}</div>` : "")
+        : `<div class="pub-grille" role="img" aria-label="${t("pub.grille.alt")}">${Array.from({ length: 9 }, (_, i) => `<canvas id="pub-t-${i}" width="${TUILE_W}" height="${TUILE_H}"></canvas>`).join("")}</div>`;
+      const a = sansPhoto && !rendus.length ? envoi : `<section class="carte pub-insta" aria-labelledby="pub-insta-titre">
+          <h2 id="pub-insta-titre">${t(social ? "pub.insta.titre" : "pub.insta.titre.google")}</h2>
+          ${social ? `<div class="pub-profil">${avatar(c)}<span class="pile serre"><span class="fort">${cpt}</span><span class="note">${nom}</span></span></div>` : ""}
+          ${grille}
+          <div class="actions pub-decision" id="pub-decision">${valide() && !sty.reglage
+            ? `<p class="texte2 fort" id="pub-valide">${t("pub.valide." + (sty.brut.texte_photos || r))}</p><a class="lien-seul" href="#pub-texte" id="pub-changer">${t("pub.changer")}</a>`
+            : `<button type="button" class="bouton" id="pub-parfait">${t("pub.parfait")}</button><a class="lien-seul" href="#pub-texte" id="pub-changer">${t("pub.changer")}</a>`}</div>
+          <p class="msg" id="msg" role="status"></p></section>
+          ${sansPhoto ? envoi : ""}`;
+      const choix = TEXTE_PHOTOS.map(x => `<label class="pub-choix"><input type="radio" name="pub-texte" value="${x}"${r === x ? " checked" : ""}>
+            ${sansPhoto ? "" : `<canvas id="pub-ex-${x}" width="${TUILE_W}" height="${TUILE_H}" aria-hidden="true"></canvas>`}
+            <span class="pub-choix-texte"><span class="fort">${t("pub.texte." + x)}</span>${x === "annonces" ? `<span class="pub-reco">${t("pub.recommande")}</span>` : ""}
+            <span class="note">${t("pub.texte." + x + ".note")}</span></span></label>`).join("");
+      const b = `<section class="carte" id="pub-texte" aria-labelledby="pub-texte-titre" tabindex="-1"><h2 id="pub-texte-titre">${t("pub.texte.titre")}</h2>
+          <p class="texte2">${t("pub.texte.chapo")}</p>
+          <fieldset class="pub-choix-liste"><legend class="vh">${t("pub.texte.titre")}</legend>${choix}</fieldset>
+          <p class="note">${t("pub.texte.aide")}</p>
+          <div class="actions">${r === (sty.brut && sty.brut.texte_photos) && valide() ? `<p class="texte2 fort pub-actuel" id="pub-actuel">${t("pub.actuel")}</p>`
+            : `<button type="button" class="bouton second" id="pub-garder">${t("pub.garder", { c: t("pub.texte." + r) })}</button>`}</div></section>`;
+      const c_ = sansPhoto ? "" : `<section class="carte" aria-labelledby="pub-an-titre"><h2 id="pub-an-titre">${t("pub.annonces.titre")}</h2><p class="texte2">${t("pub.annonces.texte")}</p>
+          <div class="pub-cadres">
+            ${social ? `<figure class="post post-ig"><figcaption class="post-tete">${avatar(c)}<span><span class="fort">${cpt}</span><span class="note">${e(c.ville || "")}</span></span></figcaption>
+              <canvas class="post-media" id="pub-an-ig" width="${TUILE_W * 2}" height="${TUILE_H * 2}" role="img" aria-label="${t("pub.annonce.alt.ig")}"></canvas>
+              <p class="post-legende"${lc}><span class="fort">${cpt}</span> ${e(legendeAnnonce(c))}</p><p class="note pub-cadre-nom">${t("pub.reseau.instagram")}</p></figure>` : ""}
+            <figure class="post post-google"><figcaption class="post-tete">${avatar(c)}<span><span class="fort">${nom}</span><span class="note">${t("pub.google.quand")}</span></span></figcaption>
+              <canvas class="post-media entier" id="pub-an-g" width="${TUILE_W * 2}" height="${TUILE_H * 2}" role="img" aria-label="${t("pub.annonce.alt.google")}"></canvas>
+              <p class="post-legende"${lc}>${e(legendeAnnonce(c))}</p><p class="note pub-cadre-nom">${t("pub.reseau.google")}</p></figure>
+          </div></section>`;
+      const vid = (sty.pubs || {}).video;
+      const d = !social ? "" : premium ? `<section class="carte" aria-labelledby="pub-video-titre"><h2 id="pub-video-titre">${t("pub.videos.titre")}</h2>
+          ${vid ? `<div class="pub-reel"><video src="${e(vid.url)}"${vid.image ? ` poster="${e(vid.image)}"` : ""} controls muted playsinline preload="metadata" aria-label="${t("pub.videos.alt")}"></video></div><p class="note">${t("pub.videos.note")}</p>`
+            : `<div class="pub-reel vide"><p class="texte2">${t("pub.videos.aucune")}</p><a class="bouton" href="#/photos?video">${t("pub.videos.creer")}</a></div>`}</section>`
+        : `<section class="carte" aria-labelledby="pub-video-titre"><h2 id="pub-video-titre">${t("pub.videos.titre")}</h2>
+          <div class="pub-reel verrou"><p class="fort">${t("pub.videos.premium")}</p><a class="bouton second" href="#/offre?dessus">${t("pub.videos.offre")}</a></div></section>`;
+      const attente = sty.demandes.filter(x => !x.traitee_le);
+      // Demande en attente : ce qui a été demandé, relu dans le texte composé à l'envoi (couleur avec son aperçu, logo, commentaire).
+      const relue = x => { const tx_ = String(x.texte || ""), co = (tx_.match(/Couleur souhaitée : (#[0-9A-Fa-f]{6})/) || [])[1], mo = (tx_.match(/Commentaire : (.*)/) || [])[1];
+        return [co ? `<li><span class="pub-pastille-c" style="background:${e(co)}" aria-hidden="true"></span><span>${t("pub.demande.vu.couleur")} <span class="note">${e(co.toUpperCase())}</span></span></li>` : "",
+          /Nouveau logo : /.test(tx_) ? `<li><span>${t("pub.demande.vu.logo")}</span></li>` : "",
+          mo ? `<li><span class="casse">${t("pub.demande.vu.mot", { m: e(mo.trim()) })}</span></li>` : ""].join(""); };
+      const e_ = `<section class="carte" aria-labelledby="pub-marque-titre"><h2 id="pub-marque-titre">${t("pub.marque.titre")}</h2>
+          <div class="pub-marque">${sty.logoUrl ? `<img class="pub-logo" src="${e(sty.logoUrl)}" alt="${t("pub.marque.logo.alt")}">` : `<span class="note">${t("pub.marque.sans.logo")}</span>`}
+            <ul class="pub-pastilles" aria-label="${t("pub.marque.couleurs")}">${C4.map(x => `<li><span class="pub-pastille-c" style="background:${e(k.couleurs[x])}" aria-hidden="true"></span><span class="note">${t("sty.c." + x)}</span></li>`).join("")}</ul></div>
+          ${attente.length ? `<div class="pub-attente" id="pub-demande-attente"><p class="note">${t("pub.demande.attente", { d: I.date(attente[0].cree_le) })}</p>${relue(attente[0]) ? `<ul class="pub-attente-liste">${relue(attente[0])}</ul>` : ""}</div>` : ""}
+          <div class="actions"><button type="button" class="bouton second" id="pub-changement" aria-expanded="${sty.ouvert}" aria-controls="pub-demande">${t("pub.demande.ouvrir")}</button></div>
+          <form id="pub-demande" class="pub-demande"${sty.ouvert ? "" : " hidden"}>
+            <div class="f"><label for="pub-dem-logo">${t("pub.demande.logo")}</label><input id="pub-dem-logo" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp"><p class="aide">${t("pub.demande.logo.aide")}</p></div>
+            <div class="f pub-couleur"><input id="pub-dem-couleur" type="color" value="${e(k.couleurs.principale.toLowerCase())}"><label for="pub-dem-couleur">${t("pub.demande.couleur")}</label></div>
+            <div class="f"><label for="pub-dem-texte">${t("pub.demande.commentaire")}</label><textarea id="pub-dem-texte" rows="2" maxlength="200"></textarea></div>
+            <p class="note">${t("pub.demande.delai")}</p>
+            <div class="actions"><button type="submit" class="bouton" id="pub-dem-envoyer">${t("pub.demande.envoyer")}</button><button type="button" class="lien" id="pub-dem-annuler">${t("annuler")}</button></div>
+            <p class="msg" id="pub-dem-msg" role="status"></p></form></section>`;
+      const mots = `<details class="carte sty-mots" id="sty-mots"><summary>${t("pub.mots")}</summary><div class="sty-mots-corps">
+          <div class="f"><label for="sty-signature">${t("pub.mots.aimes")}</label><textarea id="sty-signature" rows="3"${lc}>${e((k.mots_signature || []).join("\n"))}</textarea><p class="aide">${t("pub.mots.aimes.aide")}</p></div>
+          <div class="f"><label for="sty-eviter">${t("pub.mots.eviter")}</label><textarea id="sty-eviter" rows="3"${lc}>${e((k.a_eviter || []).join("\n"))}</textarea><p class="aide">${t("pub.mots.eviter.aide")}</p></div>
+          <div class="actions"><button type="button" class="bouton second" id="sty-mots-enregistrer">${t("pub.mots.enregistrer")}</button></div></div></details>`;
+      if (sansPhoto && !rendus.length) return `${o.entete(c)}<div class="pile pub">${a}${e_}</div>`;
+      return `${o.entete(c)}<div class="pile pub">${a}${b}${c_}${d}${e_}${mots}</div>`;
+    }
+    let msgMinuteur = 0;
+    const dire = x => { const m = $("msg"); if (!m) return; m.textContent = x; clearTimeout(msgMinuteur); msgMinuteur = setTimeout(() => { if ($("msg")) $("msg").textContent = ""; }, 8000); };
+    async function publications(c) { o.vue.innerHTML = htmlPublications(c); await publications_brancher(); }
+    // Validation : le réglage vu devient celui du commerce, validé par lui ; message sans numéro de version, effacé après 8 s.
+    async function validerReglage(bt) {
+      const r = reglageVu(); bt.disabled = true;
+      try { const m = await o.regler({ texte_photos: r }, true); sty.pour = null; sty.reglage = null; await rendre(); if (o.apres) await o.apres(m);
+        dire(t("pub.valide.msg." + r)); if ($("pub-decision")) $("pub-decision").scrollIntoView({ block: "center" }); }
+      catch (er) { bt.disabled = false; erreur(er); }
+    }
+    async function publications_brancher() {
+      const c = sty.c;
+      if ($("pub-parfait")) $("pub-parfait").onclick = () => validerReglage($("pub-parfait"));
+      if ($("pub-garder")) $("pub-garder").onclick = () => validerReglage($("pub-garder"));
+      if ($("pub-changer")) $("pub-changer").onclick = ev => { ev.preventDefault(); const x = $("pub-texte"); if (x) { x.scrollIntoView({ block: "start" }); x.focus({ preventScroll: true }); } };
+      o.vue.querySelectorAll("input[name=pub-texte]").forEach(i => i.onchange = async () => {
+        sty.reglage = i.value; const y = scrollY; o.vue.innerHTML = htmlPublications(c); await publications_brancher(); scrollTo(0, y); });
+      if ($("pub-photos")) $("pub-photos").onchange = async () => { const fs = [...$("pub-photos").files]; if (!fs.length) return; const m = $("pub-envoi-msg");
+        try { const r = await o.envoyerPhotos(fs, x => { m.textContent = x; }); sty.pour = null; await rendre(); dire(t("pub.vide.envoyees", { n: r.deposees })); }
+        catch (er) { m.textContent = I.phrase(er.message); } };
+      $("pub-changement").onclick = () => { sty.ouvert = !sty.ouvert; $("pub-demande").hidden = !sty.ouvert; $("pub-changement").setAttribute("aria-expanded", String(sty.ouvert)); if (sty.ouvert) $("pub-dem-logo").focus(); };
+      $("pub-dem-annuler").onclick = () => { sty.ouvert = false; $("pub-demande").hidden = true; $("pub-changement").setAttribute("aria-expanded", "false"); };
+      // Demande à champs fixes : logo déposé (dossier marque du commerce), couleur du sélecteur, commentaire court. Texte composé pour BoostImpact.
+      $("pub-demande").onsubmit = async ev => { ev.preventDefault(); const m = $("pub-dem-msg"), bt = $("pub-dem-envoyer"), f = $("pub-dem-logo").files[0];
+        const couleur = $("pub-dem-couleur").value.toUpperCase(), com = $("pub-dem-texte").value.trim().slice(0, 200), avant = sty.kit.couleurs.principale.toUpperCase();
+        if (!f && couleur === avant && !com) { m.textContent = t("pub.demande.vide"); return; }
+        bt.disabled = true;
+        try {
+          let logo = null; if (f) { const er = controlerLogo(f); if (er) throw Object.assign(new Error("logo " + er), { code: "sty.logo." + er }); logo = (await o.deposerLogo(f)).chemin; }
+          const l = ["Demande depuis « Vos publications » (champs fixes)."];
+          if (logo) l.push("Nouveau logo : " + logo); if (couleur !== avant) l.push("Couleur souhaitée : " + couleur + " (actuelle : " + avant + ")"); if (com) l.push("Commentaire : " + com);
+          await o.demander(l.join("\n")); sty.ouvert = false; sty.pour = null; await rendre(); if (o.apres) await o.apres(null);
+          const x = $("pub-demande-attente"); if (x) x.scrollIntoView({ block: "center" });
+        } catch (er) { bt.disabled = false; m.textContent = er.code ? t(er.code) : I.phrase(er.message); } };
+      if ($("sty-mots-enregistrer")) $("sty-mots-enregistrer").onclick = async () => {
+        try { await o.regler({ mots_signature: lignes("sty-signature", MAX_MOTS), a_eviter: lignes("sty-eviter", MAX_EVITER) }, null); sty.pour = null; await rendre(); dire(t("pub.mots.enregistres")); } catch (er) { erreur(er); } };
+      await dessinerGrille(); await dessinerExemples(); await dessinerAnnonces();
+    }
+
     async function rendre() {
       const [c, cat] = await Promise.all([o.commerce(), charger()]);
       if (sty.pour !== c.id) {
         const m = await o.marque(); Object.assign(sty, { pour: c.id, brut: m.brut, photo: 0, logoUrl: m.logo, demandes: m.demandes || [] });
         sty.images = (await Promise.all((m.photos || []).map(p => chargerImage(p.url).catch(() => null)))).filter(Boolean);
         [sty.logoImg, sty.logo] = await chargerLogo(m.logo);
+        sty.pubs = !renom && o.publications ? await o.publications().catch(() => null) : null;
         // Pas encore de kit : proposition calculée ici depuis la première photo (même calcul que le moteur), sinon les couleurs actuelles.
         sty.kit = m.kit || (sty.images.length ? { ...garderCouleurs(proposer({ photos: [pixels(sty.images[0])], metier: c.metier, ton: c.ton || "", cat }), c.couleurs), version: 0 }
           : normaliser(null, c.couleurs, c.metier, c.ton || "", cat));
       }
       sty.c = c;
+      if (!renom) return publications(c);
       const k = sty.kit, b = sty.brut, valide = !!(b && b.verrouille), [titreEtat, texteEtat] = etat(k, b), lgc = langueDe(c), lc = ` lang="${lgc}"`;
       const STY_GAB = I.carte("sty.gab", GABARITS), STY_SP = I.carte("sty.sp", STYLES_PHOTO), STY_C = I.carte("sty.c", C4);
       const attente = sty.demandes.filter(x => !x.traitee_le);
@@ -456,47 +705,6 @@
           } catch (er) { erreur(er); }
         };
         $("sty-valider").onclick = () => enregistrer(true); $("sty-enregistrer").onclick = () => enregistrer(false);
-      } else {
-        const cp = cat.couples.find(x => x.id === k.couple) || cat.couples.find(x => x.titres === k.police_titres) || null, fam = id => (cat.familles[id] || {}).nom || id;
-        const resume = `<div class="sty-resume"><div class="style-nuancier" aria-hidden="true">${C4.map(x => `<span style="background:${e(k.couleurs[x])}"></span>`).join("")}</div>
-            <p class="note">${t(gx("sty.resume"), { p: e(cp ? nomCouple(cp) : fam(k.police_titres)), f: e(fam(k.police_titres) + (k.police_texte !== k.police_titres ? " · " + fam(k.police_texte) : "")), a: STY_SP[k.style_photo] || "" })}</p></div>`;
-        const dejaValide = valide && (b.valide_par || "commercant") === "commercant";
-        o.vue.innerHTML = `${enTete}
-          <div class="colonnes sty">
-            <div class="pile">${carteApercus(k, STY_GAB, false, resume)}</div>
-            <div class="pile">
-              <section class="carte sty-actions" aria-labelledby="sty-avis-titre"><h2 id="sty-avis-titre">${t("sty.avis.titre")}</h2>
-                <div class="actions">${dejaValide ? "" : `<button type="button" class="bouton" id="sty-valider">${t("sty.valider")}</button>`}<button type="button" class="bouton second" id="sty-changement" aria-expanded="${sty.ouvert}" aria-controls="sty-demande-zone">${t("sty.changement")}</button></div>
-                <div class="f" id="sty-demande-zone"${sty.ouvert ? "" : " hidden"}><label for="sty-demande">${t("sty.demande.label")}</label><textarea id="sty-demande" rows="4" maxlength="1000"></textarea><p class="aide">${t("sty.demande.aide")}</p>
-                  <div class="actions"><button type="button" class="bouton" id="sty-demande-envoyer">${t("sty.demande.envoyer")}</button><button type="button" class="lien" id="sty-demande-annuler">${t("annuler")}</button></div></div>
-                ${sty.demandes.length ? `<div class="sty-historique"><p class="note fort">${t("sty.demandes")}</p>${listeDemandes()}</div>` : ""}
-                <p class="aide">${t("sty.valider.aide")}</p><p class="msg" id="msg" role="status"></p></section>
-              ${carteLogo(k)}
-              <details class="carte sty-mots" id="sty-mots"><summary>${t("sty.mots.facultatif")}</summary><div class="sty-mots-corps">${champsMots(k, lc)}
-                <div class="actions"><button type="button" class="bouton second" id="sty-mots-enregistrer">${t("sty.mots.enregistrer")}</button></div></div></details>
-            </div>
-          </div>`;
-        const mots = () => ({ mots_signature: lignes("sty-signature", MAX_MOTS), a_eviter: lignes("sty-eviter", MAX_EVITER) });
-        const regler = async (p, valider, cle) => {
-          try { const m = await o.regler(p, valider); sty.pour = null; await rendre(); msg(t(cle, { v: m.version })); if (o.apres) await o.apres(m); return true; } catch (er) { erreur(er); return false; }
-        };
-        $("sty-logo-fichier").onchange = async () => {
-          const f = $("sty-logo-fichier").files[0]; if (!f) return;
-          try {
-            const r = await o.deposerLogo(f), img = await chargerImage(r.url);
-            const p = proposer({ logo: pixels(img), metier: c.metier, ton: c.ton || "", logoChemin: r.chemin, cat });
-            await regler({ logo: r.chemin, logo_fond: p.logo_fond }, null, "sty.logo.enregistre");
-          } catch (er) { erreur(er); }
-        };
-        if ($("sty-logo-retirer")) $("sty-logo-retirer").onclick = () => regler({ logo: null, logo_fond: null }, null, "sty.logo.retire");
-        if ($("sty-valider")) $("sty-valider").onclick = async () => { if (await regler(mots(), true, "sty.valide.msg")) window.scrollTo(0, 0); };
-        $("sty-mots-enregistrer").onclick = () => regler(mots(), null, "sty.mots.enregistres");
-        $("sty-changement").onclick = () => { sty.ouvert = !sty.ouvert; $("sty-demande-zone").hidden = !sty.ouvert; $("sty-changement").setAttribute("aria-expanded", String(sty.ouvert)); if (sty.ouvert) $("sty-demande").focus(); };
-        $("sty-demande-annuler").onclick = () => { sty.ouvert = false; $("sty-demande-zone").hidden = true; $("sty-changement").setAttribute("aria-expanded", "false"); };
-        $("sty-demande-envoyer").onclick = async () => {
-          const x = $("sty-demande").value.trim(); if (!x) { msg(t("sty.demande.vide")); return; }
-          try { await o.demander(x); sty.ouvert = false; sty.pour = null; await rendre(); msg(t("sty.demande.envoyee")); if (o.apres) await o.apres(null); } catch (er) { erreur(er); }
-        };
       }
       o.vue.querySelectorAll("[data-sty-photo]").forEach(bt => bt.onclick = () => { sty.photo = +bt.dataset.styPhoto; o.vue.querySelectorAll("[data-sty-photo]").forEach(x => x.setAttribute("aria-pressed", String(x === bt))); redessiner(); });
       await dessinerTout();
@@ -504,8 +712,8 @@
     return { rendre, oublier() { sty.pour = null; } };
   }
 
-  const API = { STYLES_PHOTO, GABARITS, CLES, AUTEURS, ecran, MAX_MOTS, MAX_EVITER, MAX_CAR, rgb, hexa, estHexa, lum, contraste, melange, echantillons, regrouper, fondDuLogo, tonCle, couplePropose,
-    styleDesPhotos, couleursLisibles, proposer, defaut, normaliser, fautes, couleursCommerce, garderCouleurs, controlerLogo, estSvg, canon, sansBase, charger, polices, chargerImage, pixels, preparerLogo, enPng, dessiner,
+  const API = { STYLES_PHOTO, GABARITS, TEXTE_PHOTOS, TEXTE_PHOTOS_DEFAUT, CLES, AUTEURS, ecran, MAX_MOTS, MAX_EVITER, MAX_CAR, rgb, hexa, estHexa, lum, contraste, melange, echantillons, regrouper, fondDuLogo, tonCle, couplePropose,
+    styleDesPhotos, couleursLisibles, proposer, DIRECTIONS, directions, directionDu, avecDirection, dessiner916, defaut, normaliser, fautes, couleursCommerce, garderCouleurs, controlerLogo, estSvg, canon, sansBase, charger, polices, chargerImage, pixels, preparerLogo, enPng, dessiner,
     catalogue: () => catalogue, policeTitre, policeTexte };
   if (typeof module === "object" && module.exports) module.exports = API; else racine.RENOM_MARQUE = API;
 })(typeof window !== "undefined" ? window : globalThis);

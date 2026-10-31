@@ -785,7 +785,7 @@
         return { chemin, deja: r.deja };
       },
       async adminDeposerPhotos(cid, details) { const r = await sb.rpc("admin_deposer_photos", { p_commerce: cid, p_details: details }); if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data; },
-      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id,drapeaux").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id,drapeaux,gabarit,photo_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Kit de marque (écran « Votre style ») : colonne commerces.marque ; la base contrôle le kit, pose la version, l'auteur et aligne commerces.couleurs.
       async marque() { return marqueDe(await self.commerce()); },
       async deposerLogo(f) { return logoDe(await self.commerce(), f); },
