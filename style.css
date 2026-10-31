@@ -760,11 +760,29 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 .option-limite{font-size:var(--t-2);line-height:1.5;color:var(--texte-discret)}
 .option .btn{width:100%}
 .options-note{margin-top:4px}
+/* Site du restaurant en trois paliers (31/10/2026) : prix, nom, contenu et bouton par palier, séparés par un filet neutre. */
+.paliers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.palier{display:flex;flex-direction:column;gap:12px;padding:20px 0;border-top:1px solid var(--filet-clair)}
+.palier:first-child{padding-top:4px;border-top:0}
+.palier-tete{display:flex;flex-direction:column;gap:4px}
+.palier-prix{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-3);line-height:1.1;color:var(--texte)}
+.palier-nom{margin:0;font-size:var(--t-corps);font-weight:var(--graisse-forte);color:var(--texte)}
+.palier .inclus{flex:none}
+.paliers-commun{font-size:var(--t-corps);line-height:1.5;padding-top:16px;border-top:1px solid var(--filet-clair)}
 @media (min-width:760px){
   .options-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
   .option{display:grid;grid-template-rows:subgrid;grid-row:span 4;row-gap:16px;padding:32px 28px}
   .option>.inclus{align-self:start}
   .option>.btn{grid-row:4;align-self:end;width:auto;justify-self:start}
+  /* 31/10/2026 : le Site du restaurant (trois paliers) passe sous la Visibilité IA, chaque carte sur toute la largeur. */
+  .options-liste{grid-template-columns:minmax(0,1fr)}
+  .option-site{display:flex;flex-direction:column;grid-row:auto}
+  .palier .btn{width:auto;align-self:flex-start}
+}
+@media (min-width:1000px){
+  .option-site .paliers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px}
+  .option-site .palier{padding:0;border-top:0}
+  .option-site .palier .btn{margin-top:auto}
 }
 
 /* Maquettes : le réseau et l'offre au-dessus de chaque téléphone, sur la même ligne pour les quatre (les téléphones n'ont pas la même hauteur). */
