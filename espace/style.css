@@ -969,8 +969,8 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 /* Photos : raccourci vidéo en bouton secondaire de 44 px. */
 #vers-video{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 #vers-video .bouton{min-height:44px}
-/* Collé en bas seulement une fois des photos choisies (01/11/2026, tour 6 Essentiel : sans choix, il recouvrait « Prendre une photo »). */
-@media (max-width:899px){#ph-envoyer[data-choix]{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:2}}
+/* « Envoyer » n'est plus collé en bas (01/11/2026, tour 7 Essentiel : même après le choix d'une photo, il recouvrait « Prendre une photo ») :
+   à sa place dans le formulaire ; après un choix, app.js le fait défiler sous le pouce (scrollIntoView). Mesuré par test_ecrans.py. */
 /* Vos publications, côté commerçant (31/10/2026) : grille Instagram dessinée avec ses photos, choix du texte sur les photos, annonces dans le cadre
    d'Instagram et d'une actualité Google (visuel entier, rien de coupé), vidéo 9:16, couleurs et logo sur une ligne. Aucun logo de réseau dessiné :
    le nom du réseau en texte. Grille de 4 px, cibles de 44 px. */
@@ -1068,3 +1068,8 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 .contact-ligne a{display:inline-flex;align-items:center;min-height:44px}
 .contact-photo{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}
 .temps-gagne .note{display:block}
+
+/* Publication hors offre (01/11/2026, tour 7 Essentiel) : grisée, date et texte barrés ; « sera annulée » reste lisible, non barré. */
+.hors-offre{opacity:.62}
+.hors-offre .fort,.hors-offre .barrable,.hors-offre .note[lang],.hors-offre .prog > .note,span.hors-offre{text-decoration:line-through}
+.hors-offre .vignette,.hors-offre img{filter:grayscale(1)}

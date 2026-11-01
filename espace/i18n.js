@@ -172,6 +172,7 @@
     "acc.act.avis": [v => v.n > 1 ? `Valider ${v.n} réponses d'avis` : "Valider 1 réponse d'avis", v => v.n === 1 ? "Approve 1 review reply" : `Approve ${v.n} review replies`, v => v.n === 1 ? "1 antwoord op een review goedkeuren" : `${v.n} antwoorden op reviews goedkeuren`],
     "acc.act.commentaires": [v => v.n > 1 ? `Traiter ${v.n} commentaires` : "Traiter 1 commentaire", v => v.n === 1 ? "Deal with 1 comment" : `Deal with ${v.n} comments`, v => v.n === 1 ? "1 reactie behandelen" : `${v.n} reacties behandelen`],
     "acc.act.mer": ["Terminer la mise en route, {a} sur {b}", "Finish your setup, {a} of {b}", "Uw opstart afronden, {a} van {b}"],
+    "acc.mois.complet": [v => `Votre mois est complet : une photo envoyée maintenant servira en ${mois("fr")[v.mois]}.`, v => `Your month is full: a photo sent now will be used in ${mois("en")[v.mois]}.`, v => `Uw maand is vol: een foto die u nu stuurt, wordt in ${mois("nl")[v.mois]} gebruikt.`],   // 01/11/2026, tour 7 Essentiel
     "acc.act.photos": ["Envoyer vos photos du mois", "Send this month's photos", "De foto's van deze maand sturen"],
     "va.ouvrir": ["Créer une vidéo d'avis", "Create a review video", "Een reviewvideo maken"],
     "esp.admin.texte": ["Cet espace est celui des commerçants. Vous êtes connecté avec le compte de l'administrateur.", "This area is for business owners. You are signed in with the administrator account.", "Deze zone is voor handelaars. U bent aangemeld met het beheerdersaccount."],
@@ -385,6 +386,7 @@
     "avis.sans.texte": ["(note sans texte)", "(rating without text)", "(score zonder tekst)"],
     "cadre.video.google": ["Une vidéo ne se publie pas sur la fiche Google.", "A video can't be posted on the Google profile.", "Een video kan niet op het Google-profiel gepubliceerd worden."],
     "cadre.story.google": ["Une story ne se publie pas sur la fiche Google.", "A story can't be posted on the Google profile.", "Een story kan niet op het Google-profiel gepubliceerd worden."],
+    "contenus.hors.offre": ["Ne part pas avec l'offre {nom}.", "Not published with the {nom} plan.", "Wordt niet gepubliceerd met de formule {nom}."],   // 01/11/2026, tour 7 Essentiel
     "cadre.choisir": ["Choisissez Instagram, Facebook ou TikTok pour voir l'aperçu.", "Choose Instagram, Facebook or TikTok to see the preview.", "Kies Instagram, Facebook of TikTok om het voorbeeld te zien."], "cadre.story": [", story", ", story", ", story"],
     "car": [v => `${nombre(v.n, 0, "fr")} ${pl(v.n, "caractère", "caractères")}`, v => `${nombre(v.n, 0, "en")} ${en1(v.n, "character", "characters")}`, v => `${nombre(v.n, 0, "nl")} ${nl1(v.n, "teken", "tekens")}`],
     "car.sur": [" sur {lim} au plus", " (max. {lim})", " (max. {lim})"], "car.trop.google": [", trop long pour la fiche Google", ", too long for the Google profile", ", te lang voor het Google-profiel"],
@@ -2132,13 +2134,19 @@
     "offre.dessus.comment": ["Pour changer d'offre, écrivez-nous à info@boostimpact.agency.", "To change plan, write to us at info@boostimpact.agency.", "Om van formule te veranderen, schrijft u ons op info@boostimpact.agency."],
     // Montée d'offre en libre-service (27/10/2026) : bouton « Passer à <offre> » (portail client de Stripe ou page de paiement de l'offre).
     "offre.dessus.mensuel": ["Ou {prix} HT au mois, sans engagement.", "Or {prix} excl. VAT monthly, no commitment.", "Of {prix} excl. btw per maand, zonder verbintenis."],
+    "offre.dessus.vous.mensuel": ["Vous payez {prix} HT au mois.", "You pay {prix} excl. VAT monthly.", "U betaalt {prix} excl. btw per maand."],   // 01/11/2026, tour 7 Essentiel
+    "offre.dessus.vous.annuel": ["Vous payez {prix} HT par mois, en paiement annuel.", "You pay {prix} excl. VAT a month, paid annually.", "U betaalt {prix} excl. btw per maand, bij jaarlijkse betaling."],
+    "offre.dessus.annuel.ou": ["Ou {prix} HT par mois en paiement annuel.", "Or {prix} excl. VAT a month, paid annually.", "Of {prix} excl. btw per maand, bij jaarlijkse betaling."],
     "offre.dessus.passer.en": ["Passer en {nom}", "Switch to {nom}", "Overstappen naar {nom}"],
-    "offre.dessus.demande.note": ["Un geste suffit : PJ vous confirme le changement, sans nouveau paiement à faire de votre côté.", "One tap is enough: PJ confirms the change with you, no new payment on your side.", "Eén tik volstaat: PJ bevestigt de wijziging, zonder nieuwe betaling van uw kant."],
-    "offre.dessus.demande.envoyee": ["Demande envoyée le {d} : PJ vous confirme le changement aujourd'hui ou demain, la différence est calculée au prorata.", "Request sent on {d}: PJ will confirm the change today or tomorrow; the difference is prorated.", "Aanvraag verstuurd op {d}: PJ bevestigt de wijziging vandaag of morgen, het verschil wordt pro rata berekend."],
+    "offre.dessus.demande.note": ["Un geste suffit : PJ vous confirme le montant avant tout changement.", "One tap is enough: PJ confirms the amount with you before anything changes.", "Eén tik volstaat: PJ bevestigt het bedrag vóór elke wijziging."],   // tour 7 Essentiel : plus de « sans nouveau paiement »
+    "offre.dessus.demande.envoyee": ["Demande envoyée le {d} : PJ vous confirme le changement et le montant aujourd'hui ou demain.", "Request sent on {d}: PJ will confirm the change and the amount today or tomorrow.", "Aanvraag verstuurd op {d}: PJ bevestigt de wijziging en het bedrag vandaag of morgen."],
+    "offre.dessus.demande.toast": ["Demande envoyée : PJ vous confirme le changement aujourd'hui ou demain.", "Request sent: PJ will confirm the change today or tomorrow.", "Aanvraag verstuurd: PJ bevestigt de wijziging vandaag of morgen."],   // 01/11/2026, tour 7 Essentiel
+    "acc.chg.offre": ["Changement d'offre demandé le {d} : PJ vous confirme aujourd'hui ou demain.", "Plan change requested on {d}: PJ will confirm today or tomorrow.", "Formulewijziging aangevraagd op {d}: PJ bevestigt vandaag of morgen."],
     "offre.dessus.difference": ["Différence : {prix} HT de plus par mois.", "Difference: {prix} excl. VAT more a month.", "Verschil: {prix} excl. btw meer per maand."],
     "offre.dessus.passer": ["Passer à {nom}", "Switch to {nom}", "Overstappen naar {nom}"],
     "offre.dessus.rythme.mensuel": ["au mois", "monthly", "per maand"], "offre.dessus.rythme.annuel": ["à l'année", "yearly", "per jaar"],
     "offre.dessus.frais.offerts": ["Frais de mise en route ({prix} HT) offerts&nbsp;: vous payez à l'année.", "Set-up fee ({prix} excl. VAT) waived: you pay yearly.", "Opstartkosten ({prix} excl. btw) gratis: u betaalt per jaar."],
+    "offre.dessus.frais.demande": ["Frais de mise en route : {prix} HT, une seule fois, comme le prévoient nos conditions de vente (article 4).", "Set-up fee: {prix} excl. VAT, once, as set out in our terms of sale (article 4).", "Opstartkosten: {prix} excl. btw, eenmalig, zoals bepaald in onze verkoopvoorwaarden (artikel 4)."],
     "offre.dessus.frais.deja": ["Aucuns frais de mise en route : votre mise en route est déjà faite.", "No set-up fee: your set-up is already done.", "Geen opstartkosten: uw opstart is al gebeurd."],
     "offre.dessus.frais.factures": ["Frais de mise en route : {prix} HT, facturés une fois, avec le paiement de la montée.", "Set-up fee: {prix} excl. VAT, charged once, with the upgrade payment.", "Opstartkosten: {prix} excl. btw, eenmalig aangerekend bij de betaling van de overstap."],
     "offre.dessus.note.paiement": ["Le bouton ouvre la page de paiement sécurisée de Stripe pour l'offre {nom}, {r} comme votre abonnement actuel. Dès le paiement, votre espace passe à l'offre {nom} et votre abonnement actuel est arrêté : la part non utilisée vous est remboursée. La nouvelle période payée commence le jour du paiement.",
@@ -2215,6 +2223,9 @@
     "con.fg.source.console": ["(posé par la console)", "(set in the console)", "(ingesteld in de console)"],
     "con.fg.ok": ["Identifiant enregistré.", "ID saved.", "ID opgeslagen."],
     // ---- Dix sur dix (31/10/2026, tests clients Essentiel, Croissance, Premium) : décisions confirmées, réseaux réels, compteurs justes
+    "dec.refus.plein": ["La limite de publications du mois est atteinte : si une autre publication prend sa place, vous ne pourrez pas la remettre à valider ce mois-ci.", "This month's post limit is reached: if another post takes its place, you won't be able to send it back for approval this month.", "De limiet van posts voor deze maand is bereikt: als een andere post zijn plaats inneemt, kunt u hem deze maand niet opnieuw laten goedkeuren."],   // 01/11/2026, tour 7 Essentiel
+    "dec.refus.plein.sur": ["La limite de publications du mois est atteinte : une fois refusée, vous ne pourrez pas la remettre à valider ce mois-ci.", "This month's post limit is reached: once rejected, you won't be able to send it back for approval this month.", "De limiet van posts voor deze maand is bereikt: eenmaal geweigerd kunt u hem deze maand niet opnieuw laten goedkeuren."],
+    "contenus.remettre.plein": [v => `Limite du mois atteinte : elle ne peut pas être remise à valider avant le 1er ${mois("fr")[v.mois]}.`, v => `Monthly limit reached: it can't be sent back for approval before ${mois("en")[v.mois]} 1st.`, v => `Maandlimiet bereikt: hij kan niet opnieuw worden goedgekeurd vóór 1 ${mois("nl")[v.mois]}.`],
     "dec.refus.question": ["Refuser cette publication ? Elle ne sera pas publiée.", "Reject this content? It won't be published.", "Deze post weigeren? Hij wordt niet gepubliceerd."],
     "dec.refus.motif": ["Pourquoi ? (facultatif, aide l'équipe à mieux viser)", "Why? (optional, helps the team aim better)", "Waarom? (niet verplicht, helpt het team beter te mikken)"],
     "dec.refus.oui": ["Refuser", "Reject", "Weigeren"], "dec.refus.garder": ["Garder", "Keep it", "Behouden"],
@@ -2315,9 +2326,17 @@
     "avis.rappel.auj.cap": ["Aujourd'hui", "Today", "Vandaag"], "avis.rappel.demain.cap": ["Demain", "Tomorrow", "Morgen"],
     "avis.rappel.auj": ["aujourd'hui", "today", "vandaag"], "avis.rappel.demain": ["demain", "tomorrow", "morgen"], "avis.rappel.le": ["le {d}", "on {d}", "op {d}"],
     "avis.rappel.plage": ["Entre 9 h et 18 h. Rien n'est publié avant notre appel.", "Between 9 am and 6 pm. Nothing is published before our call.", "Tussen 9 en 18 uur. Niets wordt gepubliceerd vóór ons telefoontje."],
+    // Tour 7 Essentiel (01/11/2026) : créneau « après le service » et numéro obligatoire.
+    "avis.rappel.heure": ["À quelle heure", "What time", "Hoe laat"], "avis.rappel.plage.journee": ["Entre 9 h et 18 h", "Between 9 am and 6 pm", "Tussen 9 en 18 uur"],
+    "avis.rappel.plage.service": ["Après le service, de 15 h à 17 h", "After service, 3 pm to 5 pm", "Na de service, van 15 tot 17 uur"],
+    "avis.rappel.plage.1517": ["De 15 h à 17 h", "3 pm to 5 pm", "Van 15 tot 17 uur"],
+    "avis.rappel.rien": ["Rien n'est publié avant notre appel.", "Nothing is published before our call.", "Niets wordt gepubliceerd vóór ons telefoontje."],
+    "avis.rappel.tel.vide": ["Indiquez votre numéro.", "Enter your number.", "Vul uw nummer in."],
+    "avis.rappel.prevu.1517": ["Nous vous appelons au {tel}, {quand} entre 15 h et 17 h.", "We'll call you on {tel}, {quand} between 3 pm and 5 pm.", "Wij bellen u op {tel}, {quand} tussen 15 en 17 uur."],
+    "con.file.retenue.jour.1517": ["À rappeler {d}, entre 15 h et 17 h (après le service)", "Call back {d}, between 3 pm and 5 pm (after service)", "Terugbellen {d}, tussen 15 en 17 uur (na de service)"],
     "avis.rappel.confirmer": ["Confirmer : attendez mon appel", "Confirm: wait for my call", "Bevestigen: wacht op mijn telefoontje"],
     "avis.rappel.prevu": ["Nous vous appelons au {tel}, {quand} entre 9 h et 18 h.", "We'll call you on {tel}, {quand} between 9 am and 6 pm.", "Wij bellen u op {tel}, {quand} tussen 9 en 18 uur."],
-    "avis.rappel.modifier": ["Modifier le numéro ou le jour", "Change the number or the day", "Nummer of dag wijzigen"],
+    "avis.rappel.modifier": ["Modifier le numéro, le jour ou l'heure", "Change the number, day or time", "Nummer, dag of uur wijzigen"],
     "avis.retenue.toast": ["C'est noté : nous vous appelons avant de publier.", "Noted: we'll call you before publishing.", "Genoteerd: wij bellen u voordat we publiceren."],
     "contact.votre": ["Votre contact : {p}, BoostImpact · WhatsApp {tel}", "Your contact: {p}, BoostImpact · WhatsApp {tel}", "Uw contactpersoon: {p}, BoostImpact · WhatsApp {tel}"],
     // Point mensuel Premium (01/11/2026) : bouton et message WhatsApp prérempli, envoyé à PJ.
@@ -2333,6 +2352,7 @@
     "acc.pub.mois": ["Vos publications de {mois} : {l}.", "Your {mois} posts: {l}.", "Uw posts in {mois}: {l}."],
     "acc.pub.le": [v => v.j === 1 ? "le 1er" : `le ${v.j}`, v => `the ${v.j}${v.j % 10 === 1 && v.j !== 11 ? "st" : v.j % 10 === 2 && v.j !== 12 ? "nd" : v.j % 10 === 3 && v.j !== 13 ? "rd" : "th"}`, v => `${v.j}e`],
     "acc.temps": ["Temps gagné ce mois-ci : environ {d}.", "Time saved this month: about {d}.", "Tijd gewonnen deze maand: ongeveer {d}."],
+    "res.ce.mois.court": ["ce mois-ci", "this month", "deze maand"],   // 01/11/2026, tour 7 Essentiel : « 0 ce mois-ci · 1 non lu (octobre) »
     "res.retours.non.lus": [v => v.n > 1 ? `${v.n} non lus` : "1 non lu", v => `${v.n} unread`, v => `${v.n} ongelezen`],   // 01/11/2026, tour 6 Premium
     "bilan.prec.titre": [v => `Bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}`, v => `Your ${v.mois} report`, "Overzicht van {mois}"],   // 01/11/2026, tour 6 Premium
     "bilan.prec.email": ["Le bilan détaillé (chiffres, ce que disent vos clients, pistes pour le mois) part aussi par email le 1er de chaque mois, à 9 h.", "The detailed report (figures, what your customers say, ideas for the month) is also emailed on the 1st of each month, at 9 am.", "Het uitgebreide overzicht (cijfers, wat uw klanten zeggen, ideeën voor de maand) wordt ook gemaild op de 1e van elke maand, om 9 uur."],

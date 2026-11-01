@@ -1199,6 +1199,13 @@
   }
 
   window.RENOM_DATA = cfg.supabaseUrl && cfg.publishableKey ? (window.supabase && window.supabase.createClient ? supabase() : indisponible()) : demo();
+  // Prix de la montée d'offre (01/11/2026, tour 7 Essentiel : 79 et 190 affichés, différence 228 − 95 = 133 calculée au mois) : UNE base, le rythme
+  // réel de l'abonnement en cours (mensuel : prix_mensuel_ht ; annuel : prix_ht) ; sans abonnement en cours, le prix de base (paiement annuel).
+  // actuel, cible et ecart sont toujours sur cette même base ; autre = le prix de l'offre visée dans l'autre rythme.
+  const prixMontee = (o, s_, ab) => { const enCours = !!(ab && ab.statut !== "resilie"), rythme = enCours && ab.rythme === "mensuel" ? "mensuel" : "annuel";
+    const cle = rythme === "mensuel" ? "prix_mensuel_ht" : "prix_ht", actuel = +(o || {})[cle] || 0, cible = +(s_ || {})[cle] || 0;
+    return { rythme, enCours, actuel, cible, autre: +(s_ || {})[rythme === "mensuel" ? "prix_ht" : "prix_mensuel_ht"] || 0, ecart: actuel && cible ? cible - actuel : 0 }; };
+  window.RENOM_PRIX_MONTEE = prixMontee;
   window.RENOM_OPTIONS = OPTIONS; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO; window.RENOM_MONTAGE_MAIN = MONTAGE_MAIN;
   // ---- Collecte : ce dont la page publique a besoin (aucune session, aucune bibliothèque), et la règle du lien d'avis pour l'espace
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;

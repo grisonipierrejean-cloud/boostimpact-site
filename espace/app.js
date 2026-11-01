@@ -166,10 +166,11 @@
   const media = (x, u, v) => `<div class="media">${v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`}</div>`;
   // Les trois décisions sur un contenu à valider : mêmes boutons et mêmes appels sur l'accueil et sur l'écran Contenus.
   // La légende se modifie soi-même (voir blocReseaux) ; « Demander une modification à BoostImpact » reste pour ce qu'on ne peut pas faire seul, comme le visuel.
+  let pubPlein = false, pubDepasse = false;   // pubDepasse : même refusée, la limite reste atteinte (remise impossible ce mois-ci, à coup sûr)   // limite de publications du mois atteinte (écran Contenus et accueil), lue au compteur
   const decisions = (x, refus) => `<div class="actions" data-choix><button type="button" class="bouton" data-a="approuve">${t("dec.approuver")}</button><button type="button" class="bouton second" data-a="modif">${t("dec.modif")}</button><button type="button" class="lien" data-a="refuse">${refus}</button></div>
     <div class="f" data-zone hidden><label for="mot-${e(x.id)}">${t("dec.mot")}</label><textarea id="mot-${e(x.id)}" data-mot></textarea>
       <div class="actions"><button type="button" class="bouton" data-a="envoyer-modif">${t("dec.envoyer")}</button><button type="button" class="lien" data-a="fermer-modif">${t("annuler")}</button></div></div>
-    <div class="f confirmer-refus" data-zone-refus hidden><p class="fort">${t("dec.refus.question")}</p><label for="motif-${e(x.id)}">${t("dec.refus.motif")}</label><textarea id="motif-${e(x.id)}" data-motif rows="2" maxlength="500"></textarea>
+    <div class="f confirmer-refus" data-zone-refus hidden><p class="fort">${t("dec.refus.question")}</p>${pubPlein && x.type === "publication" ? `<p class="texte2" data-refus-plein>${t(pubDepasse ? "dec.refus.plein.sur" : "dec.refus.plein")}</p>` : ""}<label for="motif-${e(x.id)}">${t("dec.refus.motif")}</label><textarea id="motif-${e(x.id)}" data-motif rows="2" maxlength="500"></textarea>
       <div class="actions"><button type="button" class="bouton second" data-a="refuse-ok">${t("dec.refus.oui")}</button><button type="button" class="bouton second" data-a="refuse-garder">${t("dec.refus.garder")}</button></div></div>`;
   // Dernier contenu approuvé : {id, p}. La base le programme à l'approbation (schema.sql, bloc « Programmation à l'approbation ») ; p est sa
   // publication, relue dans le calendrier : on affiche la date. Rien de programmé (aucun réseau connecté, commerce en pause…) : p est nul et
@@ -255,7 +256,8 @@
     }
     const r = resChoisi(id), f = M.formatDe(x), vertical = f !== "publication" || r === "tiktok";
     const u = r === "tiktok" && M.photoPublication(x) ? u9 : u45;   // TikTok : le visuel 9:16 qui part réellement, jamais le 4:5 dans un cadre vertical
-    if (!resDe(x).includes(r)) return `<div class="cadre-vide"><p class="texte2">${t(f === "video" ? "cadre.video.google" : "cadre.story.google")}</p><p class="note">${t("cadre.choisir")}</p></div>`;
+    // Offre sans réseaux sociaux (Essentiel, 01/11/2026, tour 7) : pas de « Choisissez Instagram… », il n'y a rien à choisir.
+    if (!resDe(x).includes(r)) return `<div class="cadre-vide"><p class="texte2">${t(f === "video" ? "cadre.video.google" : "cadre.story.google")}</p>${commerceVu && sansReseaux(commerceVu) ? "" : `<p class="note">${t("cadre.choisir")}</p>`}</div>`;
     const l = M.legendeDe(x, r), n = M.longueur(l), lim = r === "google" ? M.LIMITE_GOOGLE : 0;
     const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
     const tete = `<div class="cadre-tete"><span class="avatar" aria-hidden="true">${e((nomCommerce || "R").charAt(0).toUpperCase())}</span><span class="cadre-nom">${e(nomCommerce)}</span><span class="cadre-res">${RES[r]}${f === "story" ? t("cadre.story") : ""}</span></div>`;
@@ -593,6 +595,10 @@
     return `<div class="offre-accueil" id="offre-accueil"><p class="fort" id="offre-accueil-nom">${e(t("offre.nom", { nom: c.offre_id }))}</p>
       <p class="texte2" id="offre-accueil-inclus">${e(ligne)}</p><p><a href="#/offre" id="offre-accueil-lien">${t("acc.voir.offre")}</a></p></div>`;
   }
+  // Changement d'offre demandé (01/11/2026, tour 7 Essentiel) : une ligne sur l'accueil, tant que la demande a moins de 3 jours et qu'une offre au-dessus
+  // existe encore (une fois l'offre changée par PJ, Premium n'a plus d'offre au-dessus ; Essentiel passé en Croissance garde la ligne au plus 3 jours).
+  const ligneChgOffre = (c, d) => !d || !offreCible(c) || Date.now() - Date.parse(d) > 3 * 864e5 ? ""
+    : `<p class="texte2" id="acc-chg-offre">${t("acc.chg.offre", { d: date(d) })} <a href="#/offre">${t("acc.voir.offre")}</a></p>`;
   // « Cette semaine » (27/10/2026, constat 10) : le travail fait pour le commerçant ces 7 derniers jours, seulement les chiffres réels et non nuls ;
   // rien du tout si tout est à zéro. Réponses aux avis publiées, publications parties, avis sensibles pris en charge, réponses aux commentaires.
   function ligneSemaine(c, av, cal, cm) {
@@ -642,7 +648,8 @@
     if (nomAConfirmer(c0) || (!c0.demarrage_fini && !plusTard(c0.id))) return demarrage();
     const [c, k, p, ct, av, cal, mr, ids, cm0] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
       D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => [])]);
-    const [nonLus, cpt, tfT, , contact] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact()]);
+    const [nonLus, cpt, tfT, , contact, dChg] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
+      D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null]);
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
     nomCommerce = c.nom; commerceVu = c; comptesVus = cpt;
@@ -668,6 +675,9 @@
       : na ? t("acc.messages", { n: na }) : merEnCours ? t("acc.reste.mer") : merAttente ? merAttenteTexte : t("acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
     const photosDuMois = p.filter(x => Date.parse(x.cree_le) >= debutDuMois()).length;
+    // Mois complet (01/11/2026, tour 7 Essentiel) : même calcul que l'écran Photos (pubReservees >= plafond) ; plus d'incitation à envoyer une photo,
+    // le grand bouton n'est plus vert et une ligne dit qu'une photo envoyée maintenant servira le mois suivant.
+    const moisPlein = !!(k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond);
     // Un bouton par action en attente, dans l'ordre des gestes : valider, puis mettre en route, puis envoyer les photos.
     const actions = [
       aValider.length ? { id: "contenus", href: "#/contenus", texte: t("acc.act.contenus", { n: aValider.length }) } : null,
@@ -679,7 +689,7 @@
       // TikTok ne se connecte pas seul : l'équipe l'active avec le commerçant (Comptes, bouton « Demander l'activation »).
       ...aConnecter.map(r => ({ id: "connecter-" + r, href: "#/comptes" + (r === "tiktok" ? "?tiktok" : ""), texte: r === "tiktok" ? t("acc.act.tiktok") : t("acc.act.connecter", { res: RES[r] }) })),
       !c.demarrage_fini ? { id: "demarrage", href: "#/demarrage", texte: t("acc.dem.reprendre") } : null,
-      !c.en_pause && !photosDuMois ? { id: "photos", facultatif: true, href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
+      !c.en_pause && !photosDuMois && !moisPlein ? { id: "photos", facultatif: true, href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
       // Retour privé d'un client non lu (constat 33) : une action ici, plus une pastille sur Résultats.
       nonLus ? { id: "retours", href: "#/collecte?retours", texte: t("acc.act.retours", { n: nonLus }) } : null,
     ].filter(Boolean);
@@ -703,8 +713,10 @@
         ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
-      <div class="gestes-accueil"><a class="bouton grand${actions.length && !sansAFaire ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
+      ${ligneChgOffre(c, dChg)}
+      <div class="gestes-accueil"><a class="bouton grand${(actions.length && !sansAFaire) || moisPlein ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
         ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
+      ${moisPlein && !c.en_pause ? `<p class="texte2" id="acc-mois-complet">${t("acc.mois.complet", { mois: (new Date().getMonth() + 1) % 12 })}</p>` : ""}
       ${lienPublications(c)}
       ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c))}
       ${ligneSemaine(c, av, cal, cm)}
@@ -715,7 +727,7 @@
       ${ligneAutorisation(c)}
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
-        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
+        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
         : `<p class="texte2">${t("acc.rien.programme")}</p>`}
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
       </section>
@@ -1102,6 +1114,10 @@
   const horsOffreContenu = (x, c) => x.statut === "approuve" && !!c && M.reseauxDuContenu(x, window.RENOM_RESEAUX_AUTORISES(c)).length === 0;
   // Onglet « Refusés » (clé « autres », 31/10/2026) : les contenus refusés seulement ; une modification demandée reste avec « À valider »
   // (elle y revient, refaite par l'équipe).
+  // Hors offre (01/11/2026, tour 7 Essentiel) : aucun bouton de programmation (rien ne peut partir) ; « Ne part pas avec l'offre … » et le lien vers
+  // l'offre du dessus (#/offre?dessus), quand elle existe.
+  const blocHorsOffre = c => { const d = offreCible(c);
+    return `<div class="encart" data-hors-offre><p class="fort">${t("contenus.hors.offre", { nom: e(I.offre(c.offre_id)) })}</p>${d ? `<p><a href="#/offre?dessus" data-hors-offre-dessus>${t("offre.dessus.passer", { nom: e(I.offre(d)) })}</a></p>` : ""}</div>`; };
   const famille = (x, c) => x.statut === "modification" ? "a_valider" : horsOffreContenu(x, c || commerceVu) ? "hors_offre" : FILTRES.some(f => f[0] === x.statut) ? x.statut : "autres";
   let filtre = null;
   // Les idées sont fusionnées dans Contenus : bouton « Proposer des idées », qui ouvre le panneau des idées.
@@ -1122,7 +1138,10 @@
     : `<div class="encart" id="contenus-delegation"><p class="texte2">${t("contenus.deleg.ligne", { h: COND.delegation.publication_auto_heures })}</p>
       <div class="actions"><button type="button" class="bouton second" id="contenus-delegation-activer">${t("offre.deleg.activer")}</button></div><p class="note">${t("offre.deleg.trace")}</p></div>`;
   async function contenus() {
-    const [c, l, cpt, calc] = await Promise.all([D.commerce(), D.contenus(), D.comptes().catch(() => null), D.calendrier().catch(() => [])]), nbf = Object.fromEntries(FILTRES.map(f => [f[0], l.filter(x => famille(x, c) === f[0]).length]));
+    const [c, l, cpt, calc, kc] = await Promise.all([D.commerce(), D.contenus(), D.comptes().catch(() => null), D.calendrier().catch(() => []), D.compteur().catch(() => null)]);
+    // Limite du mois (01/11/2026, tour 7 Essentiel) : même règle que remettre_a_valider (usage_publications >= plafond, refusées non comptées).
+    pubPlein = !!(kc && +kc.publications_plafond > 0 && (+kc.publications_utilisees || 0) >= +kc.publications_plafond);
+    pubDepasse = !!(kc && +kc.publications_plafond > 0 && (+kc.publications_utilisees || 0) - 1 >= +kc.publications_plafond); const nbf = Object.fromEntries(FILTRES.map(f => [f[0], l.filter(x => famille(x, c) === f[0]).length]));
     nomCommerce = c.nom; commerceVu = c; comptesVus = cpt; if (demandesTiktok[c.id] == null) await chargerDemandeTiktok(c);   // note TikTok des aperçus
     // Quand part ce contenu (31/10/2026) : programmé, sa date ; à valider, le créneau qu'il prendrait s'il est approuvé maintenant (même règle que la base).
     const pris = calc.filter(p => ["programme", "envoye", "publie"].includes(p.statut)).map(p => Date.parse(p.prevu_le));
@@ -1157,15 +1176,16 @@
         ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
         ${x.note_modification ? `<p class="note">${t(x.statut === "refuse" ? "contenus.motif" : "contenus.demande")}<span${lc()}>${e(x.note_modification)}</span></p>` : ""}
         ${x.statut === "modification" ? `<p class="note fort" data-modif-delai>${t(x.decide_le ? "contenus.modif.delai.le" : "contenus.modif.delai", { d: x.decide_le ? date(x.decide_le) : "" })}</p>` : ""}
-        ${x.statut === "a_valider" ? decisions(x, t("contenus.refuser")) + formatsPublies(x, urls[i], u9s[i]) : x.statut === "approuve" ? boutonsAuto(x.id, c.metier)
-          : x.statut === "refuse" ? `<div class="actions"><button type="button" class="bouton second" data-remettre="${e(x.id)}">${t("contenus.remettre")}</button></div>` : ""}</div></article>`).join("")}</div>`
+        ${x.statut === "a_valider" ? decisions(x, t("contenus.refuser")) + formatsPublies(x, urls[i], u9s[i]) : horsOffreContenu(x, c) ? blocHorsOffre(c) : x.statut === "approuve" ? boutonsAuto(x.id, c.metier)
+          : x.statut === "refuse" ? (pubPlein && x.type === "publication" ? `<p class="note" data-remettre-plein>${t("contenus.remettre.plein", { mois: (new Date().getMonth() + 1) % 12 })}</p>`
+            : `<div class="actions"><button type="button" class="bouton second" data-remettre="${e(x.id)}">${t("contenus.remettre")}</button></div>`) : ""}</div></article>`).join("")}</div>`
       : `<section class="carte"><p class="texte2">${VIDE_FILTRE[filtre]}${filtre === "a_valider" && nbf.approuve ? ` <span id="vide-a-programmer">${t("filtre.vide.a_programmer", { n: nbf.approuve, lien: `<a href="#/calendrier">${e(ECRANS.calendrier)}</a>` })}</span>` : ""}</p></section>`}`
       : `<section class="carte"><h2>${t("contenus.vide.titre")}</h2><p class="texte2">${t("contenus.vide.texte")}</p><p class="pied"><a class="bouton" href="#/photos">${t("photos.deposer")}</a></p></section><p class="msg" id="msg" role="status"></p>`}`;
     vue.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filtre = b.dataset.f; contenus(); });
     if ($("contenus-delegation-activer")) $("contenus-delegation-activer").onclick = async () => { const b = $("contenus-delegation-activer"); b.disabled = true;
       try { await D.reglerDelegation(true); await contenus(); toast(t("offre.deleg.ok.active")); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
     vue.querySelectorAll("[data-remettre]").forEach(b => b.onclick = async () => { b.disabled = true;
-      try { await D.remettreAValider(b.dataset.remettre); await contenus(); toast(t("contenus.remis")); majCompteurs(); } catch (er) { b.disabled = false; msg(ph(er.message)); toast(ph(er.message)); } });
+      try { await D.remettreAValider(b.dataset.remettre); await contenus(); toast(t("contenus.remis")); majCompteurs(); } catch (er) { b.disabled = false; toast(ph(er.message)); } });   // un seul message (tour 7 : il s'affichait en double)
     // Téléphone : les filtres défilent sur une ligne ; le filtre choisi reste visible après le nouveau rendu.
     const fl = vue.querySelector(".filtres"), fp = fl && fl.querySelector("[aria-pressed=true]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
@@ -1264,11 +1284,11 @@
       grille = `<div class="cal" role="grid" aria-label="${MOIS[ref.getMonth()]} ${ref.getFullYear()}">${JOURS.map(j => `<div class="ent">${j}</div>`).join("")}` + Array.from({ length: Math.ceil((dec + n) / 7) * 7 }, (_, i) => {
         const j = i - dec + 1; if (j < 1 || j > n) return `<div class="hors"></div>`; const d = new Date(ref.getFullYear(), ref.getMonth(), j), it = du(d);
         // Jour qui a une publication (31/10/2026, test client Premium, tour 5) : tout le jour est un bouton (44 px au moins) qui mène à la publication.
-        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }))}"><span class="n">${j}</span>${it.map(x => `<span data-cell>${heureCourte(x.prevu_le)}</span>`).join("")}</button></div>`;
+        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }))}"><span class="n">${j}</span>${it.map(x => `<span data-cell${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}>${heureCourte(x.prevu_le)}</span>`).join("")}</button></div>`;
         return `<div${memeJour(d, aujourd) ? ' aria-current="date"' : ""}>${libre(d) ? boutonLibre(d, `<span class="n">${j}</span>`) : `<span class="n">${j}</span>`}</div>`; }).join("") + "</div>";
     } else {
       grille = `<ul class="liste semaine" aria-label="${t("cal.semaine.aria")}">` + Array.from({ length: 7 }, (_, i) => { const d = new Date(lundi); d.setDate(lundi.getDate() + i); const it = du(d);
-        return `<li${memeJour(d, aujourd) ? ' aria-current="date"' : ""}>${it.length ? `<button type="button" class="cal-saut fort" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }))}">${I.jourEtDate(d)}</button>` : libre(d) ? boutonLibre(d, I.jourEtDate(d), " fort") : `<p class="fort">${I.jourEtDate(d)}</p>`}<div>${it.length ? it.map(x => `<p>${heure(x.prevu_le)} · ${destTexte(x, autorises)} · <span${lc()}>${e(cut(x.contenu?.legende || "", 60))}</span></p>`).join("") : `<p class="note">${t("cal.rien")}</p>`}</div></li>`; }).join("") + "</ul>";
+        return `<li${memeJour(d, aujourd) ? ' aria-current="date"' : ""}>${it.length ? `<button type="button" class="cal-saut fort" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }))}">${I.jourEtDate(d)}</button>` : libre(d) ? boutonLibre(d, I.jourEtDate(d), " fort") : `<p class="fort">${I.jourEtDate(d)}</p>`}<div>${it.length ? it.map(x => `<p${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}><span class="barrable">${heure(x.prevu_le)}</span> · ${destTexte(x, autorises)} · <span class="barrable"${lc()}>${e(cut(x.contenu?.legende || "", 60))}</span></p>`).join("") : `<p class="note">${t("cal.rien")}</p>`}</div></li>`; }).join("") + "</ul>";
     }
     // Chapeau selon la vraie situation (31/10/2026, test client Premium) : aucun réseau connecté (le bloc en dessous dit pourquoi), contenus approuvés
     // restés sans date, ou rien en attente. La raison « approuvés avant la connexion de vos réseaux » (test client Croissance) n'est dite que si
@@ -1294,7 +1314,7 @@
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
           <button class="bouton" type="submit" id="cal-programmer">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : bloque ? "cal.aucun.pret.bloque" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
-      <section class="carte"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
+      <section class="carte"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
         <p><span class="fort">${dateHeure(x.prevu_le)}</span> · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
         <p class="note"${lc()}>${e(cut(x.contenu?.legende || "", 90))}</p>${x.erreur ? `<p class="note">${e(ph(x.erreur))}</p>` : ""}
         ${x.statut === "programme" && horsOffreDe(x, autorises) ? `<div class="actions serre">${versGoogle(x) ? `<button type="button" class="bouton second petit" data-a="vers-google">${t("cal.vers.google")}</button>` : ""}<button type="button" class="lien" data-a="annuler">${t("cal.annuler")}</button></div>
@@ -1431,12 +1451,15 @@
       <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}</p></div>
       <fieldset><legend>${t("avis.rappel.quand")}</legend>
         ${tard ? "" : `<label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="aujourdhui" checked><span>${t("avis.rappel.auj.cap")}</span></label>`}
-        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""}><span>${t("avis.rappel.demain.cap")}</span></label>
-        <p class="aide">${t("avis.rappel.plage")}</p></fieldset>
+        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""}><span>${t("avis.rappel.demain.cap")}</span></label></fieldset>
+      <fieldset><legend>${t("avis.rappel.heure")}</legend>
+        <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value=""${x.retenue_creneau === "15-17" ? "" : " checked"}><span>${t("avis.rappel.plage.journee")}</span></label>
+        <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value="_15_17"${x.retenue_creneau === "15-17" ? " checked" : ""}><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label>
+        <p class="aide">${t("avis.rappel.rien")}</p></fieldset>
       <div class="actions"><button type="submit" class="bouton">${t("avis.rappel.confirmer")}</button><button type="button" class="lien" data-retenir-annuler>${t("annuler")}</button></div>
       <p class="msg" data-ret-msg role="status"></p></form>`; };
   const blocRetenue = (x, contact, c) => !D.retenirReponseAvis ? "" : retenueOuverte === x.id ? formRetenue(x, c) : x.retenue_le
-    ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t("avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
+    ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t(x.retenue_creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
         <p><button type="button" class="lien" data-retenir="${e(x.id)}">${t("avis.rappel.modifier")}</button></p>` : ""}${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
     : proposee(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
   const apresEcheance = () => { const d = new Date(Date.now() + 30 * 60000); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); return d.toISOString(); };
@@ -1487,8 +1510,11 @@
       const f = vue.querySelector(`[data-retenir-f="${CSS.escape(id)}"]`); if (f) { f.scrollIntoView({ block: "center" }); const i = f.querySelector("[data-ret-tel]"); if (i) i.focus({ preventScroll: true }); } });
     vue.querySelectorAll("[data-retenir-annuler]").forEach(b => b.onclick = async () => { retenueOuverte = null; await avis(); });
     vue.querySelectorAll("form[data-retenir-f]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const id = f.dataset.retenirF, b = f.querySelector("button[type=submit]"); b.disabled = true;
-      const j = (f.querySelector("input[type=radio]:checked") || {}).value || "demain";
-      try { await D.retenirReponseAvis(id, f.querySelector("[data-ret-tel]").value, j); retenueOuverte = null; await avis(); toast(t("avis.retenue.toast"));
+      const j = ((f.querySelector('input[name^="ret-jour-"]:checked') || {}).value || "demain") + ((f.querySelector('input[name^="ret-plage-"]:checked') || {}).value || "");
+      // Tour 7 Essentiel (01/11/2026) : champ vide = bloqué ici (« Indiquez votre numéro »), jamais un repli sur le contact (texte libre) du commerce.
+      const telSaisi = f.querySelector("[data-ret-tel]").value.trim();
+      if (!telSaisi) { b.disabled = false; f.querySelector("[data-ret-msg]").textContent = t("avis.rappel.tel.vide"); f.querySelector("[data-ret-tel]").focus(); return; }
+      try { await D.retenirReponseAvis(id, telSaisi, j); retenueOuverte = null; await avis(); toast(t("avis.retenue.toast"));
         const z = vue.querySelector(`[data-avis="${CSS.escape(id)}"] [data-retenue]`); if (z) z.scrollIntoView({ block: "center" }); }
       catch (er) { b.disabled = false; f.querySelector("[data-ret-msg]").textContent = ph(er.message); } });
     vue.querySelectorAll("[data-sensible]").forEach(b => b.onclick = async () => { const d = b.dataset.sensible; b.disabled = true;
@@ -1500,6 +1526,9 @@
   // Conformité Google : la page publique est la même pour tous les clients ; rien ici ne trie selon la note.
   // La carte A6 et le message WhatsApp s'adressent aux clients du commerce : ils sont écrits dans la langue du commerce.
   const retoursNonLus = async () => { try { return (await D.retoursPrives()).filter(x => !x.lu).length; } catch (er) { return 0; } };
+  // Résultats (01/11/2026, tour 7 Essentiel) : les non-lus avec leurs mois, pour « 0 ce mois-ci · 1 non lu (octobre) ».
+  const retoursNonLusMois = async () => { try { const l = (await D.retoursPrives()).filter(x => !x.lu);
+    return { n: l.length, mois: [...new Set(l.map(x => new Date(x.cree_le)).sort((a, b) => a - b).map(d => MOIS[d.getMonth()]))] }; } catch (er) { return { n: 0, mois: [] }; } };
   const HOTE_GOOGLE = /(^|\.)(google\.[a-z.]{2,6}|g\.page|goo\.gl|g\.co)$/i;
   // Lien Google proposé par la page publique : même règle que la base (https obligatoire, sinon identifiant de lieu).
   function lienAvis(c) {
@@ -1540,7 +1569,8 @@
   const MESURES = ["passages", "clics_google", "retours_prives", "nouveaux_avis"].map(k => [k, t("mesure." + k)]);
   const valeurMesure = (m, k) => k === "nouveaux_avis" && m[k] == null ? `<a href="#/resultats">${t("voir.resultats")}</a>` : nombre(+m[k] || 0);
   // Retours privés non lus (01/11/2026, tour 6 Premium) : même compte que l'accueil (retoursNonLus : tous les non lus), à côté du total du mois.
-  const nonLusMesure = (k, nl) => k === "retours_prives" && nl > 0 ? ` <a class="note" href="#/collecte?retours" id="retours-non-lus-res">${t("res.retours.non.lus", { n: nl })}</a>` : "";
+  const nonLusMesure = (k, nl) => k === "retours_prives" && nl && typeof nl === "object" ? (nl.n > 0 ? ` <span class="note" data-ce-mois>${t("res.ce.mois.court")} · <a href="#/collecte?retours" id="retours-non-lus-res">${t("res.retours.non.lus", { n: nl.n })}${nl.mois.length ? ` (${e(I.liste(nl.mois))})` : ""}</a></span>` : "")
+    : k === "retours_prives" && nl > 0 ? ` <a class="note" href="#/collecte?retours" id="retours-non-lus-res">${t("res.retours.non.lus", { n: nl })}</a>` : "";
   const chiffresCollecte = (m, deux, nl) => `<dl class="bilan-chiffres${deux ? " deux" : ""}">${MESURES.map(([k, lib]) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" data-mesure="${k}">${valeurMesure(m, k)}${nonLusMesure(k, nl)}</dd></div>`).join("")}</dl>`;
   const blocMesure = m => m ? `<section class="carte" id="mesure-collecte"><div class="carte-tete"><h2>${t("ce.mois")}</h2>${D.mode === "demo" ? `<span class="note">${t("demo.chiffres")}</span>` : ""}</div>
       ${chiffresCollecte(m)}<p class="note">${t("col.mesure.note")}</p></section>` : "";
@@ -1755,15 +1785,20 @@
     const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv) : null, enCours = !!(ab && ab.statut !== "resilie");
     const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
     // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
-    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
+    // Montée par demande (tour 7 Essentiel, 01/11/2026) : aucun paiement en ligne, donc ni « avec le paiement de la montée » ni « sans nouveau
+    // paiement » (phrases contradictoires) : les frais tels que les CGV les prévoient (article 4, une seule fois, offerts en annuel), et la note
+    // « PJ vous confirme le montant avant tout changement ».
+    const parDemande = !!D.demanderRappel && (enCours || !lien);
+    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : parDemande ? "offre.dessus.frais.demande" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
     const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
-    const parDemande = !!D.demanderRappel && (enCours || !lien), cle = rythme === "annuel" ? "prix_ht" : "prix_mensuel_ht", ecartPrix = (+s_[cle] || 0) - (+o[cle] || 0);
+    const P = window.RENOM_PRIX_MONTEE(o, s_, ab), ecartPrix = P.ecart, mensuelP = P.rythme === "mensuel";
     const blocDemande = demandeChgOffre ? `<p class="texte2 lecture" id="offre-demande-envoyee" role="status">${t("offre.dessus.demande.envoyee", { d: date(demandeChgOffre) })}</p>`
       : `<p class="pied actions-abo"><button type="button" class="bouton" id="offre-demander" data-offre="${e(suiv)}">${t("offre.dessus.passer.en", { nom })}</button></p><p class="note" id="dessus-note">${t("offre.dessus.demande.note")}</p><p class="msg" id="msg-chg" role="status"></p>`;
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
-      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(s_.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>
-      <p class="texte2" id="dessus-mensuel">${t("offre.dessus.mensuel", { prix: euros(s_.prix_mensuel_ht) })}</p>
+      ${P.enCours && P.actuel ? `<p class="texte2" id="dessus-vous">${t(mensuelP ? "offre.dessus.vous.mensuel" : "offre.dessus.vous.annuel", { prix: euros(P.actuel) })}</p>` : ""}
+      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>
+      <p class="texte2" id="dessus-mensuel">${t(mensuelP ? "offre.dessus.annuel.ou" : "offre.dessus.mensuel", { prix: euros(P.autre) })}</p>
       ${frais ? `<p class="texte2" id="dessus-frais">${frais}</p>` : ""}
       ${ecartPrix > 0 ? `<p class="texte2" id="dessus-difference">${t("offre.dessus.difference", { prix: euros(ecartPrix) })}</p>` : ""}
       ${parDemande ? blocDemande : lien ? `<p class="pied actions-abo"><a class="bouton" id="offre-passer" href="${e(lien)}" target="_blank" rel="noopener">${t("offre.dessus.passer", { nom })}</a></p>
@@ -1806,7 +1841,7 @@
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
       ${o.delegation ? "" : (() => { const h = offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), suiv = offreCible(c, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), s_ = (window.RENOM_OFFRES || {})[suiv];
-        return h && s_ ? `<details class="repliable carte" id="offre-dessus-repli"${/dessus/.test(paramRoute) ? " open" : ""}><summary><span class="fort">${t("offre.dessus.ligne", { nom: e(I.offre(suiv)), n: s_.contenus, prix: euros(s_.prix_ht) })}</span></summary>${h}</details>` : ""; })()}
+        return h && s_ ? `<details class="repliable carte" id="offre-dessus-repli"${/dessus/.test(paramRoute) || demandeChgOffre ? " open" : ""}><summary><span class="fort">${t("offre.dessus.ligne", { nom: e(I.offre(suiv)), n: s_.contenus, prix: euros(window.RENOM_PRIX_MONTEE(o, s_, ab).cible) })}</span></summary>${h}</details>` : ""; })()}
       <section class="carte" id="offre-garanties"><h2>${t("offre.garanties.titre")}</h2>
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>
           ${o.reseaux_sociaux ? `<li><p class="fort">${t("offre.garantie.contenu", { n: gd.premier_contenu_heures })}</p></li>` : ""}
@@ -1827,8 +1862,10 @@
       ${repli("offre-historique", t("offre.historique"), j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
     if ($("offre-demander")) $("offre-demander").onclick = async () => { const b = $("offre-demander"); b.disabled = true;
+      // Tour 7 Essentiel (01/11/2026) : le bloc replié s'ouvre dès qu'une demande existe (avant : seulement avec « ?dessus » dans l'adresse, donc la
+      // confirmation restait cachée dans un bloc fermé) ; un toast le dit aussi.
       try { const r = await D.demanderRappel("changement_offre", null, b.dataset.offre); demandeChgOffre = (r && r.cree_le) || new Date().toISOString(); await offre();
-        const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); }
+        const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); toast(t("offre.dessus.demande.toast")); }
       catch (er) { b.disabled = false; const m = $("msg-chg"); if (m) m.textContent = ph(er.message); } };
     // Mode délégation (Premium) : activé ou désactivé par le commerçant ; l'écran est relu (règle de publication, historique).
     const deleg = async (oui, b) => { b.disabled = true; try { await D.reglerDelegation(oui); await offre(); const m = $("msg-deleg"); if (m) m.textContent = t(oui ? "offre.deleg.ok.active" : "offre.deleg.ok.inactive"); }
@@ -1921,7 +1958,7 @@
   }
   async function resultats() {
     const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
-      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLus()]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois()]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     // Tant que BoostImpact n'a pas accès à la fiche Google (étape « google » de la mise en route), aucun chiffre ne peut arriver : le point de départ.
     const etapeGoogle = ((mr && mr.points) || []).find(x => x.point === "google");
     if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR)); return; }
