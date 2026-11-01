@@ -279,6 +279,9 @@
   // Légende repliée sur téléphone (01/11/2026, tour 7 Premium, décision prise) : 3 lignes et « Lire la suite » (style.css), pour que Valider et
   // Modifier viennent juste sous le visuel. Ordinateur : la légende entière, sans le bouton.
   const lireSuite = l => M.longueur(l) > 110 || /\n/.test(l) ? `<button type="button" class="lien lire-suite" data-lire-suite aria-expanded="false">${t("leg.lire.suite")}</button>` : "";
+  // Tour 12 (v38) : plus de « N caractères » sous l'aperçu pour le commerçant (le compteur reste pendant la modification de la légende) ; seule
+  // reste la phrase utile, quand la légende dépasse la limite de la fiche Google.
+  const trop = (n, lim) => lim && n > lim ? `<p class="note" data-compte>${t("car", { n })}${t("car.sur", { lim: nombre(lim) })}${t("car.trop.google")}</p>` : "";
   function cadre(id) {
     const { x, u: u45, v, u9 } = vus.get(id), commun = legendeCommune(x);
     if (commun) {
@@ -287,7 +290,7 @@
       return `<div class="cadre cadre-commun${f !== "publication" ? " vertical" : ""}"><div class="cadre-tete"><span class="avatar" aria-hidden="true">${e((nomCommerce || "R").charAt(0).toUpperCase())}</span><span class="cadre-nom">${e(nomCommerce)}</span>${f === "story" ? `<span class="cadre-res">${t("cadre.story.seule")}</span>` : ""}</div>
         ${visuel}<p class="cadre-texte" data-legende${lc()}>${e(l)}</p>${lireSuite(l)}</div>
         <p class="note" data-res-communs>${t("res.memes", { res: I.liste(commun.filter(k => !absentsDe(id).includes(k)).map(k => RES[k])) })}</p>${absentsDe(id).filter(k => commun.includes(k)).map(noteAbsent).join("")}
-        <p class="note" data-compte>${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) + (n > lim ? t("car.trop.google") : "") : ""}</p>`;
+        ${trop(n, lim)}`;
     }
     const r = resChoisi(id), f = M.formatDe(x), vertical = f !== "publication" || r === "tiktok";
     const u = r === "tiktok" && M.photoPublication(x) ? u9 : u45;   // TikTok : le visuel 9:16 qui part réellement, jamais le 4:5 dans un cadre vertical
@@ -299,9 +302,11 @@
     const texte = `<p class="cadre-texte" data-legende${lc()}>${r === "instagram" && f === "publication" ? `<span class="fort">${e(nomCommerce)}</span> ` : ""}${e(l)}</p>${lireSuite(l)}`;
     const corps = r === "facebook" ? tete + (f === "publication" ? texte + visuel : visuel + texte) : r === "tiktok" ? visuel + tete + texte : tete + visuel + texte;
     return `${absentsDe(id).includes(r) ? noteAbsent(r) : ""}<div class="cadre cadre-${r}${vertical ? " vertical" : ""}${absentsDe(id).includes(r) ? " absent" : ""}">${corps}</div>
-      <p class="note" data-compte>${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) + (n > lim ? t("car.trop.google") : "") : ""}</p>`;
+      ${trop(n, lim)}`;
   }
-  function blocReseaux(x, u, v, u9) {
+  // Tour 12 (v38) : « apres » (les décisions d'un contenu à valider) se place juste sous l'aperçu, avant la modification de la légende ; il est
+  // gardé tel quel (champ ouvert, texte saisi) quand on change d'onglet de réseau (redessinerReseaux).
+  function blocReseaux(x, u, v, u9, apres) {
     vus.set(x.id, { x, u, v, u9 }); const r = resChoisi(x.id), modifiable = (x.statut === "a_valider" || x.statut === "approuve") && resDe(x).includes(r), commun = legendeCommune(x);
     // Onglets : seulement les réseaux où ce format peut partir (24/10/2026) : ni vidéo ni story sur la fiche Google, donc pas d'onglet « Fiche Google ».
     // Un seul réseau (Essentiel : la fiche Google) : aucun onglet, le cadre seul.
@@ -310,6 +315,7 @@
     return `<div class="reseaux" data-reseaux="${e(x.id)}"${commun ? ` data-commun="${commun.join(" ")}"` : ""}>
       ${onglets ? `<div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}"${absentsDe(x.id).includes(k) ? ` class="res-absent" aria-describedby="t-${e(x.id)}-${k}-n"` : ""}>${k === "google" ? `<span class="lib-long">${RES[k]}</span><span class="lib-court">Google</span>` : RES[k]}${absentsDe(x.id).includes(k) ? `<span class="vh" id="t-${e(x.id)}-${k}-n">${t("res.absent.court")}</span>` : ""}</button>`).join("")}</div>` : ""}
       <div class="res-panneau"${onglets ? ` role="tabpanel" aria-labelledby="t-${e(x.id)}-${r}"` : ""}>${cadre(x.id)}</div>
+      ${apres != null ? `<div class="apres-cadre" data-apres-cadre>${apres}</div>` : ""}
       ${modifiable ? `<div class="f" data-edition hidden><label for="leg-${e(x.id)}">${commun ? t("leg.commune") : t("leg.pour", { res: RES[r] })}</label><textarea id="leg-${e(x.id)}" class="haut-texte" data-texte-legende${lc()}></textarea>
         <p class="note" data-compte-edition aria-live="polite"></p>
         <div class="actions"><button type="button" class="bouton petit" data-a="leg-enregistrer">${t("leg.enregistrer")}</button><button type="button" class="lien" data-a="leg-annuler">${t("annuler")}</button></div></div>
@@ -328,7 +334,8 @@
   // Réseau dont la limite s'applique pendant l'édition : la fiche Google si la légende commune y part aussi.
   const resEdition = b => b.dataset.commun && b.dataset.commun.split(" ").includes("google") ? "google" : resChoisi(b.dataset.reseaux);
   function redessinerReseaux(b, focus) {
-    const id = b.dataset.reseaux, { x, u, v, u9 } = vus.get(id); const d = document.createElement("div"); d.innerHTML = blocReseaux(x, u, v, u9); const neuf = d.firstElementChild; b.replaceWith(neuf);
+    const id = b.dataset.reseaux, { x, u, v, u9 } = vus.get(id), garde = b.querySelector(":scope > [data-apres-cadre]"); const d = document.createElement("div"); d.innerHTML = blocReseaux(x, u, v, u9, garde ? "" : null); const neuf = d.firstElementChild; b.replaceWith(neuf);
+    if (garde) neuf.querySelector(":scope > [data-apres-cadre]").replaceWith(garde);
     if (focus) neuf.querySelector(`[data-res="${choixRes[id]}"]`).focus();
   }
   // Programmer au meilleur créneau : réseaux connectés compatibles avec le format, créneau de départ du métier.
@@ -677,15 +684,25 @@
   // atteint, « 4 sur 16 prévues ; les suivantes viendront avec vos prochaines photos. » N = contenus du mois (programmés ou déjà partis, photos et
   // vidéos, comme les dates de la ligne), sans l'avis de la semaine (non compté) ni les publications hors offre ; M = contenus de l'offre
   // (publications_plafond + videos_plafond : 2, 8 ou 16).
-  function ligneMois(cal, autorises, k) {
+  // Tour 12 (v38) : UN seul compteur du mois. Le compteur de l'offre fait foi (vue compteur en base : contenus.mois, pas la date de publication) ;
+  // l'accueil redit le même N que l'écran Offre et Photos : publications (faites et en préparation, pubReservees) + vidéos du mois (videos_utilisees),
+  // sur publications_plafond + videos_plafond. Une date dont le contenu est compté sur un autre mois le dit (« compté en octobre ») ; l'avis de la
+  // semaine aussi (« non compté »). Le compteur n'est donné que pour le mois en cours (celui de la vue compteur).
+  const nMoisOffre = k => !k ? 0 : pubReservees(k) + (+k.videos_plafond > 0 ? +k.videos_utilisees || 0 : 0);
+  const moisContenu = x => { const m = /^(\d{4})-(\d{2})/.exec(String((x.contenu && x.contenu.mois) || "")); return m ? { a: +m[1], m: +m[2] - 1 } : null; };
+  // Mention d'une date (accueil, calendrier) : contenu compté sur un autre mois que celui de sa date, ou avis de la semaine (non compté).
+  const mentionMois = x => { const d = new Date(x.prevu_le), mc = moisContenu(x);
+    return x.contenu && x.contenu.hors_plafond ? t("acc.pub.avis.semaine") : mc && (mc.m !== d.getMonth() || mc.a !== d.getFullYear()) ? t("acc.pub.compte.en", { mois: MOIS[mc.m] }) : ""; };
+  // prevu : les publications du mois sont toutes prévues (accueil, moisPrevu) ; alors pas de « Les suivantes viendront avec vos prochaines photos ».
+  function ligneMois(cal, autorises, k, prevu) {
     const it = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).sort((a, b) => Date.parse(a.prevu_le) - Date.parse(b.prevu_le)); if (!it.length) return "";
     const d0 = new Date(it[0].prevu_le), m = d0.getMonth(), a = d0.getFullYear(), dansM = x => { const d = new Date(x.prevu_le); return d.getMonth() === m && d.getFullYear() === a; }, duM = it.filter(dansM);
-    const jours = [...new Set(duM.map(x => new Date(x.prevu_le).getDate()))], avis = duM.filter(x => x.contenu && x.contenu.hors_plafond).length;
-    const l = I.liste(jours.map(j => t("acc.pub.le", { j })));
-    const plaf = (+(k && k.publications_plafond) || 0) + (+(k && k.videos_plafond) || 0);
-    const nM = cal.filter(x => ["programme", "envoye", "publie"].includes(x.statut) && dansM(x) && !(x.contenu && x.contenu.hors_plafond) && !(autorises && horsOffreDe(x, autorises))).length;
-    const suite = plaf && nM < plaf ? ` <span id="publications-du-mois-plafond">${t("acc.pub.mois.plafond", { n: nM, m: plaf })}</span>` : "";
-    return `<p class="texte2" id="publications-du-mois">${avis ? t("acc.pub.mois.avis", { mois: MOIS[m], l, d: t("acc.pub.mois.detail", { p: duM.length - avis, a: avis }) }) : t("acc.pub.mois", { mois: MOIS[m], l })}${suite} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
+    // Une entrée par jour et par mention (rien, compté sur un autre mois, avis de la semaine) : « le 5, le 12 (compté en octobre) et le 19 (avis de la semaine, non compté) ».
+    const vus_ = new Set(), l = I.liste(duM.map(x => { const j = new Date(x.prevu_le).getDate(), mention = mentionMois(x);
+      const cle = j + "|" + mention; if (vus_.has(cle)) return null; vus_.add(cle); return t("acc.pub.le", { j }) + mention; }).filter(Boolean));
+    const plaf = (+(k && k.publications_plafond) || 0) + (+(k && k.videos_plafond) || 0), km = k && k.mois ? new Date(k.mois + "T12:00:00") : null;
+    const compteur = plaf && km && km.getMonth() === m && km.getFullYear() === a ? (n => ` <span id="publications-du-mois-plafond" data-n="${n}" data-m="${plaf}">${t("acc.pub.mois.offre", { n, m: plaf, mois: MOIS[m], suite: !prevu })}</span>`)(nMoisOffre(k)) : "";
+    return `<p class="texte2" id="publications-du-mois">${t("acc.pub.mois", { mois: MOIS[m], l })}${compteur} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
   }
   // « Temps gagné ce mois-ci » (bilan) : estimation, réponses aux avis publiées × 10 min, publications parties × 20 min, vidéos × 45 min, depuis le 1er.
   const MINUTES_GAGNEES = { reponse: 10, publication: 20, video: 45 };
@@ -760,6 +777,14 @@
     // Mois complet (01/11/2026, tour 7 Essentiel) : même calcul que l'écran Photos (pubReservees >= plafond) ; plus d'incitation à envoyer une photo,
     // le grand bouton n'est plus vert et une ligne dit qu'une photo envoyée maintenant servira le mois suivant.
     const moisPlein = !!(k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond);
+    // Tour 12 (v38) : « Une photo pour vos N publications » disparaît quand les publications du mois sont prévues : celles du calendrier de ce mois
+    // (programmées, envoyées ou parties, quel que soit le mois où elles comptent), plus les validées sans date et les publications à valider, sans
+    // l'avis de la semaine ni les publications hors offre ; leur nombre atteint le plafond de l'offre.
+    const estPub = x => !!x && (x.type || "publication") === "publication" && !x.hors_plafond, aut_ = window.RENOM_RESEAUX_AUTORISES(c), dm_ = new Date(debutDuMois());
+    const prevuesMois = new Set([...cal.filter(x => ["programme", "envoye", "publie"].includes(x.statut) && estPub(x.contenu) && !horsOffreDe(x, aut_)
+        && new Date(x.prevu_le).getMonth() === dm_.getMonth() && new Date(x.prevu_le).getFullYear() === dm_.getFullYear()).map(x => x.contenu_id),
+      ...sansDate.filter(estPub).map(x => x.id), ...ct.filter(x => x.statut === "a_valider" && estPub(x) && !horsOffreContenu(x, c)).map(x => x.id)]).size;
+    const moisPrevu = !!(k && +k.publications_plafond > 0 && prevuesMois >= +k.publications_plafond);
     // Un bouton par action en attente, dans l'ordre des gestes : valider, puis mettre en route, puis envoyer les photos.
     const actions = [
       aValider.length ? { id: "contenus", href: "#/contenus", texte: t("acc.act.contenus", { n: aValider.length }) } : null,
@@ -772,15 +797,18 @@
       // TikTok ne se connecte pas seul : l'équipe l'active avec le commerçant (Comptes, bouton « Demander l'activation »).
       ...aConnecter.map(r => ({ id: "connecter-" + r, href: "#/comptes" + (r === "tiktok" ? "?tiktok" : ""), texte: r === "tiktok" ? t("acc.act.tiktok") : t("acc.act.connecter", { res: RES[r] }) })),
       !c.demarrage_fini ? { id: "demarrage", href: "#/demarrage", texte: t("acc.dem.reprendre") } : null,
-      !c.en_pause && !photosDuMois && !moisPlein ? { id: "photos", facultatif: true, href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
+      !c.en_pause && !photosDuMois && !moisPlein && !moisPrevu ? { id: "photos", facultatif: true, href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
       // Retour privé d'un client non lu (constat 33) : une action ici, plus une pastille sur Résultats.
       nonLus ? { id: "retours", href: "#/collecte?retours", texte: t("acc.act.retours", { n: nonLus }) } : null,
     ].filter(Boolean);
     // Seul reste un geste facultatif (envoyer des photos, 31/10/2026) ou la mise en route en attente de BoostImpact (déjà dite dans le chapô, test
-    // client Essentiel) : pas de section « À faire maintenant » ; le grand bouton « Envoyer une photo »
-    // devient l'unique bouton principal vert. Sinon, un seul bouton vert : la première action.
+    // client Essentiel) : pas de section « À faire maintenant ». Le grand bouton « Envoyer une photo » reste secondaire (tour 12 : jamais vert, il est
+    // facultatif). Un seul bouton vert au plus : la première action requise.
     // Rien du tout à faire (audit Essentiel du 31/10/2026) : pas de carte vide non plus, « Tout est à jour. » n'est dit qu'une fois, dans le chapô.
     const requises = actions.filter(a => !a.facultatif), sansAFaire = !requises.length && !humains.length;
+    // Tour 12 (v38) : jamais une action facultative en bouton principal vert. Le vert va à la première action requise ; s'il ne reste que du
+    // facultatif (envoyer une photo, créer une vidéo), aucun bouton vert sur l'accueil.
+    const principale = requises[0] || null;
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
     // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
@@ -796,18 +824,19 @@
          s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
       ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}
       ${sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
-        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
-          : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>
+        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => { const sec = a === principale ? "" : " second";
+          return `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${sec}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${sec}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
+          : `<a class="bouton${sec}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`; }).join("")}</ul>
           ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}` : ""}
         ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       ${ligneChgOffre(c, dChg)}
-      <div class="gestes-accueil"><a class="bouton grand${(actions.length && !sansAFaire) || moisPlein ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
+      <div class="gestes-accueil"><a class="bouton grand second" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
         ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
       ${moisPlein && !c.en_pause ? `<p class="texte2" id="acc-mois-complet">${t("acc.mois.complet", { mois: (new Date().getMonth() + 1) % 12 })}</p>` : ""}
       ${lienPublications(c)}
-      ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c), k)}
+      ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c), k, moisPrevu || moisPlein)}
       ${ligneSemaine(c, av, cal, cm)}
       ${tempsGagne(av, cal, bilanP, +k.videos_plafond > 0)}
       ${ligneFiche}
@@ -817,7 +846,7 @@
       ${ligneAutorisation(c)}
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
-        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
+        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}<span class="note" data-mention-mois>${mentionMois(x)}</span></p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
         : sansDate.length ? "" : `<p class="texte2" id="acc-rien-programme">${t("acc.rien.programme")}</p>`}
         ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
@@ -1341,32 +1370,31 @@
     if (filtre === "hors_offre" && !nbf.hors_offre) filtre = (FILTRES.find(f => nbf[f[0]]) || FILTRES[0])[0];
     const liste = l.filter(x => famille(x, c) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
-    const formatCourt = x => t("format.court." + M.formatDe(x)), etroit = matchMedia("(max-width: 359px)").matches;
+    const formatCourt = x => t("format.court." + M.formatDe(x));
     vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil contenus-tete">${entete(t("groupe.avalider"), t("contenus.titre"), `<span class="sur-ordi">${t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo")}</span><span class="sur-tel">${delegationActive(c) ? t("contenus.chapo.delegation") : `<span class="lib-long">${t("contenus.chapo.court")}</span><span class="lib-court">${t("contenus.chapo.mini")}</span>`}</span>`)}
         <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees"><span class="lib-long">${t("idees.titre")}</span><span class="lib-court">${t("idees.titre.court")}</span></button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
-      ${/* Sous 360 px (tour 11), la proposition de délégation passe sous les contenus : « Valider » d'abord. */ ""}
-      ${etroit ? "" : ligneDelegation(c)}
+      ${/* Tour 12 (v38) : à toutes les largeurs, la proposition de délégation passe sous les contenus : « Valider » d'abord (tour 11 : sous 360 px seulement). */ ""}
       ${/* Tour 11 (v37, 320 px : « Valider » à 1 137 px) : sous 360 px, seul le filtre actif reste affiché, avec « Autres filtres, N » qui déplie les autres
          (feuille de style : .filtres:not(.ouverts)) ; au-dessus de 360 px, le bouton n'est pas rendu et tous les filtres restent visibles. */ ""}
       ${l.length ? `<div class="filtres" role="group" aria-label="${t("filtres.aria")}">${FILTRES.filter(([k]) => k !== "hors_offre" || nbf[k]).map(([k, nom]) => `<button type="button" data-f="${k}" aria-pressed="${k === filtre}">${nom}, ${nbf[k]}</button>`).join("")}${matchMedia("(max-width: 359px)").matches ? `<button type="button" class="filtres-plus" id="filtres-plus" aria-expanded="false">${t("filtres.autres", { n: FILTRES.filter(([k]) => (k !== "hors_offre" || nbf[k]) && k !== filtre).length })}</button>` : ""}</div>
       <p class="msg" id="msg" role="status"></p>
       ${liste.length && filtre === "approuve" && !approuveRecent ? noteCreneaux(c.metier) : ""}
-      ${liste.length ? `<div class="cartes">${liste.map((x, i) => `<article class="carte contenu" data-contenu="${e(x.id)}">
+      ${liste.length ? `<div class="cartes">${liste.map((x, i) => `<article class="carte contenu${x.statut === "a_valider" ? " a-decider" : ""}" data-contenu="${e(x.id)}">
         <p class="meta"><span>${formatCourt(x)}${x.depot_video_id ? " · " + t("dv.montage.de.vos") : ""}</span><span class="etat${x.statut === "a_valider" ? " actif" : ""}">${ST_CONTENU[x.statut] || e(x.statut)}</span></p>
         <p class="note contenu-quand" data-quand>${cap(quand(x))}</p>
         ${/* Délégation active (01/11/2026, tour 7 Premium) : l'échéance de 48 h ; la base valide puis programme au créneau (valider_tacitement). */ ""}
         ${x.statut === "a_valider" && delegationActive(c) ? echeanceTacite(x) : ""}
-        ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
+        ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i], x.statut === "a_valider" ? decisions(x, t("contenus.refuser")) : null)}<div class="contenu-corps">
         ${x.note_modification ? `<p class="note">${t(x.statut === "refuse" ? "contenus.motif" : "contenus.demande")}<span${lc()}>${e(x.note_modification)}</span></p>` : ""}
         ${x.statut === "modification" ? `<p class="note fort" data-modif-delai>${t(x.decide_le ? "contenus.modif.delai.le" : "contenus.modif.delai", { d: x.decide_le ? date(x.decide_le) : "" })}</p>` : ""}
-        ${x.statut === "a_valider" ? decisions(x, t("contenus.refuser")) + formatsPublies(x, urls[i], u9s[i]) : horsOffreContenu(x, c) ? blocHorsOffre(c) : x.statut === "approuve" ? boutonsAuto(x.id, c.metier)
+        ${x.statut === "a_valider" ? formatsPublies(x, urls[i], u9s[i]) : horsOffreContenu(x, c) ? blocHorsOffre(c) : x.statut === "approuve" ? boutonsAuto(x.id, c.metier)
           : x.statut === "refuse" ? (pubPlein && x.type === "publication" ? `<p class="note" data-remettre-plein>${t("contenus.remettre.plein", { mois: (new Date().getMonth() + 1) % 12 })}</p>`
             : `<div class="actions"><button type="button" class="bouton second" data-remettre="${e(x.id)}">${t("contenus.remettre")}</button></div>`) : ""}</div></article>`).join("")}</div>`
       : `<section class="carte"><p class="texte2">${VIDE_FILTRE[filtre]}${filtre === "a_valider" && nbf.approuve ? ` <span id="vide-a-programmer">${t("filtre.vide.a_programmer", { n: nbf.approuve, lien: `<a href="#/calendrier">${e(ECRANS.calendrier)}</a>` })}</span>` : ""}</p></section>`}`
       : `<section class="carte"><h2>${t("contenus.vide.titre")}</h2><p class="texte2">${t("contenus.vide.texte")}</p><p class="pied"><a class="bouton" href="#/photos">${t("photos.deposer")}</a></p></section><p class="msg" id="msg" role="status"></p>`}`;
-    if (etroit && ligneDelegation(c)) vue.insertAdjacentHTML("beforeend", ligneDelegation(c));   // sous 360 px : après les contenus (tour 11)
+    if (ligneDelegation(c)) vue.insertAdjacentHTML("beforeend", ligneDelegation(c));   // après les contenus, à toutes les largeurs (tour 12)
     vue.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filtre = b.dataset.f; contenus(); });
     if ($("filtres-plus")) $("filtres-plus").onclick = () => { const b_ = $("filtres-plus"), f_ = b_.closest(".filtres"), ouvert = !f_.classList.contains("ouverts");
       f_.classList.toggle("ouverts", ouvert); b_.setAttribute("aria-expanded", String(ouvert)); b_.textContent = ouvert ? t("filtres.replier") : t("filtres.autres", { n: f_.querySelectorAll("[data-f][aria-pressed=false]").length }); };
@@ -1510,7 +1538,7 @@
       </div>
       <section class="carte" id="cal-vos"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${(n_ => n_ ? `<span class="note" id="cal-vos-n">${t("cal.vos.a.venir", { n: n_ })}</span>` : "")(l.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) >= Date.now()).length)}</div>
         ${aProgrammerCal.length ? `<div class="actions" id="cal-tout-zone"><button type="button" class="bouton second" id="cal-programmer-tout">${t("cal.programmer.tout", { n: aProgrammerCal.length })}</button></div>` : ""}${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
-        <p><span class="fort">${dateHeure(x.prevu_le)}</span> · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
+        <p><span class="fort">${dateHeure(x.prevu_le)}</span>${mentionMois(x) ? `<span class="note" data-mention-mois>${mentionMois(x)}</span>` : ""} · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
         <p class="note"${lc()}>${e(cut(x.contenu?.legende || "", 90))}</p>${x.erreur ? `<p class="note">${e(ph(x.erreur))}</p>` : ""}
         ${x.statut === "programme" && horsOffreDe(x, autorises) ? `<div class="actions serre">${versGoogle(x) ? `<button type="button" class="bouton second petit" data-a="vers-google">${t("cal.vers.google")}</button>` : ""}<button type="button" class="lien" data-a="annuler">${t("cal.annuler")}</button></div>
           <div class="confirmer-refus" data-zone-annuler hidden><p class="fort">${t("cal.annuler.question", { quand: I.dateHeureDans(x.prevu_le) })}</p><div class="actions"><button type="button" class="bouton" data-a="annuler-ok">${t("cal.annuler.oui")}</button><button type="button" class="bouton second" data-a="annuler-garder">${t("cal.annuler.garder")}</button></div></div>`
@@ -1711,10 +1739,9 @@
     ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t(x.retenue_creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
         <p><button type="button" class="lien" data-retenir="${e(x.id)}">${t("avis.rappel.modifier")}</button></p>` : ""}${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
     : proposee(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
-  const apresEcheance = () => { const d = new Date(Date.now() + 30 * 60000); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); return d.toISOString(); };
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
-        ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5 > Date.now() ? t("avis.sensible.publication", { d: dateHeure(new Date(Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5).toISOString()) }) : t("avis.sensible.publication.passee", (q => ({ d: date(q), h: heure(q) }))(apresEcheance()))}</p>`}` : ""}
+        ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5 > Date.now() ? t("avis.sensible.publication", { d: dateHeure(new Date(Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
       ${blocRetenue(x, contact, c)}
       ${champVersion(x)}
       ${x.retenue_le && D.retenirReponseAvis ? "" : ligneContact(contact, "contact-avis-" + x.id)}</div>`;
@@ -2318,7 +2345,8 @@
     const actuelConc = x => (x.mois || [])[x.mois.length - 1] || {}, actuel = mois[mois.length - 1] || {}, enCours = dern && dern === actuel;
     const nonLu = t(lg.fiche === "non_reliee" ? "res.fiche.non.reliee" : "res.note.non.lue");
     const lecture = lectureTexte(lg), nonLue = t("non.lue"), nonLuM = t("non.lu");
-    vue.innerHTML = `${entete(t("groupe.resultats"), t("res.titre"), t("res.chapo") + (periode ? ", " + periode : "") + ".")}
+    // Tour 12 (v38) : sur téléphone, le chapeau se réduit à la période (« De juin 2026 à novembre 2026. ») pour qu'une tuile chiffrée tienne au premier écran à 320 px.
+    vue.innerHTML = `${entete(t("groupe.resultats"), t("res.titre"), `<span class="sur-ordi">${t("res.chapo") + (periode ? ", " + periode : "")}.</span>${periode ? `<span class="sur-tel res-periode">${cap(periode)}.</span>` : ""}`)}
       ${bandeauDemo()}
       ${bilanPrecedentBloc(bilanP, c, contactR)}
       ${/* Tour 9 (01/11/2026) : ce que la fiche a rapporté juste sous le bilan du mois écoulé, avant le mois en cours. */ ""}

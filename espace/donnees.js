@@ -975,7 +975,7 @@
       async idees() { const c = await self.commerce(); return ok(await sb.from("idees").select("id,titre,texte,cree_le,origine,statut,semaine,motif").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
       async demanderIdees() { const c = await self.commerce(), r = await sb.from("idees_demandes").insert({ commerce_id: c.id });
         if (r.error) throw new Error(/une demande d'idées par jour/.test(r.error.message || "") ? PHRASE_IDEES_JOUR : r.error.message); },
-      async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut,hors_plafond)").eq("commerce_id", c.id).order("prevu_le")); },
+      async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut,hors_plafond,mois)").eq("commerce_id", c.id).order("prevu_le")); },
       async programmer({ contenu_id, reseaux, prevu_le }) { if (!Array.isArray(reseaux) || !reseaux.length) throw new Error("Choisissez où publier."); const c = await self.commerce(); ok(await sb.from("publications").insert({ commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString() })); },
       // La base vérifie l'offre, la connexion et le format (déclencheurs verifier_programmation et verifier_reseaux_retenus).
       async publierSurGoogle(id) { ok(await sb.from("publications").update({ reseaux: ["google"] }).eq("id", id)); },

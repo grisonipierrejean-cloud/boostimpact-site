@@ -330,6 +330,8 @@ legend{padding:0;margin-bottom:4px}
 video.visuel{object-fit:contain;background:#000}
 .visuel.vide{display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:14px;color:var(--discret)}
 .contenu-corps{padding:0 2px 2px;display:flex;flex-direction:column;gap:12px}
+/* Tour 12 (v38) : Valider juste sous l'aperçu, avant la modification de la légende. */
+.apres-cadre{display:flex;flex-direction:column;gap:12px;margin:12px 0 8px}
 .contenu .meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px}
 .contenu .meta span{white-space:nowrap}
 .contenu [data-choix] .bouton{padding-left:12px;padding-right:12px}
@@ -1136,6 +1138,8 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 .lire-suite{display:none}
 @media (max-width:899px){.carte.contenu .cadre-texte:not(.deplie){line-height:1.5;max-height:4.5em;overflow:hidden}
   .carte.contenu .lire-suite{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}}
+/* Tour 12 (v38) : contenu à valider sur téléphone, légende repliée sur 2 lignes : Valider vient juste sous le visuel. */
+@media (max-width:899px){.carte.contenu.a-decider .cadre-texte:not(.deplie){max-height:3em}.carte.contenu.a-decider .apres-cadre{margin-top:4px}}
 /* Tour 8 (01/11/2026) : autorisation photos en petite carte sur l'accueil ; « Validées en attente de date » ; statistiques de la fiche Google */
 .carte-autorisation{gap:6px;padding:14px 16px}
 .carte-autorisation .ligne-autorisation{padding:0}
@@ -1161,3 +1165,6 @@ p.bandeau-demo .note{color:var(--texte2)}
   .res-onglets{gap:0 12px}
 }
 @media (max-width:359px){#vue > #contenus-delegation{margin-top:16px}}
+/* Tour 12 (v38) : Résultats sur téléphone, les tuiles chiffrées du bilan passent juste sous son titre, avant la phrase : au moins une tuile au premier
+   écran à 320 px, et à 375 px elles ne touchent plus la barre d'onglets. Ordinateur : ordre inchangé. */
+@media (max-width:599px){.carte.bilan>.carte-tete{order:0}.carte.bilan>.bilan-chiffres{order:1}.carte.bilan>:not(.carte-tete):not(.bilan-chiffres){order:2}}
