@@ -36,7 +36,7 @@
   const dateHeure = (d, l) => cap(jourLong(d, l)) + " " + date(d, l) + ", " + heure(d, l);
   // Heure de départ d'un créneau ("11:30") : « 11 h 30 », « 12 h » ; en anglais « 11:30 », « 12:00 ».
   const hm = (s, l) => { const [h, mi] = String(s).split(":").map(Number); return fr(l) ? h + " h" + (mi ? " " + String(mi).padStart(2, "0") : "") : String(h).padStart(2, "0") + ":" + String(mi || 0).padStart(2, "0"); };
-  const dateLongue = (iso, l) => { const [a, m, j] = String(iso).split("-").map(Number); return fr(l) ? `${j} ${mois("fr")[m - 1]} ${a}` : fmt({ day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }, l).format(new Date(Date.UTC(a, m - 1, j))); };
+  const dateLongue = (iso, l) => { const [a, m, j] = String(iso).split("-").map(Number); return fr(l) ? `${j === 1 ? "1er" : j} ${mois("fr")[m - 1]} ${a}` : fmt({ day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }, l).format(new Date(Date.UTC(a, m - 1, j))); };
   // Énumération : « a, b et c » ; « a, b and c » (anglais britannique, sans virgule avant « and »).
   const liste = (l, ou) => { const mot = t(ou === "ou" ? "liste.ou" : "liste.et"); return l.length > 1 ? l.slice(0, -1).join(", ") + " " + mot + " " + l[l.length - 1] : l.join(""); };
   const pl = (n, un, plusieurs) => n > 1 ? plusieurs : un;            // français : 0 et 1 au singulier
@@ -101,6 +101,7 @@
     "metier.restaurant": ["Restaurant", "Restaurant", "Restaurant"], "metier.beaute": ["Institut de beauté", "Beauty salon", "Schoonheidssalon"], "metier.sport": ["Salle de sport ou studio", "Gym or studio", "Fitnesszaal of studio"], "metier.autre": ["Autre commerce", "Other business", "Andere zaak"],
     "res.facebook": ["Facebook", "Facebook", "Facebook"], "res.instagram": ["Instagram", "Instagram", "Instagram"], "res.google": ["Fiche Google", "Google profile", "Google-profiel"], "res.tiktok": ["TikTok", "TikTok", "TikTok"],
     "etat.non_connecte": ["Non connecté", "Not connected", "Niet gekoppeld"], "etat.en_attente": ["En attente", "Pending", "In afwachting"], "etat.connecte": ["Connecté", "Connected", "Gekoppeld"], "etat.erreur": ["Erreur", "Error", "Fout"],
+    "etat.tiktok.demande": ["Activation demandée", "Activation requested", "Activatie aangevraagd"],
     "etape.PRODUIT": ["Contenu créé", "Content created", "Post gemaakt"], "etape.PUBLIE": ["Publication mise en ligne", "Post published", "Post online gezet"], "etape.PROGRAMME": ["Publication programmée", "Post scheduled", "Post ingepland"],
     "etape.PROGRAMMATION_ANNULEE": ["Programmation annulée", "Scheduling cancelled", "Planning geannuleerd"], "etape.IDEES": ["Idées proposées", "Ideas suggested", "Ideeën voorgesteld"],
     "etape.CONTENU_APPROUVE": ["Publication validée", "Content approved", "Post goedgekeurd"], "etape.CONTENU_MODIFICATION": ["Modification demandée", "Change requested", "Wijziging gevraagd"], "etape.CONTENU_REFUSE": ["Contenu refusé", "Content rejected", "Post geweigerd"],
@@ -555,6 +556,9 @@
       v => v.n > 1 ? "U hoeft niets te doen. Wij bereiden de antwoorden voor en sturen ze u per e-mail: niets wordt gepubliceerd zonder uw akkoord. Antwoord er zelf niet op via Google." : "U hoeft niets te doen. Wij bereiden het antwoord voor en sturen het u per e-mail: niets wordt gepubliceerd zonder uw akkoord. Antwoord er zelf niet op via Google."],
     "acc.humains.texte.equipe": ["Vous n'avez rien à faire : nous préparons la réponse, vous pouvez la relire dans Avis et donner votre version ; sans retour de votre part, elle est publiée sous 24 h. N'y répondez pas vous-même sur Google.",
       v => `You don't need to do anything: we prepare the reply, you can read it in Reviews and give your side; without a reply from you, it is published within 24 hours. Please don't reply to ${v.n > 1 ? "them" : "it"} yourself on Google.`, "U hoeft niets te doen: wij bereiden het antwoord voor, u kunt het lezen in Reviews en uw versie geven; zonder reactie van u wordt het binnen 24 uur gepubliceerd. Antwoord er zelf niet op via Google."],
+    "acc.humains.texte.retenue": [v => `Vous n'avez rien à faire : ${v.n > v.r ? (v.r > 1 ? `pour ${v.r} d'entre eux, ` : "pour l'un d'eux, ") : ""}nous attendons de vous appeler avant de publier${v.n > v.r ? (v.n - v.r > 1 ? " ; les autres réponses sont publiées sous 24 h sans retour de votre part" : " ; l'autre réponse est publiée sous 24 h sans retour de votre part") : ""}. N'y répondez pas vous-même sur Google.`,
+      v => `You don't need to do anything: we'll call you before publishing${v.n > v.r ? "; the other repl" + (v.n - v.r > 1 ? "ies are" : "y is") + " published within 24 hours without a reply from you" : ""}. Please don't reply yourself on Google.`,
+      v => `U hoeft niets te doen: wij bellen u voordat we publiceren${v.n > v.r ? "; " + (v.n - v.r > 1 ? "de andere antwoorden worden" : "het andere antwoord wordt") + " binnen 24 uur gepubliceerd zonder reactie van u" : ""}. Antwoord er zelf niet op via Google.`],   // 01/11/2026, tour 6 Premium
     "acc.humains.lire": [v => v.n > 1 ? "Lire les avis" : "Lire l'avis", v => v.n > 1 ? "Read the reviews" : "Read the review", v => v.n > 1 ? "De reviews lezen" : "De review lezen"],
     "acc.cm.titre": [v => v.n > 1 ? `${v.n} commentaires demandent votre attention` : "Un commentaire demande votre attention", v => v.n > 1 ? `${v.n} comments need your attention` : "A comment needs your attention", v => v.n > 1 ? `${v.n} reacties vragen uw aandacht` : "Een reactie vraagt uw aandacht"],
     "acc.cm.texte": ["Commentaire sensible sur vos réseaux : BoostImpact n'y répond pas. À vous de décider quoi en faire.", "Sensitive comment on your social accounts: BoostImpact doesn't reply to it. It's up to you to decide what to do.", "Gevoelige reactie op uw netwerken: BoostImpact antwoordt er niet op. U beslist zelf wat u doet."],
@@ -671,6 +675,7 @@
     "cal.semaine": ["Semaine", "Week", "Week"], "cal.mois": ["Mois", "Month", "Maand"], "cal.precedent": ["Précédent", "Previous", "Vorige"], "cal.suivant": ["Suivant", "Next", "Volgende"],
     "cal.programmer.titre": ["Programmer à la main", "Schedule manually", "Manueel inplannen"], "cal.contenu": ["Contenu", "Content", "Post"], "cal.date": ["Date", "Date", "Datum"], "cal.heure": ["Heure", "Time", "Uur"], "cal.reseaux": ["Réseaux", "Networks", "Netwerken"],
     "cal.non.connecte": [" (non connecté)", " (not connected)", " (niet gekoppeld)"],
+    "cal.tiktok.demande": [" (activation demandée)", " (activation requested)", " (activatie aangevraagd)"],   // 01/11/2026, tour 6 Premium
     "cal.non.connectee": [" (non connectée)", " (not connected)", " (niet gekoppeld)"],
     "cal.sur.google": ["Sur votre fiche Google", "On your Google profile", "Op uw Google-profiel"], "cal.sur.reseau": ["Sur {r}", "On {r}", "Op {r}"],
     // Essentiel (fiche Google seulement, 26/10/2026) : la légende du formulaire ne parle pas de réseaux.
@@ -2151,6 +2156,7 @@
     "offre.deleg.accord": [v => `En activant le mode délégation, vous acceptez qu'un contenu soumis et resté sans réponse de votre part ${v.h} heures après son envoi soit réputé validé, puis programmé et publié. Un avis sensible n'est jamais publié automatiquement. Vous pouvez le désactiver à tout moment, ici.`,
       v => `By turning on delegation mode, you agree that content submitted to you and left without a reply ${v.h} hours after it's sent is deemed approved, then scheduled and published. A sensitive review is never published automatically. You can turn it off at any time, here.`,
       v => `Door de delegatiemodus te activeren, aanvaardt u dat een voorgelegde post die ${v.h} uur na verzending zonder antwoord van u blijft, als goedgekeurd geldt en daarna ingepland en gepubliceerd wordt. Een gevoelige review wordt nooit automatisch gepubliceerd. U kunt hem op elk moment uitschakelen, hier.`],
+    "contenus.deleg.ligne": [v => `Pas le temps de valider ? Activez la délégation : sans réponse de votre part ${v.h} h après l'envoi, nous publions.`, v => `No time to approve? Turn on delegation: if you haven't replied ${v.h} hours after we send it, we publish.`, v => `Geen tijd om goed te keuren? Activeer de delegatie: zonder reactie van u ${v.h} uur na het versturen, publiceren wij.`],   // 01/11/2026, tour 6 Premium
     "offre.deleg.activer": ["Activer le mode délégation", "Turn on delegation mode", "Delegatiemodus activeren"],
     "offre.deleg.desactiver": ["Désactiver le mode délégation", "Turn off delegation mode", "Delegatiemodus uitschakelen"],
     "offre.deleg.trace": ["Votre accord est enregistré avec sa date, son heure et la version de nos conditions de vente.", "Your agreement is recorded with its date, time and the version of our terms of sale.", "Uw akkoord wordt bewaard met datum, uur en de versie van onze verkoopvoorwaarden."],
@@ -2263,7 +2269,7 @@
     "dv.f.horizontale": ["Vidéo horizontale : elle sera recadrée en vertical", "Landscape video: it will be cropped to vertical", "Liggende video: ze wordt verticaal bijgesneden"],
     // Compteur de l'onglet Photos (31/10/2026, test client Premium, tour 5) : publications du mois utilisées sur la limite de l'offre.
     // 01/11/2026 (tour 6 Croissance) : « 5 publications sur 8 ce mois-ci » (on sait ce qui est compté), plus « 5 sur 8 utilisées ».
-    "photos.compteur.reste": [v => `${v.a} ${v.a > 1 ? "publications" : "publication"} sur ${v.b} ce mois-ci, il vous en reste ${v.r}.`, v => `${v.a} ${v.a === 1 ? "post" : "posts"} out of ${v.b} this month, ${v.r} left.`, v => `${v.a} ${v.a === 1 ? "post" : "posts"} van de ${v.b} deze maand, nog ${v.r} over.`],
+    "photos.compteur.reste": [v => `${v.a} ${v.a > 1 ? "publications" : "publication"} sur ${v.b} ce mois-ci${v.n > 0 ? ` (dont ${v.n} en préparation)` : ""}, il vous en reste ${v.r}.`, v => `${v.a} ${v.a === 1 ? "post" : "posts"} out of ${v.b} this month${v.n > 0 ? ` (including ${v.n} in progress)` : ""}, ${v.r} left.`, v => `${v.a} ${v.a === 1 ? "post" : "posts"} van de ${v.b} deze maand${v.n > 0 ? ` (waarvan ${v.n} in voorbereiding)` : ""}, nog ${v.r} over.`],
     "dv.compteur.reste": [v => `${v.a} sur ${v.b} ${v.a > 1 ? "utilisées" : "utilisée"}${v.n > 0 ? ` (dont ${v.n} en préparation)` : ""}. Il vous en reste ${v.r}.`, v => `${v.a} of ${v.b} used${v.n > 0 ? ` (including ${v.n} in progress)` : ""}. ${v.r} left.`, v => `${v.a} van ${v.b} gebruikt${v.n > 0 ? ` (waarvan ${v.n} in voorbereiding)` : ""}. Nog ${v.r} over.`],
     "dv.delai": ["Le montage arrive en général le jour même.", "The edit usually arrives the same day.", "De montage komt meestal dezelfde dag."],
     "dv.comptent": ["Comptent : les vidéos du mois montées ou en préparation, vidéos d'avis comprises. Une vidéo refusée ne compte pas.", "What counts: this month's videos, edited or in progress, review videos included. A rejected video doesn't count.", "Telt mee: de video's van deze maand, gemonteerd of in voorbereiding, reviewvideo's inbegrepen. Een geweigerde video telt niet."],
@@ -2300,9 +2306,18 @@
     // « Attendez mon appel » (décision de PJ du 01/11/2026) : retenir_reponse_avis ; rien n'est publié avant l'appel.
     "avis.version.reprise": ["Nous reprenons la réponse avec votre version : vous la relisez ici avant publication.", "We're reworking the reply with your side: you'll read it here before it's published.", "Wij passen het antwoord aan met uw versie: u leest het hier vóór publicatie."],
     "con.file.version.reprendre": ["Version reçue, à reprendre", "Side received, to rework", "Versie ontvangen, te herwerken"],
+    "con.file.version.relance": ["En retard : version reçue {d}, sans reprise depuis 48 h", "Overdue: side received {d}, not reworked for 48 h", "Te laat: versie ontvangen {d}, sinds 48 u niet herwerkt"],   // 01/11/2026, tour 6 Premium
     "avis.retenir": ["Attendez mon appel", "Wait for my call", "Wacht op mijn telefoontje"],
     "avis.retenir.aide": ["Vous préférez en parler d'abord ? Nous vous appelons avant de publier.", "Prefer to talk first? We'll call you before publishing.", "Liever eerst praten? Wij bellen u voordat we publiceren."],
     "avis.retenue.fait": ["Nous ne publions rien avant de vous avoir appelé(e).", "We won't publish anything until we've called you.", "Wij publiceren niets voordat we u hebben gebeld."],
+    "avis.rappel.titre": ["Où et quand vous appeler ?", "Where and when should we call you?", "Waar en wanneer mogen we u bellen?"],   // 01/11/2026, tour 6 Premium
+    "avis.rappel.tel": ["Votre numéro", "Your number", "Uw nummer"], "avis.rappel.quand": ["Quand", "When", "Wanneer"],
+    "avis.rappel.auj.cap": ["Aujourd'hui", "Today", "Vandaag"], "avis.rappel.demain.cap": ["Demain", "Tomorrow", "Morgen"],
+    "avis.rappel.auj": ["aujourd'hui", "today", "vandaag"], "avis.rappel.demain": ["demain", "tomorrow", "morgen"], "avis.rappel.le": ["le {d}", "on {d}", "op {d}"],
+    "avis.rappel.plage": ["Entre 9 h et 18 h. Rien n'est publié avant notre appel.", "Between 9 am and 6 pm. Nothing is published before our call.", "Tussen 9 en 18 uur. Niets wordt gepubliceerd vóór ons telefoontje."],
+    "avis.rappel.confirmer": ["Confirmer : attendez mon appel", "Confirm: wait for my call", "Bevestigen: wacht op mijn telefoontje"],
+    "avis.rappel.prevu": ["Nous vous appelons au {tel}, {quand} entre 9 h et 18 h.", "We'll call you on {tel}, {quand} between 9 am and 6 pm.", "Wij bellen u op {tel}, {quand} tussen 9 en 18 uur."],
+    "avis.rappel.modifier": ["Modifier le numéro ou le jour", "Change the number or the day", "Nummer of dag wijzigen"],
     "avis.retenue.toast": ["C'est noté : nous vous appelons avant de publier.", "Noted: we'll call you before publishing.", "Genoteerd: wij bellen u voordat we publiceren."],
     "contact.votre": ["Votre contact : {p}, BoostImpact · WhatsApp {tel}", "Your contact: {p}, BoostImpact · WhatsApp {tel}", "Uw contactpersoon: {p}, BoostImpact · WhatsApp {tel}"],
     // Point mensuel Premium (01/11/2026) : bouton et message WhatsApp prérempli, envoyé à PJ.
@@ -2318,6 +2333,12 @@
     "acc.pub.mois": ["Vos publications de {mois} : {l}.", "Your {mois} posts: {l}.", "Uw posts in {mois}: {l}."],
     "acc.pub.le": [v => v.j === 1 ? "le 1er" : `le ${v.j}`, v => `the ${v.j}${v.j % 10 === 1 && v.j !== 11 ? "st" : v.j % 10 === 2 && v.j !== 12 ? "nd" : v.j % 10 === 3 && v.j !== 13 ? "rd" : "th"}`, v => `${v.j}e`],
     "acc.temps": ["Temps gagné ce mois-ci : environ {d}.", "Time saved this month: about {d}.", "Tijd gewonnen deze maand: ongeveer {d}."],
+    "res.retours.non.lus": [v => v.n > 1 ? `${v.n} non lus` : "1 non lu", v => `${v.n} unread`, v => `${v.n} ongelezen`],   // 01/11/2026, tour 6 Premium
+    "bilan.prec.titre": [v => `Bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}`, v => `Your ${v.mois} report`, "Overzicht van {mois}"],   // 01/11/2026, tour 6 Premium
+    "bilan.prec.email": ["Le bilan détaillé (chiffres, ce que disent vos clients, pistes pour le mois) part aussi par email le 1er de chaque mois, à 9 h.", "The detailed report (figures, what your customers say, ideas for the month) is also emailed on the 1st of each month, at 9 am.", "Het uitgebreide overzicht (cijfers, wat uw klanten zeggen, ideeën voor de maand) wordt ook gemaild op de 1e van elke maand, om 9 uur."],
+    "bilan.prec.parler": ["En parler avec {p}", "Talk it over with {p}", "Erover praten met {p}"],
+    "bilan.prec.message": [v => `Bonjour, c'est ${v.nom}. J'aimerais parler de notre bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}.`, v => `Hello, this is ${v.nom}. I'd like to talk about our ${v.mois} report.`, "Hallo, met {nom}. Ik wil graag ons overzicht van {mois} bespreken."],
+    "acc.temps.mois": ["Temps gagné en {mois} : environ {d}.", v => `Time saved in ${v.mois}: about ${v.d}.`, "Tijd gewonnen in {mois}: ongeveer {d}."],   // du 1er au 5 du mois (01/11/2026)
     "acc.temps.estimation": ["Estimation : 10 min par réponse à un avis, 20 min par publication, 45 min par vidéo.", "Estimate: 10 min per review reply, 20 min per post, 45 min per video.", "Schatting: 10 min per antwoord op een review, 20 min per post, 45 min per video."],
     "acc.temps.h": [v => `${v.h} h`, v => `${v.h} hour${v.h > 1 ? "s" : ""}`, v => `${v.h} uur`], "acc.temps.hdemi": [v => `${v.h} h 30`, v => `${v.h}.5 hours`, v => `${v.h},5 uur`],
     "acc.temps.min": [v => `${v.m} min`, v => `${v.m} minutes`, v => `${v.m} minuten`],
@@ -2328,6 +2349,7 @@
     "con.nv.pays.alerte": ["{v} est une ville belge : vérifiez le pays (Belgique ?).", "{v} is a Belgian city: check the country (Belgium?).", "{v} is een Belgische stad: controleer het land (België?)."],
     "con.file.retenue": ["Le commerçant attend votre appel (demandé le {d}).", "The business owner is waiting for your call (asked on {d}).", "De ondernemer wacht op uw telefoontje (gevraagd op {d})."],
     "con.file.retenue.tel": ["Numéro : {tel}", "Number: {tel}", "Nummer: {tel}"],
+    "con.file.retenue.jour": ["À rappeler {d}, entre 9 h et 18 h", "Call back {d}, between 9 am and 6 pm", "Terugbellen {d}, tussen 9 en 18 uur"],   // 01/11/2026, tour 6 Premium
     "con.file.retenue.raison": ["Publication bloquée : le commerçant attend votre appel. Appelez-le, puis « Appel fait ».", "Publishing blocked: the business owner is waiting for your call. Call them, then \u201cCall done\u201d.", "Publicatie geblokkeerd: de ondernemer wacht op uw telefoontje. Bel, en daarna \u201cGebeld\u201d."],
     "con.file.liberer": ["Appel fait", "Call done", "Gebeld"],
     "con.file.liberee": ["Appel noté : la réponse peut être publiée.", "Call recorded: the reply can be published.", "Telefoontje genoteerd: het antwoord kan worden gepubliceerd."],

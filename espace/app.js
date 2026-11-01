@@ -8,6 +8,9 @@
   // « Votre contact : PJ, BoostImpact · WhatsApp +33 6 99 08 05 39 » (lien wa.me). La console peut régler un autre prénom ou une photo.
   const CONTACT_DEFAUT = { prenom: "PJ", telephone: "+33699080539", photo: null };
   const contactDe = x => x && x.prenom ? x : CONTACT_DEFAUT;
+  // Publications du mois comptées comme les vidéos (01/11/2026, tour 6 Premium) : faites + photos en préparation (vue compteur, publications_preparation ;
+  // base sans la colonne : 0, l'ancien compte).
+  const pubReservees = k => (+k.publications_utilisees || 0) + (+k.publications_preparation || 0);
   const lienWa = tel => "https://wa.me/" + String(tel || "").replace(/[^\d]/g, "");
   const ligneContact = (x, id) => { const k = contactDe(x), tel = window.RENOM_WHATSAPP.lisible(k.telephone).replace(/ /g, "\u00a0");
     return `<p class="contact-ligne" id="${id}">${k.photo ? `<img class="contact-photo" src="${e(k.photo)}" alt="" width="40" height="40" loading="lazy">` : ""}<span>${t("contact.votre", { p: e(k.prenom || ""), tel: `<a href="${e(lienWa(k.telephone))}" target="_blank" rel="noopener">${e(tel)}</a>` })}</span></p>`; };
@@ -610,12 +613,16 @@
   }
   // « Temps gagné ce mois-ci » (bilan) : estimation, réponses aux avis publiées × 10 min, publications parties × 20 min, vidéos × 45 min, depuis le 1er.
   const MINUTES_GAGNEES = { reponse: 10, publication: 20, video: 45 };
+  // Du 1er au 5 du mois (01/11/2026, tour 6 Premium) : le mois écoulé, avec son nom (« Temps gagné en octobre »), au lieu d'un mois en cours presque vide.
+  const debutDeMoisCivil = () => new Date().getDate() <= 5;
+  const debutMoisPrecedent = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(); };
   function tempsGagne(av, cal) {
-    const t0 = debutDuMois(), dans = d => !!d && Date.parse(d) >= t0 && Date.parse(d) <= Date.now(), typeDe = x => (x.contenu && x.contenu.type) || x.type;
+    const prec = debutDeMoisCivil(), t0 = prec ? debutMoisPrecedent() : debutDuMois(), t1 = prec ? debutDuMois() : Date.now() + 1;
+    const dans = d => !!d && Date.parse(d) >= t0 && Date.parse(d) < t1 && Date.parse(d) <= Date.now(), typeDe = x => (x.contenu && x.contenu.type) || x.type;
     const n = av.filter(x => x.statut === "publie" && dans(x.repondu_le || x.traite_le || x.cree_le)).length * MINUTES_GAGNEES.reponse
       + cal.filter(x => x.statut === "publie" && dans(x.publie_le || x.prevu_le)).reduce((s_, x) => s_ + (typeDe(x) === "video" ? MINUTES_GAGNEES.video : MINUTES_GAGNEES.publication), 0);
     if (!n) return ""; const h = Math.floor(n / 60), mn = n % 60, d = h ? (mn >= 15 && mn < 45 ? t("acc.temps.hdemi", { h }) : t("acc.temps.h", { h: mn >= 45 ? h + 1 : h })) : t("acc.temps.min", { m: n });
-    return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${t("acc.temps", { d })}</span> <span class="note">${t("acc.temps.estimation")}</span></p>`;
+    return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${prec ? t("acc.temps.mois", { d, mois: MOIS[new Date(t0).getMonth()] }) : t("acc.temps", { d })}</span> <span class="note">${t("acc.temps.estimation")}</span></p>`;
   }
   // Autorisation photos sur l'accueil : une ligne (texte complet dans Photos), plus jamais après « Non merci » (photos_autorisation_refusee_le).
   const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<p class="ligne-autorisation" id="autorisation-ligne">${t("aut.ligne")}
@@ -683,15 +690,17 @@
     const requises = actions.filter(a => !a.facultatif), sansAFaire = !requises.length && !humains.length;
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
+    // « Attendez mon appel » (01/11/2026, tour 6 Premium) : un avis retenu (retenue_le) n'est pas « publié sous 24 h » : « Nous attendons de vous
+    // appeler avant de publier. »
     vue.innerHTML = `${pauseBandeau(c)}
       ${sensibleEnTete ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
-        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? "acc.humains.texte.equipe" : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
+        <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <div class="msg" id="msg" role="status"></div>
       ${sansAFaire ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li>${a.bouton ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
           : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : ""}
-        ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? "acc.humains.texte.equipe" : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
+        ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       <div class="gestes-accueil"><a class="bouton grand${actions.length && !sansAFaire ? " second" : ""}" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
@@ -803,7 +812,7 @@
   async function photos() {
     const [c, l, k] = await Promise.all([D.commerce(), D.photos(), D.compteur().catch(() => null)]); commerceVu = c;
     // Plafond du mois (31/10/2026) : prévenu AVANT l'envoi, pour toutes les offres ; remise à zéro le 1er du mois suivant.
-    const g = sansReseaux(c), plein = !!(k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond), sansVideo = !(+offreDe(c).videos > 0);
+    const g = sansReseaux(c), plein = !!(k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond), sansVideo = !(+offreDe(c).videos > 0);
     const moisSuivant = (new Date().getMonth() + 1) % 12, dessus = offreCible(c);
     // Photo gardée pour le mois suivant (refus « plafond », ou à traiter alors que la limite est atteinte) : « En attente (novembre) », jamais
     // « En préparation » (audit Essentiel du 31/10/2026) : rien ne sera préparé avant le 1er.
@@ -826,7 +835,7 @@
       : plein ? `<section class="plafond-bandeau" id="plafond-bandeau" role="status"><p class="fort" data-plafond-phrase>${t("plafond.phrase", { n: k.publications_plafond, mois: moisSuivant })}</p><p class="texte2">${t("photos.plafond.suite", { mois: moisSuivant })}</p>
         ${dessus ? `<p class="note"><a href="#/offre?dessus" id="plafond-offre">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</section>` : ""}
       <div class="rangee">
-        <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(+k.publications_utilisees || 0, +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - (+k.publications_utilisees || 0)) })}</span>` : ""}</div>
+        <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
           <form id="f"><div class="f"><div class="depot">
             <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
@@ -925,7 +934,7 @@
     const s = $("ph-suite"); if (!s) return;
     // Limite du mois atteinte (31/10/2026) : la photo est gardée pour le mois suivant ; pas de promesse « le jour même ».
     const k = await D.compteur().catch(() => null);
-    if (k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond) { s.textContent = t("photos.suite.plein", { n, mois: (new Date().getMonth() + 1) % 12 }); s.hidden = false; return; }
+    if (k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond) { s.textContent = t("photos.suite.plein", { n, mois: (new Date().getMonth() + 1) % 12 }); s.hidden = false; return; }
     const premier = !!offreDe(c).reseaux_sociaux && !(await D.contenus().catch(() => [null])).length;
     // Délai (31/10/2026) : le rendu part dès l'envoi (n8n/renom-creation.json : webhook de la photo, rendu GitHub Actions), sans file d'attente.
     s.innerHTML = t("photos.suite.delai", { lien: `<a href="#/contenus">${e(ECRANS.avalider)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
@@ -1107,6 +1116,11 @@
           ${x.semaine ? `<p class="note">${t("idee.semaine")}${v.motif ? `. <span${lcIdee(v)}>${e(v.motif)}</span>` : ""}</p>${x.statut === "a_valider" ? `<div class="actions"><button type="button" class="bouton second petit" data-decider-idee="retenue">${t("idee.retenir")}</button><button type="button" class="lien" data-decider-idee="ecartee">${t("idee.ecarter")}</button></div>` : ""}` : ""}</div>
           <span class="note">${x.semaine && x.statut !== "a_valider" ? t(x.statut === "retenue" ? "idee.retenue" : "idee.ecartee") + ", " : ""}${cap(date(x.cree_le))}</span></li>`; }).join("")}</ul>` : `<p class="texte2">${t("idees.vide")}</p>`}</section>`;
   }
+  // Délégation (01/11/2026, tour 6 Premium) : Premium sans délégation active, une ligne et le bouton d'activation de l'écran Offre (même fonction,
+  // regler_delegation : accord horodaté avec la version des CGV). Base sans ce réglage par bouton : rien (l'écran Offre dit « écrivez-nous »).
+  const ligneDelegation = c => !offreDe(c).delegation || delegationActive(c) || !(D.reglerDelegation && D.delegationParBouton && D.delegationParBouton(c)) ? ""
+    : `<div class="encart" id="contenus-delegation"><p class="texte2">${t("contenus.deleg.ligne", { h: COND.delegation.publication_auto_heures })}</p>
+      <div class="actions"><button type="button" class="bouton second" id="contenus-delegation-activer">${t("offre.deleg.activer")}</button></div><p class="note">${t("offre.deleg.trace")}</p></div>`;
   async function contenus() {
     const [c, l, cpt, calc] = await Promise.all([D.commerce(), D.contenus(), D.comptes().catch(() => null), D.calendrier().catch(() => [])]), nbf = Object.fromEntries(FILTRES.map(f => [f[0], l.filter(x => famille(x, c) === f[0]).length]));
     nomCommerce = c.nom; commerceVu = c; comptesVus = cpt; if (demandesTiktok[c.id] == null) await chargerDemandeTiktok(c);   // note TikTok des aperçus
@@ -1133,6 +1147,7 @@
         <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees">${t("idees.titre")}</button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
+      ${ligneDelegation(c)}
       ${l.length ? `<div class="filtres" role="group" aria-label="${t("filtres.aria")}">${FILTRES.filter(([k]) => k !== "hors_offre" || nbf[k]).map(([k, nom]) => `<button type="button" data-f="${k}" aria-pressed="${k === filtre}">${nom}, ${nbf[k]}</button>`).join("")}</div>
       <p class="msg" id="msg" role="status"></p>
       ${liste.length && filtre === "approuve" && !approuveRecent ? noteCreneaux(c.metier) : ""}
@@ -1147,6 +1162,8 @@
       : `<section class="carte"><p class="texte2">${VIDE_FILTRE[filtre]}${filtre === "a_valider" && nbf.approuve ? ` <span id="vide-a-programmer">${t("filtre.vide.a_programmer", { n: nbf.approuve, lien: `<a href="#/calendrier">${e(ECRANS.calendrier)}</a>` })}</span>` : ""}</p></section>`}`
       : `<section class="carte"><h2>${t("contenus.vide.titre")}</h2><p class="texte2">${t("contenus.vide.texte")}</p><p class="pied"><a class="bouton" href="#/photos">${t("photos.deposer")}</a></p></section><p class="msg" id="msg" role="status"></p>`}`;
     vue.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filtre = b.dataset.f; contenus(); });
+    if ($("contenus-delegation-activer")) $("contenus-delegation-activer").onclick = async () => { const b = $("contenus-delegation-activer"); b.disabled = true;
+      try { await D.reglerDelegation(true); await contenus(); toast(t("offre.deleg.ok.active")); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
     vue.querySelectorAll("[data-remettre]").forEach(b => b.onclick = async () => { b.disabled = true;
       try { await D.remettreAValider(b.dataset.remettre); await contenus(); toast(t("contenus.remis")); majCompteurs(); } catch (er) { b.disabled = false; msg(ph(er.message)); toast(ph(er.message)); } });
     // Téléphone : les filtres défilent sur une ligne ; le filtre choisi reste visible après le nouveau rendu.
@@ -1212,6 +1229,9 @@
   async function calendrier() {
     const [c, l, ct, cpt, mr] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes(), D.miseEnRoute().catch(() => null)]);
     const connectes = cpt.filter(x => x.etat === "connecte").map(x => x.reseau), vign = await Promise.all(l.map(x => urlSure(x.contenu)));
+    // TikTok demandé (01/11/2026, tour 6 Premium) : « TikTok (activation demandée) » au lieu de « (non connecté) ».
+    if (cpt.some(x => x.reseau === "tiktok" && x.etat !== "connecte")) await chargerDemandeTiktok(c);
+    const nonConnecte = r => r === "tiktok" && tiktokDemande(c) ? t("cal.tiktok.demande") : t(r === "google" ? "cal.non.connectee" : "cal.non.connecte");
     // Réseaux proposés au formulaire : ceux de l'offre et retenus (Essentiel : la fiche Google seule), dans l'ordre habituel.
     const autorises = window.RENOM_RESEAUX_AUTORISES(c), proposes = ORDRE_RES.filter(r => autorises.includes(r));   // ordre fixe : Instagram, Facebook, TikTok, Fiche Google
     // Programmer à la main (31/10/2026, test client Essentiel) : seuls les contenus qui peuvent partir sur un réseau de l'offre (une story ne va
@@ -1266,9 +1286,9 @@
         <section class="carte etroite"><h2 id="cal-programmer-titre">${t("cal.programmer.titre")}</h2>${prets.length ? `<form id="f">
           <div class="f"><label for="contenu">${t("cal.contenu")}</label><select id="contenu" required>${choixFait ? "" : `<option value="" selected disabled>${t("cal.contenu.choisir")}</option>`}${prets.map(x => `<option value="${e(x.id)}"${x.id === voulu || prets.length === 1 ? " selected" : ""}>${libContenu(x)}${t("deux.points")}${e(cut(x.legende || "", 70))}</option>`).join("")}</select></div>
           <div class="champs deux"><div class="f"><label for="jour">${t("cal.date")}</label><input id="jour" type="date" value="${jourDefaut}" required></div><div class="f"><label for="heure">${t("cal.heure")}</label><input id="heure" type="time" value="${heureDefaut}" required></div></div>
-          ${proposes.length === 1 ? `<div class="f" data-dest-unique><p class="fort">${t(proposes[0] === "google" ? "cal.sur.google" : "cal.sur.reseau", { r: RES[proposes[0]] })}${connectes.includes(proposes[0]) ? "" : t(proposes[0] === "google" ? "cal.non.connectee" : "cal.non.connecte")}</p><input type="hidden" name="res" value="${proposes[0]}" data-unique>
+          ${proposes.length === 1 ? `<div class="f" data-dest-unique><p class="fort">${t(proposes[0] === "google" ? "cal.sur.google" : "cal.sur.reseau", { r: RES[proposes[0]] })}${connectes.includes(proposes[0]) ? "" : nonConnecte(proposes[0])}</p><input type="hidden" name="res" value="${proposes[0]}" data-unique>
           <p class="aide">${t("cal.plafond.aide")}</p></div>`
-          : `<fieldset><legend>${t("cal.choisir.ou")}</legend>${proposes.map(r => `<label class="option" data-res-lib="${r}"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : t("cal.non.connecte")}</span></label>`).join("")}
+          : `<fieldset><legend>${t("cal.choisir.ou")}</legend>${proposes.map(r => `<label class="option" data-res-lib="${r}"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : nonConnecte(r)}</span></label>`).join("")}
           <p class="aide">${t("cal.plafond.aide")}</p></fieldset>`}
           <div class="confirmer-refus" id="f-alerte" data-zone-alerte hidden role="alert"><p class="fort" data-alerte-texte></p><div class="actions"><button type="button" class="bouton" data-a="programmer-conseil"></button><button type="button" class="bouton second" data-a="programmer-force">${t("cal.programmer.quand.meme")}</button></div></div>
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
@@ -1399,14 +1419,31 @@
   // « Attendez mon appel » (décision de PJ du 01/11/2026) : sous une réponse proposée pas encore publiée, le commerçant retient la publication
   // (D.retenirReponseAvis, fonction retenir_reponse_avis) ; ensuite « Nous ne publions rien avant de vous avoir appelé(e). » et son contact.
   const proposee = x => !!x.propose_le && !!String(x.reponse_proposee || "").trim();
-  const blocRetenue = (x, contact) => !D.retenirReponseAvis ? "" : x.retenue_le
-    ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p>${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
+  // Numéro et jour du rappel (01/11/2026, tour 6 Premium ; comme la demande TikTok) : l'appui ouvre un petit formulaire, numéro prérempli (WhatsApp,
+  // sinon contact du commerce, au format du pays) et jour (aujourd'hui, ou demain ; après 17 h, demain seulement), appel entre 9 h et 18 h.
+  // Ensuite : « Nous vous appelons au +32 …, demain entre 9 h et 18 h. » (retenue_telephone, retenue_jour), et « Modifier ».
+  let retenueOuverte = null;
+  const heureParis = () => +new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(new Date());
+  const quandRappel = j => !j ? "" : j === jourParis(Date.now()) ? t("avis.rappel.auj") : j === jourParis(Date.now() + 864e5) ? t("avis.rappel.demain") : t("avis.rappel.le", { d: date(j + "T12:00:00") });
+  const telRetenue = c => (c && (c.whatsapp_numero || (window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? window.RENOM_WHATSAPP.numero(c.contact, c.pays) : ""))) || "";
+  const formRetenue = (x, c) => { const tard = heureParis() >= 17, tel = x.retenue_telephone || telRetenue(c);
+    return `<form class="pile serre encart" data-retenir-f="${e(x.id)}" novalidate><p class="fort">${t("avis.rappel.titre")}</p>
+      <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}</p></div>
+      <fieldset><legend>${t("avis.rappel.quand")}</legend>
+        ${tard ? "" : `<label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="aujourdhui" checked><span>${t("avis.rappel.auj.cap")}</span></label>`}
+        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""}><span>${t("avis.rappel.demain.cap")}</span></label>
+        <p class="aide">${t("avis.rappel.plage")}</p></fieldset>
+      <div class="actions"><button type="submit" class="bouton">${t("avis.rappel.confirmer")}</button><button type="button" class="lien" data-retenir-annuler>${t("annuler")}</button></div>
+      <p class="msg" data-ret-msg role="status"></p></form>`; };
+  const blocRetenue = (x, contact, c) => !D.retenirReponseAvis ? "" : retenueOuverte === x.id ? formRetenue(x, c) : x.retenue_le
+    ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t("avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
+        <p><button type="button" class="lien" data-retenir="${e(x.id)}">${t("avis.rappel.modifier")}</button></p>` : ""}${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
     : proposee(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
   const apresEcheance = () => { const d = new Date(Date.now() + 30 * 60000); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); return d.toISOString(); };
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
         ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5 > Date.now() ? t("avis.sensible.publication", { d: dateHeure(new Date(Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5).toISOString()) }) : t("avis.sensible.publication.passee", (q => ({ d: date(q), h: heure(q) }))(apresEcheance()))}</p>`}` : ""}
-      ${blocRetenue(x, contact)}
+      ${blocRetenue(x, contact, c)}
       ${champVersion(x)}
       ${x.retenue_le && D.retenirReponseAvis ? "" : ligneContact(contact, "contact-avis-" + x.id)}</div>`;
   // « Votre version » (donner_version_avis) : avis sensibles ci-dessus, et avis de 1 à 3 étoiles traités par l'équipe tant que la réponse n'est pas
@@ -1419,7 +1456,7 @@
   }
   // 1 à 3 étoiles (01/11/2026) : la réponse proposée par l'équipe, lisible ici comme pour un avis sensible, et « Attendez mon appel ».
   const versionEquipe = (x, c, contact) => !x.sensible && x.statut === "escalade" && x.note <= 3 && equipeRepond(c) ? `<div class="sensible-reponse" data-version-equipe>
-      ${proposee(x) ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>` : ""}${blocRetenue(x, contact)}${champVersion(x)}</div>` : "";
+      ${proposee(x) ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>` : ""}${blocRetenue(x, contact, c)}${champVersion(x)}</div>` : "";
   // Avis vide : où en est l'accès à la fiche (constat 23). Sans accès : le lien vers l'étape ; fiche en création : ce qui se passe ; sinon : demander des avis.
   const avisVide = (c, mr) => { const g = ((mr && mr.points) || []).find(x => x.point === "google"), acces = !g || g.etat === "fait";
     if (ficheDemandee(c)) return `<section class="carte" id="avis-vide"><h2>${t("avis.vide.titre")}</h2><p class="texte2">${t("avis.vide.fiche.demandee")}</p></section>`;
@@ -1435,7 +1472,7 @@
           ${citation(x)}<p class="note">${x.auteur && !x.efface_le ? e(x.auteur) + " · " : ""}${t("recu.le", { d: date(x.cree_le) })}</p>
           ${x.sensible ? `<div class="encart" role="alert"><p class="fort">${t("avis.sensible", { r: e(raisonsTexte(x.raisons)) })}</p>${texteSensible(x, c) ? `<p>${texteSensible(x, c)}</p>` : ""}</div>${decisionSensible(x, c)}${relectureSensible(x, c, contact)}` : ""}
           ${x.statut === "a_valider" && !x.sensible ? reponseAValider(x) : ""}
-          ${x.statut === "escalade" ? `<p class="note">${t(offreDe(c).delegation ? "avis.equipe.texte" : "avis.escalade.texte")}</p>${versionEquipe(x, c, contact)}` : ""}
+          ${x.statut === "escalade" ? `${x.retenue_le && D.retenirReponseAvis ? "" : `<p class="note">${t(offreDe(c).delegation ? "avis.equipe.texte" : "avis.escalade.texte")}</p>`}${versionEquipe(x, c, contact)}` : ""}
           ${x.statut === "publie" || x.statut === "valide" || x.statut === "a_publier_main" ? `<p class="reponse"><span class="fort">${t(etiquetteReponse(x))}</span> <span${lc()}>${e(x.reponse || x.reponse_proposee || "")}</span></p>` : ""}</article>`).join("")
           : avisVide(c, mr)}
           <p class="msg" id="msg" role="status"></p></div>
@@ -1446,10 +1483,14 @@
     vue.querySelectorAll("form[data-version]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const b = f.querySelector("button"), id = f.dataset.version; b.disabled = true;
       try { await D.donnerVersionAvis(id, f.querySelector("textarea").value); await avis(); toast(t("avis.version.merci")); }   // le toast seul (role=status) : plus de 2e phrase en clair sous la liste
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
-    vue.querySelectorAll("[data-retenir]").forEach(b => b.onclick = async () => { const id = b.dataset.retenir; b.disabled = true;
-      try { await D.retenirReponseAvis(id); await avis(); toast(t("avis.retenue.toast"));
+    vue.querySelectorAll("[data-retenir]").forEach(b => b.onclick = async () => { const id = b.dataset.retenir; retenueOuverte = id; fermerToast(); await avis();
+      const f = vue.querySelector(`[data-retenir-f="${CSS.escape(id)}"]`); if (f) { f.scrollIntoView({ block: "center" }); const i = f.querySelector("[data-ret-tel]"); if (i) i.focus({ preventScroll: true }); } });
+    vue.querySelectorAll("[data-retenir-annuler]").forEach(b => b.onclick = async () => { retenueOuverte = null; await avis(); });
+    vue.querySelectorAll("form[data-retenir-f]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const id = f.dataset.retenirF, b = f.querySelector("button[type=submit]"); b.disabled = true;
+      const j = (f.querySelector("input[type=radio]:checked") || {}).value || "demain";
+      try { await D.retenirReponseAvis(id, f.querySelector("[data-ret-tel]").value, j); retenueOuverte = null; await avis(); toast(t("avis.retenue.toast"));
         const z = vue.querySelector(`[data-avis="${CSS.escape(id)}"] [data-retenue]`); if (z) z.scrollIntoView({ block: "center" }); }
-      catch (er) { b.disabled = false; msg(ph(er.message)); } });
+      catch (er) { b.disabled = false; f.querySelector("[data-ret-msg]").textContent = ph(er.message); } });
     vue.querySelectorAll("[data-sensible]").forEach(b => b.onclick = async () => { const d = b.dataset.sensible; b.disabled = true;
       try { await D.deciderAvisSensible(b.closest("[data-avis]").dataset.avis, d); await avis(); msg(t(d === "approuve" ? "avis.sensible.approuvee.msg" : "avis.sensible.en.parler.msg")); majCompteurs(); }
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
@@ -1498,7 +1539,9 @@
   // jamais conservés : sans lecture, « Voir Résultats », jamais un zéro inventé).
   const MESURES = ["passages", "clics_google", "retours_prives", "nouveaux_avis"].map(k => [k, t("mesure." + k)]);
   const valeurMesure = (m, k) => k === "nouveaux_avis" && m[k] == null ? `<a href="#/resultats">${t("voir.resultats")}</a>` : nombre(+m[k] || 0);
-  const chiffresCollecte = (m, deux) => `<dl class="bilan-chiffres${deux ? " deux" : ""}">${MESURES.map(([k, lib]) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" data-mesure="${k}">${valeurMesure(m, k)}</dd></div>`).join("")}</dl>`;
+  // Retours privés non lus (01/11/2026, tour 6 Premium) : même compte que l'accueil (retoursNonLus : tous les non lus), à côté du total du mois.
+  const nonLusMesure = (k, nl) => k === "retours_prives" && nl > 0 ? ` <a class="note" href="#/collecte?retours" id="retours-non-lus-res">${t("res.retours.non.lus", { n: nl })}</a>` : "";
+  const chiffresCollecte = (m, deux, nl) => `<dl class="bilan-chiffres${deux ? " deux" : ""}">${MESURES.map(([k, lib]) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" data-mesure="${k}">${valeurMesure(m, k)}${nonLusMesure(k, nl)}</dd></div>`).join("")}</dl>`;
   const blocMesure = m => m ? `<section class="carte" id="mesure-collecte"><div class="carte-tete"><h2>${t("ce.mois")}</h2>${D.mode === "demo" ? `<span class="note">${t("demo.chiffres")}</span>` : ""}</div>
       ${chiffresCollecte(m)}<p class="note">${t("col.mesure.note")}</p></section>` : "";
   async function collecte() {
@@ -1637,8 +1680,10 @@
     // Offre sans réseaux (Essentiel, 26/10/2026) : seulement l'accès à la fiche Google ; Facebook, Instagram et TikTok ne la concernent pas.
     const [c, l0] = await Promise.all([D.commerce(), D.comptes()]), g = sansReseaux(c), l = g ? l0.filter(x => x.reseau === "google") : l0;
     if (l.some(x => x.reseau === "tiktok" && x.etat !== "connecte")) await chargerDemandeTiktok(c);
+    // TikTok demandé (01/11/2026, tour 6 Premium) : « · Activation demandée », sans la phrase d'aide (la confirmation dit déjà la suite).
+    const tiktokEnAttente = x => x.reseau === "tiktok" && x.etat !== "connecte" && !!tiktokDemande(c) && !modifTiktok;
     vue.innerHTML = `${retourOrigine()}${entete(t("groupe.reglages"), t(g ? "reg.comptes.google" : "ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t(g ? "comptes.chapo.google" : "comptes.chapo"))}
-      <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${ETAT[x.etat] || e(x.etat)}</span></h2><p class="texte2">${AIDE[x.reseau]}</p>${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
+      <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${tiktokEnAttente(x) ? t("etat.tiktok.demande") : ETAT[x.etat] || e(x.etat)}</span></h2>${tiktokEnAttente(x) ? "" : `<p class="texte2">${AIDE[x.reseau]}</p>`}${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
     if ($("tiktok-f")) $("tiktok-f").onsubmit = async ev => { ev.preventDefault(); const b = $("activer-tiktok"); b.disabled = true;
       try { const r = await D.demanderRappel("reseaux", $("tiktok-tel").value), d = (r && r.cree_le) || new Date().toISOString(), n = (r && r.telephone) || window.RENOM_WHATSAPP.numero($("tiktok-tel").value, c.pays) || "";
         try { localStorage.setItem(cleTiktok(c), d); if (n) localStorage.setItem(cleTiktok(c) + ":tel", n); } catch (er) {} demandesTiktok[c.id] = d; modifTiktok = false;
@@ -1679,6 +1724,7 @@
   // (chiffres de moteur/offres.json : window.RENOM_OFFRES) et le bouton « Passer à <offre> », qui ouvre le portail client de Stripe (abonnement en
   // cours) ou la page de paiement de cette offre (aucun abonnement) : D.lienMonteeOffre. Sans lien Stripe configuré : « écrivez-nous ».
   // Adresse « #/offre?dessus » (offre suivante) ou « #/offre?dessus=premium » (offre précise, plus haute que l'offre actuelle : vidéos).
+  // Bouton « Réserver mon point du mois » (01/11/2026, tour 6 Premium) : juste sous la ligne « Point de 30 min », plus au milieu du bloc délégation.
   // Premium : bilan commenté et point de 30 min chaque mois (CGV, tableau des offres et article 3), mode délégation activé ou désactivé ICI
   // (D.reglerDelegation, fonction regler_delegation : accord horodaté avec la version des CGV) ; base sans ce bloc : texte « écrivez-nous ».
   const ORDRE_OFFRES = ["essentiel", "standard", "premium"];
@@ -1699,9 +1745,9 @@
             <p class="pied"><button type="button" class="bouton" id="delegation-activer-btn">${t("offre.deleg.activer")}</button></p><p class="note">${t("offre.deleg.trace")}</p>`;
       return `<section class="carte" id="offre-premium"><h2>${t("offre.premium.titre")}</h2><ul class="liste">
         <li id="premium-videos"><span>${t("offre.inc.videos")}</span><span class="fort">${t("offre.premium.videos", { v: o.videos })}</span></li>
-        <li id="premium-point"><span>${t("offre.premium.point")}</span><span class="fort">${t("compris")}</span></li>
-        <li id="premium-delegation"><span>${t("offre.premium.delegation")}</span><span class="fort">${t(actif ? "offre.premium.delegation.active" : "offre.premium.delegation.inactive")}</span></li></ul>
-        <p class="pied">${boutonPointMois(c, "premium-reserver-point")}</p>
+        <li id="premium-point"><span>${t("offre.premium.point")}</span><span class="fort">${t("compris")}</span></li></ul>
+        ${boutonPointMois(c, "premium-reserver-point") ? `<p class="pied" id="premium-point-pied">${boutonPointMois(c, "premium-reserver-point")}</p>` : ""}
+        <ul class="liste"><li id="premium-delegation"><span>${t("offre.premium.delegation")}</span><span class="fort">${t(actif ? "offre.premium.delegation.active" : "offre.premium.delegation.inactive")}</span></li></ul>
         ${reglage}<p class="msg" id="msg-deleg" role="status"></p></section>`;
     }
     const suiv = offreCible(c, voulue), s_ = O[suiv]; if (!s_) return "";
@@ -1854,8 +1900,28 @@
       ${res.map(r => `<tr data-reseau="${r}"><td data-l="${t("res.reseaux.col")}">${RES[r]}</td><td data-l="${t("res.reseaux.parties")}">${nombre(n(r, "publie"))}</td><td data-l="${t("res.reseaux.programmees")}">${nombre(n(r, "programme"))}</td></tr>`).join("")}</tbody></table>
       ${sociaux.length ? `<p class="note" id="reseaux-stats">${t("res.reseaux.stats", { res: I.liste(sociaux.map(r => RES[r])) })}</p>` : ""}</section>`;
   }
+  // Bilan du mois écoulé (01/11/2026, tour 6 Premium) : du 1er au 5 du mois, en tête de Résultats, les chiffres du mois précédent (bilan_mois, même
+  // fonction que l'email du 1er) et « En parler avec <contact> » sur WhatsApp. Aucun commentaire écrit à la main n'existe en base : rien n'est inventé.
+  // L'email (n8n/renom-bilan-mensuel.json, le 1er à 9 h, heure de Paris) part aux commerces qui le reçoivent (notifications.email, adresse valide,
+  // client depuis 14 jours au moins) : la ligne qui l'annonce n'est écrite que dans ce cas. Ce bilan est automatique (chiffres, thèmes, pistes) :
+  // il n'est pas présenté comme « commenté ».
+  const moisPrecedentIso = () => { const d = new Date(); const p = new Date(d.getFullYear(), d.getMonth() - 1, 1); return p.getFullYear() + "-" + String(p.getMonth() + 1).padStart(2, "0") + "-01"; };
+  const recoitBilanEmail = c => !!c && (c.notifications || {}).email !== false && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c.email_validation || "")
+    && Date.parse(c.cree_le || 0) <= Date.now() - 14 * 86400e3;
+  function bilanPrecedentBloc(b, c, contact) {
+    if (!b || !offreDe(c).delegation) return "";
+    const m = moisDe(b.mois), n = x => +x || 0, k = contactDe(contact), nomMois = MOIS[m.getMonth()], notes = b.note_debut != null && b.note_fin != null;   // 2 ou 4 chiffres (grille de 2)
+    const chiffre = (lib, val, id) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" id="${id}">${val}</dd></div>`;
+    const wa = lienWa(k.telephone) + "?text=" + encodeURIComponent(t("bilan.prec.message", { mois: nomMois, nom: c.nom || "" }));
+    return `<section class="carte bilan" id="bilan-precedent" aria-labelledby="bilan-prec-titre"><div class="carte-tete"><h2 id="bilan-prec-titre">${t("bilan.prec.titre", { mois: nomMois })}</h2></div>
+      <p class="texte2">${t("bilan.publie", { r: n(b.reponses_publiees), p: n(b.publications) })} ${t(b.avis_obtenus_source === "avis_recus" ? "bilan.recu" : "bilan.obtenu", { n: n(b.avis_obtenus) })}${notes ? (b.note_fin === b.note_debut ? t("bilan.note.reste", { n: nombre(b.note_fin, 1) }) : t("bilan.note.passe", { a: nombre(b.note_debut, 1), b: nombre(b.note_fin, 1) })) : "."}</p>
+      <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)), "bilan-prec-reponses")}${chiffre(t("bilan.publications"), nombre(n(b.publications)), "bilan-prec-publications")}${notes ? chiffre(t("bilan.note"), nombre(b.note_fin, 1), "bilan-prec-note") + chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)), "bilan-prec-avis") : ""}</dl>
+      ${recoitBilanEmail(c) ? `<p class="note" id="bilan-prec-email">${t("bilan.prec.email")}</p>` : ""}
+      <p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p></section>`;
+  }
   async function resultats() {
-    const [c, R, bilan, mr, calR, NR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null)]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
+      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLus()]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     // Tant que BoostImpact n'a pas accès à la fiche Google (étape « google » de la mise en route), aucun chiffre ne peut arriver : le point de départ.
     const etapeGoogle = ((mr && mr.points) || []).find(x => x.point === "google");
     if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR)); return; }
@@ -1872,6 +1938,7 @@
     const lecture = lectureTexte(lg), nonLue = t("non.lue"), nonLuM = t("non.lu");
     vue.innerHTML = `${entete(t("groupe.resultats"), t("res.titre"), t("res.chapo") + (periode ? ", " + periode : "") + ".")}
       ${bandeauDemo()}
+      ${bilanPrecedentBloc(bilanP, c, contactR)}
       ${bilanBloc(bilan, NR)}
       ${blocReseauxMois(c, calR)}
       <div class="rangee">
@@ -1907,7 +1974,7 @@
           ${themes.length ? `<ul class="liste themes">${themes.map(x => { const p = +x.positif || 0, n = +x.negatif || 0; return `<li><div class="theme">${THEMES_CONNUS[x.theme] ? `<p class="fort">${t("theme." + THEMES_CONNUS[x.theme])}</p>` : `<p class="fort"${lc()}>${e(x.theme)}</p>`}<div class="t-barre" aria-hidden="true">${p ? `<span class="t-pos" style="width:${p / maxTheme * 100}%"></span>` : ""}${n ? `<span class="t-neg" style="width:${n / maxTheme * 100}%"></span>` : ""}</div></div><p class="note t-compte">${t("res.themes.compte", { p, n })}</p></li>`; }).join("")}</ul>
           <p class="note">${t("res.themes.legende")}</p>` : `<p class="texte2">${t(lg.themes === "insuffisants" ? "res.themes.insuffisants" : "res.themes.aucun")}</p>`}
           <p class="note" id="themes-note">${t("res.themes.note", { n: lg.themes_avis ? ` (${t("res.n.avis", { n: lg.themes_avis })})` : "" })}</p></section>
-        <section class="carte moitie" aria-labelledby="r-col"><div class="carte-tete"><h2 id="r-col">${t("res.collecte.titre")}</h2><a href="#/collecte">${t("res.collecte.ouvrir")}</a></div>${chiffresCollecte(col, true)}
+        <section class="carte moitie" aria-labelledby="r-col"><div class="carte-tete"><h2 id="r-col">${t("res.collecte.titre")}</h2><a href="#/collecte">${t("res.collecte.ouvrir")}</a></div>${chiffresCollecte(col, true, nonLusR)}
           <p class="note">${t("res.collecte.note")}</p></section>
       </div>
       ${resultatsDessus(c)}
@@ -2415,7 +2482,7 @@
     commerce: () => D.commerce(), marque: () => D.marque(), deposerLogo: f => D.deposerLogo(f),
     regler: (p, v) => D.reglerMaMarque(p, v), demander: x => D.demanderChangementStyle(x), apres: async () => majCompteurs(),
     envoyerPhotos: envoyerDesPhotos, offre: c => offreDe(c),
-    plein: async () => { const k = await D.compteur().catch(() => null); return !!(k && +k.publications_plafond > 0 && +k.publications_utilisees >= +k.publications_plafond); },
+    plein: async () => { const k = await D.compteur().catch(() => null); return !!(k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond); },
     // Ce que l'écran montre en plus des photos : les publications déjà rendues par le moteur (jamais une photo brute : la démonstration en crée
     // avec la photo seule, en data:), la dernière légende écrite, et la dernière vidéo montée (Premium).
     publications: async () => {

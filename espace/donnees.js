@@ -47,6 +47,9 @@
   // égalité testée par supabase/test/creneaux.test.mjs) : espaces, points, tirets et parenthèses retirés, « 00 » lu comme « + ». Numéro national
   // qui commence par 0 (31/10/2026, test client Premium belge) : indicatif du pays du commerce (+32 pour 'BE', +33 pour 'FR') ; pays inconnu : refusé.
   const INDICATIFS = { BE: "+32", FR: "+33" }, EXEMPLES_NUMERO = { BE: "+32 470 12 34 56", FR: "+33 6 12 34 56 78" };
+  // Jour civil à Paris (« AAAA-MM-JJ ») et relance d'une version du commerçant restée 48 h sans reprise (01/11/2026, tour 6 Premium).
+  const jourParisDemo = ms => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+  const relanceVersion = a => !!a.version_client && !!a.version_client_le && Date.now() > Date.parse(a.version_client_le) + 48 * 36e5 && !(a.propose_le && a.propose_le >= a.version_client_le);
   const numeroWhatsapp = (v, pays) => { let n = String(v == null ? "" : v).replace(/[\s().-]/g, ""), ind = INDICATIFS[String(pays || "").toUpperCase()];
     if (n.startsWith("00")) n = "+" + n.slice(2); else if (ind && /^0[1-9]/.test(n)) n = ind + n.slice(1); return /^\+[1-9]\d{7,14}$/.test(n) ? n : null; };
   // Exemple de numéro selon le pays du commerce (champs, aides, phrases d'erreur) : Belgique +32 470 12 34 56, sinon +33 6 12 34 56 78.
@@ -935,7 +938,9 @@
       async avis() { const c = await self.commerce(); return ok(await sb.from("avis").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       async validerAvis(id, statut, texte) { const m = { statut }; if (texte != null) m.reponse_proposee = texte; const r = ok(await sb.from("avis").update(m).eq("id", id).select()); if (!r.length) throw new Error("Cet avis ne se valide pas ici."); },
       async comptes() { const c = await self.commerce(); const l = ok(await sb.from("comptes_connectes").select("reseau,etat,detail,maj").eq("commerce_id", c.id)); return RESEAUX.map(r => l.find(x => x.reseau === r) || { reseau: r, etat: "non_connecte", detail: "" }); },
-      async compteur() { const c = await self.commerce(); return ok(await sb.from("compteur").select("*").eq("commerce_id", c.id).single()); },
+      // Photos en préparation (01/11/2026) : vue compteur_photos (bloc « Créneaux réels ») ; base sans la vue : 0, l'ancien compte.
+      async compteur() { const c = await self.commerce(), [k, ph] = await Promise.all([sb.from("compteur").select("*").eq("commerce_id", c.id).single(), sb.from("compteur_photos").select("publications_preparation").eq("commerce_id", c.id).maybeSingle()]);
+        return Object.assign(ok(k), { publications_preparation: ph && !ph.error && ph.data ? +ph.data.publications_preparation || 0 : 0 }); },
       // Abonnement Stripe du commerce (lecture seule : la table n'est écrite que par le webhook, schema.sql, bloc « abonnements Stripe »).
       // « * » : la colonne rythme n'existe qu'avec le bloc SQL du 27/10/2026 (sans lui : lien de montée mensuel).
       async abonnement() { const c = await self.commerce(); return abonnementCourant(ok(await sb.from("abonnements").select("*").eq("commerce_id", c.id).order("maj_le", { ascending: false }).limit(5))); },
@@ -1037,7 +1042,7 @@
         R.lecture_google = { le: new Date().toISOString(), statut: n < 2 ? "non_demandee" : cfg.lectureGoogleUrl ? "indisponible" : "non_branchee" };
         return R;
       },
-      async bilanMois() { return ok(await sb.rpc("bilan_mois", {})); },
+      async bilanMois(mois) { return ok(await sb.rpc("bilan_mois", mois ? { p_mois: mois } : {})); },
       async modifierLegende(id, reseau, texte) { ok(await sb.rpc("modifier_legende", { p_contenu: id, p_reseau: reseau, p_texte: controlerLegende(reseau, texte) })); },
       async programmerAuto(id, reseaux) { return ok(await sb.rpc("programmer_auto", { p_contenu: id, p_reseaux: reseaux })); },
       async actionsFiche() { const c = await self.commerce(); return ok(await sb.from("actions_fiche").select("id,type,donnees,statut,cree_le,publie_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
@@ -1062,7 +1067,7 @@
       async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
       async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
       async donnerVersionAvis(id, texte) { return ok(await sb.rpc("donner_version_avis", { p_avis: id, p_texte: texte })); },
-      async retenirReponseAvis(id) { return ok(await sb.rpc("retenir_reponse_avis", { p_avis: id })); },
+      async retenirReponseAvis(id, telephone, jour) { return ok(await sb.rpc("retenir_reponse_avis", { p_avis: id, p_telephone: String(telephone || "").trim() || null, p_jour: jour || null })); },
       // Votre contact : sans le bloc SQL (fonction absente), null (l'espace affiche l'équipe et le numéro officiel).
       async monContact() { const r = await sb.rpc("mon_contact"); return r.error ? null : r.data; },
       async adminContact(cid) { return ok(await sb.rpc("admin_contact", { p_commerce: cid || null })); },

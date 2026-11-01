@@ -538,6 +538,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .bilan-chiffre dt{font-size:14px;font-weight:var(--graisse-forte);color:var(--discret);line-height:1.3}
 .bilan-chiffre dd{margin:0;overflow-wrap:anywhere}
 .bilan-chiffre .chiffre{font-size:28px}
+.bilan-chiffre .chiffre .note{display:block;font-size:14px;font-weight:400;line-height:1.4;margin-top:4px}   /* « 1 non lu » sous le total (01/11/2026) */
 .bilan-chiffre .chiffre a{font-family:var(--sans);font-size:15px;font-weight:var(--graisse-forte)}
 .grand-chiffre{font-size:52px;letter-spacing:-.02em}
 /* Chiffre clé (score de l'audit, Résultats) : en encre depuis le 30/10/2026 (plus d'or). Nom de classe gardé pour espace/web/app.js. */
