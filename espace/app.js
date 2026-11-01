@@ -1647,7 +1647,8 @@
   // sinon contact du commerce, au format du pays) et jour (aujourd'hui, ou demain ; après 17 h, demain seulement), appel entre 9 h et 18 h.
   // Ensuite : « Nous vous appelons au +32 …, demain entre 9 h et 18 h. » (retenue_telephone, retenue_jour), et « Modifier ».
   let retenueOuverte = null;
-  const heureParis = () => +new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(new Date());
+  // Heure de Paris (0-23), lue par formatToParts : format() rend « 18 h » en fr-FR, donc NaN (tour 10).
+  const heureParis = () => +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date()).find(x => x.type === "hour") || {}).value;
   const quandRappel = j => !j ? "" : j === jourParis(Date.now()) ? t("avis.rappel.auj") : j === jourParis(Date.now() + 864e5) ? t("avis.rappel.demain") : t("avis.rappel.le", { d: date(j + "T12:00:00") });
   // Numéro préenregistré (01/11/2026, tour 7 Premium) : ATTENTION, un numéro dont l'indicatif ne correspond pas au pays du commerce (+33 pour un
   // commerce belge, +32 pour un français) est signalé ici (console) et dans le champ (aide « vérifiez ce numéro ») ; il reste proposé, un
@@ -2045,7 +2046,7 @@
   const minJour = s_ => I.langue === "en" ? s_ : s_.charAt(0).toLowerCase() + s_.slice(1);
   function quandChgOffre(c, d) {
     let q = null; try { q = JSON.parse(localStorage.getItem(cleChgOffre(c)) || "null"); } catch (er) { q = null; }
-    if (!q || q.demande !== String(d)) { const j0 = jourParis(Date.parse(d)), h0 = +new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(new Date(d)), jr = M.joursRappel(j0, c && c.pays);
+    if (!q || q.demande !== String(d)) { const j0 = jourParis(Date.parse(d)), h0 = +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(d)).find(x => x.type === "hour") || {}).value, jr = M.joursRappel(j0, c && c.pays);
       q = { jour: h0 >= 17 && jr.aujourdhui === j0 ? jr.demain : jr.aujourdhui, creneau: "9-18", telephone: null }; }
     return { quand: minJour(I.jourEtDate(new Date(q.jour + "T12:00:00"))), plage: q.creneau === "15-17" ? "15-17" : "9-18", tel: q.telephone ? window.RENOM_WHATSAPP.lisible(q.telephone) : "" };
   }
