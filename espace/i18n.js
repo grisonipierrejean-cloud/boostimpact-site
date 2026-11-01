@@ -31,11 +31,13 @@
   const fr = l => lg(l) === "fr";
   const jourMois = (d, l) => { d = new Date(d); return fr(l) ? (d.getDate() === 1 ? "1er" : d.getDate()) + " " + mois("fr")[d.getMonth()] : fmt({ day: "numeric", month: "long" }, l).format(d); };
   const date = (d, l) => jourMois(d, l) + (new Date(d).getFullYear() !== new Date().getFullYear() ? " " + new Date(d).getFullYear() : "");
-  const heure = (d, l) => { d = new Date(d); return fr(l) ? d.getHours() + " h" + (d.getMinutes() ? " " + String(d.getMinutes()).padStart(2, "0") : "") : fmt({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, l).format(d); };
+  // Espaces insécables (01/11/2026, tour 8) : « 11 h 30 » ne se coupe jamais en fin de ligne (U+00A0 entre le nombre, « h » et les minutes).
+  const NB = "\u00a0";
+  const heure = (d, l) => { d = new Date(d); return fr(l) ? d.getHours() + NB + "h" + (d.getMinutes() ? NB + String(d.getMinutes()).padStart(2, "0") : "") : fmt({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, l).format(d); };
   const heureCourte = (d, l) => { d = new Date(d); return fr(l) ? d.getHours() + "h" + (d.getMinutes() ? String(d.getMinutes()).padStart(2, "0") : "") : heure(d, l); };   // « 12 h », « 12h » : jamais « 12 h 00 » (test client Croissance)
   const dateHeure = (d, l) => cap(jourLong(d, l)) + " " + date(d, l) + ", " + heure(d, l);
   // Heure de départ d'un créneau ("11:30") : « 11 h 30 », « 12 h » ; en anglais « 11:30 », « 12:00 ».
-  const hm = (s, l) => { const [h, mi] = String(s).split(":").map(Number); return fr(l) ? h + " h" + (mi ? " " + String(mi).padStart(2, "0") : "") : String(h).padStart(2, "0") + ":" + String(mi || 0).padStart(2, "0"); };
+  const hm = (s, l) => { const [h, mi] = String(s).split(":").map(Number); return fr(l) ? h + NB + "h" + (mi ? NB + String(mi).padStart(2, "0") : "") : String(h).padStart(2, "0") + ":" + String(mi || 0).padStart(2, "0"); };
   const dateLongue = (iso, l) => { const [a, m, j] = String(iso).split("-").map(Number); return fr(l) ? `${j === 1 ? "1er" : j} ${mois("fr")[m - 1]} ${a}` : fmt({ day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }, l).format(new Date(Date.UTC(a, m - 1, j))); };
   // Énumération : « a, b et c » ; « a, b and c » (anglais britannique, sans virgule avant « and »).
   const liste = (l, ou) => { const mot = t(ou === "ou" ? "liste.ou" : "liste.et"); return l.length > 1 ? l.slice(0, -1).join(", ") + " " + mot + " " + l[l.length - 1] : l.join(""); };
@@ -167,6 +169,9 @@
     "reg.demarrage": ["Mise en route", "Setup", "Opstart"],
     "reg.demarrage.texte": ["Les étapes pour démarrer et vos 5 réponses pour que BoostImpact écrive comme vous.", "The steps to get started and your 5 answers so BoostImpact writes the way you do.", "De stappen om te starten en uw 5 antwoorden zodat BoostImpact schrijft zoals u."],
     "acc.afaire.titre": ["À faire maintenant", "To do now", "Nu te doen"],
+    "acc.tout.voir": [v => `Tout voir, ${v.n} de plus`, v => `See all, ${v.n} more`, v => `Alles bekijken, nog ${v.n}`],   // 01/11/2026, tour 8 (petit écran)
+    "acc.attendent": [v => v.n > 1 ? `${v.n} validées attendent une date.` : "1 validée attend une date.", v => v.n > 1 ? `${v.n} approved posts are waiting for a date.` : "1 approved post is waiting for a date.", v => v.n > 1 ? `${v.n} goedgekeurde posts wachten op een datum.` : "1 goedgekeurde post wacht op een datum."],
+    "acc.programmer.tout": ["Programmer tout", "Schedule all", "Alles inplannen"],
     "acc.act.programmer": [v => v.n > 1 ? `Programmer ${v.n} publications validées` : "Programmer 1 publication validée", v => v.n > 1 ? `Schedule ${v.n} approved posts` : "Schedule 1 approved post", v => v.n > 1 ? `${v.n} goedgekeurde posts inplannen` : "1 goedgekeurde post inplannen"],
     // « Programmer tout » (01/11/2026, tour 7 Croissance) : annuler ces programmations, une à une, après confirmation.
     "acc.programmes.annuler": [v => v.n > 1 ? "Annuler ces programmations" : "Annuler cette programmation", v => v.n > 1 ? "Cancel these schedules" : "Cancel this schedule", v => v.n > 1 ? "Deze planningen annuleren" : "Deze planning annuleren"],
@@ -679,7 +684,7 @@
     "ferie.armistice": ["Armistice", "Armistice Day", "Wapenstilstand"],
     "ferie.11-novembre": ["11 Novembre", "11 November (Armistice Day)", "11 november (Wapenstilstand)"], "ferie.noel": ["Noël", "Christmas Day", "Kerstmis"],
     "cal.alerte.ferie": ["Ce jour est férié.", "That day is a public holiday.", "Die dag is een feestdag."],
-    "cal.alerte.heure": ["À cette heure, presque personne ne voit la publication : choisissez entre 7 h et 23 h.", "At that hour almost nobody sees the post: choose between 7 am and 11 pm.", "Op dat uur ziet bijna niemand de post: kies tussen 7 en 23 uur."],
+    "cal.alerte.heure": ["À cette heure, presque personne ne voit la publication : choisissez entre 7 h et 23 h.", "At that hour almost nobody sees the post: choose between 7 am and 11 pm.", "Op dat uur ziet bijna niemand de post: kies tussen 7 en 23 uur."],
     "cal.quand.meme": ["Déplacer quand même", "Move it anyway", "Toch verplaatsen"],
     "cal.programmer.quand.meme": ["Programmer quand même", "Schedule it anyway", "Toch inplannen"],
     "cal.programme.le": ["Programmé {quand}.", "Scheduled {quand}.", "Ingepland op {quand}."],
@@ -734,6 +739,8 @@
     "cal.aucun.pret.bloque": ["Aucune publication validée en attente. Dès qu'un de vos réseaux est connecté, ce que vous validez dans « <a href=\"#/contenus\">À valider</a> » se programme automatiquement.", "No approved content waiting. As soon as one of your accounts is connected, what you approve in “<a href=\"#/contenus\">To approve</a>” is scheduled automatically.", "Geen goedgekeurde post in afwachting. Zodra een van uw netwerken gekoppeld is, wordt wat u goedkeurt in “<a href=\"#/contenus\">Goed te keuren</a>” automatisch ingepland."],
     "cal.programmer.tout": [v => `Programmer tout (${v.n})`, v => `Schedule all (${v.n})`, v => `Alles inplannen (${v.n})`],
     "cal.annulees": [v => `Annulées, ${v.n}`, v => `Cancelled, ${v.n}`, v => `Geannuleerd, ${v.n}`],
+    "cal.passees": [v => `Passées, ${v.n}${v.p ? ` (${v.p} publiée${v.p > 1 ? "s" : ""})` : ""}`, v => `Past, ${v.n}${v.p ? ` (${v.p} published)` : ""}`, v => `Voorbij, ${v.n}${v.p ? ` (${v.p} gepubliceerd)` : ""}`],   // 01/11/2026, tour 8
+    "cal.rien.a.venir": ["Rien de programmé à venir.", "Nothing scheduled ahead.", "Niets gepland voor de komende tijd."],
     "cal.programmes.etales": [v => `${v.n} ${v.n > 1 ? "publications programmées" : "publication programmée"}, réparties sur le mois : ${v.d1} à ${v.d2}.`, v => `${v.n} ${v.n > 1 ? "posts" : "post"} scheduled across the month: ${v.d1} to ${v.d2}.`, v => `${v.n} ${v.n > 1 ? "posts" : "post"} ingepland over de maand: ${v.d1} tot ${v.d2}.`],
     "cal.vos": ["Vos programmations", "Your scheduled posts", "Uw ingeplande posts"], "cal.nouvelle.date": ["Nouvelle date", "New date", "Nieuwe datum"], "cal.nouvelle.heure": ["Nouvelle heure", "New time", "Nieuw uur"], "cal.deplacer": ["Déplacer", "Move", "Verplaatsen"],
     "cal.aucune": ["Aucune programmation.", "Nothing scheduled yet.", "Nog niets ingepland."], "cal.programme": ["Programmé.", "Scheduled.", "Ingepland."],
@@ -848,7 +855,7 @@
     "dem.cocher": ["Cochez la case : chaque client du fichier doit avoir accepté de recevoir cette demande.", "Tick the box: every customer in the file must have agreed to receive this request.", "Vink het vakje aan: elke klant in het bestand moet akkoord gegaan zijn om deze vraag te ontvangen."],
     "dem.importes": [v => `${v.n} ${pl(v.n, "client importé", "clients importés")}`, v => `${v.n} ${en1(v.n, "customer", "customers")} imported`, v => `${v.n} ${nl1(v.n, "klant", "klanten")} geïmporteerd`],
     "dem.ecartees": [v => `, ${v.n} ${pl(v.n, "ligne écartée", "lignes écartées")}`, v => `, ${v.n} ${en1(v.n, "line", "lines")} skipped`, v => `, ${v.n} ${nl1(v.n, "regel", "regels")} overgeslagen`],
-    "dem.partent": [". Les demandes partent le lendemain de chaque passage, à 9 h.", ". Requests go out the day after each visit, at 09:00.", ". De aanvragen vertrekken de dag na elk bezoek, om 9.00 uur."],
+    "dem.partent": [". Les demandes partent le lendemain de chaque passage, à 9 h.", ". Requests go out the day after each visit, at 09:00.", ". De aanvragen vertrekken de dag na elk bezoek, om 9.00 uur."],
     "dem.ligne": ["Ligne {n} du fichier", "Line {n} of the file", "Regel {n} van het bestand"], "dem.opp.ok": ["C'est noté : plus aucune demande ne partira vers cette adresse.", "Noted: no more requests will be sent to this address.", "Genoteerd: er vertrekken geen aanvragen meer naar dit adres."],
     // ---- Comptes connectés
     "compte.aide.google": ["Pour que BoostImpact réponde à vos avis et publie sur votre fiche : sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire et pouvez retirer l'accès à tout moment.",
@@ -1047,6 +1054,27 @@
     "lecture.limite": ["Les chiffres de Google seront relus un peu plus tard. Ceux de BoostImpact sont à jour.", "Google figures will be read again a little later. BoostImpact's figures are up to date.", "De cijfers van Google worden iets later opnieuw gelezen. De cijfers van BoostImpact zijn up-to-date."],
     "lecture.non.branchee": ["Les chiffres de Google arriveront ici bientôt. Ceux de BoostImpact sont à jour.", "Google figures will appear here soon. BoostImpact's figures are up to date.", "De cijfers van Google verschijnen hier binnenkort. De cijfers van BoostImpact zijn up-to-date."],
     "lecture.echec": ["Google n'a pas pu être lu pour le moment. Les chiffres de BoostImpact sont à jour.", "Google couldn't be read for now. BoostImpact's figures are up to date.", "Google kon momenteel niet gelezen worden. De cijfers van BoostImpact zijn up-to-date."],
+    // Démonstration (01/11/2026, tour 8) : plus jamais « Chiffres lus en direct sur Google » sous « Ces chiffres sont fictifs ».
+    "lecture.demo": ["Démonstration : chiffres fictifs, rien n'est lu sur Google.", "Demo: made-up figures, nothing is read from Google.", "Demo: fictieve cijfers, er wordt niets op Google gelezen."],
+    // « Ce que votre fiche vous a rapporté » (01/11/2026, tour 8) : statistiques de la fiche Google (API Business Profile Performance), mois précédent
+    // et mois en cours, lues à l'ouverture de Résultats (n8n/renom-resultats-google.json), jamais gardées.
+    "fiche.rap.titre": ["Ce que votre fiche vous a rapporté", "What your profile brought you", "Wat uw profiel u heeft opgebracht"],
+    "fiche.rap.periode": [v => `${cap(v.a)} en entier ; ${v.b} jusqu'au ${v.j}.`, v => `All of ${v.a}; ${v.b} so far.`, v => `Heel ${v.a}; ${v.b} tot nu.`],
+    "fiche.rap.periode.seul": [v => `${cap(v.a)}${v.j ? `, jusqu'au ${v.j}` : ""}.`, v => `${cap(v.a)}${v.j ? " so far" : ""}.`, v => `${cap(v.a)}${v.j ? " tot nu" : ""}.`],
+    "fiche.rap.appels": ["Clics pour appeler", "Clicks to call", "Klikken om te bellen"], "fiche.rap.itineraires": ["Itinéraires demandés", "Directions requested", "Routes aangevraagd"],
+    "fiche.rap.site": ["Clics vers votre site", "Clicks to your website", "Klikken naar uw website"], "fiche.rap.vues": ["Vues de votre fiche", "Views of your profile", "Weergaven van uw profiel"],
+    "fiche.rap.courant": [v => `${cap(v.mois)}, au ${v.j} : ${v.n}`, v => `${cap(v.mois)} so far: ${v.n}`, v => `${cap(v.mois)} tot nu: ${v.n}`],
+    "fiche.rap.note": ["Chiffres de Google. Un clic sur « Appeler » n'est pas un appel abouti : Google compte le clic, pas l'appel. Une demande d'itinéraire n'est pas une venue. Les vues additionnent Google Maps et la recherche Google, sur ordinateur et sur téléphone.",
+      "Google's figures. A click on “Call” is not a completed call: Google counts the click, not the call. A direction request is not a visit. Views add up Google Maps and Google Search, on computer and on phone.",
+      "Cijfers van Google. Een klik op “Bellen” is geen geslaagd telefoongesprek: Google telt de klik, niet het gesprek. Een routeaanvraag is geen bezoek. De weergaven tellen Google Maps en Google Zoeken samen, op computer en op telefoon."],
+    "fiche.rap.demo": ["Démonstration : chiffres fictifs. En service, ils sont lus sur Google à l'ouverture de cette page.", "Demo: made-up figures. In service, they are read from Google when this page opens.", "Demo: fictieve cijfers. In gebruik worden ze op Google gelezen wanneer deze pagina opent."],
+    "fiche.rap.non.reliee": ["Ces chiffres arriveront dès que votre fiche Google sera reliée à BoostImpact.", "These figures will appear as soon as your Google profile is linked to BoostImpact.", "Deze cijfers verschijnen zodra uw Google-profiel aan BoostImpact gekoppeld is."],
+    "fiche.rap.erreur": ["Google n'a pas donné ces chiffres à cette ouverture. Ils seront relus à la prochaine.", "Google didn't return these figures this time. They will be read again next time.", "Google gaf deze cijfers deze keer niet. Ze worden de volgende keer opnieuw gelezen."],
+    "fiche.rap.acc": [v => `${v.demo ? "Démonstration, chiffres fictifs. " : ""}Votre fiche Google en ${v.mois} : ${v.a} clics pour appeler, ${v.i} itinéraires demandés, ${v.v} vues.`,
+      v => `${v.demo ? "Demo, made-up figures. " : ""}Your Google profile in ${v.mois}: ${v.a} clicks to call, ${v.i} directions requested, ${v.v} views.`,
+      v => `${v.demo ? "Demo, fictieve cijfers. " : ""}Uw Google-profiel in ${v.mois}: ${v.a} klikken om te bellen, ${v.i} routes aangevraagd, ${v.v} weergaven.`],
+    "fiche.rap.acc.sans": ["Clics pour appeler, itinéraires et vues de votre fiche Google :", "Clicks to call, directions and views of your Google profile:", "Klikken om te bellen, routes en weergaven van uw Google-profiel:"],
+    "fiche.rap.acc.lien": ["voir vos résultats", "see your results", "uw resultaten bekijken"], "fiche.rap.acc.detail": ["Voir le détail", "See the details", "Details bekijken"],
     // ---- Fiche Google (actions)
     "act.type.photos": ["Ajouter des photos à la fiche", "Add photos to the profile", "Foto's aan het profiel toevoegen"], "act.type.offre": ["Créer une offre", "Create an offer", "Een aanbieding maken"], "act.type.evenement": ["Créer un événement", "Create an event", "Een evenement maken"],
     "act.type.horaires": ["Horaires exceptionnels", "Special opening hours", "Uitzonderlijke openingsuren"],
@@ -1080,7 +1108,7 @@
       "When content or a review reply needs your approval, or when our team has handled a review for you, BoostImpact lets you know.", "Wanneer een post of een antwoord op een review op uw akkoord wacht, of wanneer ons team een review voor u heeft behandeld, verwittigt BoostImpact u."],
     "notif.comment": ["Comment être prévenu", "How to be notified", "Hoe u verwittigd wordt"], "notif.canaux": ["Canaux", "Channels", "Kanalen"], "notif.email": ["Par email", "By email", "Per e-mail"], "notif.a": [", à {adresse}", ", to {adresse}", ", naar {adresse}"],
     "notif.whatsapp": ["Par WhatsApp", "By WhatsApp", "Via WhatsApp"],
-    "notif.whatsapp.aide": ["Facultatif. Vous recevez sur WhatsApp : un avis sensible (à toute heure), un avis traité par notre équipe, une réponse à valider. Aucun message entre 21 h et 8 h, sauf avis sensible. Si le message ne passe pas, vous recevez l'email. Décochez à tout moment.",
+    "notif.whatsapp.aide": ["Facultatif. Vous recevez sur WhatsApp : un avis sensible (à toute heure), un avis traité par notre équipe, une réponse à valider. Aucun message entre 21 h et 8 h, sauf avis sensible. Si le message ne passe pas, vous recevez l'email. Décochez à tout moment.",
       "Optional. You receive on WhatsApp: a sensitive review (at any time), a review handled by our team, a reply to approve. No messages between 9 pm and 8 am, except for a sensitive review. If the message doesn't go through, you get the email. Untick at any time.", "Facultatief. U ontvangt via WhatsApp: een gevoelige review (op elk uur), een review die ons team heeft behandeld, een antwoord om goed te keuren. Geen berichten tussen 21 en 8 uur, behalve bij een gevoelige review. Komt het bericht niet aan, dan krijgt u de e-mail. U kunt het op elk moment uitvinken."],
     // ---- Alertes WhatsApp (décision de PJ du 22/10/2026) : numéro au format international et case d'accord, écran Notifications et démarrage
     // (fonction regler_whatsapp de schema.sql). Texte de la case : celui de PJ, mot pour mot, avec le numéro saisi.
@@ -2072,8 +2100,8 @@
     "rappel.tel": ["Votre numéro de téléphone", "Your phone number", "Uw telefoonnummer"],
     "rappel.aide": ["Avec l'indicatif du pays, par exemple {ex}. Un numéro qui commence par 0 reçoit l'indicatif {ind}.", "With the country code, for example {ex}. A number starting with 0 gets the {ind} country code.", "Met het landnummer, bijvoorbeeld {ex}. Een nummer dat met 0 begint, krijgt landnummer {ind}."],
     "rappel.envoyer": ["Être rappelé", "Request a call back", "Teruggebeld worden"],
-    "rappel.merci": ["Demande envoyée. Nous vous rappelons au {tel} aujourd'hui ou demain, entre 9 h et 18 h, pour le faire avec vous.", "Request sent. We'll call you back on {tel} today or tomorrow, between 9 am and 6 pm, to do it with you.", "Aanvraag verstuurd. Wij bellen u terug op {tel}, vandaag of morgen tussen 9 en 18 uur, om het samen te doen."],
-    "rappel.deja": ["Votre demande est déjà enregistrée : nous vous rappelons aujourd'hui ou demain, entre 9 h et 18 h.", "Your request is already saved: we'll call you back today or tomorrow, between 9 am and 6 pm.", "Uw aanvraag is al opgeslagen: wij bellen u terug, vandaag of morgen tussen 9 en 18 uur."],
+    "rappel.merci": ["Demande envoyée. Nous vous rappelons au {tel} aujourd'hui ou demain, entre 9 h et 18 h, pour le faire avec vous.", "Request sent. We'll call you back on {tel} today or tomorrow, between 9 am and 6 pm, to do it with you.", "Aanvraag verstuurd. Wij bellen u terug op {tel}, vandaag of morgen tussen 9 en 18 uur, om het samen te doen."],
+    "rappel.deja": ["Votre demande est déjà enregistrée : nous vous rappelons aujourd'hui ou demain, entre 9 h et 18 h.", "Your request is already saved: we'll call you back today or tomorrow, between 9 am and 6 pm.", "Uw aanvraag is al opgeslagen: wij bellen u terug, vandaag of morgen tussen 9 en 18 uur."],
     "dem5.repli.autorisation": ["Facultatif : réutiliser vos photos déjà publiées", "Optional: reuse photos you've already published", "Niet verplicht: uw reeds gepubliceerde foto's hergebruiken"],
     "dem5.repli.whatsapp": ["Facultatif : vos alertes sur WhatsApp", "Optional: your alerts on WhatsApp", "Niet verplicht: uw meldingen via WhatsApp"],
     "mer.voir.etapes": ["Voir les étapes", "See the steps", "De stappen bekijken"],
@@ -2093,6 +2121,11 @@
       v => `Nothing to do for now. We're preparing the ${v.n > 1 ? "replies" : "reply"}: you'll approve ${v.n > 1 ? "them" : "it"} here, in your account. Please don't reply yourself on Google.`,
       v => `U hoeft nu niets te doen. Wij bereiden ${v.n > 1 ? "de antwoorden" : "het antwoord"} voor: u keurt ${v.n > 1 ? "ze" : "het"} hier goed, in uw klantenzone. Antwoord er zelf niet op via Google.`],
     "aut.ligne": ["Réutiliser vos photos déjà publiées ?", "Reuse photos you've already published?", "Uw reeds gepubliceerde foto's hergebruiken?"],
+    "photo.du": ["Photo du {d}", "Photo of {d}", "Foto van {d}"],   // 01/11/2026, tour 8 : titre d'une photo déposée sans plat ni prix
+    "aut.ligne.explication": ["Nous pouvons reprendre celles que votre commerce a déjà publiées : vous aurez moins de photos à envoyer. C'est facultatif.",
+      "We can reuse the ones your business has already published: you'll have fewer photos to send. It's optional.", "We kunnen de foto's hergebruiken die uw zaak al publiceerde: zo hoeft u er minder te sturen. Het is vrijblijvend."],
+    "aut.ligne.explication.google": ["Nous pouvons reprendre celles que votre commerce a déjà publiées sur sa fiche Google : vous aurez moins de photos à envoyer. C'est facultatif.",
+      "We can reuse the ones your business has already published on its Google profile: you'll have fewer photos to send. It's optional.", "We kunnen de foto's hergebruiken die uw zaak al op haar Google-profiel publiceerde: zo hoeft u er minder te sturen. Het is vrijblijvend."],
     "aut.autoriser": ["Autoriser", "Allow", "Toestaan"], "aut.non": ["Non merci", "No thanks", "Nee, bedankt"],
     "aut.non.merci": ["C'est noté : nous ne vous le proposerons plus ici. Vous pouvez toujours l'accorder dans Photos.", "Noted: we won't suggest it here again. You can still allow it in Photos.", "Genoteerd: wij stellen het hier niet meer voor. U kunt het nog altijd toestaan bij Foto's."],
     "avis.sensible.texte.espace": ["Notre équipe s'en charge. Nous préparons une réponse : vous l'approuverez ici. Rien n'est publié sans votre accord. N'y répondez pas vous-même sur Google.", "Our team is handling it. We're preparing a reply: you'll approve it here. Nothing is published without your approval. Please don't reply yourself on Google.", "Ons team neemt het op zich. Wij bereiden een antwoord voor: u keurt het hier goed. Niets wordt gepubliceerd zonder uw akkoord. Antwoord er zelf niet op via Google."],
@@ -2167,16 +2200,23 @@
     "offre.dessus.vous.mensuel": ["Vous payez {prix} HT au mois.", "You pay {prix} excl. VAT monthly.", "U betaalt {prix} excl. btw per maand."],   // 01/11/2026, tour 7 Essentiel
     "offre.dessus.vous.annuel": ["Vous payez {prix} HT par mois, en paiement annuel.", "You pay {prix} excl. VAT a month, paid annually.", "U betaalt {prix} excl. btw per maand, bij jaarlijkse betaling."],
     "offre.dessus.annuel.ou": ["Ou {prix} HT par mois en paiement annuel.", "Or {prix} excl. VAT a month, paid annually.", "Of {prix} excl. btw per maand, bij jaarlijkse betaling."],
-    "offre.dessus.passer.en": ["Passer en {nom}", "Switch to {nom}", "Overstappen naar {nom}"],
-    "offre.dessus.demande.note": ["Un geste suffit : PJ vous confirme le montant avant tout changement.", "One tap is enough: PJ confirms the amount with you before anything changes.", "Eén tik volstaat: PJ bevestigt het bedrag vóór elke wijziging."],   // tour 7 Essentiel : plus de « sans nouveau paiement »
-    "offre.dessus.demande.envoyee": ["Demande envoyée le {d} : PJ vous confirme le changement et le montant aujourd'hui ou demain.", "Request sent on {d}: PJ will confirm the change and the amount today or tomorrow.", "Aanvraag verstuurd op {d}: PJ bevestigt de wijziging en het bedrag vandaag of morgen."],
-    "offre.dessus.demande.toast": ["Demande envoyée : PJ vous confirme le changement aujourd'hui ou demain.", "Request sent: PJ will confirm the change today or tomorrow.", "Aanvraag verstuurd: PJ bevestigt de wijziging vandaag of morgen."],   // 01/11/2026, tour 7 Essentiel
-    "acc.chg.offre": ["Changement d'offre demandé le {d} : PJ vous confirme aujourd'hui ou demain.", "Plan change requested on {d}: PJ will confirm today or tomorrow.", "Formulewijziging aangevraagd op {d}: PJ bevestigt vandaag of morgen."],
+    "offre.dessus.passer.en": ["Passer à {nom}", "Switch to {nom}", "Overstappen naar {nom}"],   // 01/11/2026, tour 8 : nom du bouton tel que l'écrivent les CGV (article 4)
+    // Montée d'offre (01/11/2026, tour 8) : les mots des CGV du 1er novembre 2026, article 4 (« Changement d'offre »), sans rien y ajouter : confirmation
+    // par téléphone, abonnement en cours modifié au même rythme, aucun second abonnement, différence au prorata facturée le jour de la modification,
+    // date de renouvellement inchangée. Pas de « aucun second paiement » : la différence de prix est bien facturée.
+    "offre.dessus.demande.note": ["PJ vous appelle pour confirmer, puis modifie votre abonnement en cours, au même rythme de paiement : aucun second abonnement n'est souscrit. La différence de prix pour la part restante de la période en cours est calculée au prorata et facturée le jour de la modification ; la date de renouvellement de votre abonnement ne change pas.",
+      "PJ calls you to confirm, then changes your current subscription, at the same payment frequency: no second subscription is taken out. The price difference for the remaining part of the current period is calculated pro rata and invoiced on the day of the change; your subscription renewal date does not change.",
+      "PJ belt u om te bevestigen en wijzigt daarna uw lopende abonnement, met hetzelfde betaalritme: er wordt geen tweede abonnement afgesloten. Het prijsverschil voor het resterende deel van de lopende periode wordt pro rata berekend en gefactureerd op de dag van de wijziging; de verlengingsdatum van uw abonnement verandert niet."],
+    "offre.dessus.demande.envoyee": ["Demande envoyée le {d}. PJ vous appelle pour confirmer, aujourd'hui ou demain, puis modifie votre abonnement en cours, au même rythme de paiement : aucun second abonnement n'est souscrit. La différence de prix est calculée au prorata et facturée le jour de la modification ; la date de renouvellement ne change pas.",
+      "Request sent on {d}. PJ will call you to confirm, today or tomorrow, then change your current subscription, at the same payment frequency: no second subscription is taken out. The price difference is calculated pro rata and invoiced on the day of the change; the renewal date does not change.",
+      "Aanvraag verstuurd op {d}. PJ belt u om te bevestigen, vandaag of morgen, en wijzigt daarna uw lopende abonnement, met hetzelfde betaalritme: er wordt geen tweede abonnement afgesloten. Het prijsverschil wordt pro rata berekend en gefactureerd op de dag van de wijziging; de verlengingsdatum verandert niet."],
+    "offre.dessus.demande.toast": ["Demande envoyée : PJ vous appelle pour confirmer, aujourd'hui ou demain. Aucun second abonnement : votre abonnement en cours est modifié.", "Request sent: PJ will call you to confirm, today or tomorrow. No second subscription: your current subscription is changed.", "Aanvraag verstuurd: PJ belt u om te bevestigen, vandaag of morgen. Geen tweede abonnement: uw lopende abonnement wordt gewijzigd."],   // 01/11/2026, tour 8
+    "acc.chg.offre": ["Changement d'offre demandé le {d} : PJ vous appelle pour confirmer, aujourd'hui ou demain.", "Plan change requested on {d}: PJ will call you to confirm, today or tomorrow.", "Formulewijziging aangevraagd op {d}: PJ belt u om te bevestigen, vandaag of morgen."],
     "offre.dessus.difference": ["Différence : {prix} HT de plus par mois.", "Difference: {prix} excl. VAT more a month.", "Verschil: {prix} excl. btw meer per maand."],
     "offre.dessus.passer": ["Passer à {nom}", "Switch to {nom}", "Overstappen naar {nom}"],
     "offre.dessus.rythme.mensuel": ["au mois", "monthly", "per maand"], "offre.dessus.rythme.annuel": ["à l'année", "yearly", "per jaar"],
     "offre.dessus.frais.offerts": ["Frais de mise en route ({prix} HT) offerts&nbsp;: vous payez à l'année.", "Set-up fee ({prix} excl. VAT) waived: you pay yearly.", "Opstartkosten ({prix} excl. btw) gratis: u betaalt per jaar."],
-    "offre.dessus.frais.demande": ["Frais de mise en route : {prix} HT, une seule fois, comme le prévoient nos conditions de vente (article 4).", "Set-up fee: {prix} excl. VAT, once, as set out in our terms of sale (article 4).", "Opstartkosten: {prix} excl. btw, eenmalig, zoals bepaald in onze verkoopvoorwaarden (artikel 4)."],
+    "offre.dessus.frais.demande": ["Frais de mise en route : {prix} HT, facturés une seule fois, sur la facture de la montée (paiement mensuel ; conditions de vente, article 4). Ils sont offerts en paiement annuel.", "Set-up fee: {prix} excl. VAT, invoiced once, on the upgrade invoice (monthly billing; terms of sale, section 4). It is waived with annual billing.", "Opstartkosten: {prix} excl. btw, eenmalig gefactureerd, op de factuur van de overstap (maandelijkse betaling; verkoopvoorwaarden, artikel 4). Bij jaarlijkse betaling zijn ze gratis."],
     "offre.dessus.frais.deja": ["Aucuns frais de mise en route : votre mise en route est déjà faite.", "No set-up fee: your set-up is already done.", "Geen opstartkosten: uw opstart is al gebeurd."],
     "offre.dessus.frais.factures": ["Frais de mise en route : {prix} HT, facturés une fois, avec le paiement de la montée.", "Set-up fee: {prix} excl. VAT, charged once, with the upgrade payment.", "Opstartkosten: {prix} excl. btw, eenmalig aangerekend bij de betaling van de overstap."],
     "offre.dessus.note.paiement": ["Le bouton ouvre la page de paiement sécurisée de Stripe pour l'offre {nom}, {r} comme votre abonnement actuel. Dès le paiement, votre espace passe à l'offre {nom} et votre abonnement actuel est arrêté : la part non utilisée vous est remboursée. La nouvelle période payée commence le jour du paiement.",
@@ -2194,6 +2234,8 @@
     "offre.deleg.accord": [v => `En activant le mode délégation, vous acceptez qu'un contenu soumis et resté sans réponse de votre part ${v.h} heures après son envoi soit réputé validé, puis programmé et publié. Un avis sensible n'est jamais publié automatiquement. Vous pouvez le désactiver à tout moment, ici.`,
       v => `By turning on delegation mode, you agree that content submitted to you and left without a reply ${v.h} hours after it's sent is deemed approved, then scheduled and published. A sensitive review is never published automatically. You can turn it off at any time, here.`,
       v => `Door de delegatiemodus te activeren, aanvaardt u dat een voorgelegde post die ${v.h} uur na verzending zonder antwoord van u blijft, als goedgekeurd geldt en daarna ingepland en gepubliceerd wordt. Een gevoelige review wordt nooit automatisch gepubliceerd. U kunt hem op elk moment uitschakelen, hier.`],
+    "contenus.deleg.echeance.creneau": ["Sans réponse de votre part d'ici {e}, nous la validons pour vous : elle part alors {d}, au premier créneau libre après cette échéance.",
+      "If you don't reply by {e}, we approve it for you: it then goes out {d}, in the first free slot after that deadline.", "Zonder antwoord van u tegen {e} keuren wij hem voor u goed: hij gaat dan {d} online, in het eerste vrije tijdslot na die termijn."],   // 01/11/2026, tour 8
     "contenus.deleg.echeance": ["Sans réponse de votre part, publiée à partir du {d}, au premier créneau libre.", "If you don't reply, it will be published from {d}, in the first free slot.", "Zonder antwoord van u wordt hij gepubliceerd vanaf {d}, in het eerste vrije tijdslot."],
     "contenus.deleg.ligne": [v => `Pas le temps de valider ? Activez la délégation : sans réponse de votre part ${v.h} h après l'envoi, nous publions.`, v => `No time to approve? Turn on delegation: if you haven't replied ${v.h} hours after we send it, we publish.`, v => `Geen tijd om goed te keuren? Activeer de delegatie: zonder reactie van u ${v.h} uur na het versturen, publiceren wij.`],   // 01/11/2026, tour 6 Premium
     "offre.deleg.activer": ["Activer le mode délégation", "Turn on delegation mode", "Delegatiemodus activeren"],
@@ -2284,7 +2326,7 @@
     "compte.tiktok.demander": ["Demander l'activation", "Request activation", "Activering aanvragen"],
     "compte.tiktok.tel": ["Votre numéro, pour que l'équipe vous rappelle", "Your number, so the team can call you back", "Uw nummer, zodat het team u terugbelt"],
     "compte.tiktok.envoyee": ["Demande envoyée le {d} : notre équipe vous rappelle pour activer TikTok.", "Request sent on {d}: our team will call you back to set up TikTok.", "Aanvraag verstuurd op {d}: ons team belt u terug om TikTok te activeren."],
-    "compte.tiktok.envoyee.tel": ["Demande envoyée le {d}. Notre équipe vous rappelle au {tel}, {quand}entre 9 h et 18 h, pour activer TikTok.", "Request sent on {d}. Our team will call you on {tel}, {quand}between 9 am and 6 pm, to set up TikTok.", "Aanvraag verstuurd op {d}. Ons team belt u op {tel}, {quand}tussen 9 en 18 uur, om TikTok te activeren."],
+    "compte.tiktok.envoyee.tel": ["Demande envoyée le {d}. Notre équipe vous rappelle au {tel}, {quand}entre 9 h et 18 h, pour activer TikTok.", "Request sent on {d}. Our team will call you on {tel}, {quand}between 9 am and 6 pm, to set up TikTok.", "Aanvraag verstuurd op {d}. Ons team belt u op {tel}, {quand}tussen 9 en 18 uur, om TikTok te activeren."],
     "compte.tiktok.envoyee.le": ["Demande d'activation de TikTok envoyée le {d}.", "TikTok activation request sent on {d}.", "Aanvraag om TikTok te activeren verstuurd op {d}."],
     "compte.tiktok.quand": ["aujourd'hui ou demain, ", "today or tomorrow, ", "vandaag of morgen, "],
     "compte.tiktok.modifier": ["Modifier le numéro", "Change the number", "Nummer wijzigen"],
@@ -2371,18 +2413,18 @@
     "avis.rappel.tel": ["Votre numéro", "Your number", "Uw nummer"], "avis.rappel.quand": ["Quand", "When", "Wanneer"],
     "avis.rappel.auj.cap": ["Aujourd'hui", "Today", "Vandaag"], "avis.rappel.demain.cap": ["Demain", "Tomorrow", "Morgen"],
     "avis.rappel.auj": ["aujourd'hui", "today", "vandaag"], "avis.rappel.demain": ["demain", "tomorrow", "morgen"], "avis.rappel.le": ["le {d}", "on {d}", "op {d}"],
-    "avis.rappel.plage": ["Entre 9 h et 18 h. Rien n'est publié avant notre appel.", "Between 9 am and 6 pm. Nothing is published before our call.", "Tussen 9 en 18 uur. Niets wordt gepubliceerd vóór ons telefoontje."],
+    "avis.rappel.plage": ["Entre 9 h et 18 h. Rien n'est publié avant notre appel.", "Between 9 am and 6 pm. Nothing is published before our call.", "Tussen 9 en 18 uur. Niets wordt gepubliceerd vóór ons telefoontje."],
     // Tour 7 Essentiel (01/11/2026) : créneau « après le service » et numéro obligatoire.
     "rappel.hors.pays": ["Ce numéro n'a pas l'indicatif du pays de votre commerce : vérifiez-le.", "This number doesn't have your business's country code: please check it.", "Dit nummer heeft niet het landnummer van uw zaak: kijk het na."],
-    "avis.rappel.heure": ["À quelle heure", "What time", "Hoe laat"], "avis.rappel.plage.journee": ["Entre 9 h et 18 h", "Between 9 am and 6 pm", "Tussen 9 en 18 uur"],
-    "avis.rappel.plage.service": ["Après le service, de 15 h à 17 h", "After service, 3 pm to 5 pm", "Na de service, van 15 tot 17 uur"],
-    "avis.rappel.plage.1517": ["De 15 h à 17 h", "3 pm to 5 pm", "Van 15 tot 17 uur"],
+    "avis.rappel.heure": ["À quelle heure", "What time", "Hoe laat"], "avis.rappel.plage.journee": ["Entre 9 h et 18 h", "Between 9 am and 6 pm", "Tussen 9 en 18 uur"],
+    "avis.rappel.plage.service": ["Après le service, de 15 h à 17 h", "After service, 3 pm to 5 pm", "Na de service, van 15 tot 17 uur"],
+    "avis.rappel.plage.1517": ["De 15 h à 17 h", "3 pm to 5 pm", "Van 15 tot 17 uur"],
     "avis.rappel.rien": ["Rien n'est publié avant notre appel.", "Nothing is published before our call.", "Niets wordt gepubliceerd vóór ons telefoontje."],
     "avis.rappel.tel.vide": ["Indiquez votre numéro.", "Enter your number.", "Vul uw nummer in."],
-    "avis.rappel.prevu.1517": ["Nous vous appelons au {tel}, {quand} entre 15 h et 17 h.", "We'll call you on {tel}, {quand} between 3 pm and 5 pm.", "Wij bellen u op {tel}, {quand} tussen 15 en 17 uur."],
-    "con.file.retenue.jour.1517": ["À rappeler {d}, entre 15 h et 17 h (après le service)", "Call back {d}, between 3 pm and 5 pm (after service)", "Terugbellen op {d}, tussen 15 en 17 uur (na de service)"],
+    "avis.rappel.prevu.1517": ["Nous vous appelons au {tel}, {quand} entre 15 h et 17 h.", "We'll call you on {tel}, {quand} between 3 pm and 5 pm.", "Wij bellen u op {tel}, {quand} tussen 15 en 17 uur."],
+    "con.file.retenue.jour.1517": ["À rappeler {d}, entre 15 h et 17 h (après le service)", "Call back {d}, between 3 pm and 5 pm (after service)", "Terugbellen op {d}, tussen 15 en 17 uur (na de service)"],
     "avis.rappel.confirmer": ["Confirmer : attendez mon appel", "Confirm: wait for my call", "Bevestigen: wacht op mijn telefoontje"],
-    "avis.rappel.prevu": ["Nous vous appelons au {tel}, {quand} entre 9 h et 18 h.", "We'll call you on {tel}, {quand} between 9 am and 6 pm.", "Wij bellen u op {tel}, {quand} tussen 9 en 18 uur."],
+    "avis.rappel.prevu": ["Nous vous appelons au {tel}, {quand} entre 9 h et 18 h.", "We'll call you on {tel}, {quand} between 9 am and 6 pm.", "Wij bellen u op {tel}, {quand} tussen 9 en 18 uur."],
     "avis.rappel.modifier": ["Modifier le numéro, le jour ou l'heure", "Change the number, day or time", "Nummer, dag of uur wijzigen"],
     "avis.retenue.toast": ["C'est noté : nous vous appelons avant de publier.", "Noted: we'll call you before publishing.", "Genoteerd: wij bellen u voordat we publiceren."],
     "contact.votre": ["Votre contact : {p}, BoostImpact · WhatsApp {tel}", "Your contact: {p}, BoostImpact · WhatsApp {tel}", "Uw contactpersoon: {p}, BoostImpact · WhatsApp {tel}"],
@@ -2402,7 +2444,7 @@
     "res.ce.mois.court": ["ce mois-ci", "this month", "deze maand"],   // 01/11/2026, tour 7 Essentiel : « 0 ce mois-ci · 1 non lu (octobre) »
     "res.retours.non.lus": [v => v.n > 1 ? `${v.n} non lus` : "1 non lu", v => `${v.n} unread`, v => `${v.n} ongelezen`],   // 01/11/2026, tour 6 Premium
     "bilan.prec.titre": [v => `Bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}`, v => `Your ${v.mois} report`, "Overzicht van {mois}"],   // 01/11/2026, tour 6 Premium
-    "bilan.prec.email": ["Le bilan détaillé (chiffres, ce que disent vos clients, pistes pour le mois) part aussi par email le 1er de chaque mois, à 9 h.", "The detailed report (figures, what your customers say, ideas for the month) is also emailed on the 1st of each month, at 9 am.", "Het uitgebreide overzicht (cijfers, wat uw klanten zeggen, ideeën voor de maand) wordt ook gemaild op de 1e van elke maand, om 9 uur."],
+    "bilan.prec.email": ["Le bilan détaillé (chiffres, ce que disent vos clients, pistes pour le mois) part aussi par email le 1er de chaque mois, à 9 h.", "The detailed report (figures, what your customers say, ideas for the month) is also emailed on the 1st of each month, at 9 am.", "Het uitgebreide overzicht (cijfers, wat uw klanten zeggen, ideeën voor de maand) wordt ook gemaild op de 1e van elke maand, om 9 uur."],
     "bilan.prec.parler": ["En parler avec {p}", "Talk it over with {p}", "Erover praten met {p}"],
     "bilan.prec.message": [v => `Bonjour, c'est ${v.nom}. J'aimerais parler de notre bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}.`, v => `Hello, this is ${v.nom}. I'd like to talk about our ${v.mois} report.`, "Hallo, met {nom}. Ik wil graag ons overzicht van {mois} bespreken."],
     "acc.temps.mois": ["Temps gagné en {mois} : environ {d}.", v => `Time saved in ${v.mois}: about ${v.d}.`, "Tijd gewonnen in {mois}: ongeveer {d}."],   // du 1er au 5 du mois (01/11/2026)
@@ -2416,7 +2458,7 @@
     "con.nv.pays.alerte": ["{v} est une ville belge : vérifiez le pays (Belgique ?).", "{v} is a Belgian city: check the country (Belgium?).", "{v} is een Belgische stad: controleer het land (België?)."],
     "con.file.retenue": ["Le commerçant attend votre appel (demandé le {d}).", "The business owner is waiting for your call (asked on {d}).", "De ondernemer wacht op uw telefoontje (gevraagd op {d})."],
     "con.file.retenue.tel": ["Numéro : {tel}", "Number: {tel}", "Nummer: {tel}"],
-    "con.file.retenue.jour": ["À rappeler {d}, entre 9 h et 18 h", "Call back {d}, between 9 am and 6 pm", "Terugbellen op {d}, tussen 9 en 18 uur"],   // 01/11/2026, tour 6 Premium
+    "con.file.retenue.jour": ["À rappeler {d}, entre 9 h et 18 h", "Call back {d}, between 9 am and 6 pm", "Terugbellen op {d}, tussen 9 en 18 uur"],   // 01/11/2026, tour 6 Premium
     "con.file.retenue.raison": ["Publication bloquée : le commerçant attend votre appel. Appelez-le, puis « Appel fait ».", "Publishing blocked: the business owner is waiting for your call. Call them, then \u201cCall done\u201d.", "Publicatie geblokkeerd: de ondernemer wacht op uw telefoontje. Bel, en daarna \u201cGebeld\u201d."],
     "con.file.liberer": ["Appel fait", "Call done", "Gebeld"],
     "con.file.liberee": ["Appel noté : la réponse peut être publiée.", "Call recorded: the reply can be published.", "Telefoontje genoteerd: het antwoord kan worden gepubliceerd."],

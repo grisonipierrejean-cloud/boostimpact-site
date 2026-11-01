@@ -290,6 +290,11 @@
   }
   // Texte lu d'un contenu : la légende commune et celles par réseau (comme programmer_au_creneau).
   const texteDuContenu = ct => [ct && ct.legende, ...Object.values((ct && ct.legendes) || {})].filter(Boolean).join(" ");
+  // Contenu « du jour » (01/11/2026, tour 8) : une story, ou une légende qui parle d'aujourd'hui (« du jour », « aujourd'hui », « ce midi »,
+  // « ce soir »…, en français, anglais et néerlandais). « Programmer tout » le met au PREMIER créneau libre, jamais étalé sur le mois. Mêmes mots
+  // que contenu_du_jour() de schema.sql (bloc « Tour 8 », égalité testée par supabase/test/creneaux.test.mjs).
+  const MOTS_JOUR = /\b(du jour|aujourdhui|ce midi|ce soir|ce matin|cet apres midi|today|tonight|this evening|this morning|this afternoon|vandaag|vanavond|vanmiddag|vanochtend|vanmorgen)\b/;
+  const duJour = ct => !!ct && (formatDe(ct) === "story" || MOTS_JOUR.test(String(texteDuContenu(ct)).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['’`]/g, "").replace(/-/g, " ")));
   // Prochain créneau libre du métier, à au moins 2 h d'ici, un jour d'ouverture, jamais un jour férié, au plus une publication par jour.
   // pris : instants (ms) déjà occupés par une publication du commerce ; regles : { horaires } (texte de la fiche), { pays } ('FR' par défaut, 'BE'),
   // { unParJour: false } pour l'ancienne règle.
@@ -717,9 +722,13 @@
   // 27/10/2026) : client_reference_id = le commerce (« sent in the checkout.session.completed webhook » : la base y reconnaît la montée et arrête
   // l'ancien abonnement), prefilled_email (« enter an email address on the payment page automatically », modifiable par le client), locale.
   // Rien de configuré : null.
+  // UNE règle de rythme pour la montée d'offre (01/11/2026, tour 8 : prix affiché à l'année mais 190 € de mise en route comptés, car le prix et les
+  // frais ne lisaient pas le même rythme par défaut) : celui de l'abonnement en cours ; inconnu ou sans abonnement en cours : MENSUEL (sans
+  // engagement), comme le lien de paiement. Partagée par le prix (prixMontee), les frais de mise en route (app.js, offreDessus) et ce lien.
+  const rythmeMontee = ab => ab && ab.statut !== "resilie" && ab.rythme === "annuel" ? "annuel" : "mensuel";
   function lienMonteeOffre(ab, c, offreSuivante, maintenant) {
     if (!(OFFRES[offreSuivante] && OFFRES_EN_VENTE.includes(offreSuivante))) return null;
-    const actif = ab && ab.statut !== "resilie", rythme = actif && ab.rythme === "annuel" ? "annuel" : "mensuel";
+    const rythme = rythmeMontee(ab);
     // Mise en route déjà payée (correctif du 27/10/2026, décision de PJ) : un commerce dont l'offre comprend la mise en route (Croissance) ne la repaie
     // jamais : Croissance -> Premium prend TOUJOURS la variante « offerts » (sans ligne de frais), quelle que soit la date. Seule la montée depuis
     // l'Essentiel (offre sans mise en route) prend « factures » après fraisOffertsJusquAu.
@@ -1230,18 +1239,19 @@
 
   window.RENOM_DATA = cfg.supabaseUrl && cfg.publishableKey ? (window.supabase && window.supabase.createClient ? supabase() : indisponible()) : demo();
   // Prix de la montée d'offre (01/11/2026, tour 7 Essentiel : 79 et 190 affichés, différence 228 − 95 = 133 calculée au mois) : UNE base, le rythme
-  // réel de l'abonnement en cours (mensuel : prix_mensuel_ht ; annuel : prix_ht) ; sans abonnement en cours, le prix de base (paiement annuel).
-  // actuel, cible et ecart sont toujours sur cette même base ; autre = le prix de l'offre visée dans l'autre rythme.
-  const prixMontee = (o, s_, ab) => { const enCours = !!(ab && ab.statut !== "resilie"), rythme = enCours && ab.rythme === "mensuel" ? "mensuel" : "annuel";
+  // de la montée (rythmeMontee : celui de l'abonnement en cours ; inconnu ou sans abonnement : mensuel, tour 8), pour le prix, la différence, les
+  // frais de mise en route et le lien de paiement. actuel, cible et ecart sont toujours sur cette même base ; autre = le prix de l'offre visée dans
+  // l'autre rythme.
+  const prixMontee = (o, s_, ab) => { const enCours = !!(ab && ab.statut !== "resilie"), rythme = rythmeMontee(ab);
     const cle = rythme === "mensuel" ? "prix_mensuel_ht" : "prix_ht", actuel = +(o || {})[cle] || 0, cible = +(s_ || {})[cle] || 0;
     return { rythme, enCours, actuel, cible, autre: +(s_ || {})[rythme === "mensuel" ? "prix_ht" : "prix_mensuel_ht"] || 0, ecart: actuel && cible ? cible - actuel : 0 }; };
-  window.RENOM_PRIX_MONTEE = prixMontee;
+  window.RENOM_PRIX_MONTEE = prixMontee; window.RENOM_RYTHME_MONTEE = rythmeMontee;
   window.RENOM_OPTIONS = OPTIONS; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO; window.RENOM_MONTAGE_MAIN = MONTAGE_MAIN;
   // ---- Collecte : ce dont la page publique a besoin (aucune session, aucune bibliothèque), et la règle du lien d'avis pour l'espace
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { contientTelephone, jourLot, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { contientTelephone, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)

@@ -1122,3 +1122,8 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 .lire-suite{display:none}
 @media (max-width:899px){.carte.contenu .cadre-texte:not(.deplie){line-height:1.5;max-height:4.5em;overflow:hidden}
   .carte.contenu .lire-suite{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}}
+/* Tour 8 (01/11/2026) : autorisation photos en petite carte sur l'accueil ; « Validées en attente de date » ; statistiques de la fiche Google */
+.carte-autorisation{gap:6px;padding:14px 16px}
+.carte-autorisation .ligne-autorisation{padding:0}
+#acc-attendent .actions{margin-top:8px}
+#fiche-rapporte .bilan-chiffre .chiffre .note{white-space:normal}

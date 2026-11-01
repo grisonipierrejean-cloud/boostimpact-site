@@ -323,6 +323,10 @@
   }
   // Programmer au meilleur créneau : réseaux connectés compatibles avec le format, créneau de départ du métier.
   async function programmerAuto(id) { const { quand, res } = await programmerAutoQuand(id); return t("auto.programme", { quand: I.dateHeureDans(quand), res: res.map(r => RES[r]).join(", ") }); }
+  // « Programmer tout » (tour 8) : [contenu, lot] dans l'ordre des gestes. Stories et contenus du jour (M.duJour) d'abord, sans lot (premier créneau
+  // libre) ; les autres ensuite, avec leur rang parmi eux seuls (jour_lot / jourLot les étale sur le mois).
+  const lotProgrammer = l => { const jour_ = l.filter(x => M.duJour(x)), autres = l.filter(x => !M.duJour(x));
+    return [...jour_.map(x => [x, null]), ...autres.map((x, i) => [x, { rang: i, nombre: autres.length }])]; };
   async function programmerAutoQuand(id, lot) {
     const [x, cpt] = await Promise.all([D.contenus().then(l => l.find(y => y.id === id)), D.comptes()]);
     if (!x) throw new Error(t("err.contenu.introuvable"));
@@ -674,8 +678,10 @@
     return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${prec ? t("acc.temps.mois", { d, mois: MOIS[new Date(t0).getMonth()] }) : t("acc.temps", { d })}</span> <span class="note">${t("acc.temps.estimation")}</span></p>`;
   }
   // Autorisation photos sur l'accueil : une ligne (texte complet dans Photos), plus jamais après « Non merci » (photos_autorisation_refusee_le).
-  const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<p class="ligne-autorisation" id="autorisation-ligne">${t("aut.ligne")}
-      <a href="#/photos?autorisation" id="aut-oui">${t("aut.autoriser")}</a>${merSql(c) ? `<button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</p>`;
+  // Petite carte (01/11/2026, tour 8) : la question et une phrase qui dit à quoi sert l'autorisation (avant : une ligne seule, sans explication).
+  const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<section class="carte carte-autorisation" id="autorisation-ligne" aria-labelledby="aut-ligne-titre">
+      <p class="fort" id="aut-ligne-titre">${t("aut.ligne")}</p><p class="texte2">${t(sansReseaux(c) ? "aut.ligne.explication.google" : "aut.ligne.explication")}</p>
+      <div class="ligne-autorisation"><a href="#/photos?autorisation" id="aut-oui">${t("aut.autoriser")}</a>${merSql(c) ? `<button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</div></section>`;
   const k0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const plusTard = id => { try { return localStorage.getItem("renom-demarrage-plus-tard:" + id) === "1"; } catch (er) { return false; } };
   // Photos du mois : aucune photo envoyée depuis le 1er du mois (heure de l'appareil), commerce actif.
@@ -685,6 +691,7 @@
   const incitationCroissance = c => { const k = "renom-incitation-croissance:" + c.id, m = new Date().toISOString().slice(0, 7);
     try { if (!incitationVue && localStorage.getItem(k) === m) return false; localStorage.setItem(k, m); } catch (er) {}
     incitationVue = true; return true; };
+  const ACTIONS_VISIBLES = 3;
   async function accueil() {
     const c0 = await D.commerce();
     // Nom du commerce à confirmer (27/10/2026) : toujours d'abord, même après « Faire plus tard » (aucune demande d'avis ne part sans lui).
@@ -693,6 +700,7 @@
       D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => []), debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null]);
     const [nonLus, cpt, tfT, , contact, dChg] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
       D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null]);
+    const ligneFiche = await ligneFicheAccueil(c0, mr);
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
     nomCommerce = c.nom; commerceVu = c; comptesVus = cpt;
@@ -743,6 +751,8 @@
     const requises = actions.filter(a => !a.facultatif), sansAFaire = !requises.length && !humains.length;
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
+    // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
+    const replier = actions.length > ACTIONS_VISIBLES && matchMedia("(max-width: 899px) and (max-height: 760px)").matches;
     // « Attendez mon appel » (01/11/2026, tour 6 Premium) : un avis retenu (retenue_le) n'est pas « publié sous 24 h » : « Nous attendons de vous
     // appeler avant de publier. »
     vue.innerHTML = `${pauseBandeau(c)}
@@ -751,8 +761,9 @@
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <div class="msg" id="msg" role="status"></div>
       ${sansAFaire ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
-        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li>${a.bouton ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
-          : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>` : ""}
+        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
+          : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>
+          ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}` : ""}
         ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
@@ -764,6 +775,7 @@
       ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c))}
       ${ligneSemaine(c, av, cal, cm)}
       ${tempsGagne(av, cal, bilanP)}
+      ${ligneFiche}
       ${ligneContact(contact, "contact-accueil")}
       ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>` : ""}
       ${blocMiseEnRoute(mr, c)}
@@ -771,19 +783,25 @@
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
         ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}</p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
-        : `<p class="texte2">${t("acc.rien.programme")}</p>`}
+        : sansDate.length ? "" : `<p class="texte2" id="acc-rien-programme">${t("acc.rien.programme")}</p>`}
+        ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
       </section>
       ${blocIdeeSemaine(idee, c, tfT)}`;
     // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
     vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
+    if ($("acc-tout-voir")) $("acc-tout-voir").onclick = () => { vue.querySelectorAll("#a-faire [data-repliee]").forEach(li => { li.hidden = false; }); const b_ = $("acc-tout-voir"), f_ = vue.querySelector("#a-faire li:nth-child(" + (ACTIONS_VISIBLES + 1) + ") a, #a-faire li:nth-child(" + (ACTIONS_VISIBLES + 1) + ") button");
+      b_.closest("p").remove(); if (f_) f_.focus({ preventScroll: true }); };
     const bp = vue.querySelector('[data-action="programmer"]');
     // « Programmer N publications validées » (31/10/2026, test client Premium) : le message liste les N dates et mène au calendrier (lien).
     // 01/11/2026 (tour 6 Croissance) : pour chaque publication, sa vignette, son titre (première phrase de la légende) et sa date.
+    // Deux boutons (tour 8) : l'action de « À faire maintenant » et « Programmer tout » sous les prochaines publications ; même geste.
+    if (bp) vue.querySelectorAll('[data-action="programmer"]').forEach(b_ => b_.onclick = () => bp.onclick());
     if (bp) bp.onclick = async () => { bp.disabled = true; const faits = []; let er0 = null;
       // Étalé sur le mois (01/11/2026, tour 7 Premium) : rang et nombre passés à la programmation (jour_lot en base, jourLot en démonstration).
-      for (const [i, x] of sansDate.entries()) { try { const r_ = await programmerAutoQuand(x.id, { rang: i, nombre: sansDate.length }); faits.push({ x, quand: r_.quand, res: r_.res }); } catch (er) { er0 = er0 || er; } }
+      // Tour 8 (01/11/2026) : les stories et les contenus « du jour » d'abord, au premier créneau libre (sans lot) ; les autres ensuite, étalés entre eux.
+      for (const [x, lot] of lotProgrammer(sansDate)) { try { const r_ = await programmerAutoQuand(x.id, lot); faits.push({ x, quand: r_.quand, res: r_.res }); } catch (er) { er0 = er0 || er; } }
       faits.sort((p, q) => Date.parse(p.quand) - Date.parse(q.quand)); const vgs = await Promise.all(faits.map(f => urlSure(f.x)));
       // 01/11/2026 (tour 7 Croissance) : chaque ligne mène à sa publication dans le calendrier (#/calendrier?pub=<id>), avec ses réseaux ; et
       // « Annuler ces programmations » les annule une à une (D.annuler, même fonction que « Annuler » du calendrier), après confirmation.
@@ -901,6 +919,10 @@
       return new Set(l.filter(x => ["a_traiter", "en_cours"].includes(x.statut) && Date.parse(x.cree_le) >= t0.getTime()).sort((a, b) => String(a.cree_le).localeCompare(String(b.cree_le)))
         .filter(() => libres-- <= 0).map(x => x.id)); })();
     const enAttente = x => x.statut === "refusee" && x.refus_motif === "plafond" || auDela.has(x.id);
+    // « Déjà déposées » (01/11/2026, tour 8) : le titre est le plat et le prix saisis à l'envoi (photos.precision), sinon la date ; jamais le nom du
+    // fichier (« IMG_2041.jpg » ne dit rien au commerçant). Avec un plat, la date passe dessous.
+    const titrePhoto = x => { const pr = String(x.precision || "").trim();
+      return pr ? `<p class="fort"${lc()} data-titre-photo>${e(pr)}</p><p class="note">${cap(date(x.cree_le))}</p>` : `<p class="fort" data-titre-photo>${e(cap(t("photo.du", { d: date(x.cree_le) })))}</p>`; };
     const refusGroupe = () => { const sujet = l.filter(x => x.statut === "refusee" && ["hors_sujet", "doute"].includes(x.refus_motif)).length, pl = l.filter(x => x.statut === "refusee" && x.refus_motif === "plafond").length;
       return (sujet ? `<div class="encart refus-photo" id="refus-sujet"><p class="fort">${t("photos.refus.groupe", { n: sujet })}</p><p class="note">${t("photo.refus.conseil")}</p></div>` : "")
         + (pl ? `<div class="encart refus-photo" id="refus-plafond"><p class="fort">${t("photos.refus.groupe.plafond", { n: pl, mois: moisSuivant })}</p>${dessus ? `<p class="note"><a href="#/offre?dessus">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</div>` : ""); };
@@ -912,14 +934,17 @@
     const enVideo = aVideo && (ecranCourant === videoAvis || /(^|&)video\b/.test(paramRoute));
     const bascule = aVideo ? `<nav class="filtres bascule" id="ph-bascule" aria-label="${e(t("photos.bascule"))}">
         <a href="#/photos" data-ph-vue="photos"${enVideo ? "" : ' aria-current="page"'}>${t("photos.bascule.photos")}</a><a href="#/photos?video" data-ph-vue="video"${enVideo ? ' aria-current="page"' : ""}>${t("photos.bascule.video")}</a></nav>` : "";
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(sansVideo ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : `<span class="chapo-long">${sansVideo ? t("photos.chapo.sansvideo") : t("photos.chapo")}</span><span class="chapo-court">${t(sansVideo ? "photos.chapo.court.sansvideo" : "photos.chapo.court")}</span>`)}${bascule}
+    // Mois plein en Essentiel (01/11/2026, tour 8) : UNE ligne d'information (le chapô : « 2 sur 2 : la prochaine photo servira en décembre »), au
+    // lieu de trois (bandeau, phrase Google, compteur) ; les boutons d'envoi restent visibles sans défiler sur un téléphone de 390 × 664 ; la
+    // proposition de Croissance passe sous la liste des photos déposées.
+    const pleinG = plein && g, phrasePlein = pleinG ? `<span id="ph-plein" data-plafond-phrase>${t("plafond.phrase", { n: k.publications_plafond, mois: moisSuivant })}</span>` : "";
+    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(sansVideo ? "photos.titre.google" : "photos.titre"), pleinG ? phrasePlein : g ? t("photos.chapo.google", { n: pubGoogle(c) }) : `<span class="chapo-long">${sansVideo ? t("photos.chapo.sansvideo") : t("photos.chapo")}</span><span class="chapo-court">${t(sansVideo ? "photos.chapo.court.sansvideo" : "photos.chapo.court")}</span>`)}${bascule}
       <div class="pile" id="vue-photos"${enVideo ? " hidden" : ""}>
-      ${plein && g ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="fort" data-plafond-phrase>${t("plafond.phrase", { n: k.publications_plafond, mois: moisSuivant })}</p><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: moisSuivant })}</p>
-        ${incitationCroissance(c) ? `<p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p>` : ""}</section>`
+      ${pleinG ? ""
       : plein ? `<section class="plafond-bandeau" id="plafond-bandeau" role="status"><p class="fort" data-plafond-phrase>${t("plafond.phrase", { n: k.publications_plafond, mois: moisSuivant })}</p><p class="texte2">${t("photos.plafond.suite", { mois: moisSuivant })}</p>
         ${dessus ? `<p class="note"><a href="#/offre?dessus" id="plafond-offre">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</section>` : ""}
       <div class="rangee">
-        <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
+        <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 && !pleinG ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
           <form id="f"><div class="f"><div class="depot">
             <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
@@ -931,8 +956,9 @@
           <p class="note" id="ph-quota" aria-live="polite" hidden></p><button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
           <div class="confirmer-refus" id="ph-doublon" role="alert" hidden><p class="fort" id="ph-doublon-texte"></p><div class="actions"><button type="button" class="bouton" id="ph-doublon-envoyer">${t("photos.doublon.envoyer")}</button><button type="button" class="bouton second" id="ph-doublon-retirer"></button></div></div><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
-          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p><p class="etat"${enAttente(x) ? ' data-refus="plafond"' : ""}>${enAttente(x) ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t("photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
+          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div>${titrePhoto(x)}<p class="etat"${enAttente(x) ? ' data-refus="plafond"' : ""}>${enAttente(x) ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t("photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
+      ${pleinG && incitationCroissance(c) ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
       ${sansVideo && !g ? `<p class="note" id="videos-premium">${t("photos.video.premium")} <a href="#/offre?dessus=premium">${t("photos.video.premium.lien")}</a></p>` : ""}
       ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p></div>
       ${aVideo ? `<div class="pile" id="vue-video"${enVideo ? "" : " hidden"}>${htmlDv}${htmlVa}</div>` : ""}`;
@@ -1252,6 +1278,13 @@
         return t("contenus.quand.refusee." + (rel || "le"), { d: date(d) }); }
       const q = x.statut === "a_valider" && destDe(x).partent.length ? prochain(x) : null;
       return q ? t("contenus.quand.si", { quand: I.dateHeureDans(q) }) : jourRelatif(x.cree_le); };
+    // Délégation (01/11/2026, tour 8) : la date « sans réponse » est le VRAI créneau tacite, calculé par la même règle que « si vous validez »
+    // (creneauPour), à partir de l'échéance des 48 h (valider_tacitement valide à l'échéance, puis programme au premier créneau libre à 2 h au moins).
+    // Elle ne vient donc jamais avant la date « si vous validez » ; la phrase dit pourquoi elle est plus tard (l'échéance).
+    const echeanceTacite = x => { const ech = Date.parse(x.soumis_le || x.cree_le) + COND.delegation.publication_auto_heures * 3600000;
+      let q = null; try { q = destDe(x).partent.length ? M.creneauPour(c, pris, x, Math.max(Date.now(), ech)) : null; } catch (er) { q = null; }
+      return `<p class="note fort" data-deleg-echeance>${q ? t("contenus.deleg.echeance.creneau", { e: I.dateHeureDans(new Date(ech).toISOString()), d: I.dateHeureDans(new Date(q).toISOString()) })
+        : t("contenus.deleg.echeance", { d: I.dateHeureDans(new Date(ech).toISOString()) })}</p>`; };
     if (!filtre) filtre = (FILTRES.find(f => nbf[f[0]]) || FILTRES[0])[0];
     if (filtre === "hors_offre" && !nbf.hors_offre) filtre = (FILTRES.find(f => nbf[f[0]]) || FILTRES[0])[0];
     const liste = l.filter(x => famille(x, c) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
@@ -1269,7 +1302,7 @@
         <p class="meta"><span>${formatCourt(x)}${x.depot_video_id ? " · " + t("dv.montage.de.vos") : ""}</span><span class="etat${x.statut === "a_valider" ? " actif" : ""}">${ST_CONTENU[x.statut] || e(x.statut)}</span></p>
         <p class="note contenu-quand" data-quand>${cap(quand(x))}</p>
         ${/* Délégation active (01/11/2026, tour 7 Premium) : l'échéance de 48 h ; la base valide puis programme au créneau (valider_tacitement). */ ""}
-        ${x.statut === "a_valider" && delegationActive(c) ? `<p class="note fort" data-deleg-echeance>${t("contenus.deleg.echeance", { d: I.dateHeureDans(new Date(Date.parse(x.soumis_le || x.cree_le) + COND.delegation.publication_auto_heures * 3600000).toISOString()) })}</p>` : ""}
+        ${x.statut === "a_valider" && delegationActive(c) ? echeanceTacite(x) : ""}
         ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
         ${x.note_modification ? `<p class="note">${t(x.statut === "refuse" ? "contenus.motif" : "contenus.demande")}<span${lc()}>${e(x.note_modification)}</span></p>` : ""}
         ${x.statut === "modification" ? `<p class="note fort" data-modif-delai>${t(x.decide_le ? "contenus.modif.delai.le" : "contenus.modif.delai", { d: x.decide_le ? date(x.decide_le) : "" })}</p>` : ""}
@@ -1427,19 +1460,31 @@
           <div class="confirmer-refus" data-zone-alerte hidden role="alert"><p class="fort" data-alerte-texte></p><div class="actions"><button type="button" class="bouton" data-a="deplacer-conseil"></button><button type="button" class="bouton second" data-a="deplacer-force">${t("cal.quand.meme")}</button></div></div>
           <div class="confirmer-refus" data-zone-annuler hidden><p class="fort">${t("cal.annuler.question", { quand: I.dateHeureDans(x.prevu_le) })}</p><div class="actions"><button type="button" class="bouton" data-a="annuler-ok">${t("cal.annuler.oui")}</button><button type="button" class="bouton second" data-a="annuler-garder">${t("cal.annuler.garder")}</button></div></div>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("cal.aucune")}</p>`}</section>`;
     // « Annulé » replié (01/11/2026, tour 7 Premium) : les programmations annulées sous « Annulées, N », fermé par défaut.
+    // À venir d'abord, passé replié (01/11/2026, tour 8) : les programmations à venir restent en tête, de la plus proche à la plus lointaine ; les
+    // passées (publiées, en échec, envoyées, ou programmées dont l'heure est passée) vont sous « Passées, N (P publiées) », fermé par défaut, de la
+    // plus récente à la plus ancienne ; puis les annulées.
     const ulP = vue.querySelector("#cal-vos ul.programmations"), ann = l.filter(x => x.statut === "annule");
-    if (ulP && ann.length) { const d_ = document.createElement("details"); d_.className = "repliable cal-annulees"; d_.id = "cal-annulees";
-      d_.innerHTML = `<summary>${t("cal.annulees", { n: ann.length })}</summary><ul class="liste programmations"></ul>`;
-      ann.forEach(x => { const li = ulP.querySelector(`li[data-id="${CSS.escape(x.id)}"]`); if (li) d_.querySelector("ul").appendChild(li); }); ulP.after(d_); if (!ulP.children.length) ulP.remove(); }
+    const passees = l.filter(x => x.statut !== "annule" && !(x.statut === "programme" && Date.parse(x.prevu_le) >= Date.now())).sort((a, b) => Date.parse(b.prevu_le) - Date.parse(a.prevu_le));
+    const replie = (id, cls, titre, liste_) => { const d_ = document.createElement("details"); d_.className = "repliable " + cls; d_.id = id;
+      d_.innerHTML = `<summary>${titre}</summary><ul class="liste programmations"></ul>`;
+      liste_.forEach(x => { const li = ulP.querySelector(`li[data-id="${CSS.escape(x.id)}"]`); if (li) d_.querySelector("ul").appendChild(li); }); return d_; };
+    if (ulP && (passees.length || ann.length)) {
+      const blocs = [passees.length ? replie("cal-passees", "cal-passees", t("cal.passees", { n: passees.length, p: passees.filter(x => x.statut === "publie").length }), passees) : null,
+        ann.length ? replie("cal-annulees", "cal-annulees", t("cal.annulees", { n: ann.length }), ann) : null].filter(Boolean);
+      ulP.after(...blocs);
+      if (!ulP.children.length) ulP.replaceWith(Object.assign(document.createElement("p"), { className: "texte2", id: "cal-rien-a-venir", textContent: t("cal.rien.a.venir") }));
+    }
+    // Une publication désignée (grille, « Programmer tout ») qui est dans une partie repliée : la partie s'ouvre d'abord.
+    const ouvrirPour = li => { const d_ = li && li.closest("details"); if (d_) d_.open = true; };
     // « Programmer tout » (01/11/2026, tour 7 Premium) : comme l'accueil, étalé sur le mois (rang et nombre : jour_lot / jourLot).
     if ($("cal-programmer-tout")) $("cal-programmer-tout").onclick = async () => { const b_ = $("cal-programmer-tout"); b_.disabled = true; const faits = []; let er0 = null;
-      for (const [i, x] of aProgrammerCal.entries()) { try { faits.push((await programmerAutoQuand(x.id, { rang: i, nombre: aProgrammerCal.length })).quand); } catch (er) { er0 = er0 || er; } }
+      for (const [x, lot] of lotProgrammer(aProgrammerCal)) { try { faits.push((await programmerAutoQuand(x.id, lot)).quand); } catch (er) { er0 = er0 || er; } }
       faits.sort(); await calendrier(); majCompteurs();
       toast(faits.length ? t("cal.programmes.etales", { n: faits.length, d1: I.dateHeureDans(faits[0]), d2: I.dateHeureDans(faits[faits.length - 1]) }) + (er0 ? " " + ph(er0.message) : "") : ph(er0 ? er0.message : "")); };
     vue.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { cal.mode = b.dataset.m; calendrier(); });
     vue.querySelectorAll("[data-saut]").forEach(b => b.onclick = () => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(b.dataset.saut)}"]`); if (!li) return;
-      li.setAttribute("tabindex", "-1"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
-    if (pv) requestAnimationFrame(() => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(pv.id)}"]`); if (!li) return; li.setAttribute("tabindex", "-1"); li.classList.add("designee"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
+      ouvrirPour(li); li.setAttribute("tabindex", "-1"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
+    if (pv) requestAnimationFrame(() => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(pv.id)}"]`); if (!li) return; ouvrirPour(li); li.setAttribute("tabindex", "-1"); li.classList.add("designee"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
     vue.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { const n = +b.dataset.n, d = new Date(cal.ref); if (cal.mode === "mois") { d.setDate(1); d.setMonth(d.getMonth() + n); } else d.setDate(d.getDate() + 7 * n); cal.ref = d; calendrier(); });
     const majDestinations = () => { const x = prets.find(y => y.id === ($("contenu") || {}).value); if (!x) return; const ok = M.reseauxDuContenu(x, autorises);
       vue.querySelectorAll("[data-res-lib]").forEach(lb => { const i = lb.querySelector("input"), dedans = ok.includes(lb.dataset.resLib); lb.hidden = !dedans; if (!dedans) i.checked = false; });
@@ -1932,7 +1977,8 @@
     const suiv = offreCible(c, voulue), s_ = O[suiv]; if (!s_) return "";
     // Lien de paiement de l'offre du dessus (jamais le portail : décision de PJ du 27/10/2026), même rythme que l'abonnement en cours.
     const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv) : null, enCours = !!(ab && ab.statut !== "resilie");
-    const rythme = enCours && ab.rythme === "annuel" ? "annuel" : "mensuel", mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
+    // Même rythme que le prix et le lien (tour 8) : window.RENOM_RYTHME_MONTEE (donnees.js), une seule règle.
+    const rythme = window.RENOM_RYTHME_MONTEE(ab), mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
     // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
     // Montée par demande (tour 7 Essentiel, 01/11/2026) : aucun paiement en ligne, donc ni « avec le paiement de la montée » ni « sans nouveau
     // paiement » (phrases contradictoires) : les frais tels que les CGV les prévoient (article 4, une seule fois, offerts en annuel), et la note
@@ -2052,10 +2098,41 @@
   // sont lus à l'ouverture de la page (lecture_google). La phrase dit ce qui a été lu, ou pourquoi rien ne l'a été.
   function lectureTexte(lg) {
     if (!lg || lg.statut === "non_demandee") return "";
+    // Démonstration (01/11/2026, tour 8) : rien n'est lu sur Google ; jamais « Chiffres lus en direct sur Google » sous « Ces chiffres sont fictifs ».
+    if (lg.demo || D.mode === "demo") return t("lecture.demo");
     if (lg.statut === "ok") return t("lecture.ok", { h: lg.le ? ` (${heure(lg.le)})` : "" });
     if (lg.statut === "limite") return t("lecture.limite");
     if (lg.statut === "non_branchee") return t("lecture.non.branchee");
     return t("lecture.echec");
+  }
+  // « Ce que votre fiche vous a rapporté » (01/11/2026, tour 8) : statistiques de la fiche Google lues à l'ouverture de Résultats (R.performance,
+  // fusionner de moteur/resultats/lecture_google.js) : clics pour appeler, itinéraires, clics vers le site, vues ; le mois précédent complet en grand,
+  // le mois en cours (jusqu'à aujourd'hui) dessous. Rien n'est gardé, sauf en mémoire le temps de la visite (rappel de l'accueil, perfVue).
+  // Démonstration : chiffres fictifs, dits comme tels. Lecture sans statistiques (ancien workflow, plafond) : rien n'est affiché.
+  let perfVue = null;
+  const PERF_CLES = [["appels", "fiche.rap.appels"], ["itineraires", "fiche.rap.itineraires"], ["clics_site", "fiche.rap.site"], ["vues", "fiche.rap.vues"]];
+  function blocFicheRapporte(R, lg) {
+    const l = Array.isArray(R && R.performance) ? R.performance.filter(x => x && x.mois) : null, demo = D.mode === "demo" || !!lg.demo;
+    if (!l && !lg.performance) return "";
+    const tete = `<div class="carte-tete"><h2 id="r-fiche-rap">${t("fiche.rap.titre")}</h2>${demo ? `<span class="note">${t("demo.chiffres")}</span>` : ""}</div>`;
+    if (!l || !l.length) return `<section class="carte" id="fiche-rapporte" aria-labelledby="r-fiche-rap">${tete}<p class="texte2">${t(lg.performance === "non_reliee" ? "fiche.rap.non.reliee" : "fiche.rap.erreur")}</p></section>`;
+    const auj = new Date(), m1 = auj.getFullYear() + "-" + String(auj.getMonth() + 1).padStart(2, "0") + "-01", prec = l.find(x => x.mois < m1), cour = l.find(x => x.mois === m1);
+    const grand = prec || cour, petit = prec ? cour : null, nomM = x => MOIS[moisDe(x.mois).getMonth()], jusqua = auj.getDate() === 1 ? "1er" : String(auj.getDate());
+    const periode = prec && cour ? t("fiche.rap.periode", { a: nomM(prec), b: nomM(cour), j: jusqua }) : t("fiche.rap.periode.seul", { a: nomM(grand), j: grand === cour ? jusqua : "" });
+    perfVue = { mois: grand.mois, appels: +grand.appels || 0, itineraires: +grand.itineraires || 0, vues: +grand.vues || 0, demo };
+    const chiffre = ([k, lib]) => `<div class="bilan-chiffre" data-perf="${k}"><dt>${t(lib)}</dt><dd class="chiffre">${nombre(+grand[k] || 0)}${petit ? `<span class="note">${t("fiche.rap.courant", { mois: nomM(petit), j: jusqua, n: nombre(+petit[k] || 0) })}</span>` : ""}</dd></div>`;
+    return `<section class="carte" id="fiche-rapporte" aria-labelledby="r-fiche-rap">${tete}<p class="note" id="fiche-rap-periode">${periode}</p>
+      <dl class="bilan-chiffres">${PERF_CLES.map(chiffre).join("")}</dl>
+      <p class="note" id="fiche-rap-note">${t("fiche.rap.note")}</p>${demo ? `<p class="note" id="fiche-rap-demo">${t("fiche.rap.demo")}</p>` : ""}</section>`;
+  }
+  // Rappel sur l'accueil (tour 8) : les chiffres du mois écoulé s'ils ont été lus pendant cette visite (ou en démonstration, fictifs) ; sinon un lien
+  // vers Résultats. Aucune lecture de Google n'est faite depuis l'accueil (chaque lecture est plafonnée et coûte).
+  async function ligneFicheAccueil(c, mr) {
+    const g = ((mr && mr.points) || []).find(x => x.point === "google"); if (g && g.etat !== "fait") return "";
+    if (D.mode === "demo" && !perfVue) { try { const R = await D.resultats(6); blocFicheRapporte(R, (R && R.lecture_google) || {}); } catch (er) {} }
+    const lien = `<a href="#/resultats" id="acc-fiche-lien">${t(perfVue ? "fiche.rap.acc.detail" : "fiche.rap.acc.lien")}</a>`;
+    if (!perfVue) return `<p class="texte2" id="acc-fiche-google">${t("fiche.rap.acc.sans")} ${lien}</p>`;
+    return `<p class="texte2" id="acc-fiche-google">${t("fiche.rap.acc", { demo: perfVue.demo, mois: MOIS[moisDe(perfVue.mois).getMonth()], a: nombre(perfVue.appels), i: nombre(perfVue.itineraires), v: nombre(perfVue.vues) })} ${lien}</p>`;
   }
   // Point de départ (27/10/2026, constat 8) : tant que l'accès à la fiche Google n'est pas en place, un seul écran avec ce qui est connu (note, nombre d'avis,
   // score de l'audit) et ce qui manque pour avoir les premiers chiffres ; jamais une page de zéros.
@@ -2129,6 +2206,7 @@
       ${bandeauDemo()}
       ${bilanPrecedentBloc(bilanP, c, contactR)}
       ${bilanBloc(bilan, NR)}
+      ${blocFicheRapporte(R, lg)}
       ${blocReseauxMois(c, calR)}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.note, +dern.note, 1), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
@@ -2192,13 +2270,14 @@
   const parCommerce = a => !!a.par_commerce || actionsEnvoyees().includes(String(a.id));
   const jourTexte = j => cap(date(j + "T12:00:00"));
   const resumeAction = (a, ph_) => { const d = a.donnees || {};
-    if (a.type === "photos") { const noms = (d.photos || []).map(id => (ph_.find(p => p.id === id) || {}).nom_fichier).filter(Boolean); const n = (d.photos || []).length; return `${t("photos.n", { n })}${noms.length ? t("deux.points") + e(noms.join(", ")) : ""}`; }
+    // Tour 8 (01/11/2026) : plus de nom de fichier ; le plat et le prix saisis à l'envoi, s'il y en a.
+    if (a.type === "photos") { const noms = [...new Set((d.photos || []).map(id => String((ph_.find(p => p.id === id) || {}).precision || "").trim()).filter(Boolean))]; const n = (d.photos || []).length; return `${t("photos.n", { n })}${noms.length ? t("deux.points") + e(noms.join(", ")) : ""}`; }
     if (a.type === "horaires") return `${jourTexte(d.date)}${t("deux.points")}${d.ferme ? t("act.ferme.journee") : t("act.de.a", { a: hm(d.ouverture), b: hm(d.fermeture) })}`;
     return `<span${lc()}>${e(d.titre)}</span>${t("act.du.au", { a: date(d.debut + "T12:00:00"), b: date(d.fin + "T12:00:00") })}${d.conditions ? `${t("act.conditions")}<span${lc()}>${e(d.conditions)}</span>` : ""}`; };
   function champsAction(ph_) {
     const auj = M.aujourdhui(), dates = `<div class="champs deux"><div class="f"><label for="af-debut">${t("act.debut")}</label><input id="af-debut" type="date" min="${auj}" required></div><div class="f"><label for="af-fin">${t("act.fin")}</label><input id="af-fin" type="date" min="${auj}" required></div></div>`;
     const titre = lib => `<div class="f"><label for="af-titre">${lib}</label><input id="af-titre" type="text" maxlength="120" required></div>`;
-    return { photos: ph_.length ? `<fieldset><legend>${t("act.photos.legend")}</legend>${ph_.slice(0, 12).map(p => `<label class="option"><input type="checkbox" name="af-photo" value="${e(p.id)}"><span class="casse">${t("act.photo.deposee", { nom: e(p.nom_fichier || t("photo")), d: date(p.cree_le) })}</span></label>`).join("")}</fieldset>`
+    return { photos: ph_.length ? `<fieldset><legend>${t("act.photos.legend")}</legend>${ph_.slice(0, 12).map(p => `<label class="option"><input type="checkbox" name="af-photo" value="${e(p.id)}"><span class="casse">${t("act.photo.deposee", { nom: e(String(p.precision || "").trim() || t("photo")), d: date(p.cree_le) })}</span></label>`).join("")}</fieldset>`
         : `<p class="texte2">${t("act.aucune.photo")}</p>`,
       offre: titre(t("act.titre.offre")) + dates + `<div class="f"><label for="af-conditions">${t("act.conditions.lib")}</label><textarea id="af-conditions" maxlength="1500"></textarea><p class="aide">${t("act.conditions.aide")}</p></div>`,
       evenement: titre(t("act.titre.evenement")) + dates,
