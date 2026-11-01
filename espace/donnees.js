@@ -15,8 +15,8 @@
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
-  // (schema.sql, bloc « CGV du 30 octobre 2026 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "30 octobre 2026";
+  // (schema.sql, bloc « CGV du 1er novembre 2026 ») ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "1er novembre 2026";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -205,13 +205,20 @@
     if (!estIA(c) || !String(t || "").trim() || Object.values(MENTIONS_IA).some(m => String(t).includes(m))) return;
     throw new Error(`La mention « ${MENTIONS_IA[langue] || MENTIONS_IA.fr} » doit rester dans la légende d'une vidéo animée par IA.`);
   };
+  // Numéro de téléphone (01/11/2026, tour 7 Premium) : même vérification que le moteur (moteur/redaction.py, TELEPHONE et NUMERO : français ou
+  // belge, national ou international). Google peut retirer une publication de fiche qui en contient un (support.google.com/business/answer/7213077).
+  const RE_TELEPHONE = [/(?:\+33\s?|\b0)[1-9](?:[\s.-]?\d{2}){4}\b/, /(?:\+3[23]\s?(?:\(0\)\s?)?|\b0)[1-9](?:[\s./-]?\d){7,8}\b/];
+  const contientTelephone = t => RE_TELEPHONE.some(r => r.test(String(t || "")));
+  const PHRASE_TEL_GOOGLE = "Sur la fiche Google, le texte ne peut pas contenir de numéro de téléphone : Google peut retirer la publication. Le bouton « Appeler » de la fiche suffit.";
   const controlerLegende = (r, t) => {
     if (!RESEAUX.includes(r)) throw new Error("Réseau inconnu.");
     t = String(t || "").trim(); if (!t) throw new Error("La légende ne peut pas être vide.");
     if (r === "google" && longueur(t) > LIMITE_GOOGLE) throw new Error(`Sur la fiche Google, le texte est limité à 1 500 caractères. Celui-ci en compte ${longueur(t)}.`);
+    if (r === "google" && contientTelephone(t)) throw new Error(PHRASE_TEL_GOOGLE);
     return t;
   };
   // Heure de Paris : décalage réel du fuseau à cet instant (heure d'été comprise), sans bibliothèque.
+  const FMT_JOUR_PARIS = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" });
   const FMT_PARIS = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const partiesParis = t => { const p = {}; FMT_PARIS.formatToParts(new Date(t)).forEach(x => { p[x.type] = +x.value; }); return { a: p.year, m: p.month - 1, j: p.day, h: p.hour, mi: p.minute, s: p.second }; };
   const decalageParis = t => { const p = partiesParis(t); return Date.UTC(p.a, p.m, p.j, p.h, p.mi, p.s) - Math.floor(t / 1000) * 1000; };
@@ -256,13 +263,20 @@
   function ferieDe(jour, pays) {
     const an = +jour.slice(0, 4), fr = [...feriesFr(an)], be = paysDe(pays) === "BE";
     const ids = be ? [[ymd(an, 0, 1), "nouvel-an"], [fr[1], "lundi-paques"], [ymd(an, 4, 1), "1er-mai"], [fr[4], "ascension"], [fr[5], "lundi-pentecote"], [ymd(an, 6, 21), "21-juillet"],
-        [ymd(an, 7, 15), "15-aout"], [ymd(an, 10, 1), "toussaint"], [ymd(an, 10, 11), "11-novembre"], [ymd(an, 11, 25), "noel"]]
+        [ymd(an, 7, 15), "15-aout"], [ymd(an, 10, 1), "toussaint"], [ymd(an, 10, 11), "armistice"], [ymd(an, 11, 25), "noel"]]   // BE (01/11/2026, tour 7 Premium) : « Armistice »
       : [[fr[0], "nouvel-an"], [fr[1], "lundi-paques"], [fr[2], "1er-mai"], [fr[3], "8-mai"], [fr[4], "ascension"], [fr[5], "lundi-pentecote"], [fr[6], "14-juillet"],
         [fr[7], "15-aout"], [fr[8], "toussaint"], [fr[9], "11-novembre"], [fr[10], "noel"]];
     return (ids.find(x => x[0] === jour) || [])[1] || null;
   }
   const paysDe = pays => String(pays || "FR").toUpperCase() === "BE" ? "BE" : "FR";
   const estFerie = (jour, pays) => (paysDe(pays) === "BE" ? feriesBe : feriesFr)(+jour.slice(0, 4)).has(jour);
+  // Jour ouvré (01/11/2026, tour 7 Croissance) : à partir de jour (AAAA-MM-JJ) inclus, le premier qui n'est ni un dimanche ni un jour férié du pays.
+  // Même règle que jour_ouvre() (bloc « Plat et prix au dépôt de la photo » de schema.sql) : « Attendez mon appel » ne propose jamais « Aujourd'hui »
+  // un dimanche ni un jour férié. joursRappel() : les deux jours proposés (« aujourdhui » et « demain » au sens de retenir_reponse_avis).
+  const jourOuvre = (jour, pays) => { const d = new Date(jour + "T12:00:00Z"); let j = jour;
+    for (let i = 0; i < 14; i++, d.setUTCDate(d.getUTCDate() + 1)) { j = d.toISOString().slice(0, 10); if (d.getUTCDay() !== 0 && !estFerie(j, pays)) return j; } return j; };
+  const lendemain = j => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+  const joursRappel = (auj, pays) => { const a = jourOuvre(auj, pays); return { aujourdhui: a, demain: jourOuvre(lendemain(a), pays) }; };
   const jourParisDe = t => { const p = partiesParis(t); return ymd(p.a, p.m, p.j); };
   // Rythme selon l'offre : Essentiel (2 par mois) 7 jours d'écart au moins, Croissance 2 jours, Premium 1 jour (espacement_offre de schema.sql).
   const ESPACEMENT = { essentiel: 7, standard: 2, premium: 1 };
@@ -301,6 +315,11 @@
     }
     throw new Error("Aucun créneau libre dans les 60 prochains jours.");
   }
+  // « Programmer tout » étalé sur le mois (01/11/2026, tour 7 Premium ; même calcul que jour_lot de schema.sql) : jour (AAAA-MM-JJ) à partir duquel
+  // part le contenu de rang i sur n. Pas = le plus grand de l'écart de l'offre et des jours restants du mois divisés par n.
+  const jourLot = (rang, nombre, ecart, debut) => { const d0 = Date.parse(debut + "T12:00:00Z"), dm = new Date(d0), fin = Date.UTC(dm.getUTCFullYear(), dm.getUTCMonth() + 1, 1, 12);
+    const reste = Math.round((fin - d0) / 864e5), pas = Math.max(ecart || 1, 1, nombre > 0 ? Math.floor(reste / nombre) : 1);
+    return new Date(d0 + Math.max(0, rang) * pas * 864e5).toISOString().slice(0, 10); };
   // Créneau d'un contenu pour un commerce (01/11/2026, tour 6 Essentiel : « Si vous validez : mercredi 4 novembre » puis « prévue mardi 10 novembre ») :
   // UNE fonction pour la date annoncée (Contenus, Calendrier) et la date programmée (programmation automatique) : horaires, pays, rythme de
   // l'offre et moment du texte. ct absent : sans moment.
@@ -494,7 +513,12 @@
       lourde: "Fichier trop lourd (50 Mo au plus).", nom: "Nom de fichier non accepté.", double: "Une même photo est déclarée deux fois.", deja: "Photo déjà enregistrée.",
       introuvable: "Commerce introuvable pour ce compte.", pause: "Votre commerce est en pause : contactez BoostImpact.",
       // Console (22/10/2026) : « Déposer des photos pour ce client », refusé sans l'autorisation photos du commerçant (admin_deposer_photos).
-      sans_autorisation: "Ce client n'a pas coché l'autorisation photos dans son espace (ou l'a retirée) : impossible de déposer ses photos." },
+      sans_autorisation: "Ce client n'a pas coché l'autorisation photos dans son espace (ou l'a retirée) : impossible de déposer ses photos.",
+      precision: "Le plat et son prix : 200 caractères au plus.",
+      // 01/11/2026 (tour 7 Premium) : un numéro dans le plat et son prix irait tel quel sur la fiche Google, qui peut retirer la publication.
+      precision_tel: "Le plat et son prix : pas de numéro de téléphone (il serait repris sur la fiche Google, qui peut retirer la publication). Le numéro de votre fiche est ajouté là où il faut." },
+    // Plat et prix (01/11/2026, tour 7 Croissance) : comme enregistrer_photos, espaces resserrés, vide = null, 200 caractères au plus.
+    precision: v => (typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "") || null,
     // Contrôle d'un envoi (liste de {chemin, nom, taille}) pour le commerce cid, dans l'ordre de deposer_photos. recu(chemin) : fichier présent dans le
     // seau ; connu(chemin) : photo déjà enregistrée. Rend la phrase du premier refus, ou null.
     controler(cid, details, recu, connu) {
@@ -507,6 +531,8 @@
         if (!R.EXT_PHOTO.includes(ext)) return P.format;
         if (!/^[A-Za-z0-9_-]{1,100}\.[A-Za-z]{3,4}$/.test(fichier)) return P.nom;
         if (vus.includes(ch)) return P.double;
+        if ((PHOTOS.precision(x.precision) || "").length > 200) return P.precision;
+        if (contientTelephone(PHOTOS.precision(x.precision) || "")) return P.precision_tel;
         if (!recu(ch)) return "Fichier non reçu : " + fichier + ".";
         if (connu(ch)) return P.deja;
         vus.push(ch);
@@ -517,7 +543,7 @@
   // Refus de deposer_photos (Supabase) ramenés aux mêmes phrases que la démonstration ; une phrase inconnue reste telle quelle.
   const phrasePhotos = m => { const P = PHOTOS.PHRASES, x = String(m || "");
     return /de 1 à 10 photos/.test(x) ? P.nb : /hors du dossier/.test(x) ? P.hors : /format non accepté/.test(x) ? P.format : /nom de fichier non accepté/.test(x) ? P.nom
-      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /autorisation photos absente/.test(x) ? P.sans_autorisation : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
+      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /pas de numéro de téléphone/.test(x) ? P.precision_tel : /plat et son prix/.test(x) ? P.precision : /autorisation photos absente/.test(x) ? P.sans_autorisation : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : x; };
   // ---- fin des règles communes de l'envoi de photos
 
@@ -1044,7 +1070,8 @@
       },
       async bilanMois(mois) { return ok(await sb.rpc("bilan_mois", mois ? { p_mois: mois } : {})); },
       async modifierLegende(id, reseau, texte) { ok(await sb.rpc("modifier_legende", { p_contenu: id, p_reseau: reseau, p_texte: controlerLegende(reseau, texte) })); },
-      async programmerAuto(id, reseaux) { return ok(await sb.rpc("programmer_auto", { p_contenu: id, p_reseaux: reseaux })); },
+      async programmerAuto(id, reseaux, lot) { return lot ? ok(await sb.rpc("programmer_auto_lot", { p_contenu: id, p_reseaux: reseaux, p_rang: lot.rang, p_nombre: lot.nombre }))
+        : ok(await sb.rpc("programmer_auto", { p_contenu: id, p_reseaux: reseaux })); },
       async actionsFiche() { const c = await self.commerce(); return ok(await sb.from("actions_fiche").select("id,type,donnees,statut,cree_le,publie_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
       async creerActionFiche(type, donnees) { return ok(await sb.rpc("creer_action_fiche", { p_type: type, p_donnees: controlerAction(type, donnees) })); },
       async validerActionFiche(id, decision) { ok(await sb.rpc("valider_action_fiche", { p_id: id, p_decision: decision })); },
@@ -1058,11 +1085,14 @@
       // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible » ; les écrans ne les appellent que si la colonne
       // commerces.nom_confirme_le existe, c'est-à-dire quand le bloc est appliqué)
       async confirmerNom(nom) { const r = ok(await sb.rpc("confirmer_nom_commerce", { p_nom: MER.nom(nom) })); cache = null; return r; },
+      async reglerLanguesPublication(l) { const c = await self.commerce(), r = await sb.rpc("regler_langues_publication", { p_commerce: c.id, p_langues: l }); if (r.error) throw new Error(r.error.message); cache = null; return r.data; },
+      async adminReglerLanguesPublication(cid, l) { return ok(await sb.rpc("regler_langues_publication", { p_commerce: cid, p_langues: l })); },
       async demanderRappel(sujet, telephone, offre) { const c = await self.commerce().catch(() => ({}));
         if (sujet === "changement_offre") return ok(await sb.rpc("demander_rappel", { p_sujet: sujet, p_telephone: telephone || null, p_offre: offre }));   // 01/11/2026 : numéro facultatif
         return ok(await sb.rpc("demander_rappel", { p_sujet: sujet || "mise_en_route", p_telephone: MER.telephone(telephone, c.pays) })); },
       // Demande de rappel déjà enregistrée sur ce sujet (ma_demande_rappel, bloc « Créneaux réels ») : sa date, ou "" ; base sans la fonction : null.
       async demandeRappel(sujet) { const r = await sb.rpc("ma_demande_rappel", { p_sujet: sujet }); return r.error ? null : r.data || ""; },
+      async preciserRappel(sujet, jour) { return ok(await sb.rpc("preciser_rappel", { p_sujet: sujet, p_jour: jour })); },
       async demanderFicheGoogle(cas) { const r = ok(await sb.rpc("demander_creation_fiche", { p_cas: cas })); cache = null; return r; },
       async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
       async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
@@ -1211,7 +1241,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { contientTelephone, jourLot, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)

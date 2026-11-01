@@ -633,9 +633,13 @@
       <section class="carte" id="client-reglages-espace"><h2>${t("con.lien.avis")}</h2><form id="f-lien-avis" class="pile serre" novalidate><div class="f"><label for="lien-avis-client">${t("con.lien.avis")}</label>
           <input id="lien-avis-client" type="url" inputmode="url" maxlength="500" autocomplete="off" value="${e(c.lien_avis || "")}" placeholder="https://g.page/r/…/review"><p class="aide">${t("con.lien.avis.aide")}</p></div>
           <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
+        <h2>${t("con.langues.titre")}</h2><form id="f-langues-client" class="pile serre"><div class="f"><label for="langues-client">${t("con.langues.titre")}</label>
+          <select id="langues-client">${[["fr", "fiche.langues.fr"], ["nl", "fiche.langues.nl"], ["fr,nl", "fiche.langues.frnl"]].map(([v, k]) => `<option value="${v}"${(Array.isArray(c.langues_publication) && c.langues_publication.length ? ["fr", "nl"].filter(x => c.langues_publication.includes(x)).join(",") : c.langue === "nl" ? "nl" : "fr") === v ? " selected" : ""}>${t(k)}</option>`).join("")}</select></div>
+          <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
         <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>
       <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${tableJournal("jc")}</details>`;
     remplirJournal("jc", journalClient);
+    const fLg = $("f-langues-client"); if (fLg) fLg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminReglerLanguesPublication(cid, $("langues-client").value.split(",")); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const fl = $("f-lien-avis"); if (fl) fl.onsubmit = async ev => { ev.preventDefault(); try { await D.adminLienAvis(cid, $("lien-avis-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     [["contact-tous", null], ["contact-client", cid]].forEach(([id, pour]) => { const f = $(id); if (f) f.onsubmit = async ev => { ev.preventDefault();
       try { await D.adminReglerContact(pour, { prenom: $(id + "-prenom").value, telephone: $(id + "-tel").value, photo: $(id + "-photo").value }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } }; });

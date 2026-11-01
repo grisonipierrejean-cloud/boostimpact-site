@@ -86,7 +86,7 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 @media (hover:hover){.quitter:hover{color:var(--encre)}}
 /* ---------- Langue : FR / EN, deux mots discrets ; la langue en cours est soulignée (pas de couleur, pas de pastille). */
 .langues{display:inline-flex;align-items:center;flex:none}
-.langues button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);letter-spacing:.04em;min-width:40px;min-height:44px;padding:0 6px;background:none;border:0;border-radius:var(--r);color:var(--discret);cursor:pointer}
+.langues button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);letter-spacing:.04em;min-width:44px;min-height:44px;padding:0 6px;background:none;border:0;border-radius:var(--r);color:var(--discret);cursor:pointer}
 @media (hover:hover){.langues button:hover{color:var(--encre)}}
 .langues button[aria-pressed=true]{color:var(--encre);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}
 .haut .langues{margin-left:auto}
@@ -111,8 +111,9 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 @media (hover:hover){.haut-reglages a:hover{color:var(--encre)}}
 .haut-reglages a[aria-current]>span:last-child{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:5px}
 .haut-reglages .onglet-icone svg{width:22px;height:22px}
-@media (max-width:420px){.haut{gap:8px}.haut .langues button{min-width:34px;padding:0 4px}}   /* NL « Instellingen » tient à 390 px avec FR EN NL */
+@media (max-width:420px){.haut{gap:8px}.haut .langues button{min-width:44px;padding:0 4px}}   /* 01/11/2026 (tour 7 Premium) : 44 px de large, la zone de toucher minimale */   /* NL « Instellingen » tient à 390 px avec FR EN NL */
 @media (max-width:389px){.haut-reglages a>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+@media (max-width:439px){html[lang=nl] .haut-reglages a>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}   /* 01/11/2026 : langues à 44 px, « Instellingen » ne tient plus à 390 px : icône seule, nom lu */
 .actions-attente{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
 .actions-attente .bouton{width:100%;justify-content:flex-start;text-align:left}
 .reglages .liste a{gap:12px;padding:6px 0;text-decoration:none}
@@ -940,14 +941,13 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 /* ---------- Fluidité téléphone (31/10/2026) */
 /* À valider : l'aperçu ne dépasse pas 40 % de l'écran, Approuver et Modifier restent visibles sans défiler ; un tap affiche l'image entière. */
 @media (max-width:899px){
-  .contenu .cadre img.visuel,.contenu .media img.visuel{max-height:40vh;object-fit:cover;cursor:zoom-in}
-  .contenu .cadre img.visuel.entier,.contenu .media img.visuel.entier{max-height:none;cursor:zoom-out}
-  .contenu .cadre.vertical img.visuel:not(.entier){object-fit:cover}
+  /* 01/11/2026 (tour 7 Croissance) : le visuel entier, jamais recadré (le bandeau titre était coupé) ; un tap l'ouvre en grand (.agrandi). */
+  .contenu .cadre img.visuel,.contenu .media img.visuel{max-height:32vh;object-fit:contain;background:var(--releve);cursor:zoom-in}
+  .contenu .cadre.vertical img.visuel{object-fit:contain}
   .contenu video.visuel{max-height:40vh}
-  /* Filtres : retour à la ligne plutôt qu'un défilement qui coupe « Programmés ». */
-  .filtres{flex-wrap:wrap;overflow-x:visible}
-  .filtres.deborde{-webkit-mask-image:none;mask-image:none}
-  .filtres button{flex:1 1 auto;padding:8px 12px}
+  /* Filtres sur une seule ligne, qui défile au doigt (01/11/2026, tour 7 Croissance : trois lignes repoussaient « Valider » de deux écrans). */
+  .filtres:not(.bascule){flex-wrap:nowrap;overflow-x:auto}
+  .filtres button{flex:0 0 auto;padding:8px 12px}
   /* Accueil : l'offre passe sous « À faire maintenant ». */
   .entete-accueil.offre-sous .offre-accueil{margin-top:0}
 }
@@ -1030,7 +1030,7 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
    débordait de son lien, que le flex rétrécissait. Le lien garde maintenant la largeur du logo (flex:none), un peu plus petit sous 440 px ;
    « Réglages » ne garde que son icône sous 390 px (règle plus haut, son nom reste lu par les lecteurs d'écran). */
 @media (max-width:439px){.haut{gap:4px}.haut .logo,html[lang=nl] .haut .logo{flex:none;min-width:auto}.haut .logo-img,html[lang=nl] .haut .logo-img{height:21px}
-  .haut .langues button{min-width:36px;padding:0 2px}}
+  .haut .langues button{min-width:44px;padding:0}}   /* 44 px (01/11/2026, tour 7 Premium) */
 
 /* Dix sur dix (31/10/2026) : réseau de l'offre pas encore connecté (onglet grisé, aperçu atténué), confirmations de refus et d'annulation,
    miniatures des photos déposées. Sobre : filet, gris, aucune couleur d'accent ; l'option choisie se marque à l'encre (plus de soulignement vert). */
@@ -1048,9 +1048,10 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 /* Liens texte dans une phrase (31/10/2026) : cible tactile de 44 px (Lire l'avis, Voir vos résultats, Donner votre version, Connecter un réseau,
    conditions de vente, Télécharger un modèle). En ligne, sans casser la phrase : 12 px de marge tactile au-dessus et au-dessous (20 px de
    ligne + 2 x 12 px = 44 px), compensés par une marge négative pour ne pas écarter les lignes. */
-.semaine a,#alerte-avis-sensibles a,.encart a,.res-absent-note a,.note a[href*="cgv"],.aide a[download]{display:inline;padding:12px 0;margin:-12px 0}
+.semaine a,#alerte-avis-sensibles a,.encart a,.res-absent-note a,.note a[href*="cgv"],.aide a[download]{display:inline;padding:13px 0;margin:-13px 0}
 /* Liens dans une phrase (31/10/2026, test client Premium) : cible tactile par un remplissage qui déborde, sans agrandir l'interligne (jamais de hauteur minimale sur un lien en ligne). */
-.note a:not(.bouton),.texte2 a:not(.bouton),.chapo a:not(.bouton),.aide a:not(.bouton),.msg a:not(.bouton),.alerte p a:not(.bouton){display:inline;min-height:0;padding:12px 0;margin:-12px 0}
+/* 01/11/2026 (tour 7 Croissance) : 13 px au lieu de 12 (mesuré 42 px de haut sur iPhone 13, 44 px au moins demandés). */
+.note a:not(.bouton),.texte2 a:not(.bouton),.chapo a:not(.bouton),.aide a:not(.bouton),.msg a:not(.bouton),.alerte p a:not(.bouton){display:inline;min-height:0;padding:13px 0;margin:-13px 0}
 /* Programmer les validées depuis l'accueil (31/10/2026) : les dates une par ligne, puis le lien vers le calendrier. */
 .msg .dates-programmees{margin:4px 0 8px;padding-left:20px}
 .msg .dates-programmees li{padding:2px 0}
@@ -1060,7 +1061,7 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:baseline}
 /* Confirmation flottante sur téléphone (test client Croissance) : juste au-dessus de la barre d'onglets, sur une seule ligne (44 px de haut), pour
    ne recouvrir ni les onglets ni la date de la carte suivante ; un tap la ferme. */
-@media (max-width:899px){.toast{top:auto;bottom:calc(72px + env(safe-area-inset-bottom));min-height:44px;padding:11px 14px;font-size:14px;line-height:22px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.toast[hidden]{display:none}}
+@media (max-width:899px){.toast{top:auto;bottom:calc(72px + env(safe-area-inset-bottom));min-height:44px;padding:11px 14px;font-size:14px;line-height:22px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}.toast[hidden]{display:none}}
 /* Édition d'une légende (test client Croissance) : un seul compteur de caractères, celui du champ ; celui de l'aperçu se cache. */
 .reseaux:has([data-edition]:not([hidden])) [data-compte]{display:none}
 /* Test client Essentiel, tour 5 (31/10/2026) : votre contact, temps gagné. Confirmation flottante : trois lignes au plus sur téléphone (règle plus haut). */
@@ -1073,3 +1074,51 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 .hors-offre{opacity:.62}
 .hors-offre .fort,.hors-offre .barrable,.hors-offre .note[lang],.hors-offre .prog > .note,span.hors-offre{text-decoration:line-through}
 .hors-offre .vignette,.hors-offre img{filter:grayscale(1)}
+
+/* Visuel en grand (01/11/2026, tour 7 Croissance) : « Toucher pour agrandir » sur le visuel de la carte, écran entier, fermé d'un tap. */
+.visuel-zone{position:relative;display:block}
+.visuel-zone .agrandir{display:none}
+@media (max-width:899px){.visuel-zone .agrandir{display:inline-flex;align-items:center;justify-content:center;position:absolute;right:4px;top:4px;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:#FFFFFF;cursor:zoom-in}
+  .visuel-zone .agrandir svg{width:30px;height:30px;padding:5px;border-radius:50%;background:rgba(18,22,20,.55)}}
+.agrandi{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;background:rgba(0,0,0,.88);cursor:zoom-out}
+.agrandi img{max-width:100%;max-height:calc(100% - 72px);object-fit:contain}
+.agrandi .bouton{min-height:44px}
+/* 01/11/2026 (tour 7 Premium) : « Fermer » lisible sur le fond noir de l'image agrandie : fond blanc, texte foncé. */
+.agrandi .bouton.second{background:#FFFFFF;color:#121614;border-color:#FFFFFF}
+/* « Vos réseaux ce mois-ci » (01/11/2026, tour 7 Croissance) : une vraie grille compacte sur téléphone (une ligne par réseau, trois colonnes),
+   au lieu d'une fiche empilée par réseau (près d'un écran pour trois réseaux). */
+#reseaux-mois .tab thead{position:static;width:auto;height:auto;clip-path:none}
+#reseaux-mois .tab tr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px 0;align-items:baseline}
+#reseaux-mois .tab th,#reseaux-mois .tab td{display:block;padding:0;border:0;text-align:left}
+#reseaux-mois .tab td::before{content:none}
+#reseaux-mois .tab th{font-size:13px;font-weight:var(--graisse-forte);color:var(--discret);line-height:1.3}
+#reseaux-mois .tab td+td{font-variant-numeric:tabular-nums}
+/* « Programmer tout » (01/11/2026, tour 7 Croissance) : chaque ligne est un lien vers sa publication du calendrier, toute la ligne se touche. */
+.msg .dates-programmees li.avec-vignette>.ligne-lien{display:flex;padding:0;margin:0;gap:10px;align-items:center;flex:1 1 auto;min-height:44px;color:inherit;text-decoration:none}
+.msg .dates-programmees .ligne-lien .fort{text-decoration:underline;text-underline-offset:3px}
+.programmations li.designee{outline:2px solid var(--marque);outline-offset:4px;border-radius:8px}
+/* Champ de texte en cours de saisie sur téléphone (01/11/2026, tour 7 Croissance) : la barre d'onglets se retire, le texte n'est plus caché dessous. */
+@media (max-width:899px){body.saisie .onglets{display:none}body.saisie .toast{bottom:calc(16px + env(safe-area-inset-bottom))}}
+/* À valider sur téléphone (01/11/2026, tour 7 Croissance) : « Valider » plus haut. Sur-titre retiré (l'onglet le dit déjà), « Proposer des idées »
+   sur la ligne du titre, en lien. */
+@media (max-width:899px){
+  .entete-accueil.contenus-tete{flex-wrap:nowrap;align-items:flex-start;gap:8px 12px}
+  .entete-accueil.contenus-tete .entete .sur{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0}
+  .entete-accueil.contenus-tete .entete{flex:1 1 auto;min-width:0}
+  .entete-accueil.contenus-tete #proposer-idees{position:absolute;right:0;top:0;flex:0 0 auto;min-height:44px;padding:0 4px;border:0;background:none;color:var(--encre);text-decoration:underline;text-underline-offset:3px;font-weight:var(--graisse-forte)}
+  .entete-accueil.contenus-tete{position:relative;display:block}
+  .entete-accueil.contenus-tete .entete h1{max-width:calc(100% - 156px)}
+}
+.choix-langues legend{padding:0;margin:0 0 6px}.choix-langues legend h2{margin:0}
+
+/* Photos (01/11/2026, tour 7 Premium) : chapeau court sur petit téléphone (iPhone SE, 375 px et moins). */
+.chapo-court{display:none}
+@media (max-width:375px){.chapo .chapo-long{display:none}.chapo .chapo-court{display:inline}}
+/* « Annuler ces programmations » : la confirmation reste au-dessus de la barre d'onglets. */
+@media (max-width:899px){#acc-annuler-zone{scroll-margin-bottom:calc(104px + env(safe-area-inset-bottom));margin-bottom:16px}}
+/* iPhone SE (01/11/2026, tour 7 Premium) : langues à 44 px ; logo un peu plus petit pour garder la marge de 16 px à droite. */
+@media (max-width:360px){.haut .logo-img,html[lang=nl] .haut .logo-img{height:17px}.haut{gap:2px}}
+/* À valider sur téléphone (01/11/2026, tour 7 Premium) : légende repliée sur 3 lignes, « Lire la suite » ; Valider et Modifier juste dessous. */
+.lire-suite{display:none}
+@media (max-width:899px){.carte.contenu .cadre-texte:not(.deplie){line-height:1.5;max-height:4.5em;overflow:hidden}
+  .carte.contenu .lire-suite{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}}

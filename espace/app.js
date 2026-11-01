@@ -41,6 +41,8 @@
   // Essentiel, Croissance (standard) et Premium (avis_equipe ou delegation) : 4 et 5 étoiles automatiques, 1 à 3 étoiles et avis sensibles traités par
   // l'équipe BoostImpact. Le cas « tout passe par le commerçant » ne reste que pour une offre sans ces drapeaux. Un avis sensible n'est jamais automatique.
   const offreDe = c => (window.RENOM_OFFRES || {})[(c || {}).offre_id] || {};
+  // Langue des publications (01/11/2026, tour 7 Premium ; commerces.langues_publication, même repli que redaction.langues_de du moteur).
+  const languesPub = c => { const l = ["fr", "nl"].filter(x => Array.isArray((c || {}).langues_publication) && c.langues_publication.includes(x)); return l.length ? l : [(c || {}).langue === "nl" ? "nl" : "fr"]; };
   // Offre sans réseaux sociaux (Essentiel : fiche Google seulement, moteur/offres.json). 26/10/2026 (test réel de PJ) : ses écrans ne parlent ni de
   // réseaux, ni de vidéos, ni de « community manager » ; les photos y sont facultatives, pour ses publications Google du mois (clés « .google »).
   const sansReseaux = c => offreDe(c).reseaux_sociaux === false;
@@ -143,7 +145,16 @@
   const fermerToast = () => { const el = $("toast"); if (el && !el.hidden) { clearTimeout(toastMinuteur); el.hidden = true; el.textContent = ""; } };
   addEventListener("hashchange", fermerToast);
   // 01/11/2026 (tour 6 Croissance) : le toast recouvrait « Envoyer la demande ». Il se ferme dès qu'un formulaire s'ouvre ou qu'un champ prend le focus.
-  document.addEventListener("focusin", ev => { if (ev.target && ev.target.matches && ev.target.matches("input, textarea, select")) fermerToast(); });
+  // Saisie au téléphone (01/11/2026, tour 7 Croissance) : la légende en cours d'écriture passait sous la barre d'onglets. Tant qu'un champ de texte a
+  // le focus ET que le clavier du téléphone est ouvert, la barre est masquée (classe « saisie » sur <body>, style.css) ; elle revient dès que le
+  // champ perd le focus ou que le clavier se ferme.
+  const champTexte = el => !!(el && el.matches && el.matches("textarea, input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]):not([type=range]), [contenteditable=true]"));
+  // Clavier ouvert = la zone visible (visualViewport) a perdu plus de 120 px : sans clavier (ordinateur, clavier externe), la barre reste.
+  const clavierOuvert = () => !!window.visualViewport && window.visualViewport.height < window.innerHeight - 120;
+  const majSaisie = () => document.body.classList.toggle("saisie", champTexte(document.activeElement) && clavierOuvert());
+  document.addEventListener("focusin", ev => { if (ev.target && ev.target.matches && ev.target.matches("input, textarea, select")) fermerToast(); majSaisie(); setTimeout(majSaisie, 350); });
+  document.addEventListener("focusout", () => setTimeout(majSaisie, 0));
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", majSaisie);
   const urlSure = async (x, reseau) => { try { return x ? await D.urlVisuel(x, reseau) : null; } catch (er) { return null; } };
   // Visuel 9:16 envoyé à TikTok : seulement pour une publication photo (la story et la vidéo ont un seul fichier pour tous les réseaux).
   const url916 = x => M.photoPublication(x) ? urlSure(x, "tiktok") : Promise.resolve(null);
@@ -163,7 +174,7 @@
   const mesure = (nom, u, n, plus) => `<div class="mesure"><div class="mesure-tete"><span>${nom}</span><span>${t("sur.chiffre", { a: `<span class="chiffre">${n && +u > +n ? n : u}</span>`, b: n })}</span></div>${jauge(Math.min(+u, +n || +u), n)}${plus && +n > 0 && +u >= +n ? `<p class="note" data-plafond-phrase>${t(plus, { n, mois: moisApres() })}</p>` : ""}</div>`;
   const vignette = u => u ? `<img class="vignette" src="${e(u)}" alt="">` : `<span class="vignette vide" aria-hidden="true"></span>`;
   const FORMAT_LIB = I.carte("format.lib", ["publication", "story", "video"]);
-  const media = (x, u, v) => `<div class="media">${v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`}</div>`;
+  const media = (x, u, v) => `<div class="media">${v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<span class="visuel-zone"><img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}"><button type="button" class="agrandir" data-agrandir aria-label="${e(t("visuel.agrandir"))}" title="${e(t("visuel.agrandir"))}">${LOUPE}</button></span>` : `<div class="visuel vide">${t("apercu.indispo")}</div>`}</div>`;
   // Les trois décisions sur un contenu à valider : mêmes boutons et mêmes appels sur l'accueil et sur l'écran Contenus.
   // La légende se modifie soi-même (voir blocReseaux) ; « Demander une modification à BoostImpact » reste pour ce qu'on ne peut pas faire seul, comme le visuel.
   let pubPlein = false, pubDepasse = false;   // pubDepasse : même refusée, la limite reste atteinte (remise impossible ce mois-ci, à coup sûr)   // limite de publications du mois atteinte (écran Contenus et accueil), lue au compteur
@@ -178,10 +189,21 @@
   let approuveRecent = null;
   const texteProgramme = p => t("auto.programme", { quand: I.dateHeureDans(p.prevu_le), res: (p.reseaux || []).map(r => RES[r]).join(", ") });
   const publicationDe = async id => { try { return (await D.calendrier()).find(x => x.contenu_id === id && x.statut === "programme") || null; } catch (er) { return null; } };
+  // Agrandir (01/11/2026, tour 7 Premium) : une icône discrète (loupe) au lieu de la pastille « Toucher pour agrandir » ; le nom reste lu (aria-label).
+  const LOUPE = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l5 5M8 10.5h5M10.5 8v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+  function agrandir(im) {
+    const retour = document.activeElement, z = document.createElement("div"); z.className = "agrandi"; z.setAttribute("role", "dialog"); z.setAttribute("aria-modal", "true"); z.setAttribute("aria-label", t("visuel.agrandi"));
+    z.innerHTML = `<img src="${e(im.currentSrc || im.src)}" alt="${e(im.alt || "")}"><button type="button" class="bouton second" data-fermer>${t("fermer")}</button>`;
+    const fermer = () => { z.remove(); document.removeEventListener("keydown", touche); if (retour && retour.focus) retour.focus({ preventScroll: true }); };
+    const touche = ev => { if (ev.key === "Escape") fermer(); };
+    z.onclick = fermer; document.addEventListener("keydown", touche); document.body.appendChild(z); z.querySelector("[data-fermer]").focus({ preventScroll: true });
+  }
   function brancherDecisions(racine, apres) {
     racine.querySelectorAll("[data-contenu]").forEach(a => a.addEventListener("click", async ev => {
       // Téléphone : l'aperçu est réduit pour garder Approuver à l'écran ; un tap l'affiche en entier, un second le réduit.
-      const img = ev.target.closest("img.visuel"); if (img && a.contains(img)) { const ouvert = img.classList.toggle("entier"); img.setAttribute("aria-expanded", String(ouvert)); return; }
+      // 01/11/2026 (tour 7 Croissance) : le visuel est montré entier dans la carte (object-fit contain, style.css) ; « Toucher pour agrandir »
+      // l'ouvre en grand, par-dessus l'écran (agrandir), fermé d'un tap, par le bouton ou par Échap.
+      const img = ev.target.closest("img.visuel, [data-agrandir]"); if (img && a.contains(img)) { const im = img.matches("img") ? img : a.querySelector("img.visuel"); if (im) agrandir(im); return; }
       const b = ev.target.closest("[data-a]"); if (!b) return; const id = a.dataset.contenu, act = b.dataset.a, zone = a.querySelector("[data-zone]"), choix = a.querySelector("[data-choix]"), zr = a.querySelector("[data-zone-refus]");
       if (!["approuve", "modif", "fermer-modif", "envoyer-modif", "refuse", "refuse-ok", "refuse-garder"].includes(act)) return;
       try {
@@ -244,13 +266,16 @@
   const resChoisi = id => { const l = resDe(vus.get(id).x); return l.includes(choixRes[id]) ? choixRes[id] : ORDRE_RES.find(k => l.includes(k)) || "google"; };
   // Légende identique sur tous les réseaux du contenu (31/10/2026) : une seule vue, sans onglets ; les réseaux concernés sont nommés sous l'aperçu.
   const legendeCommune = x => { if (parReseau.has(x.id)) return null; const l = ORDRE_RES.filter(k => resDe(x).includes(k)); return l.length > 1 && l.every(k => M.legendeDe(x, k) === M.legendeDe(x, l[0])) ? l : null; };
+  // Légende repliée sur téléphone (01/11/2026, tour 7 Premium, décision prise) : 3 lignes et « Lire la suite » (style.css), pour que Valider et
+  // Modifier viennent juste sous le visuel. Ordinateur : la légende entière, sans le bouton.
+  const lireSuite = l => M.longueur(l) > 110 || /\n/.test(l) ? `<button type="button" class="lien lire-suite" data-lire-suite aria-expanded="false">${t("leg.lire.suite")}</button>` : "";
   function cadre(id) {
     const { x, u: u45, v, u9 } = vus.get(id), commun = legendeCommune(x);
     if (commun) {
       const f = M.formatDe(x), l = M.legendeDe(x, commun[0]), n = M.longueur(l), lim = commun.includes("google") ? M.LIMITE_GOOGLE : 0;
-      const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u45 || "")}" src="${e(v)}"></video>` : u45 ? `<img class="visuel" src="${e(u45)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
+      const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u45 || "")}" src="${e(v)}"></video>` : u45 ? `<span class="visuel-zone"><img class="visuel" src="${e(u45)}" alt="${t("visuel.alt")}"><button type="button" class="agrandir" data-agrandir aria-label="${e(t("visuel.agrandir"))}" title="${e(t("visuel.agrandir"))}">${LOUPE}</button></span>` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
       return `<div class="cadre cadre-commun${f !== "publication" ? " vertical" : ""}"><div class="cadre-tete"><span class="avatar" aria-hidden="true">${e((nomCommerce || "R").charAt(0).toUpperCase())}</span><span class="cadre-nom">${e(nomCommerce)}</span>${f === "story" ? `<span class="cadre-res">${t("cadre.story.seule")}</span>` : ""}</div>
-        ${visuel}<p class="cadre-texte" data-legende${lc()}>${e(l)}</p></div>
+        ${visuel}<p class="cadre-texte" data-legende${lc()}>${e(l)}</p>${lireSuite(l)}</div>
         <p class="note" data-res-communs>${t("res.memes", { res: I.liste(commun.filter(k => !absentsDe(id).includes(k)).map(k => RES[k])) })}</p>${absentsDe(id).filter(k => commun.includes(k)).map(noteAbsent).join("")}
         <p class="note" data-compte>${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) + (n > lim ? t("car.trop.google") : "") : ""}</p>`;
     }
@@ -259,9 +284,9 @@
     // Offre sans réseaux sociaux (Essentiel, 01/11/2026, tour 7) : pas de « Choisissez Instagram… », il n'y a rien à choisir.
     if (!resDe(x).includes(r)) return `<div class="cadre-vide"><p class="texte2">${t(f === "video" ? "cadre.video.google" : "cadre.story.google")}</p>${commerceVu && sansReseaux(commerceVu) ? "" : `<p class="note">${t("cadre.choisir")}</p>`}</div>`;
     const l = M.legendeDe(x, r), n = M.longueur(l), lim = r === "google" ? M.LIMITE_GOOGLE : 0;
-    const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}">` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
+    const visuel = v ? `<video class="visuel" controls preload="metadata" poster="${e(u || "")}" src="${e(v)}"></video>` : u ? `<span class="visuel-zone"><img class="visuel" src="${e(u)}" alt="${t("visuel.alt")}"><button type="button" class="agrandir" data-agrandir aria-label="${e(t("visuel.agrandir"))}" title="${e(t("visuel.agrandir"))}">${LOUPE}</button></span>` : `<div class="visuel vide">${t("apercu.indispo")}</div>`;
     const tete = `<div class="cadre-tete"><span class="avatar" aria-hidden="true">${e((nomCommerce || "R").charAt(0).toUpperCase())}</span><span class="cadre-nom">${e(nomCommerce)}</span><span class="cadre-res">${RES[r]}${f === "story" ? t("cadre.story") : ""}</span></div>`;
-    const texte = `<p class="cadre-texte" data-legende${lc()}>${r === "instagram" && f === "publication" ? `<span class="fort">${e(nomCommerce)}</span> ` : ""}${e(l)}</p>`;
+    const texte = `<p class="cadre-texte" data-legende${lc()}>${r === "instagram" && f === "publication" ? `<span class="fort">${e(nomCommerce)}</span> ` : ""}${e(l)}</p>${lireSuite(l)}`;
     const corps = r === "facebook" ? tete + (f === "publication" ? texte + visuel : visuel + texte) : r === "tiktok" ? visuel + tete + texte : tete + visuel + texte;
     return `${absentsDe(id).includes(r) ? noteAbsent(r) : ""}<div class="cadre cadre-${r}${vertical ? " vertical" : ""}${absentsDe(id).includes(r) ? " absent" : ""}">${corps}</div>
       <p class="note" data-compte>${t("car", { n })}${lim ? t("car.sur", { lim: nombre(lim) }) + (n > lim ? t("car.trop.google") : "") : ""}</p>`;
@@ -298,12 +323,12 @@
   }
   // Programmer au meilleur créneau : réseaux connectés compatibles avec le format, créneau de départ du métier.
   async function programmerAuto(id) { const { quand, res } = await programmerAutoQuand(id); return t("auto.programme", { quand: I.dateHeureDans(quand), res: res.map(r => RES[r]).join(", ") }); }
-  async function programmerAutoQuand(id) {
+  async function programmerAutoQuand(id, lot) {
     const [x, cpt] = await Promise.all([D.contenus().then(l => l.find(y => y.id === id)), D.comptes()]);
     if (!x) throw new Error(t("err.contenu.introuvable"));
     const res = cpt.filter(k => k.etat === "connecte").map(k => k.reseau).filter(r => resDe(x).includes(r));
     if (!res.length) throw new Error(t("err.aucun.reseau"));
-    const quand = await D.programmerAuto(id, res); approuveRecent = null;
+    const quand = await D.programmerAuto(id, res, lot); approuveRecent = null;
     return { quand, res };
   }
   // Phrase « Créneaux prévus… » (31/10/2026, test client Premium) : une seule fois, en tête de l'onglet Validées (noteCreneaux), et sous les boutons de
@@ -336,6 +361,9 @@
   // Un seul écouteur pour tout l'écran : onglets de réseau, édition de la légende, programmation au meilleur créneau.
   let ecranCourant = null;
   vue.addEventListener("click", async ev => {
+    const ls = ev.target.closest("[data-lire-suite]");
+    if (ls) { const p = ls.previousElementSibling, ouvert = ls.getAttribute("aria-expanded") === "true"; if (p) p.classList.toggle("deplie", !ouvert);
+      ls.setAttribute("aria-expanded", String(!ouvert)); ls.textContent = t(ouvert ? "leg.lire.suite" : "leg.replier"); return; }
     const onglet = ev.target.closest("[data-res]");
     if (onglet) { const b = onglet.closest("[data-reseaux]"); let m = "";
       try { m = await sauverLegende(b); } catch (er) { toast(ph(er.message)); return; }   // légende refusée (trop longue…) : on reste sur l'onglet
@@ -348,7 +376,18 @@
     // Légende commune : « Modifier un seul réseau » rouvre les onglets (hashtags pour Instagram ou TikTok, refusés sur la fiche Google).
     if (a.dataset.a === "leg-detail") { parReseau.add(id); redessinerReseaux(b, false); const o = vue.querySelector(`[data-reseaux="${CSS.escape(id)}"] [role=tab][aria-selected=true]`); if (o) o.focus(); return; }
     if (a.dataset.a === "leg-annuler") { ed.hidden = true; bt.hidden = false; bt.focus(); return; }
-    try { const m = await sauverLegende(b); await ecranCourant(); toast(m || t("leg.inchangee")); } catch (er) { msg(ph(er.message)); toast(ph(er.message)); }
+    // « Appliquer aussi à Facebook et Fiche Google » (01/11/2026, tour 7 Premium) : proposé après l'enregistrement de la légende Instagram, pour les
+    // réseaux de ce contenu. Fiche Google : jamais un numéro de téléphone (M.contientTelephone, même règle que le moteur) ; elle est alors laissée.
+    if (a.dataset.a === "leg-appliquer") { const tx = M.legendeDe(vus.get(id).x, "instagram"), cibles = a.dataset.cibles.split(" "), faits = [], laisses = []; a.disabled = true;
+      for (const k of cibles) { if (k === "google" && M.contientTelephone(tx)) { laisses.push(k); continue; } try { await D.modifierLegende(id, k, tx); faits.push(k); } catch (er) { laisses.push(k); } }
+      await ecranCourant();
+      toast((faits.length ? t("leg.appliquee", { res: I.liste(faits.map(k => RES[k])) }) : "") + (laisses.includes("google") && M.contientTelephone(tx) ? " " + t("leg.google.tel") : laisses.length ? " " + t("leg.non.appliquee", { res: I.liste(laisses.map(k => RES[k])) }) : ""));
+      return; }
+    const cibles = r === "instagram" && !b.dataset.commun ? [...b.querySelectorAll("[role=tab][data-res]")].map(x => x.dataset.res).filter(k => ["facebook", "google"].includes(k)) : [];
+    try { const m = await sauverLegende(b); await ecranCourant(); toast(m || t("leg.inchangee"));
+      const nb = m && cibles.length ? vue.querySelector(`[data-reseaux="${CSS.escape(id)}"]`) : null;
+      if (nb) { const p = document.createElement("p"); p.className = "actions leg-appliquer"; p.innerHTML = `<button type="button" class="bouton second petit" data-a="leg-appliquer" data-cibles="${cibles.join(" ")}">${t("leg.appliquer", { res: I.liste(cibles.map(k => RES[k])) })}</button>`; nb.appendChild(p); }
+    } catch (er) { msg(ph(er.message)); toast(ph(er.message)); }
   });
   vue.addEventListener("input", ev => { const ta = ev.target.closest("[data-texte-legende]"); if (!ta) return; const b = ta.closest("[data-reseaux]"); b.querySelector("[data-compte-edition]").textContent = compteEdition(resEdition(b), ta.value); });
   vue.addEventListener("keydown", ev => {
@@ -622,10 +661,14 @@
   // Du 1er au 5 du mois (01/11/2026, tour 6 Premium) : le mois écoulé, avec son nom (« Temps gagné en octobre »), au lieu d'un mois en cours presque vide.
   const debutDeMoisCivil = () => new Date().getDate() <= 5;
   const debutMoisPrecedent = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(); };
-  function tempsGagne(av, cal) {
+  // Du 1er au 5 (01/11/2026, tour 7 Premium) : calculé depuis le bilan du mois écoulé (bilanMois, même source que la carte Bilan de Résultats :
+  // reponses_publiees, publications), pour que les deux écrans disent les mêmes chiffres. Le bilan ne distingue pas les vidéos : chaque
+  // publication y compte 20 min. Le reste du mois : avis et calendrier, comme avant.
+  function tempsGagne(av, cal, bilanP) {
     const prec = debutDeMoisCivil(), t0 = prec ? debutMoisPrecedent() : debutDuMois(), t1 = prec ? debutDuMois() : Date.now() + 1;
     const dans = d => !!d && Date.parse(d) >= t0 && Date.parse(d) < t1 && Date.parse(d) <= Date.now(), typeDe = x => (x.contenu && x.contenu.type) || x.type;
-    const n = av.filter(x => x.statut === "publie" && dans(x.repondu_le || x.traite_le || x.cree_le)).length * MINUTES_GAGNEES.reponse
+    const n = prec && bilanP ? (+bilanP.reponses_publiees || 0) * MINUTES_GAGNEES.reponse + (+bilanP.publications || 0) * MINUTES_GAGNEES.publication
+      : av.filter(x => x.statut === "publie" && dans(x.repondu_le || x.traite_le || x.cree_le)).length * MINUTES_GAGNEES.reponse
       + cal.filter(x => x.statut === "publie" && dans(x.publie_le || x.prevu_le)).reduce((s_, x) => s_ + (typeDe(x) === "video" ? MINUTES_GAGNEES.video : MINUTES_GAGNEES.publication), 0);
     if (!n) return ""; const h = Math.floor(n / 60), mn = n % 60, d = h ? (mn >= 15 && mn < 45 ? t("acc.temps.hdemi", { h }) : t("acc.temps.h", { h: mn >= 45 ? h + 1 : h })) : t("acc.temps.min", { m: n });
     return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${prec ? t("acc.temps.mois", { d, mois: MOIS[new Date(t0).getMonth()] }) : t("acc.temps", { d })}</span> <span class="note">${t("acc.temps.estimation")}</span></p>`;
@@ -646,8 +689,8 @@
     const c0 = await D.commerce();
     // Nom du commerce à confirmer (27/10/2026) : toujours d'abord, même après « Faire plus tard » (aucune demande d'avis ne part sans lui).
     if (nomAConfirmer(c0) || (!c0.demarrage_fini && !plusTard(c0.id))) return demarrage();
-    const [c, k, p, ct, av, cal, mr, ids, cm0] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
-      D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => [])]);
+    const [c, k, p, ct, av, cal, mr, ids, cm0, bilanP] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
+      D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => []), debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null]);
     const [nonLus, cpt, tfT, , contact, dChg] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
       D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null]);
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
@@ -720,7 +763,7 @@
       ${lienPublications(c)}
       ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c))}
       ${ligneSemaine(c, av, cal, cm)}
-      ${tempsGagne(av, cal)}
+      ${tempsGagne(av, cal, bilanP)}
       ${ligneContact(contact, "contact-accueil")}
       ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>` : ""}
       ${blocMiseEnRoute(mr, c)}
@@ -739,12 +782,28 @@
     // « Programmer N publications validées » (31/10/2026, test client Premium) : le message liste les N dates et mène au calendrier (lien).
     // 01/11/2026 (tour 6 Croissance) : pour chaque publication, sa vignette, son titre (première phrase de la légende) et sa date.
     if (bp) bp.onclick = async () => { bp.disabled = true; const faits = []; let er0 = null;
-      for (const x of sansDate) { try { faits.push({ x, quand: (await programmerAutoQuand(x.id)).quand }); } catch (er) { er0 = er0 || er; } }
+      // Étalé sur le mois (01/11/2026, tour 7 Premium) : rang et nombre passés à la programmation (jour_lot en base, jourLot en démonstration).
+      for (const [i, x] of sansDate.entries()) { try { const r_ = await programmerAutoQuand(x.id, { rang: i, nombre: sansDate.length }); faits.push({ x, quand: r_.quand, res: r_.res }); } catch (er) { er0 = er0 || er; } }
       faits.sort((p, q) => Date.parse(p.quand) - Date.parse(q.quand)); const vgs = await Promise.all(faits.map(f => urlSure(f.x)));
+      // 01/11/2026 (tour 7 Croissance) : chaque ligne mène à sa publication dans le calendrier (#/calendrier?pub=<id>), avec ses réseaux ; et
+      // « Annuler ces programmations » les annule une à une (D.annuler, même fonction que « Annuler » du calendrier), après confirmation.
+      const cal_ = await D.calendrier().catch(() => []); faits.forEach(f => { const p_ = cal_.find(y => y.contenu_id === f.x.id && y.statut === "programme"); f.pub = p_ ? p_.id : null; if (p_ && p_.reseaux) f.res = p_.reseaux; });
       const titreDe = x => { const s_ = String(x.titre || (x.legende || "").split(/[.!?\n]/)[0] || "").trim(); return s_.length > 60 ? s_.slice(0, 59).trimEnd() + "…" : s_; };
-      await accueil(); const m = $("msg"), n = faits.length;
-      if (m && n) m.innerHTML = `<span>${t("acc.programmes", { n })}</span><ul class="dates-programmees">${faits.map((f, i) => `<li class="avec-vignette">${vignette(vgs[i])}<div><p class="fort"${lc()}>${e(titreDe(f.x) || t("type.publication.cap"))}</p><p class="note">${e(cap(I.dateHeureDans(f.quand)))}</p></div></li>`).join("")}</ul>`
-        + `${er0 ? `<span>${e(ph(er0.message))}</span> ` : ""}<a href="#/calendrier" id="acc-vers-calendrier">${t("acc.ouvrir.calendrier")}</a>`;
+      await accueil(); const m = $("msg"), n = faits.length, aAnnuler = faits.filter(f => f.pub);
+      const ligne = (f, i) => { const corps_ = `${vignette(vgs[i])}<div><p class="fort"${lc()}>${e(titreDe(f.x) || t("type.publication.cap"))}</p><p class="note">${e(cap(I.dateHeureDans(f.quand)))}</p>${(f.res || []).length ? `<p class="note" data-reseaux>${e(I.liste(ORDRE_RES.filter(r => f.res.includes(r)).map(r => RES[r])))}</p>` : ""}</div>`;
+        return `<li class="avec-vignette">${f.pub ? `<a class="ligne-lien" href="#/calendrier?pub=${encodeURIComponent(f.pub)}" data-pub="${e(f.pub)}">${corps_}</a>` : corps_}</li>`; };
+      if (m && n) { m.innerHTML = `<span>${t("acc.programmes", { n })}</span><ul class="dates-programmees">${faits.map(ligne).join("")}</ul>`
+        + `${er0 ? `<span>${e(ph(er0.message))}</span> ` : ""}<a href="#/calendrier" id="acc-vers-calendrier">${t("acc.ouvrir.calendrier")}</a>`
+        + (aAnnuler.length ? `<div class="actions"><button type="button" class="lien" id="acc-annuler-prog">${t("acc.programmes.annuler", { n: aAnnuler.length })}</button></div>
+          <div class="confirmer-refus" id="acc-annuler-zone" hidden><p class="fort">${t("acc.programmes.annuler.question", { n: aAnnuler.length })}</p><div class="actions"><button type="button" class="bouton" id="acc-annuler-oui">${t("acc.programmes.annuler.oui", { n: aAnnuler.length })}</button><button type="button" class="bouton second" id="acc-annuler-garder">${t("acc.programmes.garder", { n: aAnnuler.length })}</button></div></div>` : "");
+        if ($("acc-annuler-prog")) { const z = $("acc-annuler-zone");
+          $("acc-annuler-prog").onclick = () => { z.hidden = false; $("acc-annuler-prog").hidden = true; $("acc-annuler-garder").focus({ preventScroll: true });
+            // 01/11/2026 (tour 7 Premium) : les deux boutons au-dessus de la barre d'onglets (avant : « nearest » les laissait dessous sur téléphone).
+            const bas = $("acc-annuler-garder").getBoundingClientRect().bottom, barre = innerWidth < 900 ? 88 : 0; if (bas > innerHeight - barre) window.scrollBy(0, bas - innerHeight + barre + 16); };
+          $("acc-annuler-garder").onclick = () => { z.hidden = true; $("acc-annuler-prog").hidden = false; $("acc-annuler-prog").focus({ preventScroll: true }); };
+          $("acc-annuler-oui").onclick = async () => { $("acc-annuler-oui").disabled = true; let k_ = 0, er1 = null;
+            for (const f of aAnnuler) { try { await D.annuler(f.pub); k_++; } catch (er) { er1 = er1 || er; } }
+            await accueil(); toast(t("acc.programmes.annulees", { n: k_ }) + (er1 ? " " + ph(er1.message) : "")); majCompteurs(); }; } }
       else msg(ph(er0 ? er0.message : "")); majCompteurs(); };
     brancherAutomatisations(vue, accueil);
     if ($("aut-non")) $("aut-non").onclick = async () => { try { await D.refuserAutorisationPhotos(); await accueil(); msg(t("aut.non.merci")); } catch (er) { msg(ph(er.message)); } };
@@ -758,7 +817,7 @@
     vue.innerHTML = `${entete("", t("ecran.reglages"), t("reg.chapo"))}
       ${carte}
       <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.filter(r => !(carte && r === "publications")).map(r => { const g = r === "comptes" && sansReseaux(c) ? ".google" : "";
-        return `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r + g)}</span><span class="note">${t("reg." + r + ".texte" + g)}</span></span></a></li>`; }).join("")}</ul></nav>
+        return `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r + g)}</span><span class="note">${t("reg." + r + ".texte" + g, { res: I.liste(["google", "facebook", "instagram", "tiktok"].filter(x => window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => x === "google" ? "Google" : RES[x])) })}</span></span></a></li>`; }).join("")}</ul></nav>
       ${large.matches ? "" : `<p class="pied-reglages"><button type="button" id="sortir" class="bouton second">${t("quitter")}</button></p>`}`;
   }
 
@@ -777,6 +836,9 @@
         <div class="f"><label for="metier">${t("fiche.metier")}</label><select id="metier">${Object.entries(METIERS).map(([k, l]) => `<option value="${k}"${c.metier === k ? " selected" : ""}>${l}</option>`).join("")}</select></div>
         <div class="f"><label for="ville">${t("fiche.ville")}</label><input id="ville" type="text" value="${v("ville")}"></div>
         <div class="f toute"><label for="horaires">${t("fiche.horaires")}</label><textarea id="horaires"${lc()}>${v("horaires")}</textarea></div></div></section>
+      <section class="carte" id="fiche-langues"><fieldset class="choix-langues"><legend><h2>${t("fiche.langues.titre")}</h2></legend>
+        ${[["fr", ["fr"]], ["nl", ["nl"]], ["frnl", ["fr", "nl"]]].map(([k, l]) => `<label class="option"><input type="radio" name="langues-pub" value="${l.join(",")}"${languesPub(c).join(",") === l.join(",") ? " checked" : ""}><span>${t("fiche.langues." + k)}</span></label>`).join("")}
+        <p class="aide">${t("fiche.langues.aide")}${String(c.pays || "").toUpperCase() === "BE" ? " " + t("fiche.langues.be") : ""}</p></fieldset></section>
       <section class="carte"><h2>${t("fiche.propose")}</h2><div class="champs">
         <div class="f toute"><label for="specialites">${t("fiche.specialites")}</label><textarea id="specialites"${lc()}>${v("specialites")}</textarea><p class="aide">${t("fiche.specialites.aide")}</p></div>
         <div class="f toute"><label for="ton">${t("fiche.ton")}</label><input id="ton" type="text" value="${v("ton")}"${lc()}><p class="aide">${t("fiche.ton.aide")}</p></div>
@@ -800,6 +862,8 @@
         await D.enregistrer({ nom: $("nom").value.trim(), metier: $("metier").value, ville: $("ville").value.trim(), specialites: $("specialites").value.trim(), horaires: $("horaires").value.trim(), ton: $("ton").value.trim(),
           mots_cles: liste("mots_cles"), mentions_autorisees: liste("mentions"), contact: $("contact").value.trim(), email_validation: $("email_validation").value.trim() });   // lien_avis : renseigné par BoostImpact (console)   // couleurs : écran « Votre style » (kit de marque)
         if (nomAConfirmer(c)) await D.confirmerNom($("nom").value.trim());
+        const lg = (vue.querySelector("input[name=langues-pub]:checked") || {}).value;
+        if (lg && lg !== languesPub(c).join(",")) await D.reglerLanguesPublication(lg.split(","));
         msg(t("fiche.enregistree"));
       } catch (er) { msg(t("fiche.echec", { m: ph(er.message) })); }
     };
@@ -829,6 +893,14 @@
     // Photo gardée pour le mois suivant (refus « plafond », ou à traiter alors que la limite est atteinte) : « En attente (novembre) », jamais
     // « En préparation » (audit Essentiel du 31/10/2026) : rien ne sera préparé avant le 1er.
     // Photos refusées (31/10/2026) : un seul message groupé au-dessus de la liste, au lieu du motif répété sur chaque ligne.
+    // Photo « En attente (mois suivant) » (01/11/2026, tour 7 Premium) : SEULEMENT au-delà des places du mois. Gardée par la base dès l'envoi
+    // (refus_motif 'plafond', enregistrer_photos) ; ou, photo plus ancienne encore « à traiter », au-delà des places dans l'ordre d'arrivée (même
+    // règle que la vue compteur_photos). Avant (v31) : avec le mois complet, TOUTES les photos à traiter passaient « En attente (décembre) ».
+    const auDela = (() => { const pl = k ? +k.publications_plafond || 0 : 0; if (!(pl > 0)) return new Set();
+      const t0 = new Date(); t0.setDate(1); t0.setHours(0, 0, 0, 0); let libres = Math.max(0, pl - (+k.publications_utilisees || 0));
+      return new Set(l.filter(x => ["a_traiter", "en_cours"].includes(x.statut) && Date.parse(x.cree_le) >= t0.getTime()).sort((a, b) => String(a.cree_le).localeCompare(String(b.cree_le)))
+        .filter(() => libres-- <= 0).map(x => x.id)); })();
+    const enAttente = x => x.statut === "refusee" && x.refus_motif === "plafond" || auDela.has(x.id);
     const refusGroupe = () => { const sujet = l.filter(x => x.statut === "refusee" && ["hors_sujet", "doute"].includes(x.refus_motif)).length, pl = l.filter(x => x.statut === "refusee" && x.refus_motif === "plafond").length;
       return (sujet ? `<div class="encart refus-photo" id="refus-sujet"><p class="fort">${t("photos.refus.groupe", { n: sujet })}</p><p class="note">${t("photo.refus.conseil")}</p></div>` : "")
         + (pl ? `<div class="encart refus-photo" id="refus-plafond"><p class="fort">${t("photos.refus.groupe.plafond", { n: pl, mois: moisSuivant })}</p>${dessus ? `<p class="note"><a href="#/offre?dessus">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</div>` : ""); };
@@ -840,7 +912,7 @@
     const enVideo = aVideo && (ecranCourant === videoAvis || /(^|&)video\b/.test(paramRoute));
     const bascule = aVideo ? `<nav class="filtres bascule" id="ph-bascule" aria-label="${e(t("photos.bascule"))}">
         <a href="#/photos" data-ph-vue="photos"${enVideo ? "" : ' aria-current="page"'}>${t("photos.bascule.photos")}</a><a href="#/photos?video" data-ph-vue="video"${enVideo ? ' aria-current="page"' : ""}>${t("photos.bascule.video")}</a></nav>` : "";
-    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(sansVideo ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : sansVideo ? t("photos.chapo.sansvideo") : t("photos.chapo"))}${bascule}
+    vue.innerHTML = `${pauseBandeau(c)}${entete(t("groupe.photos"), t(sansVideo ? "photos.titre.google" : "photos.titre"), g ? t("photos.chapo.google", { n: pubGoogle(c) }) : `<span class="chapo-long">${sansVideo ? t("photos.chapo.sansvideo") : t("photos.chapo")}</span><span class="chapo-court">${t(sansVideo ? "photos.chapo.court.sansvideo" : "photos.chapo.court")}</span>`)}${bascule}
       <div class="pile" id="vue-photos"${enVideo ? " hidden" : ""}>
       ${plein && g ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="fort" data-plafond-phrase>${t("plafond.phrase", { n: k.publications_plafond, mois: moisSuivant })}</p><p class="texte2">${t("photos.plafond.google", { n: k.publications_plafond, mois: moisSuivant })}</p>
         ${incitationCroissance(c) ? `<p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p>` : ""}</section>`
@@ -854,11 +926,12 @@
             <span class="note" id="choisies" aria-live="polite">${t("photos.aucune.choisie")}</span></div>
           <ul class="miniatures" id="ph-miniatures" aria-label="${e(t("photos.choisies.liste"))}"></ul>
           <p class="aide">${t("photos.aide", { max: EN.REGLES.PHOTOS_MAX, mo: nombre(EN.REGLES.PHOTO_MAX_MO) })}</p></div>
+          <div class="f" id="ph-precision-zone"><label for="ph-precision">${t(c.metier === "restaurant" ? "photos.precision" : "photos.precision.produit")}</label><input id="ph-precision" type="text" maxlength="200" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.precision || "")}" placeholder="${e(t(c.metier === "restaurant" ? "photos.precision.ex" : "photos.precision.ex.produit"))}" aria-describedby="ph-precision-aide"><p class="aide" id="ph-precision-aide">${t("photos.precision.aide")}</p></div>
           <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
-          <button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
+          <p class="note" id="ph-quota" aria-live="polite" hidden></p><button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
           <div class="confirmer-refus" id="ph-doublon" role="alert" hidden><p class="fort" id="ph-doublon-texte"></p><div class="actions"><button type="button" class="bouton" id="ph-doublon-envoyer">${t("photos.doublon.envoyer")}</button><button type="button" class="bouton second" id="ph-doublon-retirer"></button></div></div><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
-          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p><p class="etat"${x.refus_motif === "plafond" ? ' data-refus="plafond"' : ""}>${x.statut === "refusee" && x.refus_motif === "plafond" || plein && x.statut === "a_traiter" ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t("photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
+          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div><p class="fort casse">${e(x.nom_fichier || t("photo"))}</p><p class="note">${cap(date(x.cree_le))}</p><p class="etat"${enAttente(x) ? ' data-refus="plafond"' : ""}>${enAttente(x) ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t("photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
       ${sansVideo && !g ? `<p class="note" id="videos-premium">${t("photos.video.premium")} <a href="#/offre?dessus=premium">${t("photos.video.premium.lien")}</a></p>` : ""}
       ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p></div>
@@ -873,7 +946,12 @@
     const choisies = () => phEnvoi.choix.map(x => x.f);
     const locaux = envoisLocaux(c.id);
     const dejaEnvoyee = f => locaux[clePhoto(f)] ? { cree_le: locaux[clePhoto(f)] } : NOM_GENERIQUE.test(f.name || "") ? null : l.find(x => x.nom_fichier && x.nom_fichier === f.name);
-    const dessinerChoix = () => { const fs = choisies(); $("ph-envoyer").textContent = fs.length ? t("photos.envoyer.n", { n: fs.length }) : t("envoyer"); $("ph-envoyer").toggleAttribute("data-choix", fs.length > 0); $("ph-doublon").hidden = true; $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length });
+    // Quota du mois (01/11/2026, tour 7 Croissance) : plus de photos choisies que de places restantes -> « 3 deviendront des publications ce mois-ci,
+    // 3 en décembre » ; mois complet -> « Envoyer pour décembre » et la phrase qui l'explique. Places : celles du compteur (ph-compteur, pubReservees).
+    const plafond = k ? +k.publications_plafond || 0 : 0, places = plafond > 0 ? Math.max(0, plafond - pubReservees(k)) : Infinity;
+    const dessinerChoix = () => { const fs = choisies(), q = $("ph-quota"), n_ = fs.length;
+      if (q) { q.hidden = !(n_ && places < n_); q.textContent = !n_ || places >= n_ ? "" : places === 0 ? t("photos.quota.plein", { n: n_, mois: moisSuivant }) : t("photos.quota.partage", { a: places, b: n_ - places, mois: moisSuivant }); }
+      $("ph-envoyer").textContent = places === 0 && plafond > 0 ? t("photos.envoyer.mois", { mois: moisSuivant }) : fs.length ? t("photos.envoyer.n", { n: fs.length }) : t("envoyer"); $("ph-envoyer").toggleAttribute("data-choix", fs.length > 0); $("ph-doublon").hidden = true; $("choisies").textContent = !fs.length ? t("photos.aucune.choisie") : fs.length === 1 ? fs[0].name : t("photos.n.choisies", { n: fs.length });
       $("ph-miniatures").innerHTML = phEnvoi.choix.map((x, i) => { const d = dejaEnvoyee(x.f);
         return `<li><img src="${e(x.u)}" alt=""><div><p class="fort casse">${e(x.f.name)}</p><p class="note">${x.f.lastModified ? cap(date(new Date(x.f.lastModified).toISOString())) : ""}</p>${d ? `<p class="texte2" data-doublon>${t("photos.doublon", { d: date(d.cree_le) })}</p>` : ""}</div>
           <button type="button" class="lien" data-retirer="${i}" aria-label="${e(t("dv.retirer.nom", { nom: x.f.name }))}">${t("dv.retirer")}</button></li>`; }).join(""); };
@@ -882,6 +960,7 @@
       inp.value = ""; dessinerChoix();
       // Photo choisie : le bouton « Envoyer » vient sous le pouce s'il est sous le pli (barre d'onglets comprise).
       const b_ = $("ph-envoyer"); if (phEnvoi.choix.length && b_.getBoundingClientRect().bottom > innerHeight - 90) b_.scrollIntoView({ block: "center" }); };
+    $("ph-precision").oninput = ev => { phEnvoi.precision = ev.target.value; };
     $("ph-miniatures").onclick = ev => { const b = ev.target.closest("[data-retirer]"); if (!b || phEnvoi.encours) return; const [x] = phEnvoi.choix.splice(+b.dataset.retirer, 1); if (x) URL.revokeObjectURL(x.u); dessinerChoix(); };
     dessinerChoix();
     $("f").onsubmit = async ev => {
@@ -901,28 +980,41 @@
       for (const f of fs) { const k = await EN.controler(f); if (k.genre !== "photo") erreurs.push(f.name + t("deux.points") + ph("Format non accepté (JPEG, PNG, WebP ou HEIC).")); else if (k.raison) erreurs.push(f.name + t("deux.points") + ph("Fichier trop lourd (50 Mo au plus).")); else bonnes.push(f); }
       if (!bonnes.length) { msg(t("photos.aucune.envoyee") + t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") })); return; }
       const ens = EN.controlerPhotos(bonnes.length); if (ens) { msg(t("photos.ens." + ens.code, { n: ens.n, max: EN.REGLES.PHOTOS_MAX })); return; }
+      // Plat et prix avec un numéro de téléphone (01/11/2026, tour 7 Premium) : refusé AVANT l'envoi des fichiers (même règle que la base).
+      if (M.contientTelephone(($("ph-precision") || {}).value || "")) { msg(t("photos.precision.tel")); const pz = $("ph-precision"); if (pz) pz.focus(); return; }
+      // Places calculées AVANT l'envoi (01/11/2026, tour 7 Premium) : la phrase d'après l'envoi reprend exactement celle d'avant (« 7 ce mois-ci,
+      // 1 en décembre »). La base fait le même calcul et garde les photos au-delà (réponse ce_mois / gardees de deposer_photos).
+      const placesAvant = places;
+      // Écran quitté pendant l'envoi (01/11/2026, tour 7 Premium) : l'envoi continue, mais rien n'est écrit ni redessiné sur l'autre écran.
+      const surPhotos = () => ecranCourant === photos || ecranCourant === videoAvis;
+      const msgPh = x => { if (surPhotos()) msg(x); };
       phEnvoi.encours = true; $("ph-envoyer").disabled = true; $("appareil").disabled = $("fichiers").disabled = true;
-      const jauge = $("ph-jauge"), total = bonnes.reduce((s, f) => s + (f.size || 0), 0) || 1, recus = [], pris = new Set(); let faits = 0, deposees = 0;
+      const jauge = $("ph-jauge"), total = bonnes.reduce((s, f) => s + (f.size || 0), 0) || 1, recus = [], pris = new Set(); let faits = 0, deposees = 0, gardees = 0;
       const avancer = n => { const p = Math.min(100, Math.floor((faits + n) / total * 100)); jauge.hidden = false; jauge.setAttribute("aria-valuenow", p); jauge.firstElementChild.style.width = p + "%"; };
       try {
         for (let i = 0; i < bonnes.length; i++) {
           // Deux fichiers identiques (même nom, taille, date) dans un même envoi reçoivent deux noms : jamais de doublon refusé par la base.
           const f = bonnes[i], cle = clePhoto(f); let nom = phEnvoi.noms.get(cle); if (!nom || pris.has(nom)) nom = EN.nomPhoto(f); pris.add(nom); phEnvoi.noms.set(cle, nom);
-          msg(t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length }));
+          msgPh(t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length }));
           try {
             const r = await D.envoyerPhoto(f, { nom, onProgress: a => avancer(a),
-              onEtat: et => msg(et === "hors_ligne" ? t("dv.hors.ligne") : et === "nouvel_essai" ? t("dv.nouvel.essai") : t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length })) });
+              onEtat: et => msgPh(et === "hors_ligne" ? t("dv.hors.ligne") : et === "nouvel_essai" ? t("dv.nouvel.essai") : t("photos.envoi.de", { nom: f.name, i: i + 1, n: bonnes.length })) });
             recus.push({ chemin: r.chemin, nom: f.name, taille: f.size, cle, f });
           } catch (er) { erreurs.push(f.name + t("deux.points") + (er && er.interrompu ? t("photos.interrompu") : ph(er.message))); }
           faits += f.size || 0; avancer(0);
         }
         // Enregistrement de l'envoi entier : un refus de la base n'enregistre rien (les fichiers reçus restent, un nouvel essai les reprend).
-        if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => ({ chemin, nom, taille }))); deposees = r.nb_photos; recus.forEach(x => phEnvoi.noms.delete(x.cle)); retenirEnvois(c.id, recus.map(x => x.f)); }
+        // Plat et prix (01/11/2026, tour 7 Croissance) : facultatif, le même pour toutes les photos de cet envoi (photos.precision, enregistrer_photos).
+        const precision = String(($("ph-precision") || {}).value || "").trim().replace(/\s+/g, " ").slice(0, 200);
+        if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => Object.assign({ chemin, nom, taille }, precision ? { precision } : {}))); deposees = r.nb_photos;
+          gardees = r.gardees != null ? +r.gardees : Math.max(0, deposees - (placesAvant === Infinity ? deposees : placesAvant)); recus.forEach(x => phEnvoi.noms.delete(x.cle)); retenirEnvois(c.id, recus.map(x => x.f)); }
       } catch (er) { erreurs.push(ph(er.message)); }
       finally { phEnvoi.encours = false; }
-      if (deposees) { phEnvoi.choix.forEach(x => URL.revokeObjectURL(x.u)); phEnvoi.choix = []; }
-      await photos(); msg((deposees ? t("photos.deposees", { n: deposees }) : t("photos.aucune.enregistree")) + (erreurs.length ? t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") }) : ""));
-      if (deposees) await suitePhotos(c, deposees);
+      if (deposees) { phEnvoi.choix.forEach(x => URL.revokeObjectURL(x.u)); phEnvoi.choix = []; phEnvoi.precision = ""; }
+      const bilan = (deposees ? t("photos.deposees", { n: deposees }) : t("photos.aucune.enregistree")) + (erreurs.length ? t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") }) : "");
+      if (!surPhotos()) { toast(bilan + (deposees ? " " + phraseSuite(deposees, gardees, moisSuivant) : "")); majCompteurs(); return; }
+      await photos(); msg(bilan);
+      if (deposees) await suitePhotos(c, deposees, gardees);
       // Le résultat de l'envoi reste sous les yeux (l'écran est redessiné) : message et suite amenés au milieu de l'écran s'ils en sont sortis.
       const m_ = $("msg"); if (m_) { const r_ = m_.getBoundingClientRect(); if (r_.top < 0 || r_.bottom > innerHeight - 90) m_.scrollIntoView({ block: "center" }); }
       majCompteurs();
@@ -942,14 +1034,17 @@
   // Après un envoi réussi : la suite en une phrase, avec le lien vers les contenus de l'onglet « À valider ». Délai : seulement celui que l'offre promet (« Premier contenu proposé
   // sous 72 h », Standard et Premium, site/index.html #offres ; COND = moteur/conditions_offre.json), et seulement tant qu'aucun contenu n'existe.
   // 26/10/2026 (test réel de PJ) : le lien porte le nom de l'onglet tel qu'il apparaît (« À valider »), plus « Contenus ».
-  async function suitePhotos(c, n = 1) {
+  // Après l'envoi (01/11/2026, tour 7 Premium) : la phrase vient des places calculées AVANT l'envoi (gardees = photos au-delà, gardées par la
+  // base pour le mois suivant), plus du compteur relu après : « 7 deviendront des publications ce mois-ci, 1 en décembre », comme avant l'envoi.
+  const phraseSuite = (n, gardees, mois) => gardees >= n ? t("photos.suite.plein", { n, mois }) : gardees > 0 ? t("photos.quota.partage", { a: n - gardees, b: gardees, mois }) : "";
+  async function suitePhotos(c, n = 1, gardees = 0) {
     const s = $("ph-suite"); if (!s) return;
-    // Limite du mois atteinte (31/10/2026) : la photo est gardée pour le mois suivant ; pas de promesse « le jour même ».
-    const k = await D.compteur().catch(() => null);
-    if (k && +k.publications_plafond > 0 && pubReservees(k) >= +k.publications_plafond) { s.textContent = t("photos.suite.plein", { n, mois: (new Date().getMonth() + 1) % 12 }); s.hidden = false; return; }
+    const mois = (new Date().getMonth() + 1) % 12;
+    // Toutes gardées (mois complet avant l'envoi) : pas de promesse « le jour même ».
+    if (gardees >= n) { s.textContent = phraseSuite(n, gardees, mois); s.hidden = false; return; }
     const premier = !!offreDe(c).reseaux_sociaux && !(await D.contenus().catch(() => [null])).length;
     // Délai (31/10/2026) : le rendu part dès l'envoi (n8n/renom-creation.json : webhook de la photo, rendu GitHub Actions), sans file d'attente.
-    s.innerHTML = t("photos.suite.delai", { lien: `<a href="#/contenus">${e(ECRANS.avalider)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
+    s.innerHTML = (gardees > 0 ? e(phraseSuite(n, gardees, mois)) + " " : "") + t("photos.suite.delai", { lien: `<a href="#/contenus">${e(ECRANS.avalider)}</a>` }) + (premier ? " " + t("offre.garantie.contenu", { n: COND.garantie_delais.premier_contenu_heures }) : "");
     s.hidden = false;
   }
 
@@ -1162,7 +1257,7 @@
     const liste = l.filter(x => famille(x, c) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
     const formatCourt = x => t("format.court." + M.formatDe(x));
-    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil">${entete(t("groupe.avalider"), t("contenus.titre"), t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo"))}
+    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil contenus-tete">${entete(t("groupe.avalider"), t("contenus.titre"), `<span class="sur-ordi">${t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo")}</span><span class="sur-tel">${t(delegationActive(c) ? "contenus.chapo.delegation" : "contenus.chapo.court")}</span>`)}
         <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees">${t("idees.titre")}</button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
@@ -1173,6 +1268,8 @@
       ${liste.length ? `<div class="cartes">${liste.map((x, i) => `<article class="carte contenu" data-contenu="${e(x.id)}">
         <p class="meta"><span>${formatCourt(x)}${x.depot_video_id ? " · " + t("dv.montage.de.vos") : ""}</span><span class="etat${x.statut === "a_valider" ? " actif" : ""}">${ST_CONTENU[x.statut] || e(x.statut)}</span></p>
         <p class="note contenu-quand" data-quand>${cap(quand(x))}</p>
+        ${/* Délégation active (01/11/2026, tour 7 Premium) : l'échéance de 48 h ; la base valide puis programme au créneau (valider_tacitement). */ ""}
+        ${x.statut === "a_valider" && delegationActive(c) ? `<p class="note fort" data-deleg-echeance>${t("contenus.deleg.echeance", { d: I.dateHeureDans(new Date(Date.parse(x.soumis_le || x.cree_le) + COND.delegation.publication_auto_heures * 3600000).toISOString()) })}</p>` : ""}
         ${etiquetteIA(x)}${blocReseaux(x, urls[i], vids[i], u9s[i])}<div class="contenu-corps">
         ${x.note_modification ? `<p class="note">${t(x.statut === "refuse" ? "contenus.motif" : "contenus.demande")}<span${lc()}>${e(x.note_modification)}</span></p>` : ""}
         ${x.statut === "modification" ? `<p class="note fort" data-modif-delai>${t(x.decide_le ? "contenus.modif.delai.le" : "contenus.modif.delai", { d: x.decide_le ? date(x.decide_le) : "" })}</p>` : ""}
@@ -1185,7 +1282,7 @@
     if ($("contenus-delegation-activer")) $("contenus-delegation-activer").onclick = async () => { const b = $("contenus-delegation-activer"); b.disabled = true;
       try { await D.reglerDelegation(true); await contenus(); toast(t("offre.deleg.ok.active")); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
     vue.querySelectorAll("[data-remettre]").forEach(b => b.onclick = async () => { b.disabled = true;
-      try { await D.remettreAValider(b.dataset.remettre); await contenus(); toast(t("contenus.remis")); majCompteurs(); } catch (er) { b.disabled = false; toast(ph(er.message)); } });   // un seul message (tour 7 : il s'affichait en double)
+      try { await D.remettreAValider(b.dataset.remettre); filtre = "a_valider"; await contenus(); toast(t("contenus.remis")); majCompteurs(); } catch (er) { b.disabled = false; toast(ph(er.message)); } });   // un seul message (tour 7 : il s'affichait en double)
     // Téléphone : les filtres défilent sur une ligne ; le filtre choisi reste visible après le nouveau rendu.
     const fl = vue.querySelector(".filtres"), fp = fl && fl.querySelector("[aria-pressed=true]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
@@ -1240,15 +1337,17 @@
     if (motifs.length) { try { conseil = M.creneauPour(c, autres.map(x => Date.parse(x.prevu_le)), ct, Math.max(Date.now(), new Date(nj + "T00:00").getTime())); } catch (er) { conseil = null; } }
     return { motifs, conseil };
   }
-  function montrerAlerte(za, a, cle) {
+  function montrerAlerte(za, a, cle, focus = true) {
     za.querySelector("[data-alerte-texte]").textContent = a.motifs.join(" ");
     const bc = za.querySelector("[data-a=" + cle + "-conseil]"); bc.hidden = !a.conseil; if (a.conseil) { bc.dataset.q = new Date(a.conseil).toISOString(); bc.textContent = t("cal.conseil", { quand: I.dateHeureDans(a.conseil) }); }
     const zm = $("cal-moment"); if (zm) zm.hidden = true;   // une seule alerte : celle du créneau conseillé
-    za.hidden = false; (a.conseil ? bc : za.querySelector("[data-a=" + cle + "-force]")).focus({ preventScroll: true });
+    za.hidden = false; if (focus) (a.conseil ? bc : za.querySelector("[data-a=" + cle + "-force]")).focus({ preventScroll: true });
   }
   async function calendrier() {
     const [c, l, ct, cpt, mr] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes(), D.miseEnRoute().catch(() => null)]);
     const connectes = cpt.filter(x => x.etat === "connecte").map(x => x.reseau), vign = await Promise.all(l.map(x => urlSure(x.contenu)));
+    // Validés sans date (même liste que « Programmer tout » de l'accueil) : approuvés, sans programmation en cours.
+    const aProgrammerCal = sansDateDe(ct, l, cpt, c);
     // TikTok demandé (01/11/2026, tour 6 Premium) : « TikTok (activation demandée) » au lieu de « (non connecté) ».
     if (cpt.some(x => x.reseau === "tiktok" && x.etat !== "connecte")) await chargerDemandeTiktok(c);
     const nonConnecte = r => r === "tiktok" && tiktokDemande(c) ? t("cal.tiktok.demande") : t(r === "google" ? "cal.non.connectee" : "cal.non.connecte");
@@ -1259,6 +1358,10 @@
     const actifs = l.filter(x => x.statut !== "annule"), prets = ct.filter(x => x.statut === "approuve" && M.reseauxDuContenu(x, autorises).length > 0);
     // « Choisir moi-même » depuis un contenu approuvé (#/calendrier?contenu=<id>) : ce contenu présélectionné, au prochain bon créneau du commerce.
     const voulu = decodeURIComponent((/(?:^|&)contenu=([^&]+)/.exec(paramRoute) || [])[1] || "");
+    // Publication désignée (#/calendrier?pub=<id>, 01/11/2026 : lignes de « Programmer tout ») : sa semaine ou son mois, et sa ligne amenée à l'écran.
+    const pubVoulue = decodeURIComponent((/(?:^|&)pub=([^&]+)/.exec(paramRoute) || [])[1] || ""), pv = pubVoulue && l.find(x => x.id === pubVoulue);
+    if (!pubVoulue) cal.pub = null;
+    if (pv && cal.pub !== pubVoulue) { cal.pub = pubVoulue; cal.auto = false; cal.ref = new Date(pv.prevu_le); }
     const occupes = l.filter(x => ["programme", "envoye", "publie"].includes(x.statut));
     let defaut = null; try { defaut = M.creneauPour(c, occupes.map(x => Date.parse(x.prevu_le)), ct.find(x => x.id === voulu) || null); } catch (er) { defaut = null; }
     const jourDefaut = defaut ? jourLocal(defaut) : demain(), heureDefaut = defaut ? heureLocale(defaut) : "12:00";
@@ -1314,7 +1417,8 @@
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
           <button class="bouton" type="submit" id="cal-programmer">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : bloque ? "cal.aucun.pret.bloque" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
-      <section class="carte"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
+      <section class="carte" id="cal-vos"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>
+        ${aProgrammerCal.length ? `<div class="actions" id="cal-tout-zone"><button type="button" class="bouton second" id="cal-programmer-tout">${t("cal.programmer.tout", { n: aProgrammerCal.length })}</button></div>` : ""}${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
         <p><span class="fort">${dateHeure(x.prevu_le)}</span> · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
         <p class="note"${lc()}>${e(cut(x.contenu?.legende || "", 90))}</p>${x.erreur ? `<p class="note">${e(ph(x.erreur))}</p>` : ""}
         ${x.statut === "programme" && horsOffreDe(x, autorises) ? `<div class="actions serre">${versGoogle(x) ? `<button type="button" class="bouton second petit" data-a="vers-google">${t("cal.vers.google")}</button>` : ""}<button type="button" class="lien" data-a="annuler">${t("cal.annuler")}</button></div>
@@ -1322,9 +1426,20 @@
         : x.statut === "programme" ? `<div class="actions serre"><input type="date" data-nj value="${jourLocal(x.prevu_le)}" aria-label="${t("cal.nouvelle.date")}"><input type="time" data-nh value="${heureLocale(x.prevu_le)}" aria-label="${t("cal.nouvelle.heure")}"><button type="button" class="bouton second petit" data-a="deplacer" aria-disabled="true" aria-describedby="rien-${e(x.id)}">${t("cal.deplacer")}</button><span class="note" id="rien-${e(x.id)}" data-rien hidden>${t("cal.rien.a.changer")}</span><button type="button" class="lien" data-a="annuler">${t("cal.annuler")}</button></div>
           <div class="confirmer-refus" data-zone-alerte hidden role="alert"><p class="fort" data-alerte-texte></p><div class="actions"><button type="button" class="bouton" data-a="deplacer-conseil"></button><button type="button" class="bouton second" data-a="deplacer-force">${t("cal.quand.meme")}</button></div></div>
           <div class="confirmer-refus" data-zone-annuler hidden><p class="fort">${t("cal.annuler.question", { quand: I.dateHeureDans(x.prevu_le) })}</p><div class="actions"><button type="button" class="bouton" data-a="annuler-ok">${t("cal.annuler.oui")}</button><button type="button" class="bouton second" data-a="annuler-garder">${t("cal.annuler.garder")}</button></div></div>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("cal.aucune")}</p>`}</section>`;
+    // « Annulé » replié (01/11/2026, tour 7 Premium) : les programmations annulées sous « Annulées, N », fermé par défaut.
+    const ulP = vue.querySelector("#cal-vos ul.programmations"), ann = l.filter(x => x.statut === "annule");
+    if (ulP && ann.length) { const d_ = document.createElement("details"); d_.className = "repliable cal-annulees"; d_.id = "cal-annulees";
+      d_.innerHTML = `<summary>${t("cal.annulees", { n: ann.length })}</summary><ul class="liste programmations"></ul>`;
+      ann.forEach(x => { const li = ulP.querySelector(`li[data-id="${CSS.escape(x.id)}"]`); if (li) d_.querySelector("ul").appendChild(li); }); ulP.after(d_); if (!ulP.children.length) ulP.remove(); }
+    // « Programmer tout » (01/11/2026, tour 7 Premium) : comme l'accueil, étalé sur le mois (rang et nombre : jour_lot / jourLot).
+    if ($("cal-programmer-tout")) $("cal-programmer-tout").onclick = async () => { const b_ = $("cal-programmer-tout"); b_.disabled = true; const faits = []; let er0 = null;
+      for (const [i, x] of aProgrammerCal.entries()) { try { faits.push((await programmerAutoQuand(x.id, { rang: i, nombre: aProgrammerCal.length })).quand); } catch (er) { er0 = er0 || er; } }
+      faits.sort(); await calendrier(); majCompteurs();
+      toast(faits.length ? t("cal.programmes.etales", { n: faits.length, d1: I.dateHeureDans(faits[0]), d2: I.dateHeureDans(faits[faits.length - 1]) }) + (er0 ? " " + ph(er0.message) : "") : ph(er0 ? er0.message : "")); };
     vue.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { cal.mode = b.dataset.m; calendrier(); });
     vue.querySelectorAll("[data-saut]").forEach(b => b.onclick = () => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(b.dataset.saut)}"]`); if (!li) return;
       li.setAttribute("tabindex", "-1"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
+    if (pv) requestAnimationFrame(() => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(pv.id)}"]`); if (!li) return; li.setAttribute("tabindex", "-1"); li.classList.add("designee"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
     vue.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { const n = +b.dataset.n, d = new Date(cal.ref); if (cal.mode === "mois") { d.setDate(1); d.setMonth(d.getMonth() + n); } else d.setDate(d.getDate() + 7 * n); cal.ref = d; calendrier(); });
     const majDestinations = () => { const x = prets.find(y => y.id === ($("contenu") || {}).value); if (!x) return; const ok = M.reseauxDuContenu(x, autorises);
       vue.querySelectorAll("[data-res-lib]").forEach(lb => { const i = lb.querySelector("input"), dedans = ok.includes(lb.dataset.resLib); lb.hidden = !dedans; if (!dedans) i.checked = false; });
@@ -1360,8 +1475,16 @@
         z.querySelector("[data-moment-texte]").textContent = t("cal.moment." + cas[0], { h: hh }); $("cal-moment-prendre").textContent = t("cal.moment.prendre", { h: hh });
         $("cal-moment-prendre").onclick = () => { $("heure").value = cas[1]; $("heure").dispatchEvent(new Event("change")); }; z.hidden = false; };
       ["jour", "heure", "contenu"].forEach(k => $(k).addEventListener("change", momentTexte));
-      vue.querySelectorAll("[data-jour]").forEach(b => b.onclick = () => { const j = $("jour"); if (!j) return; j.value = b.dataset.jour; j.dispatchEvent(new Event("change"));
-        const h = $("cal-programmer-titre"); if (h) h.scrollIntoView({ block: "start" }); j.focus({ preventScroll: true }); }); $("heure").addEventListener("input", momentTexte); momentTexte();
+      // Jour fermé ou férié (01/11/2026, tour 7 Croissance) : l'alerte vient dès que la date change, sans attendre « Programmer » (sans voler le focus).
+      const alerteJour = () => { const nj = $("jour").value, nh = $("heure").value, x = prets.find(y => y.id === $("contenu").value); if (!nj || !jourBloque(c, nj)) return;
+        const a = alertesCreneau(c, nj, nh || "12:00", occupes, x); if (!a.motifs.length) return; montrerAlerte($("f-alerte"), a, "programmer", false); $("cal-programmer").hidden = true; };
+      $("jour").addEventListener("change", alerteJour);
+      // Jour vide touché (01/11/2026, tour 7 Croissance) : le premier contenu prêt est présélectionné s'il n'y en a pas, et le focus va sur la liste
+      // des contenus (sur iOS, le focus du champ date rouvrait la roue).
+      vue.querySelectorAll("[data-jour]").forEach(b => b.onclick = () => { const j = $("jour"), sc = $("contenu"); if (!j) return;
+        if (sc && !sc.value && prets[0]) { sc.value = prets[0].id; sc.dispatchEvent(new Event("change")); }
+        j.value = b.dataset.jour; j.dispatchEvent(new Event("change"));
+        const h = $("cal-programmer-titre"); if (h) h.scrollIntoView({ block: "start" }); if (sc) sc.focus({ preventScroll: true }); }); $("heure").addEventListener("input", momentTexte); momentTexte();
       // Arrivée depuis « Choisir moi-même » : le titre « Programmer à la main » en haut de l'écran (block « start »), pas le milieu du formulaire.
       if (voulu) requestAnimationFrame(() => $("cal-programmer-titre").scrollIntoView({ block: "start" }));
     }
@@ -1400,7 +1523,7 @@
   // Essentiel (26/10/2026) : la case ne porte que sur les photos publiées par le commerce sur sa fiche Google (« aut.case.google »).
   const carteAutorisation = c => autorisationAJour(c) ? "" : `<section class="carte autorisation-photos" id="autorisation-photos" aria-labelledby="aut-titre">
       <h2 id="aut-titre">${t("aut.titre")}</h2><p class="texte2">${t("aut.chapo")}</p>
-      <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t(sansReseaux(c) ? "aut.case.google" : "aut.case")}</span></label>
+      <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t(sansReseaux(c) ? "aut.case.google" : "aut.case", { comptes: I.liste(ORDRE_RES.filter(x => x !== "google" && window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => RES[x])) })}</span></label>
       <div class="actions"><button type="submit" class="bouton second" id="aut-ok">${t("aut.enregistrer")}</button></div><p class="msg" id="aut-msg" role="status"></p></form></section>`;
   function brancherAutorisation(apres) {
     const f = $("aut-f"); if (!f) return;
@@ -1445,13 +1568,25 @@
   let retenueOuverte = null;
   const heureParis = () => +new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(new Date());
   const quandRappel = j => !j ? "" : j === jourParis(Date.now()) ? t("avis.rappel.auj") : j === jourParis(Date.now() + 864e5) ? t("avis.rappel.demain") : t("avis.rappel.le", { d: date(j + "T12:00:00") });
-  const telRetenue = c => (c && (c.whatsapp_numero || (window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? window.RENOM_WHATSAPP.numero(c.contact, c.pays) : ""))) || "";
-  const formRetenue = (x, c) => { const tard = heureParis() >= 17, tel = x.retenue_telephone || telRetenue(c);
+  // Numéro préenregistré (01/11/2026, tour 7 Premium) : ATTENTION, un numéro dont l'indicatif ne correspond pas au pays du commerce (+33 pour un
+  // commerce belge, +32 pour un français) est signalé ici (console) et dans le champ (aide « vérifiez ce numéro ») ; il reste proposé, un
+  // commerçant peut avoir un mobile d'un autre pays. Démonstration d'un commerce belge sans numéro belge : numéro de démonstration au format belge.
+  const DEMO_TEL_BE = "+3225123456";
+  const paysNumero = n => /^\+32/.test(n || "") ? "BE" : /^\+33/.test(n || "") ? "FR" : null;
+  const numeroHorsPays = (n, c) => !!n && !!paysNumero(n) && paysNumero(n) !== M.paysDe((c || {}).pays);
+  const telRetenue = c => { const n = (c && (c.whatsapp_numero || (window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? window.RENOM_WHATSAPP.numero(c.contact, c.pays) : ""))) || "";
+    if (D.mode === "demo" && M.paysDe((c || {}).pays) === "BE" && paysNumero(n) !== "BE") return DEMO_TEL_BE;
+    if (numeroHorsPays(n, c)) console.warn("RENOM : numéro préenregistré au format d'un autre pays que celui du commerce", n, (c || {}).pays);
+    return n; };
+  // Jours proposés (01/11/2026, tour 7 Croissance) : jamais « Aujourd'hui » un dimanche ni un jour férié du pays ; alors le jour ouvré suivant, nommé
+  // (« Lundi 2 novembre »), puis le suivant. Mêmes jours que retenir_reponse_avis (jour_ouvre, bloc « Plat et prix au dépôt de la photo »).
+  const libJourRappel = (j, auj) => j === auj ? t("avis.rappel.auj.cap") : j === jourParis(Date.parse(auj + "T12:00:00Z") + 864e5) ? t("avis.rappel.demain.cap") : cap(I.jourEtDate(new Date(j + "T12:00:00")));
+  const formRetenue = (x, c) => { const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c && c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj, tel = x.retenue_telephone || telRetenue(c);
     return `<form class="pile serre encart" data-retenir-f="${e(x.id)}" novalidate><p class="fort">${t("avis.rappel.titre")}</p>
-      <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}</p></div>
+      <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}${numeroHorsPays(tel, c) ? " " + t("rappel.hors.pays") : ""}</p></div>
       <fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${tard ? "" : `<label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="aujourdhui" checked><span>${t("avis.rappel.auj.cap")}</span></label>`}
-        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""}><span>${t("avis.rappel.demain.cap")}</span></label></fieldset>
+        ${tard ? "" : `<label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
+        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
       <fieldset><legend>${t("avis.rappel.heure")}</legend>
         <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value=""${x.retenue_creneau === "15-17" ? "" : " checked"}><span>${t("avis.rappel.plage.journee")}</span></label>
         <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value="_15_17"${x.retenue_creneau === "15-17" ? " checked" : ""}><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label>
@@ -1699,11 +1834,23 @@
     const mail = `mailto:info@boostimpact.agency?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(co)}`;
     // Confirmation (31/10/2026, test client Premium, tour 5) : numéro mis au format (+32 470 12 34 56), délai, « Modifier le numéro ».
     const telD = telTiktok(c), recente = d && Date.now() - Date.parse(d) < 24 * 3600000;
-    if (d && !modifTiktok) return `<div class="pile serre"><p class="texte2" id="tiktok-demande" role="status">${telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(telD))}</span>`, quand: recente ? t("compte.tiktok.quand") : "" }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
+    const qd = (() => { try { return JSON.parse(localStorage.getItem(cleTiktok(c) + ":quand") || "null"); } catch (er) { return null; } })();
+    const telLu = telD ? `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(telD))}</span>` : "";
+    if (d && !modifTiktok) return `<div class="pile serre"><p class="texte2" id="tiktok-demande" role="status">${telD && recente && qd && qd.jour ? t("compte.tiktok.envoyee.le", { d: date(d) }) + " " + t(qd.creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: telLu, quand: quandRappel(String(qd.jour).slice(0, 10)) })
+      : telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: telLu, quand: recente ? t("compte.tiktok.quand") : "" }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
       ${recente && merSql(c) ? `<p><button type="button" class="lien" id="tiktok-modifier">${t("compte.tiktok.modifier")}</button></p>` : ""}</div>`;
     if (!merSql(c)) return `<p class="actions"><a class="bouton second" id="activer-tiktok" href="${mail}">${t("compte.tiktok.demander")}</a></p>`;
-    const tel = telTiktok(c) || c.whatsapp_numero || (window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? c.contact : "");
+    const tel = telTiktok(c) || telRetenue(c);   // même numéro préenregistré que le formulaire d'avis (01/11/2026, tour 7 Premium)
+    // Jour et heure (01/11/2026, tour 7 Premium) : mêmes jours que le formulaire d'avis (M.joursRappel : jamais un dimanche ni un jour férié du pays)
+    // et même choix d'heure (9 h-18 h, ou 15 h-17 h, « après le service » pour un restaurant) ; base : preciser_rappel.
+    const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj;
     return `<form id="tiktok-f" class="pile serre" novalidate><div class="f"><label for="tiktok-tel">${t("compte.tiktok.tel")}</label><input id="tiktok-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel)}" placeholder="${e(exNum(c))}" aria-describedby="tiktok-aide"><p class="aide" id="tiktok-aide">${t("rappel.aide", numParams(c))}</p></div>
+      ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
+        ${tard ? "" : `<label class="option"><input type="radio" name="tiktok-jour" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
+        <label class="option"><input type="radio" name="tiktok-jour" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
+      <fieldset><legend>${t("avis.rappel.heure")}</legend>
+        <label class="option"><input type="radio" name="tiktok-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
+        <label class="option"><input type="radio" name="tiktok-plage" value="_15_17"><span>${t(c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
       <div class="actions"><button class="bouton" type="submit" id="activer-tiktok">${t("compte.tiktok.demander")}</button></div><p class="msg" id="tiktok-msg" role="status"></p>
       <p class="note">${t("compte.tiktok.ou")} <a href="${mail}" id="tiktok-mail">${t("compte.tiktok.email")}</a></p></form>`; };
   async function comptes() {
@@ -1716,7 +1863,9 @@
       <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${tiktokEnAttente(x) ? t("etat.tiktok.demande") : ETAT[x.etat] || e(x.etat)}</span></h2>${tiktokEnAttente(x) ? "" : `<p class="texte2">${AIDE[x.reseau]}</p>`}${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
     if ($("tiktok-f")) $("tiktok-f").onsubmit = async ev => { ev.preventDefault(); const b = $("activer-tiktok"); b.disabled = true;
       try { const r = await D.demanderRappel("reseaux", $("tiktok-tel").value), d = (r && r.cree_le) || new Date().toISOString(), n = (r && r.telephone) || window.RENOM_WHATSAPP.numero($("tiktok-tel").value, c.pays) || "";
-        try { localStorage.setItem(cleTiktok(c), d); if (n) localStorage.setItem(cleTiktok(c) + ":tel", n); } catch (er) {} demandesTiktok[c.id] = d; modifTiktok = false;
+        const jv = (vue.querySelector("input[name=tiktok-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=tiktok-plage]:checked") || {}).value || "";
+        const q = jv && D.preciserRappel ? await D.preciserRappel("reseaux", jv + pv).catch(() => null) : null;
+        try { localStorage.setItem(cleTiktok(c), d); if (n) localStorage.setItem(cleTiktok(c) + ":tel", n); if (q) localStorage.setItem(cleTiktok(c) + ":quand", JSON.stringify(q)); } catch (er) {} demandesTiktok[c.id] = d; modifTiktok = false;
         // Pas de toast : la confirmation complète est affichée (role=status) à la place du formulaire.
         await comptes(); majCompteurs(); const z = $("tiktok-demande"); if (z) z.scrollIntoView({ block: "center" }); } catch (er) { b.disabled = false; $("tiktok-msg").textContent = ph(er.message); } };
     if ($("tiktok-modifier")) $("tiktok-modifier").onclick = async () => { modifTiktok = true; await comptes(); const i = $("tiktok-tel"); if (i) { i.focus(); i.select(); } };
@@ -1822,7 +1971,8 @@
     const baisse = ORDRE_OFFRES.indexOf(c.offre_id) > 0;
     vue.innerHTML = `${pauseBandeau(c)}${retourOrigine()}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre || k.offre_nom) }))}
         <section class="carte" id="offre-mois"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
-          ${mesure(t("offre.pub.utilisees"), k.publications_utilisees, k.publications_plafond, "plafond.phrase")}
+          ${/* Compteur de l'offre (01/11/2026, tour 7 Premium) : comme Photos, publications faites + photos en préparation (pubReservees), « dont N en préparation ». */ ""}
+          ${mesure(t("offre.pub.reservees"), pubReservees(k), k.publications_plafond, "plafond.phrase")}${+k.publications_preparation > 0 ? `<p class="note" id="offre-preparation">${t("offre.pub.preparation", { n: +k.publications_preparation })}</p>` : ""}
           ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
           ${o.reseaux_sociaux === false || !o.commentaires_disponible ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter ; 30/10/2026 : compteur masqué tant que offres.json dit commentaires_disponible faux (aucun « bientôt » à l'écran) */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
@@ -1946,7 +2096,9 @@
   const recoitBilanEmail = c => !!c && (c.notifications || {}).email !== false && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c.email_validation || "")
     && Date.parse(c.cree_le || 0) <= Date.now() - 14 * 86400e3;
   function bilanPrecedentBloc(b, c, contact) {
-    if (!b || !offreDe(c).delegation) return "";
+    // Toutes les offres (01/11/2026, tour 7 Croissance ; la vague 13 l'avait fait pour Premium) : du 1er au 5, le mois précédent complet d'abord,
+    // puis le mois en cours (bilanBloc). « En parler avec … » reste au point mensuel de Premium (delegation).
+    if (!b) return ""; const premium = !!offreDe(c).delegation;
     const m = moisDe(b.mois), n = x => +x || 0, k = contactDe(contact), nomMois = MOIS[m.getMonth()], notes = b.note_debut != null && b.note_fin != null;   // 2 ou 4 chiffres (grille de 2)
     const chiffre = (lib, val, id) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" id="${id}">${val}</dd></div>`;
     const wa = lienWa(k.telephone) + "?text=" + encodeURIComponent(t("bilan.prec.message", { mois: nomMois, nom: c.nom || "" }));
@@ -1954,7 +2106,7 @@
       <p class="texte2">${t("bilan.publie", { r: n(b.reponses_publiees), p: n(b.publications) })} ${t(b.avis_obtenus_source === "avis_recus" ? "bilan.recu" : "bilan.obtenu", { n: n(b.avis_obtenus) })}${notes ? (b.note_fin === b.note_debut ? t("bilan.note.reste", { n: nombre(b.note_fin, 1) }) : t("bilan.note.passe", { a: nombre(b.note_debut, 1), b: nombre(b.note_fin, 1) })) : "."}</p>
       <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)), "bilan-prec-reponses")}${chiffre(t("bilan.publications"), nombre(n(b.publications)), "bilan-prec-publications")}${notes ? chiffre(t("bilan.note"), nombre(b.note_fin, 1), "bilan-prec-note") + chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)), "bilan-prec-avis") : ""}</dl>
       ${recoitBilanEmail(c) ? `<p class="note" id="bilan-prec-email">${t("bilan.prec.email")}</p>` : ""}
-      <p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p></section>`;
+      ${premium ? `<p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p>` : ""}</section>`;
   }
   async function resultats() {
     const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
