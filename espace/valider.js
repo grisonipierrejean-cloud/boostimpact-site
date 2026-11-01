@@ -20,6 +20,15 @@
   }
   const FAIT = cle => [t("val.fait." + cle), t("val.fait." + cle + ".texte")];
   let objet = null;
+  // Refuser (31/10/2026) : jamais d'un seul geste. La barre de décision devient la question, avec « Refuser » et « Garder ».
+  function confirmerRefus(question, oui, decision) {
+    const avant = $("boutons").innerHTML;
+    $("boutons").innerHTML = `<p class="fort" id="refus-question">${question}</p><button type="button" class="bouton second" id="refus-oui">${oui}</button><button type="button" class="bouton second" id="refus-garder">${t("dec.refus.garder")}</button>`;
+    $("refus-oui").onclick = () => decider(decision);
+    $("refus-garder").onclick = () => { $("boutons").innerHTML = avant; brancher(); };
+    $("refus-garder").focus();
+  }
+  let brancher = () => {};
   async function decider(decision, texte) {
     const boutons = [...document.querySelectorAll("#decision button")]; boutons.forEach(b => { b.disabled = true; }); msg(t("envoi.en.cours"));
     try {
@@ -27,7 +36,7 @@
       const [a, x0] = FAIT(decision === "refuse" ? "refuse_" + objet : decision === "valide" && objet === "commentaire" ? "valide_commentaire" : decision);
       // Contenu approuvé : la base le programme tout de suite (schema.sql, bloc « Programmation à l'approbation ») et rend la date et les réseaux.
       const prog = decision === "approuve" && r && r.prevu_le ? r : null, R = RES();
-      const x = prog ? t("val.fait.approuve.programme", { quand: I.dateHeureDans(prog.prevu_le), res: (prog.reseaux || []).map(k => R[k] || k).join(", ") }) : x0;
+      const x = prog ? t("val.fait.approuve.programme", { quand: I.dateHeureDans(prog.prevu_le), res: ["instagram", "facebook", "tiktok", "google"].filter(k => (prog.reseaux || []).includes(k)).map(k => R[k] || k).join(", ") }) : x0;
       $("page").hidden = true; $("fait").hidden = false; $("fait-titre").textContent = a; $("fait-texte").textContent = x;
     } catch (er) {
       const cle = etatDuMessage(er && er.message); if (cle) return erreur(cle);
@@ -37,7 +46,11 @@
   // Les textes du commerce (légende, avis, réponse proposée) gardent leur langue : l'attribut lang le dit au navigateur.
   let lc = "";
   function contenu(o) {
-    const f = M.formatDe(o), vertical = f !== "publication", R = RES(), res = M.reseauxDuContenu(o, o.reseaux);
+    // Même règle que l'espace et la programmation (donnees.js) : un réseau de l'offre pas encore connecté (TikTok souvent) n'est pas annoncé
+    // comme destination ; une note dit que ce contenu n'y partira pas (« connectes » rendu par objet_par_jeton ; absent : connexions inconnues).
+    const comptes = Array.isArray(o.connectes) ? ["instagram", "facebook", "google", "tiktok"].map(r => ({ reseau: r, etat: o.connectes.includes(r) ? "connecte" : "non_connecte" })) : null;
+    const d = M.destinations(o, o.reseaux, comptes), absents = d.absents.filter(r => r !== "google"), res = d.reseaux.filter(r => !absents.includes(r));
+    const f = M.formatDe(o), vertical = f !== "publication", R = RES();
     const avecTiktok = res.includes("tiktok"), seulGoogle = res.length === 1 && res[0] === "google";
     $("titre").textContent = t(f === "story" ? "val.titre.story" : f === "video" ? "val.titre.video" : "val.titre.publication");
     const visuel = o.video_url ? `<video class="visuel vertical" controls preload="metadata" poster="${e(o.visuel_url || "")}" src="${e(o.video_url)}"></video>`
@@ -52,13 +65,15 @@
       : `<section class="carte"><h2>${t("val.visuel")}</h2>${M.estIA(o) ? `<p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p>` : ""}${visuel}</section>`;
     $("objet").innerHTML = `${bloc}
       <section class="carte"><h2>${t(seulGoogle ? "val.legende.google" : "val.legende.reseau")}</h2><ul class="legendes">${res.map(r => { const x = M.legendeDe(o, r); return `<li data-reseau="${r}"><span class="reseau">${R[r]}</span><p class="texte"${lc}>${e(x)}</p>${r === "google" && M.longueur(x) > M.LIMITE_GOOGLE ? `<p class="note">${t("val.trop.google")}</p>` : ""}</li>`; }).join("")}</ul>
-        <p class="note">${t("val.modifier.note")}</p></section>`;
+        ${absents.map(r => `<p class="note" data-absent="${r}">${t("res.absent", { res: R[r] })}${r === "tiktok" ? (o.tiktok_demande_le ? ` <span data-tiktok-demande>${t("acc.act.tiktok.demande", { d: I.date(o.tiktok_demande_le) })}</span>` : ` <a href="${e(I.lien("index.html") + "#/comptes?tiktok")}" id="val-tiktok">${t("acc.act.tiktok")}</a>`) : ""}</p>`).join("")}
+        <p class="note">${t("val.modifier.note.lien", { espace: `<a href="${e(I.lien("index.html") + "#/contenus")}" id="val-espace">${t("val.votre.espace")}</a>` })}</p></section>`;
     $("boutons").innerHTML = `<button type="button" class="bouton" id="approuver">${t("dec.approuver")}</button><button type="button" class="bouton second" id="modifier">${t("val.demander.modif")}</button><button type="button" class="lien" id="refuser">${t("refuser")}</button>`;
-    $("approuver").onclick = () => decider("approuve");
-    $("refuser").onclick = () => decider("refuse");
+    brancher = () => { $("approuver").onclick = () => decider("approuve"); $("refuser").onclick = () => confirmerRefus(t("dec.refus.question"), t("dec.refus.oui"), "refuse");
+      $("modifier").onclick = ouvrirMot; };
+    const ouvrirMot = () => { $("page").classList.remove("collante"); $("boutons").hidden = true; $("zone-mot").hidden = false; $("mot").focus({ preventScroll: true }); $("decision").scrollIntoView({ block: "start" }); };
     // Barre de décision collée en bas sur téléphone (valider.html, #page.collante) ; retirée pendant la saisie du mot.
     $("page").classList.add("collante");
-    $("modifier").onclick = () => { $("page").classList.remove("collante"); $("boutons").hidden = true; $("zone-mot").hidden = false; $("mot").focus({ preventScroll: true }); $("decision").scrollIntoView({ block: "start" }); };   // en haut de l'écran : le clavier ne cache pas « Envoyer la demande »
+    brancher();   // « Demander une modification » : en haut de l'écran : le clavier ne cache pas « Envoyer la demande »
     $("annuler-mot").onclick = () => { $("page").classList.add("collante"); $("boutons").hidden = false; $("zone-mot").hidden = true; msg(""); };
     $("envoyer-mot").onclick = () => { const x = $("mot").value.trim(); if (!x) { msg(t("val.ecrire.mot")); $("mot").focus(); return; } decider("modification", x); };
   }
@@ -69,8 +84,8 @@
       <section class="carte"><div class="f"><label for="reponse">${t("rep.proposee")}</label><textarea id="reponse" maxlength="4000"${lc}>${e(o.reponse_proposee || "")}</textarea></div>
         <p class="note">${t("val.publiee.sous.avis")}</p></section>`;
     $("boutons").innerHTML = `<button type="button" class="bouton" id="valider">${t("rep.valider")}</button><button type="button" class="lien" id="refuser">${t("rep.refuser")}</button>`;
-    $("valider").onclick = () => { const x = $("reponse").value.trim(); if (!x) { msg(t("val.reponse.vide")); $("reponse").focus(); return; } decider("valide", x); };
-    $("refuser").onclick = () => decider("refuse");
+    brancher = () => { $("valider").onclick = () => { const x = $("reponse").value.trim(); if (!x) { msg(t("val.reponse.vide")); $("reponse").focus(); return; } decider("valide", x); };
+      $("refuser").onclick = () => confirmerRefus(t("val.refus.avis.question"), t("rep.refuser"), "refuse"); }; brancher();
   }
   // Réponse à un commentaire Instagram ou Facebook (jamais un commentaire sensible : la base ne crée pas de lien pour lui).
   function commentaire(o) {
@@ -80,8 +95,8 @@
       <section class="carte"><div class="f"><label for="reponse">${t("rep.proposee")}</label><textarea id="reponse" maxlength="1000"${lc}>${e(o.reponse_proposee || "")}</textarea></div>
         <p class="note">${t("val.publiee.sous.cm")}</p></section>`;
     $("boutons").innerHTML = `<button type="button" class="bouton" id="valider">${t("cm.valider")}</button><button type="button" class="lien" id="refuser">${t("cm.ne.pas.repondre")}</button>`;
-    $("valider").onclick = () => { const x = $("reponse").value.trim(); if (!x) { msg(t("val.reponse.vide")); $("reponse").focus(); return; } decider("valide", x); };
-    $("refuser").onclick = () => decider("ignore");
+    brancher = () => { $("valider").onclick = () => { const x = $("reponse").value.trim(); if (!x) { msg(t("val.reponse.vide")); $("reponse").focus(); return; } decider("valide", x); };
+      $("refuser").onclick = () => confirmerRefus(t("val.refus.cm.question"), t("cm.ne.pas.repondre"), "ignore"); }; brancher();
   }
   async function charger() {
     if (P) $("demo").hidden = P.mode !== "demo";

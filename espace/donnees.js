@@ -34,7 +34,7 @@
   const reseauxAutorises = c => { const o = OFFRES[(c || {}).offre_id] || {}, ret = Array.isArray((c || {}).reseaux_retenus) ? c.reseaux_retenus : ["instagram", "facebook", "tiktok"];
     return ["instagram", "facebook", "google", "tiktok"].filter(r => r === "google" || (o.reseaux_sociaux && ret.includes(r) && (r !== "tiktok" || o.tiktok))); };
   const FICHE = ["nom", "metier", "ville", "ton", "specialites", "horaires", "mots_cles", "mentions_autorisees", "contact", "email_validation", "couleurs", "reglage_avis", "lien_avis", "notifications", "commentaires_compliments_auto"];
-  const RESEAUX = ["facebook", "instagram", "google", "tiktok"];
+  const RESEAUX = ["instagram", "facebook", "tiktok", "google"];   // ordre fixe d'affichage (31/10/2026) : Instagram, Facebook, TikTok, Fiche Google
   // Même refus que le déclencheur a_reseaux_retenus de schema.sql : un réseau hors de l'offre ou non retenu à la mise en route ne se programme pas.
   const horsOffre = (c, r) => { if (!reseauxAutorises(c).includes(r)) throw new Error("réseau non compris dans l'offre ou non retenu pour ce commerce : " + r); };
   // Journal : types INTERNES, jamais montrés au commerçant (objectif interne des pilotes, ancienne garantie « 10 avis », saisies et décisions de
@@ -43,22 +43,36 @@
   // Mode de secours des avis (20/10/2026) : une réponse « à publier sur Google » qui attend depuis 4 h déclenche une alerte à l'équipe (même valeur
   // que secours_alerte_heures() de schema.sql, égalité testée par rls.test.mjs) ; la console met la carte en évidence à partir de là.
   const SECOURS_ALERTE_HEURES = 4;
-  // Numéro WhatsApp au format international E.164 (même règle que regler_whatsapp de schema.sql) : espaces, points, tirets et parenthèses retirés,
-  // « 00 » lu comme « + ». Sans indicatif du pays : refusé (aucun pays deviné).
-  const numeroWhatsapp = v => { let n = String(v == null ? "" : v).replace(/[\s().-]/g, ""); if (n.startsWith("00")) n = "+" + n.slice(2); return /^\+[1-9]\d{7,14}$/.test(n) ? n : null; };
+  // Numéro WhatsApp ou de rappel au format international E.164 (même règle que numero_international de schema.sql, bloc « Créneaux réels » ;
+  // égalité testée par supabase/test/creneaux.test.mjs) : espaces, points, tirets et parenthèses retirés, « 00 » lu comme « + ». Numéro national
+  // qui commence par 0 (31/10/2026, test client Premium belge) : indicatif du pays du commerce (+32 pour 'BE', +33 pour 'FR') ; pays inconnu : refusé.
+  const INDICATIFS = { BE: "+32", FR: "+33" }, EXEMPLES_NUMERO = { BE: "+32 470 12 34 56", FR: "+33 6 12 34 56 78" };
+  const numeroWhatsapp = (v, pays) => { let n = String(v == null ? "" : v).replace(/[\s().-]/g, ""), ind = INDICATIFS[String(pays || "").toUpperCase()];
+    if (n.startsWith("00")) n = "+" + n.slice(2); else if (ind && /^0[1-9]/.test(n)) n = ind + n.slice(1); return /^\+[1-9]\d{7,14}$/.test(n) ? n : null; };
+  // Exemple de numéro selon le pays du commerce (champs, aides, phrases d'erreur) : Belgique +32 470 12 34 56, sinon +33 6 12 34 56 78.
+  const exempleNumero = pays => EXEMPLES_NUMERO[String(pays || "").toUpperCase() === "BE" ? "BE" : "FR"];
+  // Fixe ou mobile (31/10/2026, test client Essentiel, tour 5) : même règle que numero_fixe de schema.sql (bloc « Créneaux réels », égalité testée) :
+  // Belgique, mobile = +324 et 8 chiffres ; France, mobile = +336 ou +337 ; autre pays : jamais compté comme fixe. WhatsApp ne reçoit pas un fixe.
+  const numeroFixe = n => { n = String(n || ""); return n.startsWith("+32") ? !/^\+324\d{8}$/.test(n) : n.startsWith("+33") ? !/^\+33[67]\d{8}$/.test(n) : false; };
+  const PHRASE_FIXE = "Ce numéro ressemble à un fixe : WhatsApp ne le recevra pas.";
+  // Numéro tel qu'enregistré, mis en forme pour la lecture : +32 472 12 34 56, +33 6 12 34 56 78 ; un autre numéro reste tel quel.
+  const numeroLisible = n => { n = String(n || ""); let m = n.match(/^\+32(4\d{2})(\d{2})(\d{2})(\d{2})$/); if (m) return "+32 " + m.slice(1).join(" ");
+    m = n.match(/^\+32(\d)(\d{3})(\d{2})(\d{2})$/); if (m) return "+32 " + m.slice(1).join(" ");
+    m = n.match(/^\+33(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/); return m ? "+33 " + m.slice(1).join(" ") : n; };
   const PHRASES_MARQUE = { invalide: "Identifiant de marque Metricool invalide : des chiffres seulement (blogId, lu dans l'adresse de la marque sur Metricool).",
     prise: "Cette marque Metricool est déjà celle d'un autre commerce." };
-  const PHRASE_WHATSAPP = "Numéro WhatsApp invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.";
+  const phraseWhatsapp = pays => "Numéro WhatsApp invalide : indiquez l'indicatif du pays, par exemple " + exempleNumero(pays) + ".";
   // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : mêmes règles et mêmes phrases que la base.
-  const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
+  const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible", "changement_offre"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
     TEXTES: { nom_vide: "Indiquez le nom de votre commerce.", nom_long: "Le nom est trop long (120 caractères au plus).",
-      telephone: "Numéro de téléphone invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.", sujet: "Sujet inconnu.",
+      telephone: "Numéro de téléphone invalide : indiquez l'indicatif du pays, par exemple +33 6 12 34 56 78.",
+      telephone_be: "Numéro de téléphone invalide : indiquez l'indicatif du pays, par exemple +32 470 12 34 56.", sujet: "Sujet inconnu.",
       cas: "Cas inconnu : pas de fiche, ou fiche pas à votre nom.", deja_verifiee: "Votre fiche est déjà vérifiée par Google.",
       fiche_en_creation: "Fiche Google en création : la garantie démarre à sa vérification par Google (console, « Fiche vérifiée par Google »).",
       date_verif: "Date de vérification invalide (aujourd'hui au plus tard).", decision: "Décision inconnue : approuver ou en parler.",
       avis_introuvable: "Avis introuvable.", avis_equipe: "Avec votre offre, notre équipe répond elle-même à cet avis.", rien_a_approuver: "Aucune réponse proposée à approuver pour cet avis." },
     nom(v) { const n = String(v == null ? "" : v).replace(/\s+/g, " ").trim(); if (n.length < 2) throw new Error(MER.TEXTES.nom_vide); if (n.length > 120) throw new Error(MER.TEXTES.nom_long); return n; },
-    telephone(v) { const n = numeroWhatsapp(v); if (!n) throw new Error(MER.TEXTES.telephone); return n; } };
+    telephone(v, pays) { const n = numeroWhatsapp(v, pays); if (!n) throw new Error(MER.TEXTES[String(pays || "").toUpperCase() === "BE" ? "telephone_be" : "telephone"]); return n; } };
   window.RENOM_MER = MER;
   // ---- Fiche Google du client venu du site (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : mêmes règles et
   // mêmes phrases que lien_fiche_google, place_id_de_lien et etat_fiche_google de schema.sql (et que moteur/audit/lien_google.py : FORMAT, extraire).
@@ -78,14 +92,15 @@
     // Recherche automatique sans réponse depuis 2 h (n8n ou GitHub Actions en panne) : carte « Identifier la fiche Google » dans la console.
     ATTENTE_HEURES: 2 };
   window.RENOM_FICHE = FG;
-  window.RENOM_WHATSAPP = { numero: numeroWhatsapp };
+  window.RENOM_WHATSAPP = { numero: numeroWhatsapp, exemple: exempleNumero, fixe: numeroFixe, lisible: numeroLisible, PHRASE_FIXE };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
-    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
   const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
   const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
-  const mois0 = () => new Date().toISOString().slice(0, 7) + "-01";
+  // Mois en cours à l'heure de Paris (01/11/2026, vu à 0 h 03 le 1er novembre : le mois UTC était encore octobre, compteurs à zéro).
+  const mois0 = () => { const p = partiesParis(Date.now()); return ymd(p.a, p.m, 1); };
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
   const REGLES = { programme: "Seul un contenu approuvé se programme.", futur: "La date doit être dans le futur." };
 
@@ -132,7 +147,9 @@
       // apercu_9x16_url : visuel TikTok d'une publication photo (bloc SQL « Aperçus par réseau », 15/10/2026) ; absent d'un lien plus ancien.
       if (r.contenu) { const c = r.contenu; return { ...base, type: c.type, format: c.format, legende: c.legende || "", legendes: c.legendes || null, visuel_url: c.apercu_url || null, visuel_9x16_url: c.apercu_9x16_url || null, video_url: null, ia: c.ia === true,
         // reseaux : réseaux où ce commerce publie (bloc SQL « Réseaux de l'offre sur la page de validation », 30/10/2026) ; absent avant ce bloc.
-        reseaux: Array.isArray(c.reseaux) ? c.reseaux : null }; }
+        reseaux: Array.isArray(c.reseaux) ? c.reseaux : null,
+        // connectes : comptes connectés (bloc « Créneaux réels », 31/10/2026) ; absent avant ce bloc : la page compte alors tous les réseaux comme partants.
+        connectes: Array.isArray(c.connectes) ? c.connectes : null, tiktok_demande_le: c.tiktok_demande_le || null }; }
       if (r.avis) { const a = r.avis; return { ...base, note: a.note, texte: a.texte || "", auteur: a.auteur || "", reponse_proposee: a.reponse_proposee || "" }; }
       if (r.commentaire) { const m = r.commentaire; return { ...base, reseau: m.reseau, categorie: m.categorie, texte: m.texte || "", auteur: m.auteur || "", reponse_proposee: m.reponse_proposee || "", recu_le: m.recu_le }; }
       return r;
@@ -157,7 +174,9 @@
   const LIMITE_GOOGLE = 1500;
   const formatDe = c => (c && c.format) || (c && c.type === "video" ? "video" : "publication");
   // Une vidéo ou une story ne se publie pas sur la fiche Google.
-  const reseauxPour = c => formatDe(c) === "publication" ? RESEAUX.slice() : RESEAUX.filter(r => r !== "google");
+  // Story : Instagram et Facebook seulement (même règle que reseaux_tacites() et verifier_programmation de schema.sql, 31/10/2026 : l'aperçu
+  // montrait un onglet TikTok pour une story qui n'y part jamais).
+  const reseauxPour = c => formatDe(c) === "publication" ? RESEAUX.slice() : formatDe(c) === "story" ? ["facebook", "instagram"] : RESEAUX.filter(r => r !== "google");
   // Réseaux où CE contenu part pour CE commerce (30/10/2026, bug vu par PJ : un Essentiel voyait Instagram, Facebook et TikTok à la validation) :
   // ceux du format (reseauxPour) ET ceux de l'offre et retenus (autorises : reseauxAutorises du commerce, ou « reseaux » rendu par objet_par_jeton).
   // autorises absent (lien d'avant le bloc SQL) : le format seul, comme avant.
@@ -194,17 +213,107 @@
   const partiesParis = t => { const p = {}; FMT_PARIS.formatToParts(new Date(t)).forEach(x => { p[x.type] = +x.value; }); return { a: p.year, m: p.month - 1, j: p.day, h: p.hour, mi: p.minute, s: p.second }; };
   const decalageParis = t => { const p = partiesParis(t); return Date.UTC(p.a, p.m, p.j, p.h, p.mi, p.s) - Math.floor(t / 1000) * 1000; };
   const instantParis = (a, m, j, h, mi) => { const g = Date.UTC(a, m, j, h, mi); let t = g - decalageParis(g); t = g - decalageParis(t); return t; };
-  // Prochain créneau libre du métier, à au moins 2 h d'ici. pris : instants (ms) déjà occupés par une publication du commerce.
-  function prochainCreneau(metier, pris, maintenant) {
-    const now = maintenant || Date.now(), occupe = new Set(pris || []), p = partiesParis(now), heures = CRENEAUX[metier] || CRENEAUX.autre;
+  // ---- Jours où l'on publie (31/10/2026, test client « dix sur dix » : une publication tombait un lundi, jour de fermeture du restaurant).
+  // Mêmes règles que jours_ouverts(), est_ferie_fr() et programmer_au_creneau() de schema.sql (bloc « Créneaux réels », cas communs testés par
+  // espace/test/creneaux.test.mjs et supabase/test/creneaux.test.mjs) :
+  //   - jours d'ouverture lus dans les horaires de la fiche (texte libre, français, anglais ou néerlandais : « Du mardi au samedi », « fermé le lundi »,
+  //     « Closed on Mondays », « maandag gesloten ») ; horaires illisibles ou sans jour : aucun jour exclu (null) ;
+  //   - jours fériés de France (Code du travail, article L3133-1 : 1er janvier, lundi de Pâques, 1er mai, 8 mai, Ascension, lundi de Pentecôte,
+  //     14 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre) ou de Belgique selon le pays du commerce (commerces.pays, 'FR' par défaut,
+  //     'BE' : 1er janvier, lundi de Pâques, 1er mai, Ascension, lundi de Pentecôte, 21 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre) ;
+  //   - au plus une publication par jour (heure de Paris).
+  const sansAccents = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const NOMS_JOURS = [["lundi", "monday", "maandag"], ["mardi", "tuesday", "dinsdag"], ["mercredi", "wednesday", "woensdag"], ["jeudi", "thursday", "donderdag"],
+    ["vendredi", "friday", "vrijdag"], ["samedi", "saturday", "zaterdag"], ["dimanche", "sunday", "zondag"]];
+  function joursOuverts(texte) {
+    let s = sansAccents(texte); if (!s.trim()) return null;
+    NOMS_JOURS.forEach((l, i) => l.forEach(n => { s = s.replace(new RegExp("\\b" + n + "s?\\b", "g"), "#" + (i + 1)); }));
+    const LISTE = "#[1-7](?:\\s*(?:,|et|and|en|&|/)\\s*#[1-7])*", FERME = "(?:fermee?s?|closed|gesloten)";
+    const jours = x => (x.match(/#[1-7]/g) || []).map(y => +y[1]), fermes = new Set(), ouverts = new Set();
+    s = s.replace(new RegExp(FERME + "\\s*(?:le |les |on |op |the )?(" + LISTE + ")", "g"), (m, l) => { jours(l).forEach(j => fermes.add(j)); return " "; });
+    s = s.replace(new RegExp("(" + LISTE + ")\\s*:?\\s*" + FERME, "g"), (m, l) => { jours(l).forEach(j => fermes.add(j)); return " "; });
+    s = s.replace(/#([1-7])\s*(?:au|a|-|–|to|until|through|tot|t\/m)\s*#([1-7])/g, (m, a, b) => { for (let j = +a, k = 0; k < 7; k++, j = j % 7 + 1) { ouverts.add(j); if (j === +b) break; } return " "; });
+    jours(s).forEach(j => ouverts.add(j));
+    if (!ouverts.size && !fermes.size) return null;
+    const l = (ouverts.size ? [...ouverts] : [1, 2, 3, 4, 5, 6, 7]).filter(j => !fermes.has(j)).sort((a, b) => a - b);
+    return l.length ? l : null;   // tout fermé : texte mal compris, aucun jour exclu (jamais de programmation bloquée)
+  }
+  const ymd = (a, m, j) => a + "-" + String(m + 1).padStart(2, "0") + "-" + String(j).padStart(2, "0");
+  function feriesFr(an) {
+    const a = an % 19, b = Math.floor(an / 100), c = an % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const p = Date.UTC(an, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1), dec = n => new Date(p + n * 86400000).toISOString().slice(0, 10);
+    return new Set([ymd(an, 0, 1), dec(1), ymd(an, 4, 1), ymd(an, 4, 8), dec(39), dec(50), ymd(an, 6, 14), ymd(an, 7, 15), ymd(an, 10, 1), ymd(an, 10, 11), ymd(an, 11, 25)]);
+  }
+  function feriesBe(an) {
+    const fr = [...feriesFr(an)], ascension = fr[4], lundiPaques = fr[1], pentecote = fr[5];
+    return new Set([ymd(an, 0, 1), lundiPaques, ymd(an, 4, 1), ascension, pentecote, ymd(an, 6, 21), ymd(an, 7, 15), ymd(an, 10, 1), ymd(an, 10, 11), ymd(an, 11, 25)]);
+  }
+  // Nom du jour férié (31/10/2026, test client Croissance : « Ce jour est férié » ne disait pas lequel) : identifiant traduit par i18n.js (ferie.<id>).
+  function ferieDe(jour, pays) {
+    const an = +jour.slice(0, 4), fr = [...feriesFr(an)], be = paysDe(pays) === "BE";
+    const ids = be ? [[ymd(an, 0, 1), "nouvel-an"], [fr[1], "lundi-paques"], [ymd(an, 4, 1), "1er-mai"], [fr[4], "ascension"], [fr[5], "lundi-pentecote"], [ymd(an, 6, 21), "21-juillet"],
+        [ymd(an, 7, 15), "15-aout"], [ymd(an, 10, 1), "toussaint"], [ymd(an, 10, 11), "11-novembre"], [ymd(an, 11, 25), "noel"]]
+      : [[fr[0], "nouvel-an"], [fr[1], "lundi-paques"], [fr[2], "1er-mai"], [fr[3], "8-mai"], [fr[4], "ascension"], [fr[5], "lundi-pentecote"], [fr[6], "14-juillet"],
+        [fr[7], "15-aout"], [fr[8], "toussaint"], [fr[9], "11-novembre"], [fr[10], "noel"]];
+    return (ids.find(x => x[0] === jour) || [])[1] || null;
+  }
+  const paysDe = pays => String(pays || "FR").toUpperCase() === "BE" ? "BE" : "FR";
+  const estFerie = (jour, pays) => (paysDe(pays) === "BE" ? feriesBe : feriesFr)(+jour.slice(0, 4)).has(jour);
+  const jourParisDe = t => { const p = partiesParis(t); return ymd(p.a, p.m, p.j); };
+  // Rythme selon l'offre : Essentiel (2 par mois) 7 jours d'écart au moins, Croissance 2 jours, Premium 1 jour (espacement_offre de schema.sql).
+  const ESPACEMENT = { essentiel: 7, standard: 2, premium: 1 };
+  // Moment du texte (31/10/2026, capture v26 : « l'heure du déjeuner » programmée à 18 h 30) : midi, soir, ou null (les deux ou aucun).
+  // Mêmes mots que moment_legende de schema.sql (égalité testée) ; sert à la programmation automatique ET à la suggestion de « Programmer à la main ».
+  const MOTS_MIDI = /\b(midi|dejeuner|dejeuners|lunch|lunchen|middag|noon)\b/;
+  const MOTS_SOIR = /\b(soir|soiree|soirees|diner|diners|dinner|tonight|evening|avond|vanavond|avondeten|apero|aperos|aperitif|aperitifs|borrel)\b/;
+  function momentLegende(texte) {
+    const s = String(texte || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(), mi = MOTS_MIDI.test(s), so = MOTS_SOIR.test(s);
+    return mi && !so ? "midi" : so && !mi ? "soir" : null;
+  }
+  // Texte lu d'un contenu : la légende commune et celles par réseau (comme programmer_au_creneau).
+  const texteDuContenu = ct => [ct && ct.legende, ...Object.values((ct && ct.legendes) || {})].filter(Boolean).join(" ");
+  // Prochain créneau libre du métier, à au moins 2 h d'ici, un jour d'ouverture, jamais un jour férié, au plus une publication par jour.
+  // pris : instants (ms) déjà occupés par une publication du commerce ; regles : { horaires } (texte de la fiche), { pays } ('FR' par défaut, 'BE'),
+  // { unParJour: false } pour l'ancienne règle.
+  // { offre } (31/10/2026, test client Essentiel, tour 5) : écart minimal entre deux publications, ESPACEMENT (même valeur que espacement_offre).
+  function prochainCreneau(metier, pris, maintenant, regles) {
+    const r = regles || {}, ouverts = joursOuverts(r.horaires), unParJour = r.unParJour !== false, ecart = unParJour ? ESPACEMENT[r.offre] || 1 : 0;
+    const now = maintenant || Date.now(), occupe = new Set(pris || []), joursPris = new Set([...occupe].map(jourParisDe)), p = partiesParis(now), base = CRENEAUX[metier] || CRENEAUX.autre;
+    // Alternance (31/10/2026, test client Croissance, tour 5) : on commence par le créneau qui suit celui de la dernière publication
+    // (restaurant : 11 h 30 puis 18 h 30, puis 11 h 30...), même règle que programmer_au_creneau de schema.sql.
+    const dern = occupe.size ? partiesParis(Math.max(...occupe)) : null, k = dern ? base.indexOf(String(dern.h).padStart(2, "0") + ":" + String(dern.mi).padStart(2, "0")) + 1 : 0;
+    const tournes = base.slice(k).concat(base.slice(0, k));
+    // { moment } : « midi » garde le créneau d'avant 15 h, « soir » celui de 17 h ou après (momentLegende) ; sinon l'alternance.
+    const voulus = r.moment === "midi" ? tournes.filter(x => +x.slice(0, 2) < 15) : r.moment === "soir" ? tournes.filter(x => +x.slice(0, 2) >= 17) : tournes;
+    const heures = voulus.length ? voulus : tournes;
+    const numJour = j => Date.parse(j + "T00:00:00Z") / 864e5, numsPris = [...joursPris].map(numJour), tropPres = j => numsPris.some(x => Math.abs(x - numJour(j)) < ecart);
     for (let k = 0; k < 60; k++) {
-      const d = new Date(Date.UTC(p.a, p.m, p.j + k));
+      const d = new Date(Date.UTC(p.a, p.m, p.j + k)), jour = d.toISOString().slice(0, 10), js = d.getUTCDay() || 7;
+      if ((ouverts && !ouverts.includes(js)) || estFerie(jour, r.pays) || (unParJour && tropPres(jour))) continue;
       for (const hm of heures) {
         const [h, mi] = hm.split(":").map(Number), t = instantParis(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, mi);
         if (t >= now + DELAI_MIN_CRENEAU && !occupe.has(t)) return t;
       }
     }
     throw new Error("Aucun créneau libre dans les 60 prochains jours.");
+  }
+  // Créneau d'un contenu pour un commerce (01/11/2026, tour 6 Essentiel : « Si vous validez : mercredi 4 novembre » puis « prévue mardi 10 novembre ») :
+  // UNE fonction pour la date annoncée (Contenus, Calendrier) et la date programmée (programmation automatique) : horaires, pays, rythme de
+  // l'offre et moment du texte. ct absent : sans moment.
+  function creneauPour(c, pris, ct, maintenant) {
+    c = c || {};
+    return prochainCreneau(c.metier, pris, maintenant || null, { horaires: c.horaires, pays: c.pays, offre: c.offre_id, moment: ct ? momentLegende(texteDuContenu(ct)) : null });
+  }
+  // ---- Où un contenu part vraiment (31/10/2026) : UNE règle pour l'aperçu (onglets), la programmation, valider.html et les textes.
+  //   reseaux : réseaux de l'offre et retenus où ce format part (reseauxDuContenu) ; partent : ceux-là qui sont connectés ;
+  //   absents : ceux de l'offre pas encore connectés (le contenu n'y partira pas tant qu'ils ne le sont pas) ;
+  //   formats : visuel réel par réseau (« 4:5 », « 9:16 ») ; comptes absent (page de validation : connexions inconnues) : tous comptés comme partants.
+  function destinations(ct, autorises, comptes) {
+    const reseaux = ["instagram", "facebook", "tiktok", "google"].filter(r => reseauxDuContenu(ct, autorises).includes(r));
+    const etat = r => comptes == null ? "connecte" : ((Array.isArray(comptes) ? comptes.find(k => k.reseau === r) : comptes[r]) || {}).etat;
+    const f = formatDe(ct), formats = Object.fromEntries(reseaux.map(r => [r, f !== "publication" || r === "tiktok" ? "9:16" : "4:5"]));
+    return { reseaux, partent: reseaux.filter(r => etat(r) === "connecte"), absents: reseaux.filter(r => etat(r) !== "connecte"), formats };
   }
   // Dernier créneau du métier à l'instant t ou avant (publication passée de la graine de démonstration).
   function creneauAvant(metier, pris, t) {
@@ -486,7 +595,8 @@
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
     RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
     FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
-    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler",
+    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis sensible : version du commerçant à lire avant de publier",
+    AVIS_RETENU: "Avis : le commerçant attend votre appel avant toute publication",
     // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
     ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
@@ -503,6 +613,7 @@
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
+    if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer au ${telLisible(d.telephone) || "commerçant (numéro inconnu)"}, puis changer l'abonnement dans Stripe (prorata), sans second paiement.`;
     if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
@@ -649,7 +760,7 @@
     const signe = async ch => { try { const r = await sb.storage.from("photos").createSignedUrl(ch, 3600); return r.data && r.data.signedUrl; } catch (e) { return null; } };
     async function marqueDe(c) {
       const MQ = window.RENOM_MARQUE, cat = await MQ.charger();
-      const ph = ok(await sb.from("photos").select("id,chemin,nom_fichier,cree_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(6));
+      const ph = ok(await sb.from("photos").select("id,chemin,nom_fichier,cree_le").eq("commerce_id", c.id).or("statut.neq.refusee,refus_motif.eq.plafond").order("cree_le", { ascending: false }).limit(9));
       const urls = await Promise.all(ph.map(p => signe(p.chemin)));
       return { kit: c.marque ? MQ.normaliser(c.marque, c.couleurs, c.metier, c.ton || "", cat) : null, brut: c.marque || null,
         photos: ph.map((p, i) => ({ url: urls[i], nom: p.nom_fichier })).filter(p => p.url), logo: c.marque && c.marque.logo ? await signe(c.marque.logo) : null,
@@ -772,9 +883,9 @@
       async autoriserPhotos() { const c = await self.commerce(), r = await sb.rpc("autoriser_photos", { p_commerce: c.id }); if (r.error) throw new Error(phrasePhotos(r.error.message)); cache = null; return r.data; },
       // ---- Alertes WhatsApp (22/10/2026) : la case du commerçant (regler_whatsapp : numéro E.164, heure de l'accord, journal WHATSAPP_ACCORD).
       async reglerWhatsapp(numero, accord) {
-        const c = await self.commerce(), n = accord ? numeroWhatsapp(numero) : null; if (accord && !n) throw new Error(PHRASE_WHATSAPP);
+        const c = await self.commerce(), n = accord ? numeroWhatsapp(numero, c.pays) : null; if (accord && !n) throw new Error(phraseWhatsapp(c.pays)); if (accord && numeroFixe(n)) throw new Error(PHRASE_FIXE);
         const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });
-        if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? PHRASE_WHATSAPP : r.error.message); cache = null; return r.data;
+        if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? phraseWhatsapp(c.pays) : r.error.message); cache = null; return r.data;
       },
       async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
       async adminEnvoyerPhoto(cid, f, o = {}) {
@@ -785,7 +896,7 @@
         return { chemin, deja: r.deja };
       },
       async adminDeposerPhotos(cid, details) { const r = await sb.rpc("admin_deposer_photos", { p_commerce: cid, p_details: details }); if (r.error) throw new Error(phrasePhotos(r.error.message)); return r.data; },
-      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,depot_video_id,drapeaux,gabarit,photo_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      async contenus() { const c = await self.commerce(); return ok(await sb.from("contenus").select("id,type,format,statut,legende,legendes,fichier,note_modification,cree_le,decide_le,depot_video_id,drapeaux,gabarit,photo_id").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       // ---- Kit de marque (écran « Votre style ») : colonne commerces.marque ; la base contrôle le kit, pose la version, l'auteur et aligne commerces.couleurs.
       async marque() { return marqueDe(await self.commerce()); },
       async deposerLogo(f) { return logoDe(await self.commerce(), f); },
@@ -805,21 +916,25 @@
       async urlVideo(ct) { if (ct.type !== "video" || !ct.fichier) return null; const r = ok(await sb.storage.from("contenus").createSignedUrl(ct.fichier, 3600)); return r.signedUrl; },
       async valider(id, statut, note) {
         if (statut === "modification" && !(note || "").trim()) throw new Error("Écrivez un mot pour dire ce qu'il faut modifier.");
-        const r = ok(await sb.from("contenus").update({ statut, note_modification: statut === "modification" ? note.trim() : null }).eq("id", id).select());
+        const motif = statut === "refuse" && String(note || "").trim() ? String(note).trim().slice(0, 500) : null;   // motif de refus facultatif (31/10/2026)
+        const r = ok(await sb.from("contenus").update({ statut, note_modification: statut === "modification" ? note.trim() : motif }).eq("id", id).select());
         if (!r.length) throw new Error("Ce contenu est déjà traité.");
       },
+      async remettreAValider(id) { return ok(await sb.rpc("remettre_a_valider", { p_contenu: id })); },
       async idees() { const c = await self.commerce(); return ok(await sb.from("idees").select("id,titre,texte,cree_le,origine,statut,semaine,motif").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
       async demanderIdees() { const c = await self.commerce(), r = await sb.from("idees_demandes").insert({ commerce_id: c.id });
         if (r.error) throw new Error(/une demande d'idées par jour/.test(r.error.message || "") ? PHRASE_IDEES_JOUR : r.error.message); },
       async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut)").eq("commerce_id", c.id).order("prevu_le")); },
-      async programmer({ contenu_id, reseaux, prevu_le }) { const c = await self.commerce(); ok(await sb.from("publications").insert({ commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString() })); },
+      async programmer({ contenu_id, reseaux, prevu_le }) { if (!Array.isArray(reseaux) || !reseaux.length) throw new Error("Choisissez où publier."); const c = await self.commerce(); ok(await sb.from("publications").insert({ commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString() })); },
+      // La base vérifie l'offre, la connexion et le format (déclencheurs verifier_programmation et verifier_reseaux_retenus).
+      async publierSurGoogle(id) { ok(await sb.from("publications").update({ reseaux: ["google"] }).eq("id", id)); },
       async deplacer(id, prevu_le) { ok(await sb.from("publications").update({ prevu_le: new Date(prevu_le).toISOString() }).eq("id", id)); },
       async annuler(id) { ok(await sb.from("publications").update({ statut: "annule" }).eq("id", id)); },
       // Toutes les colonnes (22/10/2026) : propose_le (réponse d'un avis sensible envoyée par email) et publie_par (mode de secours) sont lues si la base
       // les a, sans casser l'écran si un bloc n'est pas encore collé. Le commerçant lit déjà toute la ligne de ses avis (règle avis_lecture).
       async avis() { const c = await self.commerce(); return ok(await sb.from("avis").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
       async validerAvis(id, statut, texte) { const m = { statut }; if (texte != null) m.reponse_proposee = texte; const r = ok(await sb.from("avis").update(m).eq("id", id).select()); if (!r.length) throw new Error("Cet avis ne se valide pas ici."); },
-      async comptes() { const c = await self.commerce(); const l = ok(await sb.from("comptes_connectes").select("reseau,etat,detail").eq("commerce_id", c.id)); return RESEAUX.map(r => l.find(x => x.reseau === r) || { reseau: r, etat: "non_connecte", detail: "" }); },
+      async comptes() { const c = await self.commerce(); const l = ok(await sb.from("comptes_connectes").select("reseau,etat,detail,maj").eq("commerce_id", c.id)); return RESEAUX.map(r => l.find(x => x.reseau === r) || { reseau: r, etat: "non_connecte", detail: "" }); },
       async compteur() { const c = await self.commerce(); return ok(await sb.from("compteur").select("*").eq("commerce_id", c.id).single()); },
       // Abonnement Stripe du commerce (lecture seule : la table n'est écrite que par le webhook, schema.sql, bloc « abonnements Stripe »).
       // « * » : la colonne rythme n'existe qu'avec le bloc SQL du 27/10/2026 (sans lui : lien de montée mensuel).
@@ -938,10 +1053,21 @@
       // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible » ; les écrans ne les appellent que si la colonne
       // commerces.nom_confirme_le existe, c'est-à-dire quand le bloc est appliqué)
       async confirmerNom(nom) { const r = ok(await sb.rpc("confirmer_nom_commerce", { p_nom: MER.nom(nom) })); cache = null; return r; },
-      async demanderRappel(sujet, telephone) { return ok(await sb.rpc("demander_rappel", { p_sujet: sujet || "mise_en_route", p_telephone: MER.telephone(telephone) })); },
+      async demanderRappel(sujet, telephone, offre) { const c = await self.commerce().catch(() => ({}));
+        if (sujet === "changement_offre") return ok(await sb.rpc("demander_rappel", { p_sujet: sujet, p_telephone: telephone || null, p_offre: offre }));   // 01/11/2026 : numéro facultatif
+        return ok(await sb.rpc("demander_rappel", { p_sujet: sujet || "mise_en_route", p_telephone: MER.telephone(telephone, c.pays) })); },
+      // Demande de rappel déjà enregistrée sur ce sujet (ma_demande_rappel, bloc « Créneaux réels ») : sa date, ou "" ; base sans la fonction : null.
+      async demandeRappel(sujet) { const r = await sb.rpc("ma_demande_rappel", { p_sujet: sujet }); return r.error ? null : r.data || ""; },
       async demanderFicheGoogle(cas) { const r = ok(await sb.rpc("demander_creation_fiche", { p_cas: cas })); cache = null; return r; },
       async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
       async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
+      async donnerVersionAvis(id, texte) { return ok(await sb.rpc("donner_version_avis", { p_avis: id, p_texte: texte })); },
+      async retenirReponseAvis(id) { return ok(await sb.rpc("retenir_reponse_avis", { p_avis: id })); },
+      // Votre contact : sans le bloc SQL (fonction absente), null (l'espace affiche l'équipe et le numéro officiel).
+      async monContact() { const r = await sb.rpc("mon_contact"); return r.error ? null : r.data; },
+      async adminContact(cid) { return ok(await sb.rpc("admin_contact", { p_commerce: cid || null })); },
+      async adminReglerContact(cid, p) { return ok(await sb.rpc("admin_regler_contact", { p_commerce: cid || null, p: p || {} })); },
+      async adminLienAvis(cid, lien) { return ok(await sb.rpc("admin_lien_avis", { p_commerce: cid, p_lien: lien })); },
       async adminConfirmerNom(cid, nom) { return ok(await sb.rpc("admin_confirmer_nom", { p_commerce: cid, p_nom: MER.nom(nom) })); },
       // Fiche Google (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet »)
       async adminFicheGoogleLieu(cid, valeur) { return ok(await sb.rpc("admin_fiche_google_lieu", { p_commerce: cid, p_valeur: String(valeur == null ? "" : valeur).trim() })); },
@@ -1025,12 +1151,14 @@
         const nom = [String(x.commerce || "commerce").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40), x.reseau, String(x.prevu_le || "").slice(0, 10)].filter(Boolean).join("-") + "." + ext;
         const r = ok(await sb.storage.from("contenus").createSignedUrl(x.chemin, 3600, { download: nom })); return r.signedUrl;
       },
+      async adminLibererAvis(id) { return ok(await sb.rpc("admin_liberer_avis", { p_avis: id })); },
       async adminAvisPublie(id, reponse, accord) { ok(await sb.rpc("admin_avis_publie", { p_id: id, p_reponse: reponse, p_accord_client: !!accord })); },
       async adminAvisProposer(id, reponse) { return ok(await sb.rpc("admin_avis_proposer", { p_id: id, p_reponse: reponse })); },
       async adminGarantieDelais() { return ok(await sb.rpc("admin_garantie_delais", {})) || []; },
       async adminDelais(cid, p) { return ok(await sb.rpc("admin_delais", { p_commerce: cid, p: p || {} })); },
       async adminManquement(id, statut, motif) { return ok(await sb.rpc("admin_manquement", { p_id: id, p_statut: statut, p_motif: motif || null })); },
       async adminReseaux(cid, reseaux) { return ok(await sb.rpc("admin_reseaux", { p_commerce: cid, p_reseaux: reseaux })); },
+      async adminPays(cid, pays) { return ok(await sb.rpc("admin_pays", { p_commerce: cid, p_pays: pays })); },
       async adminDelegation(cid, signee) { return ok(await sb.rpc("admin_delegation", { p_commerce: cid, p_signee: !!signee })); },
       async adminCommentairesEquipe() { return ok(await sb.rpc("admin_commentaires_equipe", {})) || []; },
       async adminCommentaireDecider(id, decision, texte) { return ok(await sb.rpc("admin_commentaire_decider", { p_id: id, p_decision: decision, p_texte: texte || null })); },
@@ -1071,7 +1199,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { CRENEAUX, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)

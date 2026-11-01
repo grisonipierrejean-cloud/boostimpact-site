@@ -33,7 +33,7 @@ h1,h2,h3,p,ul,figure{margin:0}
 h1{font-family:var(--titre);font-weight:var(--graisse-titre);font-size:clamp(32px,8.6vw,38px);line-height:1.08;letter-spacing:-.018em;overflow-wrap:break-word;text-wrap:balance;font-stretch:var(--largeur-titre);font-variant-numeric:lining-nums}
 h2{font-family:var(--sans);font-size:19px;font-weight:var(--graisse-forte);line-height:1.25;letter-spacing:-.005em;overflow-wrap:break-word}
 a{color:var(--encre);text-underline-offset:3px}
-a:hover{color:var(--bleu-texte)}
+@media (hover:hover){a:hover{color:var(--bleu-texte)}}
 ::selection{background:var(--encre);color:var(--fond)}
 html{accent-color:var(--encre);caret-color:var(--encre)}
 strong,.fort{font-weight:var(--graisse-forte)}
@@ -78,16 +78,16 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .haut .haut-note+.quitter{margin-left:0}
 .sous{display:flex;flex-wrap:wrap;align-items:center;gap:0 20px;padding:0 16px;font-size:15px;border-bottom:1px solid var(--filet)}
 .sous a{display:inline-flex;align-items:center;gap:6px;min-height:44px;text-decoration:none;color:var(--discret);font-weight:var(--graisse-forte)}
-.sous a:hover{color:var(--encre)}
+@media (hover:hover){.sous a:hover{color:var(--encre)}}
 .sous a[aria-current=page]{color:var(--encre);font-weight:var(--graisse-forte)}
-.sous a[aria-current=page]>span:first-child{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:8px}
+.sous a[aria-current=page]>span:first-child{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:8px}
 .sous .quitter{margin-left:auto}
 .quitter{font:inherit;font-size:15px;background:none;border:0;padding:0 4px;min-height:44px;color:var(--discret);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.quitter:hover{color:var(--encre)}
+@media (hover:hover){.quitter:hover{color:var(--encre)}}
 /* ---------- Langue : FR / EN, deux mots discrets ; la langue en cours est soulignée (pas de couleur, pas de pastille). */
 .langues{display:inline-flex;align-items:center;flex:none}
 .langues button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);letter-spacing:.04em;min-width:40px;min-height:44px;padding:0 6px;background:none;border:0;border-radius:var(--r);color:var(--discret);cursor:pointer}
-.langues button:hover{color:var(--encre)}
+@media (hover:hover){.langues button:hover{color:var(--encre)}}
 .langues button[aria-pressed=true]{color:var(--encre);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}
 .haut .langues{margin-left:auto}
 .haut .haut-note+.langues{margin-left:0}
@@ -107,8 +107,9 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
    Résultats) dans la rangée #sous, au-dessus du contenu, sur téléphone comme sur ordinateur. */
 .haut-reglages{display:flex;flex:0 0 auto}
 .haut-reglages a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;color:var(--discret);text-decoration:none;font-size:14px;font-weight:var(--graisse-forte)}
-.haut-reglages a:hover,.haut-reglages a[aria-current]{color:var(--encre)}
-.haut-reglages a[aria-current]>span:last-child{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:5px}
+.haut-reglages a[aria-current]{color:var(--encre)}
+@media (hover:hover){.haut-reglages a:hover{color:var(--encre)}}
+.haut-reglages a[aria-current]>span:last-child{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:5px}
 .haut-reglages .onglet-icone svg{width:22px;height:22px}
 @media (max-width:420px){.haut{gap:8px}.haut .langues button{min-width:34px;padding:0 4px}}   /* NL « Instellingen » tient à 390 px avec FR EN NL */
 @media (max-width:389px){.haut-reglages a>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
@@ -116,15 +117,15 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .actions-attente .bouton{width:100%;justify-content:flex-start;text-align:left}
 .reglages .liste a{gap:12px;padding:6px 0;text-decoration:none}
 .reglages .liste a .fort{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
-.reglages .liste a:hover .fort{text-decoration-thickness:2px}
+@media (hover:hover){.reglages .liste a:hover .fort{text-decoration-thickness:2px}}
 .pied-reglages .bouton{width:100%}
 .va-bloc{display:flex;flex-direction:column;gap:16px;min-width:0}
 .va-bloc h3{font-size:17px;font-weight:var(--graisse-forte)}
 .onglets a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 0;min-height:54px;text-decoration:none;color:var(--discret);border-radius:var(--r)}
-.onglets a:hover{color:var(--encre)}
+@media (hover:hover){.onglets a:hover{color:var(--encre)}}
 .onglets a[aria-current]{color:var(--encre);background:var(--releve);font-weight:var(--graisse-forte)}
 /* Onglet actif (26/10/2026) : son libellé souligné d'or, sous le mot (jamais un trait devant) ; la couleur du texte reste l'ivoire. */
-.onglets a[aria-current]>span:last-child{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.onglets a[aria-current]>span:last-child{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:4px}
 .onglet-icone{position:relative;display:flex}
 .onglet-icone .nb{position:absolute;top:-8px;left:16px;min-width:19px;height:19px;padding:0 5px;font-size:11px}
 .hors-session #vue{padding:24px 16px 56px}
@@ -184,17 +185,17 @@ h2 .etat{font-size:inherit;font-weight:var(--graisse-forte)}
 /* ---------- Boutons et liens d'action */
 .bouton{display:inline-flex;align-items:center;justify-content:center;gap:10px;font:inherit;font-weight:var(--graisse-forte);line-height:1.25;letter-spacing:.005em;text-align:center;text-decoration:none;background:var(--marque);color:var(--sur-marque);border:1px solid var(--marque);border-radius:var(--r);padding:11px 22px;min-height:48px;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
 @media (prefers-reduced-motion:reduce){.bouton{transition:none}}
-.bouton:hover{background:var(--marque-survol);border-color:var(--marque-survol);color:var(--sur-marque)}
+@media (hover:hover){.bouton:hover{background:var(--marque-survol);border-color:var(--marque-survol);color:var(--sur-marque)}}
 .bouton.second{background:transparent;color:var(--encre);border-color:var(--bord-fort)}
-.bouton.second:hover{background:var(--encre);border-color:var(--encre);color:var(--fond)}
+@media (hover:hover){.bouton.second:hover{background:var(--encre);border-color:var(--encre);color:var(--fond)}}
 .bouton.second[aria-pressed=true]{background:var(--teinte);border-color:var(--bleu-texte);color:var(--encre)}
 .bouton.petit{padding:8px 14px;min-height:44px;font-size:15px}
 .bouton.plein{width:100%}
-.bouton:disabled{opacity:.5;cursor:not-allowed}
+.bouton:disabled,.bouton[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
 .bouton.grand{width:100%;font-size:17px;padding:15px 20px;min-height:56px}
 .bouton svg{flex:0 0 auto}
 .lien{font:inherit;font-size:15px;font-weight:var(--graisse-forte);background:none;border:0;padding:8px 4px;min-height:44px;color:var(--discret);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.lien:hover{color:var(--encre)}
+@media (hover:hover){.lien:hover{color:var(--encre)}}
 .msg .lien{padding:0 2px;color:var(--bleu-texte)}
 .actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .actions.serre{gap:8px}
@@ -209,7 +210,7 @@ label,legend{font-size:14px;font-weight:var(--graisse-forte);color:var(--texte2)
 input[type=text],input[type=number],input[type=email],input[type=password],input[type=url],input[type=tel],input[type=date],input[type=datetime-local],input[type=time],input[type=file],select,textarea{font:inherit;font-size:16px;line-height:1.45;color:var(--encre);background:var(--creux);border:1px solid var(--bord);border-radius:var(--r);padding:11px 14px;min-height:48px;width:100%;max-width:100%}
 textarea{min-height:92px;resize:vertical}
 textarea.haut-texte{min-height:132px}
-input:hover,select:hover,textarea:hover{border-color:var(--discret)}
+@media (hover:hover){input:hover,select:hover,textarea:hover{border-color:var(--discret)}}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus)}
 input[type=file]{font-size:15px;padding:8px}
 input[type=file]::file-selector-button{font:inherit;font-weight:var(--graisse-forte);color:var(--encre);background:var(--releve);border:1px solid var(--bord-fort);border-radius:8px;padding:7px 12px;margin-right:12px;cursor:pointer}
@@ -299,11 +300,11 @@ legend{padding:0;margin-bottom:4px}
 .filtres{display:flex;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;gap:6px;padding:4px;background:var(--surface);border:1px solid var(--filet);border-radius:var(--r-image);align-self:stretch;max-width:100%}
 .filtres::-webkit-scrollbar{display:none}
 .filtres button{flex:0 0 auto;white-space:nowrap;font:inherit;font-weight:var(--graisse-forte);background:none;border:0;border-radius:8px;padding:8px 14px;min-height:44px;color:var(--discret);cursor:pointer}
-.filtres button:hover{color:var(--encre);background:var(--releve)}
+@media (hover:hover){.filtres button:hover{color:var(--encre);background:var(--releve)}}
 .filtres button[aria-pressed=true]{color:var(--sur-marque);font-weight:var(--graisse-forte);background:var(--marque)}
 /* Compteurs de la file « À faire » de la console (25/10/2026) : mêmes filtres, en liens (#/afaire/<type>). */
 .filtres a{flex:0 0 auto;display:inline-flex;align-items:center;white-space:nowrap;font-weight:var(--graisse-forte);border-radius:8px;padding:8px 14px;min-height:44px;color:var(--discret);text-decoration:none}
-.filtres a:hover{color:var(--encre);background:var(--releve)}
+@media (hover:hover){.filtres a:hover{color:var(--encre);background:var(--releve)}}
 .filtres a[aria-current]{color:var(--sur-marque);font-weight:var(--graisse-forte);background:var(--marque)}
 /* Sélecteur « Photos » / « Vidéo » en haut de l'écran Photos (31/10/2026) : deux moitiés égales, 48 px de haut (cible tactile au moins 44 px). */
 .filtres.bascule{display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:visible}
@@ -340,6 +341,12 @@ video.visuel{object-fit:contain;background:#000}
 .cal .hors{background:none}
 .cal .n{font-weight:var(--graisse-forte);padding:0 2px}
 .cal>div[aria-current=date]{box-shadow:inset 0 0 0 2px var(--citron)}
+.cal>div.a-pub{padding:0}
+.cal>div:has(> .cal-libre){padding:0}
+.cal-libre:hover{background:var(--fond-survol, rgba(0,0,0,.04))}
+.cal-saut{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;height:100%;min-height:44px;min-width:0;padding:5px 4px;margin:0;background:none;border:0;border-radius:inherit;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cal-saut:focus-visible{outline:2px solid var(--marque);outline-offset:1px}
+.liste.semaine .cal-saut{min-height:44px;height:auto;padding:0;justify-content:center;text-decoration:underline;text-underline-offset:3px}
 .cal [data-cell]{background:var(--marque);color:var(--sur-marque);font-weight:var(--graisse-forte);font-size:11px;border-radius:5px;padding:1px 3px;max-width:100%}
 
 /* ---------- Avis */
@@ -423,9 +430,9 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
   .lat .logo{font-size:21px;padding:0 12px}
   .menu{display:flex;flex-direction:column;gap:22px;font-size:15px}
   .menu a{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:10px 12px;border-radius:var(--r);text-decoration:none;color:var(--texte2);font-weight:var(--graisse-forte)}
-  .menu a:hover{background:var(--releve);color:var(--encre)}
+  @media (hover:hover){.menu a:hover{background:var(--releve);color:var(--encre)}}
   .menu a[aria-current=page]{background:var(--releve);color:var(--encre);font-weight:var(--graisse-forte);box-shadow:inset 0 0 0 1px var(--filet)}
-  .menu a[aria-current]>span:first-child{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:6px}
+  .menu a[aria-current]>span:first-child{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:6px}
   .groupe{display:flex;flex-direction:column;gap:2px}
   .groupe-lib{font-size:13px;font-weight:var(--graisse-forte);letter-spacing:0;text-transform:none;color:var(--groupe);padding:0 12px 6px}
   .lat-pied .quitter{padding:0 4px}
@@ -462,6 +469,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
   .cal{gap:6px}
   .cal{grid-auto-rows:minmax(76px,1fr)}
   .cal>div{padding:8px;font-size:13px;gap:4px;border-radius:var(--r)}
+  .cal-saut{padding:8px;gap:4px}
   .cal .ent{padding:2px 8px}
   .cal [data-cell]{font-size:12px;padding:2px 6px;border-radius:6px}
   .semaine li{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px;align-items:baseline}
@@ -504,7 +512,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .va-refus li{justify-content:flex-start}
 .va-styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
 .va-style{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-height:104px;padding:14px;background:var(--creux);border:1px solid var(--bord);border-radius:var(--r-image);cursor:pointer}
-.va-style:hover{border-color:var(--discret)}
+@media (hover:hover){.va-style:hover{border-color:var(--discret)}}
 .va-style:has(input:checked){background:var(--teinte);border-color:var(--bleu-texte)}
 .va-style:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
 .va-style-nom{font-size:24px;line-height:1.1;color:var(--encre)}
@@ -540,8 +548,8 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .reseaux{display:flex;flex-direction:column;gap:10px;min-width:0}
 .res-onglets{display:flex;flex-wrap:wrap;gap:0 16px;border-bottom:1px solid var(--filet)}
 .res-onglets button{font:inherit;font-size:14px;font-weight:var(--graisse-forte);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0;min-height:44px;min-width:44px;color:var(--discret);cursor:pointer}
-.res-onglets button:hover{color:var(--encre)}
-.res-onglets button[aria-selected=true]{color:var(--encre);font-weight:var(--graisse-forte);border-bottom-color:var(--accent)}
+@media (hover:hover){.res-onglets button:hover{color:var(--encre)}}
+.res-onglets button[aria-selected=true]{color:var(--encre);font-weight:var(--graisse-forte);border-bottom-color:var(--encre)}
 .res-panneau{display:flex;flex-direction:column;gap:6px;min-width:0}
 .cadre{background:var(--creux);border:1px solid var(--filet);border-radius:var(--r-image);overflow:hidden;width:100%;max-width:400px;display:flex;flex-direction:column}
 .cadre.vertical{max-width:300px}
@@ -649,7 +657,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .entrer-demo{display:flex;flex-direction:column;gap:10px;margin-top:4px;padding:18px;background:var(--releve);border:1px solid var(--filet);border-radius:var(--r-image)}
 .entrer-demo .fort{margin:0 0 2px;font-family:var(--sans);font-size:18px;font-weight:var(--graisse-forte)}
 .entrer-demo .bouton{width:100%;justify-content:center}
-.entrer-demo .bouton.second:hover{background:var(--surface)}
+@media (hover:hover){.entrer-demo .bouton.second:hover{background:var(--surface)}}
 
 /* ---- Automatisations de service : mise en route, score de santé (console). Aucun trait coloré devant un libellé, aucun orange :
    le niveau est écrit en toutes lettres, sur un fond teinté. */
@@ -682,9 +690,9 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .a-valider .apercu-texte .meta{font-size:14px}
 .a-valider[data-contenu] .apercu-texte .meta{font-size:15px;color:var(--encre)}
 .a-valider [data-choix] .bouton{min-height:54px;font-size:17px}
-.a-valider[data-contenu] .bouton.second:hover{background:var(--encre);color:var(--surface)}
+@media (hover:hover){.a-valider[data-contenu] .bouton.second:hover{background:var(--encre);color:var(--surface)}}
 .a-valider[data-contenu] .cadre{background:var(--creux);border-color:var(--filet)}
-.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:var(--encre);text-decoration-thickness:2px}
+@media (hover:hover){.a-valider[data-contenu] .carte-tete a:hover,.a-valider[data-contenu] .lien:hover{color:var(--encre);text-decoration-thickness:2px}}
 .groupe-lib,.carte-tete h2,.entete h1{text-wrap:balance}
 @media (min-width:900px){
   .carte.a-valider{padding:34px;gap:22px}
@@ -719,7 +727,7 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .sty-pastilles button{width:44px;height:44px;border-radius:8px;border:1px solid var(--bord-fort);cursor:pointer;padding:0}
 .sty-couples{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .sty-couple{position:relative;display:flex;flex-direction:column;gap:6px;min-height:112px;padding:14px;background:var(--creux);border:1px solid var(--bord);border-radius:var(--r-image);cursor:pointer}
-.sty-couple:hover{border-color:var(--discret)}
+@media (hover:hover){.sty-couple:hover{border-color:var(--discret)}}
 .sty-couple:has(input:checked){background:var(--teinte);border-color:var(--bleu-texte)}
 .sty-couple:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
 .sty-couple-nom{font-size:24px;line-height:1.1;color:var(--encre)}
@@ -820,6 +828,7 @@ details.repli>.carte{border:0;padding:8px 0 0;background:none}
 .semaine a{font-weight:var(--graisse-forte);white-space:nowrap}
 .ligne-autorisation{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px;padding:4px 0;color:var(--texte2)}
 .ligne-autorisation a{display:inline-flex;align-items:center;min-height:44px;font-weight:var(--graisse-forte)}
+.ligne-autorisation .lien{padding-left:0}
 .sensible-reponse{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--filet);padding-top:12px}
 .sensible-reponse .reponse{white-space:pre-wrap}
 .plafond-essentiel{gap:8px}
@@ -852,7 +861,7 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 .kpi{display:flex;flex-direction:column;gap:2px;padding:14px 16px 16px;color:var(--encre);text-decoration:none;border-top:1px solid var(--filet);min-width:0}
 .kpi:nth-child(odd){border-left:1px solid var(--filet)}
 .kpi:first-child{grid-column:1/-1;border-top:0;border-left:0}
-.kpi:hover{background:var(--releve);color:var(--encre)}
+@media (hover:hover){.kpi:hover{background:var(--releve);color:var(--encre)}}
 .kpi-lib{font-size:14px;font-weight:var(--graisse-forte);color:var(--texte2)}
 .kpi-sous{display:block;font-weight:var(--graisse-texte);color:var(--discret);font-size:13px}
 .kpi-val{font-family:var(--titre);font-size:38px;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:lining-nums tabular-nums;margin-top:4px;font-weight:var(--graisse-titre);font-stretch:var(--largeur-titre)}
@@ -941,8 +950,8 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
   /* Accueil : l'offre passe sous « À faire maintenant ». */
   .entete-accueil.offre-sous .offre-accueil{margin-top:0}
 }
-/* Confirmation flottante, au-dessus de la barre d'onglets, environ 3 s. */
-.toast{position:fixed;left:16px;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;margin:0 auto;max-width:560px;padding:12px 16px;border-radius:var(--r);background:#FFFFFF;color:#121614;border:1px solid #7CCE12;font-size:15px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.24)}
+/* Confirmation flottante, au-dessus de la barre d'onglets, 5 s ; un tap la ferme. */
+.toast{position:fixed;left:16px;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:30;margin:0 auto;max-width:560px;padding:12px 16px;border-radius:var(--r);background:#FFFFFF;color:#121614;border:1px solid #7CCE12;font-size:15px;line-height:1.4;box-shadow:0 4px 16px rgba(0,0,0,.24);cursor:pointer}
 .toast[hidden]{display:none}
 @media (min-width:900px){.toast{bottom:24px}}
 /* Cibles tactiles d'au moins 44 x 44 px, sans changer le visuel. */
@@ -959,7 +968,8 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 /* Photos : raccourci vidéo en bouton secondaire de 44 px. */
 #vers-video{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 #vers-video .bouton{min-height:44px}
-@media (max-width:899px){#ph-envoyer{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:2}}
+/* Collé en bas seulement une fois des photos choisies (01/11/2026, tour 6 Essentiel : sans choix, il recouvrait « Prendre une photo »). */
+@media (max-width:899px){#ph-envoyer[data-choix]{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));z-index:2}}
 /* Vos publications, côté commerçant (31/10/2026) : grille Instagram dessinée avec ses photos, choix du texte sur les photos, annonces dans le cadre
    d'Instagram et d'une actualité Google (visuel entier, rien de coupé), vidéo 9:16, couleurs et logo sur une ligne. Aucun logo de réseau dessiné :
    le nom du réseau en texte. Grille de 4 px, cibles de 44 px. */
@@ -989,7 +999,7 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 .pub-choix canvas{display:block;width:88px;height:110px;border-radius:4px;background:var(--releve)}
 .pub-choix-texte{display:grid;gap:4px;justify-items:start;line-height:1.35}
 .pub-choix:has(input:checked){border-color:var(--encre);box-shadow:inset 0 0 0 1px var(--encre)}
-.pub-choix:has(input:checked) .fort{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.pub-choix:has(input:checked) .fort{text-decoration:underline;text-decoration-color:var(--encre);text-decoration-thickness:2px;text-underline-offset:4px}
 .pub-choix:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:2px}
 .pub-reco{display:inline-block;padding:0 8px;font-size:13px;line-height:24px;font-weight:var(--graisse-forte);color:var(--sur-marque);background:var(--marque);border-radius:4px}
 .pub-cadres{display:grid;gap:16px;margin-top:12px}
@@ -1020,3 +1030,40 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
    « Réglages » ne garde que son icône sous 390 px (règle plus haut, son nom reste lu par les lecteurs d'écran). */
 @media (max-width:439px){.haut{gap:4px}.haut .logo,html[lang=nl] .haut .logo{flex:none;min-width:auto}.haut .logo-img,html[lang=nl] .haut .logo-img{height:21px}
   .haut .langues button{min-width:36px;padding:0 2px}}
+
+/* Dix sur dix (31/10/2026) : réseau de l'offre pas encore connecté (onglet grisé, aperçu atténué), confirmations de refus et d'annulation,
+   miniatures des photos déposées. Sobre : filet, gris, aucune couleur d'accent ; l'option choisie se marque à l'encre (plus de soulignement vert). */
+.res-onglets button.res-absent{color:var(--discret);font-style:italic}
+.cadre.absent{opacity:.55}
+.res-absent-note{margin:0 0 8px}
+.confirmer-refus{border:1px solid var(--bord-fort);border-radius:var(--r);padding:12px;display:grid;gap:8px;background:var(--surface)}
+.confirmer-refus textarea{min-height:64px}
+.miniatures{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:8px 0 0}
+.miniatures li{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center;width:100%}
+.miniatures img{width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--filet)}
+.miniatures .lien{min-height:44px}
+.plafond-bandeau{border:1px solid var(--bord-fort);border-radius:var(--r);padding:12px;background:var(--surface)}
+.pub-grille-google{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Liens texte dans une phrase (31/10/2026) : cible tactile de 44 px (Lire l'avis, Voir vos résultats, Donner votre version, Connecter un réseau,
+   conditions de vente, Télécharger un modèle). En ligne, sans casser la phrase : 12 px de marge tactile au-dessus et au-dessous (20 px de
+   ligne + 2 x 12 px = 44 px), compensés par une marge négative pour ne pas écarter les lignes. */
+.semaine a,#alerte-avis-sensibles a,.encart a,.res-absent-note a,.note a[href*="cgv"],.aide a[download]{display:inline;padding:12px 0;margin:-12px 0}
+/* Liens dans une phrase (31/10/2026, test client Premium) : cible tactile par un remplissage qui déborde, sans agrandir l'interligne (jamais de hauteur minimale sur un lien en ligne). */
+.note a:not(.bouton),.texte2 a:not(.bouton),.chapo a:not(.bouton),.aide a:not(.bouton),.msg a:not(.bouton),.alerte p a:not(.bouton){display:inline;min-height:0;padding:12px 0;margin:-12px 0}
+/* Programmer les validées depuis l'accueil (31/10/2026) : les dates une par ligne, puis le lien vers le calendrier. */
+.msg .dates-programmees{margin:4px 0 8px;padding-left:20px}
+.msg .dates-programmees li{padding:2px 0}
+.msg .dates-programmees{list-style:none;padding-left:0}
+.msg .dates-programmees li.avec-vignette{display:flex;gap:10px;align-items:center;padding:4px 0}
+.msg .dates-programmees p{margin:0}
+p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:baseline}
+/* Confirmation flottante sur téléphone (test client Croissance) : juste au-dessus de la barre d'onglets, sur une seule ligne (44 px de haut), pour
+   ne recouvrir ni les onglets ni la date de la carte suivante ; un tap la ferme. */
+@media (max-width:899px){.toast{top:auto;bottom:calc(72px + env(safe-area-inset-bottom));min-height:44px;padding:11px 14px;font-size:14px;line-height:22px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.toast[hidden]{display:none}}
+/* Édition d'une légende (test client Croissance) : un seul compteur de caractères, celui du champ ; celui de l'aperçu se cache. */
+.reseaux:has([data-edition]:not([hidden])) [data-compte]{display:none}
+/* Test client Essentiel, tour 5 (31/10/2026) : votre contact, temps gagné. Confirmation flottante : trois lignes au plus sur téléphone (règle plus haut). */
+.contact-ligne{display:flex;align-items:center;gap:12px;margin:12px 0 0}
+.contact-ligne a{display:inline-flex;align-items:center;min-height:44px}
+.contact-photo{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}
+.temps-gagne .note{display:block}

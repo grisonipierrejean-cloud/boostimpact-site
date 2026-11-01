@@ -327,20 +327,26 @@
   // Avis sensible (26/10/2026) : en tête de « À faire » (alertes), « En retard » passé reçu + 24 h tant que la réponse n'est pas PUBLIÉE (une réponse
   // proposée au commerçant ne suffit pas) ; « Traité : réponse publiée » ; « Ouvrir l'avis » (fiche du client) et « Voir sur Google » (lien de
   // l'avis ou de la fiche, si connu). Mode équipe : l'avis reste dans la file jusqu'à la publication, même s'il a été « traité » plus tôt.
-  const retardAvis = a => a.sensible || a.mode === "equipe" ? Date.now() > Date.parse(a.echeance) : !!a.en_retard;
+  // Version du commerçant reçue (01/11/2026) : échéance suspendue, « Version reçue, à reprendre », jamais en retard.
+  const retardAvis = a => a.suspendue ? false : a.sensible || a.mode === "equipe" ? Date.now() > Date.parse(a.echeance) : !!a.en_retard;
+  // « Attendez mon appel » (01/11/2026, retenir_reponse_avis) : avis en tête, « Le commerçant attend votre appel », publication grisée avec la raison
+  // (la base la refuse aussi : admin_avis_publie) ; « Appel fait » (admin_liberer_avis) lève la retenue. Aucune publication automatique de ces avis.
+  const retenueAvis = a => !a.retenue_le ? "" : `<div class="encart" data-retenue role="alert"><p class="fort">${t("con.file.retenue", { d: dh(a.retenue_le) })}</p>${a.telephone_client ? `<p class="note">${t("con.file.retenue.tel", { tel: `<a class="casse" href="tel:${e(a.telephone_client)}" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(a.telephone_client) : a.telephone_client)}</a>` })}</p>` : ""}</div>`;
   const carteAvisFile = (a, o = {}) => { const r = retardAvis(a), sens = !!a.sensible;
-    const etat = sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
+    const etat = a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
     const ouvrir = !o.surClient && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>` : "";
     const google = a.lien ? `<a class="bouton second petit" href="${e(a.lien)}" target="_blank" rel="noopener" data-avis-google>${t("con.al.google")}</a>` : "";
     return `<article class="carte${r ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"${sens ? " data-sensible" : ""}><div class="carte-tete"><h2>${sens ? t("con.al.avis.sensible") : e(a.commerce || "")}</h2><span class="etat${r ? (sens ? " retard" : "") : " actif"}">${etat}</span></div>
-          ${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
+          ${retenueAvis(a)}${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
           <p class="fort">${etoiles(a.note)} · ${e(I.offre(a.offre || ""))}${a.sensible ? " · " + t("con.file.sensible", { r: e((a.raisons || []).join(", ")) }) : " · " + t("con.file.equipe")}</p>
           ${a.texte ? `<p class="texte2 casse" translate="no">${e(a.texte)}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}<p class="note">${t("con.file.recu", { d: dh(a.recu_le) })}</p>
           <div class="f"><label for="rep-av-${e(a.id)}">${t(a.mode === "equipe" ? "con.file.reponse" : "con.file.reponse.proposer")}</label><textarea id="rep-av-${e(a.id)}" data-rep-avis maxlength="2000" translate="no">${e(a.reponse_proposee || "")}</textarea></div>
           ${a.mode === "equipe" ? `<p class="note">${t("con.file.mode.equipe")}</p>` : `<p class="note">${t("con.file.mode.proposer", { email: a.email_client ? `<span class="casse">${e(a.email_client)}</span>` : t("con.file.sans.email") })}</p>
+          ${a.version_client ? `<div class="encart" data-version-client><p class="fort">${t("con.file.version", { d: dh(a.version_client_le) })}</p><p class="texte2 casse" translate="no">${e(a.version_client)}</p></div>` : ""}
           ${a.propose_le ? `<p class="note">${t("con.file.proposee", { d: dh(a.propose_le) })}</p>` : ""}${a.accord_espace ? `<p class="fort" data-accord-espace>${t("con.file.accord.espace", { d: dh(a.decision_client_le) })}</p>` : a.decision_client === "en_parler" ? `<p class="fort">${t("con.file.en.parler", { d: dh(a.decision_client_le) })}</p>` : ""}<label class="option"><input type="checkbox" data-accord${a.accord_espace ? " checked" : ""}><span>${t("con.file.accord")}</span></label>`}
           ${ouvrir || google ? `<div class="actions">${ouvrir}${google}</div>` : ""}
-          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis>${t("con.copier")}</button>${a.mode === "equipe" ? "" : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}<button type="button" class="bouton petit" data-avis-publie>${t(sens ? "con.file.traite.publiee" : "con.file.publiee")}</button></div></article>`; };
+          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis>${t("con.copier")}</button>${a.mode === "equipe" ? "" : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}${a.retenue_le ? `<button type="button" class="bouton petit" data-avis-liberer>${t("con.file.liberer")}</button>` : ""}<button type="button" class="bouton petit${a.retenue_le ? " second" : ""}" data-avis-publie${a.retenue_le ? ` disabled aria-describedby="retenue-raison-${e(a.id)}"` : ""}>${t(sens ? "con.file.traite.publiee" : "con.file.publiee")}</button></div>
+          ${a.retenue_le ? `<p class="note" id="retenue-raison-${e(a.id)}" data-retenue-raison>${t("con.file.retenue.raison")}</p>` : ""}</article>`; };
   const carteCommentaireEquipe = x => `<article class="carte" data-cm="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${NOM_RES[x.reseau] || e(x.reseau)}</span></div>
           <p class="note">${t("con.cm.equipe.titre")}</p>
           <p class="texte2 casse" translate="no">${e(x.texte || "")}</p><p class="note">${x.auteur ? e(x.auteur) + " · " : ""}${dh(x.recu_le)}</p>
@@ -435,7 +441,7 @@
     const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
       sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], lirePrises()]);
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
-    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
+    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
     // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête.
     const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id));
     (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id))).forEach(a => { const ech = echeanceAlerte(a);
@@ -445,8 +451,8 @@
     (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id, cid: x.commerce_id }));
     (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
     (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id, cid: x.commerce_id }));
-    (file || []).forEach(a => ajout(a.sensible ? "alertes" : "avis", carteAvisFile(a), retardAvis(a), a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
-      { cle: "avis:" + a.id, prio: !!a.sensible, types: a.sensible ? ["alertes", "avis"] : ["avis"], cid: a.commerce_id }));
+    (file || []).forEach(a => ajout(a.sensible || a.retenue_le ? "alertes" : "avis", carteAvisFile(a), retardAvis(a), a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
+      { cle: "avis:" + a.id, prio: !!a.sensible || !!a.retenue_le, tete: !!a.retenue_le, types: a.sensible || a.retenue_le ? ["alertes", "avis"] : ["avis"], cid: a.commerce_id }));
     (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
     (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), false, NaN, T_(d.cree_le), { cle: "depot:" + d.id, cid: d.commerce_id }));
     (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id, cid: g.commerce_id }); });
@@ -454,7 +460,7 @@
     (dl || []).flatMap(groupesManquements).forEach(m => ajout("garanties", carteManquement(m), !m.deja, T_(m.echeance), NaN, { cle: "manquement:" + m.ids[0], cid: m.commerce_id }));
     cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }));
     (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
-    items.sort((a, b) => (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
+    items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
     return { items, alertes, pubs, dl, cs, erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null) };
   }
   // Prénom de l'appareil (compte partagé) : la même zone dans « À faire » et dans le cockpit.
@@ -516,6 +522,7 @@
     // Avis de la file de BoostImpact et commentaires des commerces Premium
     sur("[data-copier-avis]", b => copier(b.closest("article").querySelector("[data-rep-avis]"), "con.copiee"));
     sur("[data-avis-proposer]", b => { const a = b.closest("article"); agir(() => D.adminAvisProposer(a.dataset.avis, a.querySelector("[data-rep-avis]").value), t("con.file.proposee.msg")); });
+    sur("[data-avis-liberer]", b => agir(() => D.adminLibererAvis(b.closest("article").dataset.avis), t("con.file.liberee"), b));
     sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"); agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
     sur("[data-cm-d]", b => { const a = b.closest("article"); agir(() => D.adminCommentaireDecider(a.dataset.cm, b.dataset.cmD, b.dataset.cmD === "valide" ? a.querySelector("[data-cm-texte]").value : null)); });
     // Garanties : dates du commerce, message de cohérence, manquements, réseaux retenus, délégation, objectif interne
@@ -577,19 +584,25 @@
         <p class="aide" id="fg-aide">${t("con.fg.aide")}${c.google_place_id && c.google_place_id_source ? " " + t("con.fg.source." + c.google_place_id_source) : ""}</p></div>
       <button type="button" class="bouton second petit" data-a="fiche-lieu">${t("con.fg.enregistrer")}</button></div>`;
   // 26/10/2026 : « Avis à traiter » (la file des avis de CE client, mêmes cartes et mêmes actions que dans « À faire ») ; #/client/<id>/avis y descend.
+  // Votre contact (31/10/2026) : un formulaire pour tous les commerces, un pour ce commerce (prioritaire). Prénom vide : réglage retiré.
+  const formContact = (id, x, titre) => `<form id="${id}" class="pile serre" novalidate><h3>${e(titre)}</h3><div class="champs deux"><div class="f"><label for="${id}-prenom">${t("con.contact.prenom")}</label><input id="${id}-prenom" type="text" maxlength="40" autocomplete="off" value="${e((x || {}).prenom || "")}"></div>
+      <div class="f"><label for="${id}-tel">${t("con.contact.tel")}</label><input id="${id}-tel" type="tel" inputmode="tel" autocomplete="off" value="${e((x || {}).telephone ? window.RENOM_WHATSAPP.lisible(x.telephone) : "")}" placeholder="+33 6 12 34 56 78"></div></div>
+      <div class="f"><label for="${id}-photo">${t("con.contact.photo")}</label><input id="${id}-photo" type="url" inputmode="url" maxlength="500" autocomplete="off" value="${e((x || {}).photo || "")}"><p class="aide">${t("con.contact.aide")}</p></div>
+      <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>`;
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
-    const [cs, dl, gs, opts, depots, jl, fileAvis] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises()]);
+    const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
     const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
-    const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
+    const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a></p><p class="msg" id="msg" role="status"></p>
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
-        <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div></div>
+        <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
+        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div></div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${sante(c.sante)}<h3>${C_("mer")}</h3>${miseEnRoute(c.sante)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2></section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
@@ -616,13 +629,22 @@
           <td data-l="${C_("fichiers")}">${d.nb_videos ? t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s) : ""}${d.rushes_effaces_le ? `<p class="note">${t("dv.efface.le", { d: I.date(d.rushes_effaces_le) })}</p>` : ""}</td>
           <td data-l="${C_("statut")}"><p class="fort">${ST_DV[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}${d.essais ? `<p class="note">${t("con.essais", { n: d.essais })}</p>` : ""}</td>
           <td data-l="${C_("actions")}">${actionsDepot(d) ? `<div class="pile serre">${actionsDepot(d)}</div>` : ""}</td></tr>`).join("")}</tbody></table></section>` : ""}
+      <section class="carte" id="client-reglages-espace"><h2>${t("con.lien.avis")}</h2><form id="f-lien-avis" class="pile serre" novalidate><div class="f"><label for="lien-avis-client">${t("con.lien.avis")}</label>
+          <input id="lien-avis-client" type="url" inputmode="url" maxlength="500" autocomplete="off" value="${e(c.lien_avis || "")}" placeholder="https://g.page/r/…/review"><p class="aide">${t("con.lien.avis.aide")}</p></div>
+          <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
+        <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>
       <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${tableJournal("jc")}</details>`;
     remplirJournal("jc", journalClient);
+    const fl = $("f-lien-avis"); if (fl) fl.onsubmit = async ev => { ev.preventDefault(); try { await D.adminLienAvis(cid, $("lien-avis-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    [["contact-tous", null], ["contact-client", cid]].forEach(([id, pour]) => { const f = $(id); if (f) f.onsubmit = async ev => { ev.preventDefault();
+      try { await D.adminReglerContact(pour, { prenom: $(id + "-prenom").value, telephone: $(id + "-tel").value, photo: $(id + "-photo").value }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } }; });
     const zc = $("client-etat");
     zc.querySelector("[data-a=pause]").onclick = async () => { try { await D.adminPause(cid, !c.en_pause); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const zn = zc.querySelector("[data-a=nom]"); if (zn) zn.onclick = async () => { try { await D.adminConfirmerNom(cid, $("nom-console").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const zf = zc.querySelector("[data-a=fiche-verifiee]"); if (zf) zf.onclick = async () => { try { await D.adminFicheGoogleVerifiee(cid, $("fiche-verif").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     // Changement d'offre (27/10/2026) : la base arrête ce qui est hors de la nouvelle offre et ajoute la tâche « Mettre Stripe à jour » si besoin.
+    // Pays du commerce (31/10/2026) : jours fériés de France ou de Belgique pour la programmation et l'idée de la semaine (fonction SQL admin_pays).
+    zc.querySelector("[data-a=pays]").onclick = async () => { try { await D.adminPays(cid, $("pays-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("con.offre.changee")); } catch (er) { msg(ph(er.message)); } };
     vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async () => { const r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
@@ -655,6 +677,13 @@
   // 26/10/2026 (constat 35) : ville, lien de la fiche Google et langue des emails (fonction SQL admin_creer_client ; sans elle, admin_creer_commerce et
   // un message le dit). #/nouveau/<prospect> : formulaire prérempli depuis un prospect (nom, ville, email, métier, langue, fiche par son identifiant de
   // lieu) ; l'offre est choisie par l'équipe, rien n'est créé sans « Créer et inviter ». Le score de l'audit n'est pas gardé par la base.
+  // Villes belges connues (communes les plus peuplées et chefs-lieux), comparées sans accents ni casse ; sert seulement à l'alerte du pays.
+  const VILLES_BE = ["bruxelles", "brussel", "anvers", "antwerpen", "gand", "gent", "charleroi", "liege", "luik", "bruges", "brugge", "namur", "namen", "louvain", "leuven", "mons", "bergen",
+    "malines", "mechelen", "alost", "aalst", "la louviere", "hasselt", "courtrai", "kortrijk", "ostende", "oostende", "tournai", "doornik", "genk", "seraing", "roulers", "roeselare", "verviers",
+    "mouscron", "moeskroen", "wavre", "waver", "arlon", "aarlen", "nivelles", "ixelles", "elsene", "uccle", "ukkel", "schaerbeek", "schaarbeek", "anderlecht", "molenbeek", "etterbeek", "waterloo",
+    "ottignies", "louvain-la-neuve", "dinant", "spa", "huy", "bastogne", "marche-en-famenne", "ath", "binche", "soignies", "braine-l'alleud", "knokke", "knokke-heist", "ypres", "ieper", "turnhout", "sint-niklaas", "lier", "dendermonde", "vilvoorde", "zaventem"];
+  const sansAccent = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const villeBelge = v => VILLES_BE.includes(sansAccent(v).replace(/\s+/g, " "));
   const lienFicheDe = p => /^[A-Za-z0-9_-]+$/.test(p.place_id || "") ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.commerce || "") + "&query_place_id=" + p.place_id : "";
   async function nouveau(pid) {
     const [l, ps] = await Promise.all([D.adminInvitations(), pid ? D.adminProspects().catch(() => []) : []]), pr = pid ? ps.find(x => x.id === pid) : null;
@@ -666,11 +695,15 @@
       <div class="f"><label for="offre">${C_("offre")}</label><select id="offre">${Object.entries(OFFRES).filter(([k, o]) => !o.retiree).map(([k, o]) => `<option value="${k}">${e(I.offre(k))}</option>`).join("")}</select></div></div>
       <div class="champs deux"><div class="f"><label for="ville">${t("con.nv.ville")}</label><input id="ville" type="text" maxlength="120" autocomplete="off" value="${e(v.ville || "")}"></div>
       <div class="f"><label for="langue">${t("con.nv.langue")}</label><select id="langue">${["fr", "en", "nl"].map(k => `<option value="${k}"${sel(k, v.langue)}>${t("con.nv.langue." + k)}</option>`).join("")}</select></div></div>
+      <div class="f etroit"><label for="pays">${t("con.nv.pays")}</label><select id="pays" required><option value="">${t("con.nv.pays.choisir")}</option>${["FR", "BE"].map(k => `<option value="${k}"${sel(k, v.pays)}>${t("con.nv.pays." + k)}</option>`).join("")}</select><p class="aide fort" id="pays-alerte" role="status" hidden></p></div>
       <div class="f"><label for="fiche">${t("con.nv.fiche")}</label><input id="fiche" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://maps.google.com/…" value="${e(v.fiche || "")}"><p class="aide">${t("con.nv.fiche.aide")}</p></div>
       <div class="f"><label for="email">${t("con.email.proprio")}</label><input id="email" type="email" required value="${e(v.email || "")}"></div><button class="bouton" type="submit">${t("con.creer.inviter")}</button><p class="msg" id="msg" role="status"></p></form></section>
       <section class="carte tableau" id="invitations"><h2>${t("con.entree.invitations")}</h2><p class="texte2">${t("con.invitations.chapo")}</p>${l.length ? `<table class="tab"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("email")}</th><th>${C_("etat")}</th></tr></thead><tbody>${l.map(i => `<tr><td data-l="${C_("date")}">${dh(i.cree_le)}</td><td data-l="${C_("commerce")}">${e(i.commerce || "")}</td><td data-l="${C_("email")}" class="casse">${e(i.email)}</td><td data-l="${C_("etat")}">${INVITATION[i.statut] ? `<span class="fort" data-statut="${e(i.statut)}">${INVITATION[i.statut]}</span>` : e(i.statut)}</td></tr>`).join("")}</tbody></table>` : `<p class="texte2">${t("con.aucune.invitation")}</p>`}</section>`;
+    // Pays (31/10/2026, test client Essentiel, tour 5) : obligatoire ; une ville belge connue avec « France » choisi est signalée (pas bloquée).
+    const alertePays = () => { const vi = $("ville").value, z = $("pays-alerte"), be = villeBelge(vi) && $("pays").value === "FR"; z.hidden = !be; z.textContent = be ? t("con.nv.pays.alerte", { v: vi.trim() }) : ""; };
+    $("ville").oninput = alertePays; $("pays").onchange = alertePays;
     $("f").onsubmit = async ev => { ev.preventDefault(); const b = ev.submitter || $("f").querySelector("button[type=submit]"); b.disabled = true;
-      const p = { nom: $("nom").value, metier: $("metier").value, offre: $("offre").value, email: $("email").value, ville: $("ville").value, langue: $("langue").value, fiche: $("fiche").value.trim() };
+      const p = { nom: $("nom").value, metier: $("metier").value, offre: $("offre").value, email: $("email").value, ville: $("ville").value, langue: $("langue").value, fiche: $("fiche").value.trim(), pays: $("pays").value };
       if (pr) p.prospect = pr.id;
       try { const r = D.adminCreerClient ? await D.adminCreerClient(p) : await D.adminCreer(p.nom, p.metier, p.offre, p.email);
         if (pr) history.replaceState(null, "", "#/nouveau"); await nouveau(); msg(t(r && r.partiel ? "con.nv.partiel" : "con.cree")); }

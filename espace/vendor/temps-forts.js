@@ -37,11 +37,12 @@ function dateDe(regle, an) {
   else throw new Error("règle inconnue : " + regle.type);
   return plus(d, regle.decalage || 0);
 }
-// Temps forts d'un métier entre deux dates (incluses), triés par date.
-function tempsForts(D, metier, debut, fin) {
-  const r = [];
+// Temps forts d'un métier entre deux dates (incluses), triés par date. pays : celui du commerce (commerces.pays, « FR » par défaut, « BE ») ;
+// un événement sans « pays » compte dans les deux, sinon seulement dans les pays listés (8 mai et 14 juillet en France, 21 juillet en Belgique).
+function tempsForts(D, metier, debut, fin, pays) {
+  const r = [], p = String(pays || "FR").toUpperCase();
   for (const an of new Set([debut.getUTCFullYear(), fin.getUTCFullYear()]))
-    for (const ev of D.evenements) if (ev.metiers.includes(metier)) { const d = dateDe(ev.regle, an); if (d >= debut && d <= fin) r.push({ ev, date: d }); }
+    for (const ev of D.evenements) if (ev.metiers.includes(metier) && (!Array.isArray(ev.pays) || ev.pays.includes(p))) { const d = dateDe(ev.regle, an); if (d >= debut && d <= fin) r.push({ ev, date: d }); }
   return r.sort((a, b) => a.date - b.date || a.ev.id.localeCompare(b.ev.id));
 }
 // Prévision Open-Meteo (réponse JSON de /v1/forecast avec daily=temperature_2m_max,precipitation_sum) -> catégorie du lendemain ou null.
@@ -58,18 +59,24 @@ function saisonDe(D, d) {
   const an = d.getUTCFullYear(), debuts = D.saisons.map(s => ({ s, d: J(an, s.debut.mois, s.debut.jour) })).sort((a, b) => a.d - b.d);
   const avant = debuts.filter(x => x.d <= d); return (avant.length ? avant[avant.length - 1] : debuts[debuts.length - 1]).s;   // avant le 1er mars : l'hiver commencé en décembre
 }
+// Idée d'un temps fort pour un métier : un seul texte, ou un texte par métier (idee.par_metier, Saint-Sylvestre : la soirée d'un restaurant
+// n'est pas celle d'un institut ; audit du parcours Essentiel du 31/10/2026). Chaque métier de l'événement a son texte (moteur/tests/test_service.js).
+function ideeDuMetier(idee, metier) { return idee && idee.par_metier ? idee.par_metier[metier] || Object.values(idee.par_metier)[0] : idee; }
 // L'idée de la semaine d'un commerce. lundi : « AAAA-MM-JJ » (un lundi) ; meteo : réponse Open-Meteo ou null (option désactivée, position inconnue).
 // Rend { titre, texte, origine, motif, date_evenement } : motif est un fait daté et vérifiable, jamais un chiffre inventé.
 function ideeDeLaSemaine(D, commerce, lundi, meteo, ville) {
   const L = deIso(lundi); if (jourSemaine(L) !== 1) throw new Error("la semaine se désigne par son lundi");
   const metier = D.metiers.includes(commerce.metier) ? commerce.metier : "autre";
   const [a0, a1] = D.fenetre_defaut, [f0, f1] = D.fenetre_ferie;
-  const candidats = [...tempsForts(D, metier, plus(L, a0), plus(L, a1)).filter(x => !x.ev.ferie), ...tempsForts(D, metier, plus(L, f0), plus(L, f1)).filter(x => x.ev.ferie)];
+  // Jour férié un jour où le commerce est fermé (commerce.jours_ouverts : 1 = lundi ... 7 = dimanche, lu dans ses horaires) : pas proposé (31/10/2026).
+  const ouverts = Array.isArray(commerce.jours_ouverts) && commerce.jours_ouverts.length ? commerce.jours_ouverts : null;
+  const candidats = [...tempsForts(D, metier, plus(L, a0), plus(L, a1), commerce.pays).filter(x => !x.ev.ferie),
+    ...tempsForts(D, metier, plus(L, f0), plus(L, f1), commerce.pays).filter(x => x.ev.ferie && (!ouverts || ouverts.includes(jourSemaine(x.date))))];
   if (candidats.length) {
     const { ev, date } = candidats[0];
     // Offre sans réseaux sociaux (Essentiel) : le texte ne parle que de la fiche Google (27/10/2026).
     const texteFerie = commerce.offre_id === "essentiel" && D.idee_ferie.texte_google ? D.idee_ferie.texte_google : D.idee_ferie.texte;
-    const idee = ev.ferie ? { titre: D.idee_ferie.titre, texte: texteFerie.replace("{jour}", enLettres(date).replace(/ \d{4}$/, "") + " (" + ev.nom.replace(/ \(jour férié\)$/, "") + ")") } : ev.idee;
+    const idee = ev.ferie ? { titre: D.idee_ferie.titre, texte: texteFerie.replace("{jour}", enLettres(date).replace(/ \d{4}$/, "") + " (" + ev.nom.replace(/ \(jour férié\)$/, "").replace(/, fête nationale$/, "") + ")") } : ideeDuMetier(ev.idee, metier);
     return { titre: idee.titre, texte: idee.texte, origine: "calendrier", motif: `${ev.nom} : ${enLettres(date)}`, date_evenement: iso(date) };
   }
   const demain = iso(plus(L, 1)), m = meteo ? meteoDuLendemain(D, meteo, demain) : null;
@@ -94,4 +101,4 @@ function lundiDeParis(maintenant) {
 }
 
 // Node (tests) : export ; navigateur (démonstration de l'espace, copie dans espace/web/vendor/) : fonctions globales ; n8n : ligne retirée à la copie.
-if (typeof module === "object" && module.exports) module.exports = { paques, nIeme, dateDe, tempsForts, meteoDuLendemain, ideeDeLaSemaine, urlMeteo, lundiDeParis, saisonDe, iso, deIso, enLettres };
+if (typeof module === "object" && module.exports) module.exports = { ideeDuMetier, paques, nIeme, dateDe, tempsForts, meteoDuLendemain, ideeDeLaSemaine, urlMeteo, lundiDeParis, saisonDe, iso, deIso, enLettres };

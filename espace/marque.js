@@ -471,7 +471,9 @@
       return { texte_visuel: titre, accroche: acc, annonce: [acc] };
     }
     const legendeAnnonce = c => { const tx_ = textesDe(c, 0), h = horairesDe(c);
-      return t("pub.annonce.legende", { titre: tx_.texte_visuel, nom: c.nom, h: h ? " " + h : "" }, langueDe(c)); };
+      // Sans spécialités, le titre de l'annonce est le nom du commerce : pas de « Crêperie Sophie, chez Crêperie Sophie » (31/10/2026).
+      const memeNom = String(tx_.texte_visuel || "").trim().toLowerCase() === String(c.nom || "").trim().toLowerCase() || !String(tx_.texte_visuel || "").trim();
+      return t(memeNom ? "pub.annonce.legende.seul" : "pub.annonce.legende", { titre: tx_.texte_visuel, nom: c.nom, h: h ? " " + h : "" }, langueDe(c)); };
     // Grille de 9 selon le réglage : jamais = 9 photos seules ; annonces = 7 photos seules et 2 annonces ; souvent = modèle préféré et rotation.
     function sequence(reglage, k) {
       if (reglage === "jamais") return Array(9).fill("photo");
@@ -495,9 +497,10 @@
     async function dessinerGrille() {
       const c = sty.c, seq = sequence(reglageVu(), sty.kit), n = sty.images.length; let a = 0, p = 0;
       if (!n) return;
-      for (let i = 0; i < 9; i++) { const g = seq[i], txt = g === "annonce" ? textesDe(c, a++) : textesDe(c, p + 1); if (g !== "annonce") p++;
+      // 31/10/2026 (test client) : seulement les vraies photos, chacune une fois ; Essentiel : ses publications Google du mois.
+      for (let i = 0; i < nbTuiles(c); i++) { const g = seq[i], txt = g === "annonce" ? textesDe(c, a++) : textesDe(c, p + 1); if (g !== "annonce") p++;
         // Photos en décalé d'une rangée à l'autre : avec 3 photos, jamais la même photo l'une au-dessus de l'autre.
-        await tuile($("pub-t-" + i), g, sty.images[(i + Math.floor(i / 3)) % n], txt); }
+        await tuile($("pub-t-" + i), g, sty.images[i % n], txt); }
     }
     async function dessinerExemples() {
       const c = sty.c, img = sty.images[0] || null; if (!img) return;
@@ -513,15 +516,17 @@
     const rendusDuReglage = () => { const r = reglageVu(), l = ((sty.pubs || {}).rendus || []);
       const bons = l.filter(x => !x.gabarit || (r === "jamais" ? x.gabarit === "photo" : r === "annonces" ? ["photo", "annonce"].includes(x.gabarit) : true));
       return (bons.length ? bons : l).slice(0, 9); };
+    const nbTuiles = c => { const of = (o.offre && o.offre(c)) || {}; return Math.min(of.reseaux_sociaux === false ? (+of.publications || 2) : 9, sty.images.length); };
     function htmlPublications(c) {
       const offre = (o.offre && o.offre(c)) || {}, social = offre.reseaux_sociaux !== false, premium = +offre.videos > 0 && social;
       const lgc = langueDe(c), lc = ` lang="${lgc}"`, nom = e(c.nom), cpt = e(compte(c) || c.nom), r = reglageVu(), k = sty.kit;
       const sansPhoto = !sty.images.length, rendus = sansPhoto ? rendusDuReglage() : [];
-      const envoi = `<section class="carte pub-envoi" aria-labelledby="pub-envoi-titre"><h2 id="pub-envoi-titre">${t("pub.vide.titre")}</h2><p class="texte2">${t("pub.vide.texte")}</p>
+      const envoi = `<section class="carte pub-envoi" aria-labelledby="pub-envoi-titre"><h2 id="pub-envoi-titre">${t(social ? "pub.vide.titre" : "pub.vide.titre.google")}</h2><p class="texte2">${t("pub.vide.texte")}</p>
           <div class="actions"><span class="depot-choix"><input id="pub-photos" class="vh" type="file" accept="image/*" multiple><label for="pub-photos" class="bouton">${t("pub.vide.bouton")}</label></span></div>
           <p class="msg" id="pub-envoi-msg" role="status"></p></section>`;
       const grille = sansPhoto ? (rendus.length ? `<div class="pub-grille" role="img" aria-label="${t("pub.grille.alt")}">${rendus.map(x => `<img src="${e(x.url)}" alt="">`).join("")}</div>` : "")
-        : `<div class="pub-grille" role="img" aria-label="${t("pub.grille.alt")}">${Array.from({ length: 9 }, (_, i) => `<canvas id="pub-t-${i}" width="${TUILE_W}" height="${TUILE_H}"></canvas>`).join("")}</div>`;
+        : `<div class="pub-grille${social ? "" : " pub-grille-google"}" role="img" aria-label="${t(social ? "pub.grille.alt.n" : "pub.grille.alt.google", { n: nbTuiles(c) })}">${Array.from({ length: nbTuiles(c) }, (_, i) => `<canvas id="pub-t-${i}" width="${TUILE_W}" height="${TUILE_H}"></canvas>`).join("")}</div>
+          ${social && nbTuiles(c) < 9 && !sty.plein ? `<p class="note" id="pub-completer">${t("pub.completer", { n: 9 - nbTuiles(c) })}</p>` : ""}`;
       const a = sansPhoto && !rendus.length ? envoi : `<section class="carte pub-insta" aria-labelledby="pub-insta-titre">
           <h2 id="pub-insta-titre">${t(social ? "pub.insta.titre" : "pub.insta.titre.google")}</h2>
           ${social ? `<div class="pub-profil">${avatar(c)}<span class="pile serre"><span class="fort">${cpt}</span><span class="note">${nom}</span></span></div>` : ""}
@@ -541,7 +546,7 @@
           <p class="note">${t("pub.texte.aide")}</p>
           <div class="actions">${r === (sty.brut && sty.brut.texte_photos) && valide() ? `<p class="texte2 fort pub-actuel" id="pub-actuel">${t("pub.actuel")}</p>`
             : `<button type="button" class="bouton second" id="pub-garder">${t("pub.garder", { c: t("pub.texte." + r) })}</button>`}</div></section>`;
-      const c_ = sansPhoto ? "" : `<section class="carte" aria-labelledby="pub-an-titre"><h2 id="pub-an-titre">${t("pub.annonces.titre")}</h2><p class="texte2">${t("pub.annonces.texte")}</p>
+      const c_ = sansPhoto ? "" : `<section class="carte" aria-labelledby="pub-an-titre"><h2 id="pub-an-titre">${t("pub.annonces.titre")}</h2><p class="texte2">${t(social ? "pub.annonces.texte" : "pub.annonces.texte.google")}</p>
           <div class="pub-cadres">
             ${social ? `<figure class="post post-ig"><figcaption class="post-tete">${avatar(c)}<span><span class="fort">${cpt}</span><span class="note">${e(c.ville || "")}</span></span></figcaption>
               <canvas class="post-media" id="pub-an-ig" width="${TUILE_W * 2}" height="${TUILE_H * 2}" role="img" aria-label="${t("pub.annonce.alt.ig")}"></canvas>
@@ -599,7 +604,7 @@
       o.vue.querySelectorAll("input[name=pub-texte]").forEach(i => i.onchange = async () => {
         sty.reglage = i.value; const y = scrollY; o.vue.innerHTML = htmlPublications(c); await publications_brancher(); scrollTo(0, y); });
       if ($("pub-photos")) $("pub-photos").onchange = async () => { const fs = [...$("pub-photos").files]; if (!fs.length) return; const m = $("pub-envoi-msg");
-        try { const r = await o.envoyerPhotos(fs, x => { m.textContent = x; }); sty.pour = null; await rendre(); dire(t("pub.vide.envoyees", { n: r.deposees })); }
+        try { const r = await o.envoyerPhotos(fs, x => { m.textContent = x; }); sty.pour = null; await rendre(); const so = ((o.offre && o.offre(c)) || {}).reseaux_sociaux !== false; dire(t(so ? "pub.vide.envoyees" : "pub.vide.envoyees.google", { n: r.deposees })); }
         catch (er) { m.textContent = I.phrase(er.message); } };
       $("pub-changement").onclick = () => { sty.ouvert = !sty.ouvert; $("pub-demande").hidden = !sty.ouvert; $("pub-changement").setAttribute("aria-expanded", String(sty.ouvert)); if (sty.ouvert) $("pub-dem-logo").focus(); };
       $("pub-dem-annuler").onclick = () => { sty.ouvert = false; $("pub-demande").hidden = true; $("pub-changement").setAttribute("aria-expanded", "false"); };
@@ -625,6 +630,8 @@
       if (sty.pour !== c.id) {
         const m = await o.marque(); Object.assign(sty, { pour: c.id, brut: m.brut, photo: 0, logoUrl: m.logo, demandes: m.demandes || [] });
         sty.images = (await Promise.all((m.photos || []).map(p => chargerImage(p.url).catch(() => null)))).filter(Boolean);
+        // Limite du mois atteinte (31/10/2026, test client Croissance) : pas d'invitation à « compléter la grille », une photo de plus attendrait le mois suivant.
+        try { sty.plein = o.plein ? !!(await o.plein()) : false; } catch (er) { sty.plein = false; }
         [sty.logoImg, sty.logo] = await chargerLogo(m.logo);
         sty.pubs = !renom && o.publications ? await o.publications().catch(() => null) : null;
         // Pas encore de kit : proposition calculée ici depuis la première photo (même calcul que le moteur), sinon les couleurs actuelles.

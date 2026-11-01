@@ -33,12 +33,14 @@
 
   // Durée lue par un élément vidéo (métadonnées seulement, rien n'est lu en entier). null si le navigateur ne sait pas la lire
   // (exemple : un .mov HEVC dans un navigateur sans HEVC) : la vidéo est alors acceptée, sa durée sera contrôlée au montage.
+  // Dimensions lues en même temps que la durée (31/10/2026) : une vidéo horizontale est acceptée, et le commerçant est prévenu du recadrage vertical.
+  const DIMENSIONS = new WeakMap();
   function lireDuree(f, delai) {
     return new Promise(res => {
       let fini = false, url = null; const v = document.createElement("video");
       const fin = d => { if (fini) return; fini = true; try { v.removeAttribute("src"); v.load(); } catch (e) {} if (url) URL.revokeObjectURL(url); res(d); };
       v.preload = "metadata"; v.muted = true; v.playsInline = true;
-      v.onloadedmetadata = () => fin(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration * 10) / 10 : null);
+      v.onloadedmetadata = () => { if (v.videoWidth && v.videoHeight) DIMENSIONS.set(f, { l: v.videoWidth, h: v.videoHeight }); fin(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration * 10) / 10 : null); };
       v.onerror = () => fin(null);
       setTimeout(() => fin(null), delai || 8000);
       try { url = URL.createObjectURL(f); v.src = url; } catch (e) { fin(null); }
@@ -52,8 +54,8 @@
     if (!g) return { genre: null, duree: null, taille, raison: "format" };
     if (g === "photo") return { genre: g, duree: null, taille, raison: taille > REGLES.PHOTO_MAX_MO * MO ? "photo_lourde" : null };
     if (taille > REGLES.VIDEO_MAX_MO * MO) return { genre: g, duree: null, taille, raison: "lourde" };
-    const duree = await lireDuree(f);
-    return { genre: g, duree, taille, raison: duree == null ? null : Math.round(duree) > REGLES.DUREE_MAX_S ? "longue" : duree < REGLES.DUREE_MIN_S ? "courte" : null };
+    const duree = await lireDuree(f), dim = DIMENSIONS.get(f);
+    return { genre: g, duree, taille, horizontale: !!(dim && dim.l > dim.h), raison: duree == null ? null : Math.round(duree) > REGLES.DUREE_MAX_S ? "longue" : duree < REGLES.DUREE_MIN_S ? "courte" : null };
   }
   // Contrôle d'un ensemble : nombre de vidéos et de photos. Rend null ou { code, n }.
   function controlerEnsemble(nbVideos, nbPhotos) {
