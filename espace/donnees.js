@@ -299,8 +299,11 @@
   // pris : instants (ms) déjà occupés par une publication du commerce ; regles : { horaires } (texte de la fiche), { pays } ('FR' par défaut, 'BE'),
   // { unParJour: false } pour l'ancienne règle.
   // { offre } (31/10/2026, test client Essentiel, tour 5) : écart minimal entre deux publications, ESPACEMENT (même valeur que espacement_offre).
+  // { duJour: true } (01/11/2026, tour 9 : une story validée le dimanche partait le jeudi 5 au lieu du mardi 3, en Croissance) : story ou contenu
+  // « du jour » au PREMIER créneau ouvert ; l'écart de l'offre et la règle d'une publication par jour sont ignorés, seul le créneau exact déjà
+  // occupé est pris. Même règle que programmer_au_creneau de schema.sql (bloc « Tour 9 », égalité testée par supabase/test/creneaux.test.mjs).
   function prochainCreneau(metier, pris, maintenant, regles) {
-    const r = regles || {}, ouverts = joursOuverts(r.horaires), unParJour = r.unParJour !== false, ecart = unParJour ? ESPACEMENT[r.offre] || 1 : 0;
+    const r = regles || {}, ouverts = joursOuverts(r.horaires), unParJour = r.unParJour !== false && !r.duJour, ecart = unParJour ? ESPACEMENT[r.offre] || 1 : 0;
     const now = maintenant || Date.now(), occupe = new Set(pris || []), joursPris = new Set([...occupe].map(jourParisDe)), p = partiesParis(now), base = CRENEAUX[metier] || CRENEAUX.autre;
     // Alternance (31/10/2026, test client Croissance, tour 5) : on commence par le créneau qui suit celui de la dernière publication
     // (restaurant : 11 h 30 puis 18 h 30, puis 11 h 30...), même règle que programmer_au_creneau de schema.sql.
@@ -330,7 +333,7 @@
   // l'offre et moment du texte. ct absent : sans moment.
   function creneauPour(c, pris, ct, maintenant) {
     c = c || {};
-    return prochainCreneau(c.metier, pris, maintenant || null, { horaires: c.horaires, pays: c.pays, offre: c.offre_id, moment: ct ? momentLegende(texteDuContenu(ct)) : null });
+    return prochainCreneau(c.metier, pris, maintenant || null, { horaires: c.horaires, pays: c.pays, offre: c.offre_id, moment: ct ? momentLegende(texteDuContenu(ct)) : null, duJour: duJour(ct) });
   }
   // ---- Où un contenu part vraiment (31/10/2026) : UNE règle pour l'aperçu (onglets), la programmation, valider.html et les textes.
   //   reseaux : réseaux de l'offre et retenus où ce format part (reseauxDuContenu) ; partent : ceux-là qui sont connectés ;
@@ -898,7 +901,12 @@
       },
       async enregistrer(ch) { const c = await self.commerce(); const m = {}; FICHE.forEach(k => { if (k in ch) m[k] = ch[k]; }); ok(await sb.from("commerces").update(m).eq("id", c.id)); cache = null; },
       // « * » (28/10/2026) : refus_motif (photo hors sujet) quand le bloc SQL est appliqué, sans erreur avant.
-      async photos() { const c = await self.commerce(); return ok(await sb.from("photos").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100)); },
+      // Vignettes de Photos (01/11/2026, tour 9) : une version de 200 px, seulement si le stockage la fournit, c'est-à-dire la transformation
+      // d'image de Supabase (forfait payant ; le projet est sur le forfait gratuit, voir ordres/BRANCHEMENT.md) et RENOM_CONFIG.vignettes200 à
+      // true. Sinon aucune adresse : la vignette reste vide, jamais la photo d'origine (jusqu'à 50 Mo) chargée pour une vignette de 48 px.
+      async photos() { const c = await self.commerce(), l = ok(await sb.from("photos").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100));
+        if (cfg.vignettes200 === true) await Promise.all(l.map(async p => { try { const r = await sb.storage.from("photos").createSignedUrl(p.chemin, 3600, { transform: { width: 200, height: 200, resize: "cover", quality: 70 } }); if (r.data && r.data.signedUrl) p.url = r.data.signedUrl; } catch (e) {} }));
+        return l; },
       // ---- Photos (17/10/2026 : SEUL chemin des photos, plus aucune par email). Envoi résumable TUS dans le seau « photos », directement dans le
       // dossier du commerce (<commerce>/<aléa>.<ext> : espace/web/envoi.js, même envoi que le dépôt de vidéos), puis la fonction deposer_photos
       // enregistre l'envoi entier : une ligne « photos » par fichier, qui lance la création de contenus (hook_photo -> n8n « RENOM, création de
@@ -962,7 +970,7 @@
       async idees() { const c = await self.commerce(); return ok(await sb.from("idees").select("id,titre,texte,cree_le,origine,statut,semaine,motif").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(50)); },
       async demanderIdees() { const c = await self.commerce(), r = await sb.from("idees_demandes").insert({ commerce_id: c.id });
         if (r.error) throw new Error(/une demande d'idées par jour/.test(r.error.message || "") ? PHRASE_IDEES_JOUR : r.error.message); },
-      async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut)").eq("commerce_id", c.id).order("prevu_le")); },
+      async calendrier() { const c = await self.commerce(); return ok(await sb.from("publications").select("*, contenu:contenus(id,type,legende,fichier,statut,hors_plafond)").eq("commerce_id", c.id).order("prevu_le")); },
       async programmer({ contenu_id, reseaux, prevu_le }) { if (!Array.isArray(reseaux) || !reseaux.length) throw new Error("Choisissez où publier."); const c = await self.commerce(); ok(await sb.from("publications").insert({ commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString() })); },
       // La base vérifie l'offre, la connexion et le format (déclencheurs verifier_programmation et verifier_reseaux_retenus).
       async publierSurGoogle(id) { ok(await sb.from("publications").update({ reseaux: ["google"] }).eq("id", id)); },

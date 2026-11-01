@@ -136,6 +136,9 @@
   const demain = () => jourLocal(Date.now() + 86400000);
 
   const cut = (s, n) => s.length > n ? s.slice(0, s.lastIndexOf(" ", n)) + "…" : s;
+  // Coupe propre (tour 9) : jusqu'à n caractères ; à la dernière virgule si elle laisse au moins 20 caractères, sinon au dernier espace, avec « … ».
+  const coupePropre = (s, n) => { if (s.length <= n) return s; const v = s.lastIndexOf(",", n); if (v >= 20) return s.slice(0, v).trimEnd();
+    const b = s.lastIndexOf(" ", n); return (b > 0 ? s.slice(0, b) : s.slice(0, n)).replace(/[\s,;:–-]+$/, "") + "…"; };
   const msg = x => { const m = $("msg"); if (m) m.textContent = x; };
   // Confirmation flottante au-dessus de la barre d'onglets (31/10/2026) : après une décision, #msg est souvent hors de l'écran sur téléphone. 5 s, un tap la ferme.
   let toastMinuteur = 0;
@@ -624,10 +627,14 @@
       t(b.avis_obtenus_source === "avis_recus" ? "bilan.recu" : "bilan.obtenu", { n: n(b.avis_obtenus) }) + (notes ? (b.note_fin === b.note_debut ? t("bilan.note.reste", { n: nombre(b.note_fin, 1) }) : t("bilan.note.passe", { a: nombre(b.note_debut, 1), b: nombre(b.note_fin, 1) })) : ".")];
     if (N && (N.decisions || N.aProgrammer)) morceaux.push(t("bilan.afaire", { x: t("compte.phrase", { n: N.decisions, p: N.aProgrammer, k: 0 }) }));   // compteur unique (compteDe)
     const chiffre = (lib, val) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre">${val}</dd></div>`;
-    return `<section class="carte bilan" aria-labelledby="bilan-titre"><div class="carte-tete"><h2 id="bilan-titre">${t("bilan.titre", { mois: m.getMonth() })}</h2><span class="note">${t("bilan.a.ce.jour")}</span></div>
-      ${D.mode === "demo" ? `<p class="note bilan-demo"><span class="fort">${t("demo.chiffres.point")}</span> ${t("bilan.demo")}</p>` : ""}
+    const corps = `${D.mode === "demo" ? `<p class="note bilan-demo"><span class="fort">${t("demo.chiffres.point")}</span> ${t("bilan.demo")}</p>` : ""}
       <p class="texte2">${morceaux.join(" ")}</p>
-      <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)))}${chiffre(t("bilan.publications"), nombre(n(b.publications)))}${chiffre(t("bilan.note"), notes ? nombre(b.note_fin, 1) : t("non.lue"))}${chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)))}</dl></section>`;
+      <dl class="bilan-chiffres">${chiffre(t("bilan.reponses"), nombre(n(b.reponses_publiees)))}${chiffre(t("bilan.publications"), nombre(n(b.publications)))}${chiffre(t("bilan.note"), notes ? nombre(b.note_fin, 1) : t("non.lue"))}${chiffre(t("bilan.avis"), nombre(n(b.avis_obtenus)))}</dl>`;
+    // Tour 9 (01/11/2026) : le mois en cours reste replié tant que tout y est à zéro (réponses publiées, publications, avis obtenus) : le
+    // 1er du mois, une carte de quatre zéros passait avant ce que la fiche a rapporté. Il s'ouvre d'un tap, rien n'est retiré.
+    if (!n(b.reponses_publiees) && !n(b.publications) && !n(b.avis_obtenus)) return `<section class="carte bilan" id="bilan-mois" data-vide="1" aria-labelledby="bilan-titre"><details class="repliable" id="bilan-mois-repli"><summary><h2 id="bilan-titre">${t("bilan.titre", { mois: m.getMonth() })}</h2><span class="note">${t("bilan.rien.encore")}</span></summary>${corps}</details></section>`;
+    return `<section class="carte bilan" id="bilan-mois" aria-labelledby="bilan-titre"><div class="carte-tete"><h2 id="bilan-titre">${t("bilan.titre", { mois: m.getMonth() })}</h2><span class="note">${t("bilan.a.ce.jour")}</span></div>
+      ${corps}</section>`;
   }
   // Offre souscrite, en haut de l'accueil (26/10/2026, test réel de PJ : « Bonjour » et le nom du commerce, sans l'offre ; sur téléphone, la note de l'en-tête
   // est masquée sous 420 px). Nom de l'offre, une ligne sur ce qu'elle comprend (chiffres de moteur/offres.json, via window.RENOM_OFFRES), lien vers
@@ -641,7 +648,7 @@
   // Changement d'offre demandé (01/11/2026, tour 7 Essentiel) : une ligne sur l'accueil, tant que la demande a moins de 3 jours et qu'une offre au-dessus
   // existe encore (une fois l'offre changée par PJ, Premium n'a plus d'offre au-dessus ; Essentiel passé en Croissance garde la ligne au plus 3 jours).
   const ligneChgOffre = (c, d) => !d || !offreCible(c) || Date.now() - Date.parse(d) > 3 * 864e5 ? ""
-    : `<p class="texte2" id="acc-chg-offre">${t("acc.chg.offre", { d: date(d) })} <a href="#/offre">${t("acc.voir.offre")}</a></p>`;
+    : `<p class="texte2" id="acc-chg-offre">${t("acc.chg.offre", Object.assign({ d: date(d) }, quandChgOffre(c, d)))} <a href="#/offre">${t("acc.voir.offre")}</a></p>`;
   // « Cette semaine » (27/10/2026, constat 10) : le travail fait pour le commerçant ces 7 derniers jours, seulement les chiffres réels et non nuls ;
   // rien du tout si tout est à zéro. Réponses aux avis publiées, publications parties, avis sensibles pris en charge, réponses aux commentaires.
   function ligneSemaine(c, av, cal, cm) {
@@ -655,10 +662,14 @@
   }
   // « Vos publications de <mois> : le 4 et le 18 » (31/10/2026, test client Essentiel, tour 5) : les prochaines dates programmées, du mois de la prochaine.
   // Hors offre (01/11/2026, tour 6 Essentiel) : une publication qui « sera annulée » (horsOffreDe, même règle que son libellé) n'est pas annoncée.
+  // Tour 9 (01/11/2026, Essentiel : trois dates en novembre pour une offre de 2 publications) : quand l'avis de la semaine (contenus.hors_plafond)
+  // est parmi les dates du mois, la ligne le dit : « 2 publications + l'avis de la semaine (non compté) ».
   function ligneMois(cal, autorises) {
-    const l = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).map(x => new Date(x.prevu_le)).sort((a, b) => a - b); if (!l.length) return "";
-    const m = l[0].getMonth(), a = l[0].getFullYear(), jours = [...new Set(l.filter(d => d.getMonth() === m && d.getFullYear() === a).map(d => d.getDate()))];
-    return `<p class="texte2" id="publications-du-mois">${t("acc.pub.mois", { mois: MOIS[m], l: I.liste(jours.map(j => t("acc.pub.le", { j }))) })} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
+    const it = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).sort((a, b) => Date.parse(a.prevu_le) - Date.parse(b.prevu_le)); if (!it.length) return "";
+    const d0 = new Date(it[0].prevu_le), m = d0.getMonth(), a = d0.getFullYear(), duM = it.filter(x => { const d = new Date(x.prevu_le); return d.getMonth() === m && d.getFullYear() === a; });
+    const jours = [...new Set(duM.map(x => new Date(x.prevu_le).getDate()))], avis = duM.filter(x => x.contenu && x.contenu.hors_plafond).length;
+    const l = I.liste(jours.map(j => t("acc.pub.le", { j })));
+    return `<p class="texte2" id="publications-du-mois">${avis ? t("acc.pub.mois.avis", { mois: MOIS[m], l, d: t("acc.pub.mois.detail", { p: duM.length - avis, a: avis }) }) : t("acc.pub.mois", { mois: MOIS[m], l })} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
   }
   // « Temps gagné ce mois-ci » (bilan) : estimation, réponses aux avis publiées × 10 min, publications parties × 20 min, vidéos × 45 min, depuis le 1er.
   const MINUTES_GAGNEES = { reponse: 10, publication: 20, video: 45 };
@@ -679,9 +690,12 @@
   }
   // Autorisation photos sur l'accueil : une ligne (texte complet dans Photos), plus jamais après « Non merci » (photos_autorisation_refusee_le).
   // Petite carte (01/11/2026, tour 8) : la question et une phrase qui dit à quoi sert l'autorisation (avant : une ligne seule, sans explication).
+  // Un seul geste (01/11/2026, tour 9 : « Autoriser » menait à Photos, où il fallait cocher puis enregistrer) : le texte de l'accord est écrit dans la
+  // carte, « Autoriser » l'enregistre tout de suite (D.autoriserPhotos, fonction autoriser_photos : même trace d'accord, datée, qu'avant).
   const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<section class="carte carte-autorisation" id="autorisation-ligne" aria-labelledby="aut-ligne-titre">
       <p class="fort" id="aut-ligne-titre">${t("aut.ligne")}</p><p class="texte2">${t(sansReseaux(c) ? "aut.ligne.explication.google" : "aut.ligne.explication")}</p>
-      <div class="ligne-autorisation"><a href="#/photos?autorisation" id="aut-oui">${t("aut.autoriser")}</a>${merSql(c) ? `<button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</div></section>`;
+      <p class="note" id="aut-ligne-accord">${t("aut.ligne.accord")} ${t(sansReseaux(c) ? "aut.case.google" : "aut.case", { comptes: I.liste(ORDRE_RES.filter(x => x !== "google" && window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => RES[x])) })}</p>
+      <div class="ligne-autorisation"><button type="button" class="bouton second petit" id="aut-oui">${t("aut.autoriser")}</button>${merSql(c) ? `<button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</div></section>`;
   const k0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const plusTard = id => { try { return localStorage.getItem("renom-demarrage-plus-tard:" + id) === "1"; } catch (er) { return false; } };
   // Photos du mois : aucune photo envoyée depuis le 1er du mois (heure de l'appareil), commerce actif.
@@ -760,7 +774,10 @@
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <div class="msg" id="msg" role="status"></div>
-      ${sansAFaire ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
+      ${/* Tour 9 (01/11/2026) : « À faire maintenant » disparaît quand il n'y a rien à faire (avant : la carte restait, avec seulement « notre équipe
+         s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
+      ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}
+      ${sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${i ? " second" : ""}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
           : `<a class="bouton${i ? " second" : ""}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`).join("")}</ul>
           ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}` : ""}
@@ -791,7 +808,13 @@
     // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
     vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
-    if ($("acc-tout-voir")) $("acc-tout-voir").onclick = () => { vue.querySelectorAll("#a-faire [data-repliee]").forEach(li => { li.hidden = false; }); const b_ = $("acc-tout-voir"), f_ = vue.querySelector("#a-faire li:nth-child(" + (ACTIONS_VISIBLES + 1) + ") a, #a-faire li:nth-child(" + (ACTIONS_VISIBLES + 1) + ") button");
+    // Petit écran (tour 9, 01/11/2026 : sur iPhone SE, « Tout voir, 2 de plus » tombait sous la barre d'onglets) : tant que le lien passe sous la
+    // barre au premier écran, une action de plus est repliée (au moins une reste visible) et le nombre du lien suit.
+    const tv = $("acc-tout-voir"), barreO = $("onglets");
+    if (tv && barreO && scrollY < 4 && getComputedStyle(barreO).position === "fixed") { const lis = [...vue.querySelectorAll("#a-faire .actions-attente > li")];
+      for (let k_ = lis.filter(li => !li.hidden).length; k_ > 1 && tv.getBoundingClientRect().bottom > barreO.getBoundingClientRect().top - 4; k_--) {
+        lis[k_ - 1].hidden = true; lis[k_ - 1].dataset.repliee = ""; const n_ = lis.filter(li => li.hidden).length; tv.dataset.n = n_; tv.textContent = t("acc.tout.voir", { n: n_ }); } }
+    if (tv) tv.onclick = () => { const f_ = vue.querySelector("#a-faire li[data-repliee] a, #a-faire li[data-repliee] button"); vue.querySelectorAll("#a-faire [data-repliee]").forEach(li => { li.hidden = false; }); const b_ = $("acc-tout-voir");
       b_.closest("p").remove(); if (f_) f_.focus({ preventScroll: true }); };
     const bp = vue.querySelector('[data-action="programmer"]');
     // « Programmer N publications validées » (31/10/2026, test client Premium) : le message liste les N dates et mène au calendrier (lien).
@@ -806,7 +829,10 @@
       // 01/11/2026 (tour 7 Croissance) : chaque ligne mène à sa publication dans le calendrier (#/calendrier?pub=<id>), avec ses réseaux ; et
       // « Annuler ces programmations » les annule une à une (D.annuler, même fonction que « Annuler » du calendrier), après confirmation.
       const cal_ = await D.calendrier().catch(() => []); faits.forEach(f => { const p_ = cal_.find(y => y.contenu_id === f.x.id && y.statut === "programme"); f.pub = p_ ? p_.id : null; if (p_ && p_.reseaux) f.res = p_.reseaux; });
-      const titreDe = x => { const s_ = String(x.titre || (x.legende || "").split(/[.!?\n]/)[0] || "").trim(); return s_.length > 60 ? s_.slice(0, 59).trimEnd() + "…" : s_; };
+      // Titre (tour 9, 01/11/2026 : « … servie sur une table de mar… ») : le plat et le prix saisis au dépôt de la photo (photos.precision), sinon
+      // la première phrase de la légende, coupée proprement (à la virgule, sinon entre deux mots, jamais au milieu d'un mot).
+      const phs_ = await D.photos().catch(() => []), platDe = x => { const p_ = x.photo_id && phs_.find(y => y.id === x.photo_id); return p_ ? String(p_.precision || "").trim() : ""; };
+      const titreDe = x => platDe(x) || coupePropre(String(x.titre || (x.legende || "").split(/[.!?\n]/)[0] || "").trim(), 60);
       await accueil(); const m = $("msg"), n = faits.length, aAnnuler = faits.filter(f => f.pub);
       const ligne = (f, i) => { const corps_ = `${vignette(vgs[i])}<div><p class="fort"${lc()}>${e(titreDe(f.x) || t("type.publication.cap"))}</p><p class="note">${e(cap(I.dateHeureDans(f.quand)))}</p>${(f.res || []).length ? `<p class="note" data-reseaux>${e(I.liste(ORDRE_RES.filter(r => f.res.includes(r)).map(r => RES[r])))}</p>` : ""}</div>`;
         return `<li class="avec-vignette">${f.pub ? `<a class="ligne-lien" href="#/calendrier?pub=${encodeURIComponent(f.pub)}" data-pub="${e(f.pub)}">${corps_}</a>` : corps_}</li>`; };
@@ -824,6 +850,9 @@
             await accueil(); toast(t("acc.programmes.annulees", { n: k_ }) + (er1 ? " " + ph(er1.message) : "")); majCompteurs(); }; } }
       else msg(ph(er0 ? er0.message : "")); majCompteurs(); };
     brancherAutomatisations(vue, accueil);
+    if ($("aut-oui")) $("aut-oui").onclick = async () => { const b = $("aut-oui"); b.disabled = true;
+      try { await D.autoriserPhotos(); const c2 = await D.commerce(); await accueil(); msg(t(sansReseaux(c2) ? "aut.donnee.google" : "aut.donnee", { d: date(c2.photos_autorisees_le || new Date().toISOString()) })); }
+      catch (er) { b.disabled = false; msg(ph(er.message)); } };
     if ($("aut-non")) $("aut-non").onclick = async () => { try { await D.refuserAutorisationPhotos(); await accueil(); msg(t("aut.non.merci")); } catch (er) { msg(ph(er.message)); } };
   }
 
@@ -1192,14 +1221,11 @@
     const plans = t("dv.plans." + (c.metier === "restaurant" ? "restaurant" : "autre"));
     return `<section class="carte" id="depot-video" aria-labelledby="dv-titre">
       <div class="carte-tete"><h2 id="dv-titre">${t("dv.titre")}</h2><span class="note" id="dv-compteur">${t("dv.compteur.reste", { a: k.videos_reservees, b: k.videos_plafond, r: Math.max(0, k.videos_plafond - k.videos_reservees), n: attente })}</span></div>
-      <p class="texte2">${t("dv.chapo")} ${t("dv.delai")}</p>
-      <p class="note" id="dv-comptent">${t("dv.comptent")}</p>
       ${dvOuvert && !dv.envoi ? `<div class="alerte dv-ouvert" role="status"><div><p class="fort">${t("dv.ouvert.titre")}</p><p>${t("dv.ouvert.texte", { d: I.dateHeureDans(dvOuvert.cree_le) })}</p>
         <p><button type="button" class="lien" id="dv-annuler">${t("dv.annuler")}</button></p></div></div>` : ""}
+      ${/* Tour 9 (01/11/2026, Premium) : « Filmer » et « Choisir des vidéos » juste sous le titre, visibles sans défiler sur un écran de 390 × 664 ;
+         le texte d'explication et le guide « Bien filmer » passent dessous (sur ordinateur, le guide reste à gauche, CSS .dv-infos). */ ""}
       <div class="dv-grille">
-        <details class="dv-guide repliable sous" id="dv-guide"${large.matches ? " open" : ""}><summary><h3>${t("dv.guide.titre")}</h3></summary><div class="dv-guide-corps"><ol class="dv-points" id="dv-guide-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
-          <p class="note" id="dv-guide-accord">${t("dv.guide.accord")}</p>
-          <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div></details>
         ${plein ? `<div><p class="texte2" id="dv-plein">${t("dv.plafond")}</p><p class="msg" id="dv-msg" role="status" aria-live="polite"></p></div>` : `<form id="fv" class="dv-form" novalidate><div class="f"><div class="depot">
             <span class="depot-choix"><input id="filmer" class="vh" type="file" accept="video/*" capture="environment"><label for="filmer" class="bouton second appareil-photo">${CAMERA}<span>${t("dv.filmer")}</span></label></span>
             <span class="depot-choix"><input id="videos" class="vh" type="file" accept="video/*" multiple><label for="videos" class="bouton second">${FILM}<span>${t("dv.choisir")}</span></label></span>
@@ -1210,6 +1236,11 @@
           <div class="alerte dv-lourde" id="dv-lourde" hidden><div><p class="fort">${t("dv.lourde.titre")}</p><p>${t("dv.lourde.texte")}</p><p>${t("dv.lourde.iphone")}</p><p>${t("dv.lourde.android")}</p></div></div>
           ${dvOuvert ? "" : `<div class="f"><label for="dv-note">${t("dv.note")}</label><textarea id="dv-note" maxlength="${EN.REGLES.NOTE_MAX}" rows="2" aria-describedby="dv-note-aide">${e(dv.note)}</textarea><p class="aide" id="dv-note-aide">${t("dv.note.aide")}</p></div>`}
           <button class="bouton" type="submit" id="dv-envoyer">${t("dv.envoyer")}</button><p class="msg" id="dv-msg" role="status" aria-live="polite"></p></form>`}
+        <div class="dv-infos"><p class="texte2">${t("dv.chapo")} ${t("dv.delai")}</p>
+        <p class="note" id="dv-comptent">${t("dv.comptent")}</p>
+        <details class="dv-guide repliable sous" id="dv-guide"${large.matches ? " open" : ""}><summary><h3>${t("dv.guide.titre")}</h3></summary><div class="dv-guide-corps"><ol class="dv-points" id="dv-guide-points">${[1, 2, 3, 4, 5].map(i => `<li>${t("dv.guide." + i)}</li>`).join("")}</ol>
+          <p class="note" id="dv-guide-accord">${t("dv.guide.accord")}</p>
+          <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div></details></div>
       </div></section>
       <section class="carte" id="dv-suivi">${dvSuivi(l)}</section>`;
   }
@@ -1420,7 +1451,7 @@
       grille = `<div class="cal" role="grid" aria-label="${MOIS[ref.getMonth()]} ${ref.getFullYear()}">${JOURS.map(j => `<div class="ent">${j}</div>`).join("")}` + Array.from({ length: Math.ceil((dec + n) / 7) * 7 }, (_, i) => {
         const j = i - dec + 1; if (j < 1 || j > n) return `<div class="hors"></div>`; const d = new Date(ref.getFullYear(), ref.getMonth(), j), it = du(d);
         // Jour qui a une publication (31/10/2026, test client Premium, tour 5) : tout le jour est un bouton (44 px au moins) qui mène à la publication.
-        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }))}"><span class="n">${j}</span>${it.map(x => `<span data-cell${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}>${heureCourte(x.prevu_le)}</span>`).join("")}</button></div>`;
+        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }) + " (" + I.liste(it.map(x => heure(x.prevu_le))) + ")")}"><span class="n">${j}</span>${it.map(x => `<span data-cell${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}><span class="h-long">${heureCourte(x.prevu_le)}</span><span class="h-court" aria-hidden="true">${I.heureMini(x.prevu_le)}</span></span>`).join("")}</button></div>`;
         return `<div${memeJour(d, aujourd) ? ' aria-current="date"' : ""}>${libre(d) ? boutonLibre(d, `<span class="n">${j}</span>`) : `<span class="n">${j}</span>`}</div>`; }).join("") + "</div>";
     } else {
       grille = `<ul class="liste semaine" aria-label="${t("cal.semaine.aria")}">` + Array.from({ length: 7 }, (_, i) => { const d = new Date(lundi); d.setDate(lundi.getDate() + i); const it = du(d);
@@ -1450,7 +1481,7 @@
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
           <button class="bouton" type="submit" id="cal-programmer">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : bloque ? "cal.aucun.pret.bloque" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
-      <section class="carte" id="cal-vos"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${l.length ? `<span class="note">${l.length}</span>` : ""}</div>
+      <section class="carte" id="cal-vos"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${(n_ => n_ ? `<span class="note" id="cal-vos-n">${t("cal.vos.a.venir", { n: n_ })}</span>` : "")(l.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) >= Date.now()).length)}</div>
         ${aProgrammerCal.length ? `<div class="actions" id="cal-tout-zone"><button type="button" class="bouton second" id="cal-programmer-tout">${t("cal.programmer.tout", { n: aProgrammerCal.length })}</button></div>` : ""}${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
         <p><span class="fort">${dateHeure(x.prevu_le)}</span> · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
         <p class="note"${lc()}>${e(cut(x.contenu?.legende || "", 90))}</p>${x.erreur ? `<p class="note">${e(ph(x.erreur))}</p>` : ""}
@@ -1485,6 +1516,11 @@
     vue.querySelectorAll("[data-saut]").forEach(b => b.onclick = () => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(b.dataset.saut)}"]`); if (!li) return;
       ouvrirPour(li); li.setAttribute("tabindex", "-1"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
     if (pv) requestAnimationFrame(() => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(pv.id)}"]`); if (!li) return; ouvrirPour(li); li.setAttribute("tabindex", "-1"); li.classList.add("designee"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
+    // Grille du mois (tour 9, 01/11/2026) : « 11 h 30 » quand l'heure tient dans sa pastille ; sinon toute la grille passe à « 11 h » (un point hors
+    // français) : sous 360 px toujours, et sur les téléphones où « 11 h 30 » dépasserait. L'heure complète reste dans le nom du bouton et dans la liste.
+    const grilleM = vue.querySelector(".cal"), ajusterGrille = () => { if (!grilleM || !grilleM.isConnected) return; grilleM.classList.remove("court");
+      if ([...grilleM.querySelectorAll("[data-cell]")].some(x => x.scrollWidth > x.clientWidth + 0.5)) grilleM.classList.add("court"); };
+    if (grilleM) { ajusterGrille(); if (!cal.ecouteGrille) { cal.ecouteGrille = true; addEventListener("resize", () => { const g_ = document.querySelector("#vue .cal"); if (g_) { g_.classList.remove("court"); if ([...g_.querySelectorAll("[data-cell]")].some(x => x.scrollWidth > x.clientWidth + 0.5)) g_.classList.add("court"); } }); } }
     vue.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { const n = +b.dataset.n, d = new Date(cal.ref); if (cal.mode === "mois") { d.setDate(1); d.setMonth(d.getMonth() + n); } else d.setDate(d.getDate() + 7 * n); cal.ref = d; calendrier(); });
     const majDestinations = () => { const x = prets.find(y => y.id === ($("contenu") || {}).value); if (!x) return; const ok = M.reseauxDuContenu(x, autorises);
       vue.querySelectorAll("[data-res-lib]").forEach(lb => { const i = lb.querySelector("input"), dedans = ok.includes(lb.dataset.resLib); lb.hidden = !dedans; if (!dedans) i.checked = false; });
@@ -1987,8 +2023,11 @@
     const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : parDemande ? "offre.dessus.frais.demande" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
     const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
     const P = window.RENOM_PRIX_MONTEE(o, s_, ab), ecartPrix = P.ecart, mensuelP = P.rythme === "mensuel";
-    const blocDemande = demandeChgOffre ? `<p class="texte2 lecture" id="offre-demande-envoyee" role="status">${t("offre.dessus.demande.envoyee", { d: date(demandeChgOffre) })}</p>`
-      : `<p class="pied actions-abo"><button type="button" class="bouton" id="offre-demander" data-offre="${e(suiv)}">${t("offre.dessus.passer.en", { nom })}</button></p><p class="note" id="dessus-note">${t("offre.dessus.demande.note")}</p><p class="msg" id="msg-chg" role="status"></p>`;
+    // Tour 9 (01/11/2026) : plus de « aujourd'hui ou demain » écrit en dur. Le numéro est demandé comme pour « Attendez mon appel » (prérempli,
+    // obligatoire) et le jour est un vrai jour ouvré (M.joursRappel : jamais un dimanche ni un jour férié du pays), nommé (« lundi 2 novembre »),
+    // avec la plage horaire ; base : demander_rappel puis preciser_rappel (sujet « changement_offre »), comme la demande TikTok.
+    const blocDemande = demandeChgOffre ? `<p class="texte2 lecture" id="offre-demande-envoyee" role="status">${t("offre.dessus.demande.envoyee", Object.assign({ d: date(demandeChgOffre) }, quandChgOffre(c, demandeChgOffre)))}</p>`
+      : formChgOffre(c, suiv, nom);
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
       ${P.enCours && P.actuel ? `<p class="texte2" id="dessus-vous">${t(mensuelP ? "offre.dessus.vous.mensuel" : "offre.dessus.vous.annuel", { prix: euros(P.actuel) })}</p>` : ""}
@@ -2000,6 +2039,27 @@
         <p class="note" id="dessus-note">${t(enCours ? "offre.dessus.note.paiement" : "offre.dessus.note.paiement.seul", { nom, r: t("offre.dessus.rythme." + rythme) })}</p>`
         : `<p class="note" id="dessus-note">${t("offre.dessus.comment")}</p>`}</section>`;
   }
+  // Demande de changement d'offre (tour 9) : jour et plage choisis, gardés sur l'appareil (la base les garde aussi, alertes_exploitant.detail) ;
+  // ailleurs, le jour ouvré qui suit la demande (après 17 h : le suivant), même calcul que joursRappel.
+  const cleChgOffre = c => "renom-chg-offre:" + ((c && c.id) || "");
+  const minJour = s_ => I.langue === "en" ? s_ : s_.charAt(0).toLowerCase() + s_.slice(1);
+  function quandChgOffre(c, d) {
+    let q = null; try { q = JSON.parse(localStorage.getItem(cleChgOffre(c)) || "null"); } catch (er) { q = null; }
+    if (!q || q.demande !== String(d)) { const j0 = jourParis(Date.parse(d)), h0 = +new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(new Date(d)), jr = M.joursRappel(j0, c && c.pays);
+      q = { jour: h0 >= 17 && jr.aujourdhui === j0 ? jr.demain : jr.aujourdhui, creneau: "9-18", telephone: null }; }
+    return { quand: minJour(I.jourEtDate(new Date(q.jour + "T12:00:00"))), plage: q.creneau === "15-17" ? "15-17" : "9-18", tel: q.telephone ? window.RENOM_WHATSAPP.lisible(q.telephone) : "" };
+  }
+  const formChgOffre = (c, suiv, nom) => { const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c && c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj, tel = telRetenue(c);
+    return `<form id="chg-f" class="pile serre" novalidate data-offre="${e(suiv)}"><p class="fort">${t("avis.rappel.titre")}</p>
+      <div class="f"><label for="chg-tel">${t("avis.rappel.tel")}</label><input id="chg-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="chg-aide"><p class="aide" id="chg-aide">${t("rappel.aide", numParams(c))}</p></div>
+      ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
+        ${tard ? "" : `<label class="option"><input type="radio" name="chg-jour" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
+        <label class="option"><input type="radio" name="chg-jour" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
+      <fieldset><legend>${t("avis.rappel.heure")}</legend>
+        <label class="option"><input type="radio" name="chg-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
+        <label class="option"><input type="radio" name="chg-plage" value="_15_17"><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
+      <div class="actions actions-abo"><button type="submit" class="bouton" id="offre-demander" data-offre="${e(suiv)}">${t("offre.dessus.passer.en", { nom })}</button></div>
+      <p class="msg" id="msg-chg" role="status"></p><p class="note" id="dessus-note">${t("offre.dessus.demande.note")}</p></form>`; };
   async function offre() {
     const [k, j, c, ab, g, cmds] = await Promise.all([D.compteur(), D.journal(), D.commerce(), D.abonnement ? D.abonnement().catch(() => null) : null, D.maGarantieDelais ? D.maGarantieDelais().catch(() => null) : null,
       D.mesCommandesOptions ? D.mesCommandesOptions().catch(() => []) : []]);
@@ -2029,10 +2089,13 @@
           <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>
           <li><span>${t(o.delegation ? "offre.inc.bilan.premium" : "offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
           <p class="note pied">${t(o.reseaux_sociaux === false ? "offre.contenus.unite.google" : "offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
-      ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2>${ab && ab.statut !== "resilie" && ab.rythme === "mensuel" && o.prix_mensuel_ht
-          ? `<p class="prix-offre" id="offre-prix-vous"><span class="chiffre">${euros(o.prix_mensuel_ht)}</span> ${t("offre.ht.mois.mensuel")}</p>` : `<p class="prix-offre" id="offre-prix-vous"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>`}
+      ${/* Tour 9 (01/11/2026) : « Prix de votre offre » au même rythme que la montée d'offre (RENOM_RYTHME_MONTEE : celui de l'abonnement en cours,
+          mensuel s'il est inconnu) ; avant, 79 € « payé à l'année » ici et 95 € par mois dans « Passer à Croissance », sur le même écran. */ ""}
+      ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2>${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht
+          ? `<p class="prix-offre" id="offre-prix-vous" data-rythme="mensuel"><span class="chiffre">${euros(o.prix_mensuel_ht)}</span> ${t("offre.ht.mois.mensuel")}</p>` : `<p class="prix-offre" id="offre-prix-vous" data-rythme="annuel"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>`}
         ${ab && ab.statut !== "resilie" && ab.rythme ? `<p class="note" id="offre-votre-rythme">${t("offre.votre.rythme." + (ab.rythme === "mensuel" ? "mensuel" : "annuel"))}</p>` : ""}
-        <p class="texte2 lecture" id="offre-annuel">${t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
+        ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
+        <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
         <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
@@ -2057,12 +2120,17 @@
       ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c)) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
       ${repli("offre-historique", t("offre.historique"), j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
-    if ($("offre-demander")) $("offre-demander").onclick = async () => { const b = $("offre-demander"); b.disabled = true;
+    if ($("chg-f")) $("chg-f").onsubmit = async ev => { ev.preventDefault(); const b = $("offre-demander"), m = $("msg-chg"); b.disabled = true;
       // Tour 7 Essentiel (01/11/2026) : le bloc replié s'ouvre dès qu'une demande existe (avant : seulement avec « ?dessus » dans l'adresse, donc la
-      // confirmation restait cachée dans un bloc fermé) ; un toast le dit aussi.
-      try { const r = await D.demanderRappel("changement_offre", null, b.dataset.offre); demandeChgOffre = (r && r.cree_le) || new Date().toISOString(); await offre();
-        const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); toast(t("offre.dessus.demande.toast")); }
-      catch (er) { b.disabled = false; const m = $("msg-chg"); if (m) m.textContent = ph(er.message); } };
+      // confirmation restait cachée dans un bloc fermé) ; un toast le dit aussi. Tour 9 : numéro obligatoire, comme « Attendez mon appel ».
+      const saisi = $("chg-tel").value.trim(), num = saisi && window.RENOM_WHATSAPP.numero(saisi, M.paysDe(c.pays));
+      if (!saisi || !num) { b.disabled = false; m.textContent = saisi ? t("chg.tel.invalide", numParams(c)) : t("avis.rappel.tel.vide"); $("chg-tel").focus(); return; }
+      try { const r = await D.demanderRappel("changement_offre", num, b.dataset.offre); demandeChgOffre = (r && r.cree_le) || new Date().toISOString();
+        const jv = (vue.querySelector("input[name=chg-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=chg-plage]:checked") || {}).value || "";
+        const q = jv && D.preciserRappel ? await D.preciserRappel("changement_offre", jv + pv).catch(() => null) : null;
+        try { localStorage.setItem(cleChgOffre(c), JSON.stringify({ demande: String(demandeChgOffre), jour: q && q.jour ? String(q.jour).slice(0, 10) : M.joursRappel(jourParis(Date.now()), c.pays)[jv === "demain" ? "demain" : "aujourdhui"], creneau: (q && q.creneau) || (pv ? "15-17" : "9-18"), telephone: (r && r.telephone) || num })); } catch (er) {}
+        await offre(); const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); toast(t("offre.dessus.demande.toast", quandChgOffre(c, demandeChgOffre))); }
+      catch (er) { b.disabled = false; if (m) m.textContent = ph(er.message); } };
     // Mode délégation (Premium) : activé ou désactivé par le commerçant ; l'écran est relu (règle de publication, historique).
     const deleg = async (oui, b) => { b.disabled = true; try { await D.reglerDelegation(oui); await offre(); const m = $("msg-deleg"); if (m) m.textContent = t(oui ? "offre.deleg.ok.active" : "offre.deleg.ok.inactive"); }
       catch (er) { b.disabled = false; const m = $("msg-deleg"); if (m) m.textContent = ph(er.message); } };
@@ -2152,8 +2220,10 @@
       ${lecture && connus.length ? `<p class="note lecture-google" id="lecture-google">${e(lecture)}</p>` : ""}`;
   }
   // « Vos réseaux ce mois-ci » (31/10/2026, test client) : par réseau de l'offre, les publications parties et programmées ce mois-ci, lues dans le
-  // calendrier (rien d'inventé). Vues et abonnés : la base ne lit pas encore les statistiques des réseaux, donc une phrase sobre, aucun chiffre.
-  function blocReseauxMois(c, cal) {
+  // calendrier (rien d'inventé). Tour 9 (01/11/2026) : plus de promesse « Statistiques (vues, abonnés) : bientôt » ; à la place, ce qui existe
+  // vraiment pour le mois : les réponses publiées à vos commentaires (table commentaires, statut « publie », répondues ce mois-ci), par réseau.
+  // Vues et abonnés : la base ne les lit pas, donc rien n'est affiché.
+  function blocReseauxMois(c, cal, cms) {
     // 31/10/2026 (test client Croissance) : mois en heure locale (plus en UTC) ; « À venir » = toutes les publications programmées futures,
     // y compris celles du mois prochain (avant, une publication du 2 novembre n'apparaissait nulle part le 31 octobre).
     const res = ORDRE_RES.filter(r => window.RENOM_RESEAUX_AUTORISES(c).includes(r)), auj = new Date(), maintenant = auj.getTime();
@@ -2162,8 +2232,11 @@
     return `<section class="carte" id="reseaux-mois" aria-labelledby="r-reseaux"><h2 id="r-reseaux">${t(sociaux.length ? "res.reseaux.titre" : "res.reseaux.titre.google")}</h2>
       <table class="tab compact"><thead><tr><th>${t("res.reseaux.col")}</th><th>${t("res.reseaux.parties")}</th><th>${t("res.reseaux.programmees")}</th></tr></thead><tbody>
       ${res.map(r => `<tr data-reseau="${r}"><td data-l="${t("res.reseaux.col")}">${RES[r]}</td><td data-l="${t("res.reseaux.parties")}">${nombre(n(r, "publie"))}</td><td data-l="${t("res.reseaux.programmees")}">${nombre(n(r, "programme"))}</td></tr>`).join("")}</tbody></table>
-      ${sociaux.length ? `<p class="note" id="reseaux-stats">${t("res.reseaux.stats", { res: I.liste(sociaux.map(r => RES[r])) })}</p>` : ""}</section>`;
+      ${sociaux.length && offreDe(c).commentaires ? (() => { const rep = (cms || []).filter(x => x.statut === "publie" && duMoisCm(x)), parRes = ORDRE_RES.map(r => [r, rep.filter(x => x.reseau === r).length]).filter(([, k]) => k);
+        return `<p class="texte2" id="reseaux-commentaires">${t("res.reseaux.cm", { n: rep.length, l: parRes.length ? I.liste(parRes.map(([r, k]) => RES[r] + " " + nombre(k))) : "" })}</p>`; })() : ""}</section>`;
   }
+  // Réponse à un commentaire publiée ce mois-ci (heure locale) : date de la réponse, sinon de la décision.
+  const duMoisCm = x => { const d = new Date(x.repondu_le || x.decide_le || x.cree_le || 0), a = new Date(); return d.getFullYear() === a.getFullYear() && d.getMonth() === a.getMonth(); };
   // Bilan du mois écoulé (01/11/2026, tour 6 Premium) : du 1er au 5 du mois, en tête de Résultats, les chiffres du mois précédent (bilan_mois, même
   // fonction que l'email du 1er) et « En parler avec <contact> » sur WhatsApp. Aucun commentaire écrit à la main n'existe en base : rien n'est inventé.
   // L'email (n8n/renom-bilan-mensuel.json, le 1er à 9 h, heure de Paris) part aux commerces qui le reçoivent (notifications.email, adresse valide,
@@ -2186,11 +2259,11 @@
       ${premium ? `<p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p>` : ""}</section>`;
   }
   async function resultats() {
-    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
-      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois()]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR, cmsR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
+      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois(), D.commentaires ? D.commentaires().catch(() => []) : []]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     // Tant que BoostImpact n'a pas accès à la fiche Google (étape « google » de la mise en route), aucun chiffre ne peut arriver : le point de départ.
     const etapeGoogle = ((mr && mr.points) || []).find(x => x.point === "google");
-    if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR)); return; }
+    if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR, cmsR)); return; }
     // Thèmes nommés en français par la démonstration (FAMILLES de donnees.js) : traduits dans la langue d'affichage ; ceux de Claude, tels quels.
     const THEMES_CONNUS = { "L'accueil et le service": "accueil", "Le matériel": "materiel", "Le parcours et les paysages": "parcours", "L'attente": "attente", "Les plats": "plats", "L'ambiance": "ambiance", "Les prix": "prix" };
     const prem = avecNote[0], dern = avecNote[avecNote.length - 1], rep = (R && R.reponses) || {}, audit = (R && R.audit) || [], conc = (R && R.concurrents) || [], themes = (R && R.themes) || [], col = (R && R.collecte) || {};
@@ -2205,9 +2278,10 @@
     vue.innerHTML = `${entete(t("groupe.resultats"), t("res.titre"), t("res.chapo") + (periode ? ", " + periode : "") + ".")}
       ${bandeauDemo()}
       ${bilanPrecedentBloc(bilanP, c, contactR)}
-      ${bilanBloc(bilan, NR)}
+      ${/* Tour 9 (01/11/2026) : ce que la fiche a rapporté juste sous le bilan du mois écoulé, avant le mois en cours. */ ""}
       ${blocFicheRapporte(R, lg)}
-      ${blocReseauxMois(c, calR)}
+      ${bilanBloc(bilan, NR)}
+      ${blocReseauxMois(c, calR, cmsR)}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.note, +dern.note, 1), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
           ${dern ? `<p><span class="chiffre grand-chiffre">${nombre(dern.note, 1)}</span> <span class="note">${t(enCours ? "res.sur5.auj" : "res.sur5.fin", { mois: moisLong(dern.mois) })}</span></p>` : ""}

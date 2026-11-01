@@ -349,6 +349,11 @@ video.visuel{object-fit:contain;background:#000}
 .cal-saut:focus-visible{outline:2px solid var(--marque);outline-offset:1px}
 .liste.semaine .cal-saut{min-height:44px;height:auto;padding:0;justify-content:center;text-decoration:underline;text-underline-offset:3px}
 .cal [data-cell]{background:var(--marque);color:var(--sur-marque);font-weight:var(--graisse-forte);font-size:11px;border-radius:5px;padding:1px 3px;max-width:100%}
+/* Tour 9 (01/11/2026) : heure entière dans la pastille (« 11 h 30 », jamais coupée ni débordante) ; sous 360 px, « 11 h » (un point hors français). */
+.cal [data-cell]{white-space:nowrap;overflow:hidden;text-overflow:clip;box-sizing:border-box}
+.cal .h-court{display:none}
+.cal.court .h-long{display:none}.cal.court .h-court{display:inline}
+@media (max-width:359px){.cal .h-long{display:none}.cal .h-court{display:inline}.cal [data-cell]{padding:1px 2px}}
 
 /* ---------- Avis */
 .citation{color:var(--texte2)}
@@ -784,6 +789,9 @@ details.dv-guide[open]>summary{margin-bottom:4px}
 #dv-suivi .liste li{align-items:flex-start}
 #dv-suivi .liste li a{display:inline-flex;align-items:center;min-height:44px;font-weight:var(--graisse-forte)}
 @media (min-width:900px){.dv-grille{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+/* Tour 9 (01/11/2026) : sur téléphone, le dépôt (Filmer, Choisir) d'abord, sous le titre ; l'explication et le guide dessous. Ordinateur : à gauche. */
+.dv-infos{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (min-width:900px){.dv-infos{order:-1}}
 @media (max-width:899px){.dv-form .depot .bouton{flex:1 1 100%;min-height:56px;font-size:17px}.dv-form>.bouton{align-self:stretch;min-height:56px;font-size:17px}}
 .tableau>h2{padding:16px 20px 4px}
 .tableau>h2+p.texte2,.tableau>p.texte2:last-child{padding:4px 20px 12px}   /* console, Invitations : texte d'introduction et « Aucune invitation » dans la carte */
@@ -945,9 +953,11 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
   .contenu .cadre img.visuel,.contenu .media img.visuel{max-height:32vh;object-fit:contain;background:var(--releve);cursor:zoom-in}
   .contenu .cadre.vertical img.visuel{object-fit:contain}
   .contenu video.visuel{max-height:40vh}
-  /* Filtres sur une seule ligne, qui défile au doigt (01/11/2026, tour 7 Croissance : trois lignes repoussaient « Valider » de deux écrans). */
-  .filtres:not(.bascule){flex-wrap:nowrap;overflow-x:auto}
-  .filtres button{flex:0 0 auto;padding:8px 12px}
+  /* Filtres (tour 9, 01/11/2026) : tous visibles, sans défilement horizontal caché ; ils passent à la ligne, serrés (deux lignes sur 375 à 430 px).
+     Avant (tour 7) : une seule ligne qui défilait au doigt, les derniers filtres cachés à droite. */
+  .filtres:not(.bascule){flex-wrap:wrap;overflow-x:visible;gap:4px}
+  .filtres button{flex:0 0 auto;padding:8px 10px}
+  @media (max-width:359px){.filtres:not(.bascule){gap:2px;padding:3px}.filtres:not(.bascule) button{padding:8px 5px;font-size:14px}}
   /* Accueil : l'offre passe sous « À faire maintenant ». */
   .entete-accueil.offre-sous .offre-accueil{margin-top:0}
 }
