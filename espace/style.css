@@ -1144,3 +1144,20 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 /* Tour 10 (v36) : libellé court d'une action sous 360 px (« Programmer 3 validées »). */
 .lib-court{display:none}
 @media (max-width:359px){.lib-long{display:none}.lib-court{display:inline}}
+/* Tour 11 (v37) ---------------------------------------------------------------------------------------------------------------------------
+   Résultats en démonstration : « Chiffres de démonstration (fictifs) » sur une seule ligne, le bilan remonte au premier écran. */
+p.bandeau-demo{display:block;padding:8px 12px;font-size:14px;line-height:1.4;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+p.bandeau-demo .note{color:var(--texte2)}
+/* Message amené à l'écran après « Programmer tout » : focus sans anneau (ce n'est pas une commande). */
+.msg[tabindex="-1"]:focus{outline:none}
+/* À valider sous 360 px (320 px : « Valider » à 1 137 px) : sous-onglets sur une ligne, « Avis » et « Idées » en court, onglets de réseau sur une
+   ligne (« Google »), filtres repliés sur le filtre actif avec « Autres filtres, N ». */
+.filtres-plus{display:none}
+@media (max-width:359px){
+  .sous{gap:0 14px;font-size:14px}
+  .filtres:not(.bascule):not(.ouverts) button[data-f][aria-pressed=false]{display:none}
+  .filtres .filtres-plus{display:inline-flex;align-items:center;flex:0 0 auto;font:inherit;font-size:14px;font-weight:var(--graisse-forte);background:none;border:0;border-radius:8px;padding:8px 10px;min-height:44px;color:var(--encre);text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-left:auto}
+  .entete-accueil.contenus-tete .entete h1{max-width:calc(100% - 64px)}
+  .res-onglets{gap:0 12px}
+}
+@media (max-width:359px){#vue > #contenus-delegation{margin-top:16px}}

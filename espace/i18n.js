@@ -79,7 +79,7 @@
     "voir.resultats": ["Voir Résultats", "See Results", "Bekijk Resultaten"], "voir.les": ["Voir les {n}", "See all {n}", "Bekijk alle {n}"],
     "non.comprises.offre": ["Non comprises dans votre offre", "Not included in your plan", "Niet inbegrepen in uw formule"],
     "non.comprises": ["Non comprises", "Not included", "Niet inbegrepen"], "comprises": ["Comprises", "Included", "Inbegrepen"], "comprise": ["Comprise", "Included", "Inbegrepen"], "compris": ["Compris", "Included", "Inbegrepen"],
-    "demo.chiffres": ["Chiffres de démonstration", "Demo figures", "Democijfers"], "demo.chiffres.point": ["Chiffres de démonstration.", "Demo figures.", "Democijfers."],
+    "demo.chiffres": ["Chiffres de démonstration", "Demo figures", "Democijfers"], "demo.chiffres.court": ["(fictifs)", "(made up)", "(fictief)"], "demo.chiffres.point": ["Chiffres de démonstration.", "Demo figures.", "Democijfers."],
     "demo.chiffres.texte": ["Ces chiffres sont fictifs. En service, ceux de Google sont lus à l'ouverture de cette page, ceux de BoostImpact viennent de votre espace.",
       "These figures are made up. In live use, Google's figures are read when this page opens and BoostImpact's come from your account.", "Deze cijfers zijn fictief. In de echte dienst worden de cijfers van Google gelezen wanneer deze pagina opent en komen die van BoostImpact uit uw klantenzone."],
     // ---- Page de l'espace (index.html) et bandeau de démonstration
@@ -654,13 +654,16 @@
     "filtre.vide.hors_offre": ["Aucune publication hors de votre offre.", "Nothing outside your plan.", "Niets buiten uw formule."],
     "filtre.vide.autres": ["Aucune publication refusée.", "No rejected content.", "Geen geweigerde posts."],
     "contenus.remettre": ["Remettre à valider", "Send back for approval", "Opnieuw laten goedkeuren"], "contenus.remis": ["Publication remise à valider : elle attend votre décision dans l'onglet « À valider ».", "Content sent back for approval: it's waiting for your decision in the “To approve” tab.", "Post opnieuw ter goedkeuring: hij wacht op uw beslissing in het tabblad “Goed te keuren”."], "filtres.aria": ["Filtrer les contenus par état", "Filter content by status", "Posts filteren op status"],
-    "idees.titre": ["Proposer des idées", "Suggest ideas", "Ideeën voorstellen"],
+    "idees.titre": ["Proposer des idées", "Suggest ideas", "Ideeën voorstellen"], "idees.titre.court": ["Idées", "Ideas", "Ideeën"],   // sous 360 px (tour 11)
+    "ecran.avis.court": ["Avis", "Reviews", "Reviews"],   // sous-onglet sous 360 px (tour 11)
+    "filtres.autres": [v => `Autres filtres, ${v.n}`, v => `Other filters, ${v.n}`, v => `Andere filters, ${v.n}`], "filtres.replier": ["Replier les filtres", "Fold the filters", "Filters inklappen"],   // sous 360 px (tour 11)
     // 22/10/2026 (décision de PJ) : une demande d'idées ne compte plus dans les publications de l'offre ; une par jour au plus.
     "idees.texte": ["Des idées de publications liées à votre fiche et aux temps forts de votre métier. Une demande ne compte pas dans les publications de votre offre ; vous pouvez en faire une par jour.",
       "Post ideas based on your details and the key dates for your type of business. A request does not count towards the posts in your plan; you can make one a day.", "Ideeën voor posts op basis van uw gegevens en de hoogtepunten van uw vak. Een aanvraag telt niet mee voor de posts van uw formule; u kunt er één per dag doen."],
     "idees.demander": ["Demander des idées", "Ask for ideas", "Ideeën vragen"], "idees.plafond": ["La limite de votre offre est atteinte ce mois-ci.", "Your plan's limit has been reached this month.", "De limiet van uw formule is deze maand bereikt."],
     "idees.vide": ["Aucune idée pour le moment.", "No ideas yet.", "Nog geen ideeën."], "idees.enregistree": ["Demande enregistrée. Les idées sont dans le panneau ci-dessus.", "Request saved. The ideas are in the panel above.", "Aanvraag opgeslagen. De ideeën staan in het vak hierboven."],
     "contenus.titre": ["Vos contenus", "Your content", "Uw posts"],
+    "contenus.chapo.mini": ["Rien ne part sans votre accord.", "Nothing goes out without your approval.", "Niets gaat online zonder uw akkoord."],   // sous 360 px (tour 11)
     "contenus.chapo.court": ["Validez d'un clic ou modifiez la légende. Rien n'est publié sans votre accord.", "Approve in one click or edit the caption. Nothing is posted without your approval.", "Keur goed met één klik of pas het bijschrift aan. Niets wordt gepubliceerd zonder uw akkoord."],   // téléphone (01/11/2026, tour 7 Croissance)
     "contenus.chapo": ["Vous validez d'un clic, ou vous modifiez la légende vous-même, réseau par réseau. Pour le visuel, demandez une modification à BoostImpact. Rien n'est publié sans votre validation.",
       "Approve in one click, or edit the caption yourself, network by network. For the visual, ask BoostImpact for a change. Nothing is published without your approval.", "U keurt goed met één klik, of u past het bijschrift zelf aan, netwerk per netwerk. Voor het beeld vraagt u BoostImpact om een wijziging. Niets wordt gepubliceerd zonder uw goedkeuring."],
@@ -897,6 +900,7 @@
     "offre.mensuel": ["Au mois&nbsp;: {prix} HT par mois, sans engagement.", "Monthly: {prix} excl. VAT per month, no commitment.", "Maandelijks: {prix} excl. btw per maand, zonder verbintenis."],
     "offre.frais.offerts": ["Frais de mise en route&nbsp;: {prix} HT une fois (audit approfondi, optimisation de la fiche, mise en place des réseaux retenus, cartes d'avis). Offerts pour toute souscription jusqu'au {date} inclus.",
       "Set-up fee: {prix} excl. VAT, once (in-depth audit, profile optimisation, set-up of the chosen social networks, review cards). Waived for any subscription taken out up to and including {date}.", "Opstartkosten: {prix} excl. btw, eenmalig (grondige audit, optimalisatie van het profiel, installatie van de gekozen netwerken, reviewkaarten). Gratis voor elk abonnement afgesloten tot en met {date}."],
+    "offre.frais.deja.faite": ["Frais de mise en route : votre mise en route est déjà faite, rien à payer.", "Set-up fee: your set-up is already done, nothing to pay.", "Opstartkosten: uw opstart is al gebeurd, niets te betalen."],   // abonnement en cours (tour 11)
     "offre.frais.regle": ["Frais de mise en route&nbsp;: {prix} HT une fois (audit approfondi, optimisation de la fiche, mise en place des réseaux retenus, cartes d'avis). Offerts en paiement annuel, facturés avec le premier paiement au mois.",
       "Set-up fee: {prix} excl. VAT, once (in-depth audit, profile optimisation, set-up of the chosen social networks, review cards). Waived with annual billing, charged with the first payment if you pay monthly.", "Opstartkosten: {prix} excl. btw, eenmalig (grondige audit, optimalisatie van het profiel, installatie van de gekozen netwerken, reviewkaarten). Gratis bij jaarlijkse betaling, aangerekend bij de eerste betaling als u per maand betaalt."],
     "offre.frais.factures": ["Frais de mise en route&nbsp;: {prix} HT, facturés une fois avec le premier paiement (audit approfondi, optimisation de la fiche, mise en place des réseaux retenus, cartes d'avis).",
@@ -1620,7 +1624,7 @@
     "reg.publications": ["Vos publications", "Your posts", "Uw posts"],
     "reg.publications.texte": ["Voir vos publications, le texte sur vos photos, vos couleurs et votre logo.", "See your posts, text on your photos, your colours and your logo.", "Uw posts bekijken, tekst op uw foto's, uw kleuren en uw logo."],
     "acc.pub.titre": ["Voir vos publications, 30 secondes", "See your posts, 30 seconds", "Bekijk uw posts, 30 seconden"],
-    "acc.pub.texte": ["Votre Instagram avec vos photos, tel qu'il va sortir. Un coup d'œil, et vous validez.", "Your Instagram with your photos, as it will look. One look, and you approve.", "Uw Instagram met uw foto's, zoals het eruit zal zien. Eén blik, en u keurt goed."],
+    "acc.pub.texte": ["Votre Instagram avec vos photos, tel qu'il va sortir. Un coup d'œil, et vous validez votre style.", "Your Instagram with your photos, as it will look. One look, and you approve your style.", "Uw Instagram met uw foto's, zoals het eruit zal zien. Eén blik, en u keurt uw stijl goed."],   // tour 11 (v37) : « votre style », la carte suit « Tout est à jour »
     "acc.pub.bouton": ["Voir mes publications", "See my posts", "Mijn posts bekijken"],
     "acc.pub.lien": ["Vos publications : changer le texte ou les couleurs", "Your posts: change the text or the colours", "Uw posts: tekst of kleuren wijzigen"],
     "pub.chapo": ["Voici ce que vos clients vont voir. Vous validez, nous publions.", "This is what your customers will see. You approve, we post.", "Dit zien uw klanten. U keurt goed, wij posten."],
@@ -2115,7 +2119,7 @@
     "mer.court.google": ["Ajoutez notre adresse comme administrateur de votre fiche : 6 étapes courtes.", "Add our address as a manager of your profile: 6 short steps.", "Voeg ons adres toe als beheerder van uw profiel: 6 korte stappen."],
     "mer.court.metricool": ["Ouvrez le lien reçu par email et connectez Facebook et Instagram.", "Open the link you received by email and connect Facebook and Instagram.", "Open de link die u per e-mail kreeg en koppel Facebook en Instagram."],
     "mer.court.demarrage": ["Cinq questions courtes pour écrire comme vous. Chacune peut être passée.", "Five short questions so we write the way you do. You can skip any of them.", "Vijf korte vragen zodat wij schrijven zoals u. U kunt elke vraag overslaan."],
-    "acc.semaine": ["Cette semaine : {l}.", "This week: {l}.", "Deze week: {l}."],
+    "acc.semaine": ["Ces 7 derniers jours : {l}.", "Last 7 days: {l}.", "Afgelopen 7 dagen: {l}."],   // tour 11 (v37) : le calcul porte sur les 7 derniers jours, pas sur la semaine civile
     "acc.semaine.reponses": [v => v.n > 1 ? `${v.n} réponses publiées à vos avis` : "1 réponse publiée à vos avis", v => v.n === 1 ? "1 review reply published" : `${v.n} review replies published`, v => v.n === 1 ? "1 antwoord op een review gepubliceerd" : `${v.n} antwoorden op reviews gepubliceerd`],
     "acc.semaine.publications": [v => v.n > 1 ? `${v.n} publications parties` : "1 publication partie", v => v.n === 1 ? "1 post published" : `${v.n} posts published`, v => v.n === 1 ? "1 post gepubliceerd" : `${v.n} posts gepubliceerd`],
     "acc.semaine.sensibles": [v => v.n > 1 ? `${v.n} avis sensibles pris en charge` : "1 avis sensible pris en charge", v => v.n === 1 ? "1 sensitive review handled" : `${v.n} sensitive reviews handled`, v => v.n === 1 ? "1 gevoelige review behandeld" : `${v.n} gevoelige reviews behandeld`],
@@ -2386,7 +2390,7 @@
     "pub.grille.alt.google": [v => `${v.n} publications de votre fiche Google faites avec vos photos`, v => `${v.n} Google profile posts made with your photos`, v => `${v.n} posts op uw Google-profiel gemaakt met uw foto's`],
     "pub.completer": [v => `Envoyez ${v.n} ${v.n > 1 ? "photos" : "photo"} pour compléter votre grille.`, v => `Upload ${v.n} more ${v.n > 1 ? "photos" : "photo"} to complete your grid.`, v => `Laad nog ${v.n} ${v.n > 1 ? "foto's" : "foto"} op om uw raster te vervolledigen.`],
     "pub.annonces.texte.google": ["Une nouveauté, un événement, vos horaires : voici comment elles sortent sur votre fiche Google.", "Something new, an event, your opening hours: this is how they go out on your Google profile.", "Iets nieuws, een evenement, uw openingsuren: zo verschijnen ze op uw Google-profiel."],
-    "acc.pub.texte.google": ["Vos prochaines publications sur votre fiche Google, telles qu'elles vont sortir. Un coup d'œil, et vous validez.", "Your next posts on your Google profile, as they will look. One look, and you approve.", "Uw volgende posts op uw Google-profiel, zoals ze eruit zullen zien. Eén blik, en u keurt goed."],
+    "acc.pub.texte.google": ["Vos prochaines publications sur votre fiche Google, telles qu'elles vont sortir. Un coup d'œil, et vous validez votre style.", "Your next posts on your Google profile, as they will look. One look, and you approve your style.", "Uw volgende posts op uw Google-profiel, zoals ze eruit zullen zien. Eén blik, en u keurt uw stijl goed."],
     // Limite du mois atteinte (audit Essentiel du 31/10/2026) : une seule phrase, la même sur Offre et Photos.
     "plafond.phrase": [v => `${v.n} sur ${v.n} : la prochaine photo servira en ${mois("fr")[v.mois]}.`, v => `${v.n} of ${v.n}: the next photo will be used in ${mois("en")[v.mois]}.`, v => `${v.n} van ${v.n}: de volgende foto wordt gebruikt in ${mois("nl")[v.mois]}.`],
     "photo.attente.mois": [v => `En attente (${mois("fr")[v.mois]})`, v => `On hold (${mois("en")[v.mois]})`, v => `In wacht (${mois("nl")[v.mois]})`],
@@ -2454,6 +2458,8 @@
     "cal.libre.aria": ["{d} : programmer un contenu ce jour-là", "{d}: schedule a post on this day", "{d}: een post op deze dag plannen"],
     "contact.equipe": ["L'équipe BoostImpact", "The BoostImpact team", "Het BoostImpact-team"],
     "acc.pub.mois": ["Vos publications de {mois} : {l}.", "Your {mois} posts: {l}.", "Uw posts in {mois}: op de {l}."],
+    // Tour 11 (v37) : plafond du mois pas encore atteint.
+    "acc.pub.mois.plafond": [v => `${v.n}\u00a0sur ${v.m}\u00a0prévue${v.n > 1 ? "s" : ""}\u00a0; les suivantes viendront avec vos prochaines photos.`, v => `${v.n}\u00a0of ${v.m}\u00a0planned; the next ones will come with your next photos.`, v => `${v.n}\u00a0van de ${v.m}\u00a0gepland; de volgende komen met uw volgende foto's.`],
     // Tour 9 (01/11/2026) : l'avis de la semaine ne compte pas dans l'offre (contenus.hors_plafond, CGV : « Les demandes d'idées et l'avis de la semaine ne comptent pas »).
     "acc.pub.mois.avis": ["Vos publications de {mois} : {l}, soit {d}", "Your {mois} posts: {l}, that is {d}", "Uw posts in {mois}: op de {l}, dus {d}"],
     "acc.pub.mois.detail": [v => `${v.p} publication${v.p > 1 ? "s" : ""} + ${v.a > 1 ? v.a + " avis de la semaine" : "l'avis de la semaine"} (non compté${v.a > 1 ? "s" : ""}).`,
@@ -2469,6 +2475,7 @@
     "bilan.prec.message": [v => `Bonjour, c'est ${v.nom}. J'aimerais parler de notre bilan ${/^[aeiouy]/i.test(v.mois) ? "d'" : "de "}${v.mois}.`, v => `Hello, this is ${v.nom}. I'd like to talk about our ${v.mois} report.`, "Hallo, met {nom}. Ik wil graag ons overzicht van {mois} bespreken."],
     "acc.temps.mois": ["Temps gagné en {mois} : environ {d}.", v => `Time saved in ${v.mois}: about ${v.d}.`, "Tijd gewonnen in {mois}: ongeveer {d}."],   // du 1er au 5 du mois (01/11/2026)
     "acc.temps.estimation": ["Estimation : 10 min par réponse à un avis, 20 min par publication, 45 min par vidéo.", "Estimate: 10 min per review reply, 20 min per post, 45 min per video.", "Schatting: 10 min per antwoord op een review, 20 min per post, 45 min per video."],
+    "acc.temps.estimation.sans.video": ["Estimation : 10 min par réponse à un avis, 20 min par publication.", "Estimate: 10 min per review reply, 20 min per post.", "Schatting: 10 min per antwoord op een review, 20 min per post."],   // offre sans vidéo (tour 11)
     "acc.temps.h": [v => `${v.h} h`, v => `${v.h} hour${v.h > 1 ? "s" : ""}`, v => `${v.h} uur`], "acc.temps.hdemi": [v => `${v.h} h 30`, v => `${v.h}.5 hours`, v => `${v.h},5 uur`],
     "acc.temps.min": [v => `${v.m} min`, v => `${v.m} minutes`, v => `${v.m} minuten`],
     "fiche.lien.boost": ["Renseigné par BoostImpact. Pour le changer, écrivez-nous.", "Set by BoostImpact. To change it, write to us.", "Ingevuld door BoostImpact. Om het te wijzigen, schrijf ons."],

@@ -142,6 +142,11 @@
   const coupePropre = (s, n) => { if (s.length <= n) return s; const v = s.lastIndexOf(",", n); if (v >= 20) return s.slice(0, v).trimEnd();
     const b = s.lastIndexOf(" ", n); return (b > 0 ? s.slice(0, b) : s.slice(0, n)).replace(/[\s,;:–-]+$/, "") + "…"; };
   const msg = x => { const m = $("msg"); if (m) m.textContent = x; };
+  // Message amené à l'écran (tour 11, v37) : s'il commence au-dessus de l'écran ou trop bas pour être lu au-dessus de la barre d'onglets (téléphone),
+  // la page défile pour le mettre en haut ; le focus y va, sans nouveau défilement.
+  const amenerMsg = m => { if (!m || !m.textContent.trim()) return; const r = m.getBoundingClientRect(), o = $("onglets"), barre = o && getComputedStyle(o).position === "fixed" ? o.getBoundingClientRect().height : 0;
+    if (r.top < 8 || r.top > innerHeight - barre - 120) window.scrollTo({ top: Math.max(0, scrollY + r.top - 12), behavior: "instant" });
+    if (!m.hasAttribute("tabindex")) m.setAttribute("tabindex", "-1"); m.focus({ preventScroll: true }); };
   // Confirmation flottante au-dessus de la barre d'onglets (31/10/2026) : après une décision, #msg est souvent hors de l'écran sur téléphone. 5 s, un tap la ferme.
   let toastMinuteur = 0;
   const toast = x => { let el = $("toast"); if (!el) { el = document.createElement("p"); el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el);
@@ -303,7 +308,7 @@
     // Légende identique partout (31/10/2026) : pas d'onglets, une seule vue (voir legendeCommune) ; « Modifier la légende » change alors celle de tous ces réseaux.
     const ordre = ORDRE_RES.filter(k => resDe(x).includes(k)), onglets = ordre.length > 1 && !commun;
     return `<div class="reseaux" data-reseaux="${e(x.id)}"${commun ? ` data-commun="${commun.join(" ")}"` : ""}>
-      ${onglets ? `<div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}"${absentsDe(x.id).includes(k) ? ` class="res-absent" aria-describedby="t-${e(x.id)}-${k}-n"` : ""}>${RES[k]}${absentsDe(x.id).includes(k) ? `<span class="vh" id="t-${e(x.id)}-${k}-n">${t("res.absent.court")}</span>` : ""}</button>`).join("")}</div>` : ""}
+      ${onglets ? `<div class="res-onglets" role="tablist" aria-label="${t("res.onglets")}">${ordre.map(k => `<button type="button" role="tab" id="t-${e(x.id)}-${k}" data-res="${k}" aria-selected="${k === r}" tabindex="${k === r ? 0 : -1}"${absentsDe(x.id).includes(k) ? ` class="res-absent" aria-describedby="t-${e(x.id)}-${k}-n"` : ""}>${k === "google" ? `<span class="lib-long">${RES[k]}</span><span class="lib-court">Google</span>` : RES[k]}${absentsDe(x.id).includes(k) ? `<span class="vh" id="t-${e(x.id)}-${k}-n">${t("res.absent.court")}</span>` : ""}</button>`).join("")}</div>` : ""}
       <div class="res-panneau"${onglets ? ` role="tabpanel" aria-labelledby="t-${e(x.id)}-${r}"` : ""}>${cadre(x.id)}</div>
       ${modifiable ? `<div class="f" data-edition hidden><label for="leg-${e(x.id)}">${commun ? t("leg.commune") : t("leg.pour", { res: RES[r] })}</label><textarea id="leg-${e(x.id)}" class="haut-texte" data-texte-legende${lc()}></textarea>
         <p class="note" data-compte-edition aria-live="polite"></p>
@@ -460,7 +465,7 @@
     const actif = groupeActif(); navActif = actif.ecrans.includes(route) || actif !== groupeDe(route) ? actif : null;
     // Sections d'un écran en plusieurs parties (À valider, Résultats) : une rangée de liens au-dessus du contenu, sur téléphone comme sur ordinateur.
     const secs = (actif.ecrans.includes(route) ? actif.sections || [] : []).filter(r => r !== "commentaires" || commentairesInclus || route === r);
-    sous.innerHTML = secs.length > 1 ? secs.map(r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : r === "avis" && route === "collecte" ? ' aria-current="true"' : ""}><span>${ECRANS[r]}</span>${COMPTE_ECRAN[r] ? compte(COMPTE_ECRAN[r]) : ""}</a>`).join("") : "";
+    sous.innerHTML = secs.length > 1 ? secs.map(r => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : r === "avis" && route === "collecte" ? ' aria-current="true"' : ""}><span>${r === "avis" ? `<span class="lib-long">${ECRANS[r]}</span><span class="lib-court">${t("ecran.avis.court")}</span>` : ECRANS[r]}</span>${COMPTE_ECRAN[r] ? compte(COMPTE_ECRAN[r]) : ""}</a>`).join("") : "";
     sous.setAttribute("aria-label", actif.nom);
     if (large.matches) {
       lat.innerHTML = `<div class="lat-in"><a class="logo" href="#/accueil" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("nav.espace")}"><div class="groupe">${GROUPES.map(g => lienGroupe(g)).join("")}</div>
@@ -621,7 +626,9 @@
   // d'avis, commentaires, mise en route, démarrage, photos du mois) ; puis les prochaines publications (le calendrier devient ce bloc ; le calendrier
   // complet reste à #/calendrier) ; puis l'idée de la semaine. Le bilan du mois est passé dans Résultats ; l'offre, la fiche et le style dans Réglages.
   // Bilan du mois : 4 chiffres au plus et une phrase. Mêmes données que l'email du 1er du mois (fonction bilan_mois).
-  const bandeauDemo = () => D.mode === "demo" ? `<div class="bandeau-demo" role="note"><p class="fort">${t("demo.chiffres")}</p><p>${t("demo.chiffres.texte")}</p></div>` : "";
+  // Tour 11 (v37, 320 px : aucun chiffre au premier écran de Résultats en démonstration) : une seule ligne, le bilan remonte. L'explication complète
+  // reste dans le nom accessible et l'infobulle (title) ; la carte du bilan redit déjà « Chiffres de démonstration. » avec sa phrase.
+  const bandeauDemo = () => D.mode === "demo" ? `<p class="bandeau-demo" role="note" title="${e(t("demo.chiffres.texte"))}"><span class="fort">${t("demo.chiffres")}</span> <span class="note">${t("demo.chiffres.court")}</span></p>` : "";
   function bilanBloc(b, N) {
     if (!b) return "";
     const m = moisDe(b.mois || k0()), notes = b.note_debut != null && b.note_fin != null, n = x => +x || 0;
@@ -666,12 +673,19 @@
   // Hors offre (01/11/2026, tour 6 Essentiel) : une publication qui « sera annulée » (horsOffreDe, même règle que son libellé) n'est pas annoncée.
   // Tour 9 (01/11/2026, Essentiel : trois dates en novembre pour une offre de 2 publications) : quand l'avis de la semaine (contenus.hors_plafond)
   // est parmi les dates du mois, la ligne le dit : « 2 publications + l'avis de la semaine (non compté) ».
-  function ligneMois(cal, autorises) {
+  // Tour 11 (v37, Premium : « Vos publications de novembre : le 4, le 5, le 12 et le 21 » pour une offre de 12) : quand le plafond du mois n'est pas
+  // atteint, « 4 sur 16 prévues ; les suivantes viendront avec vos prochaines photos. » N = contenus du mois (programmés ou déjà partis, photos et
+  // vidéos, comme les dates de la ligne), sans l'avis de la semaine (non compté) ni les publications hors offre ; M = contenus de l'offre
+  // (publications_plafond + videos_plafond : 2, 8 ou 16).
+  function ligneMois(cal, autorises, k) {
     const it = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).sort((a, b) => Date.parse(a.prevu_le) - Date.parse(b.prevu_le)); if (!it.length) return "";
-    const d0 = new Date(it[0].prevu_le), m = d0.getMonth(), a = d0.getFullYear(), duM = it.filter(x => { const d = new Date(x.prevu_le); return d.getMonth() === m && d.getFullYear() === a; });
+    const d0 = new Date(it[0].prevu_le), m = d0.getMonth(), a = d0.getFullYear(), dansM = x => { const d = new Date(x.prevu_le); return d.getMonth() === m && d.getFullYear() === a; }, duM = it.filter(dansM);
     const jours = [...new Set(duM.map(x => new Date(x.prevu_le).getDate()))], avis = duM.filter(x => x.contenu && x.contenu.hors_plafond).length;
     const l = I.liste(jours.map(j => t("acc.pub.le", { j })));
-    return `<p class="texte2" id="publications-du-mois">${avis ? t("acc.pub.mois.avis", { mois: MOIS[m], l, d: t("acc.pub.mois.detail", { p: duM.length - avis, a: avis }) }) : t("acc.pub.mois", { mois: MOIS[m], l })} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
+    const plaf = (+(k && k.publications_plafond) || 0) + (+(k && k.videos_plafond) || 0);
+    const nM = cal.filter(x => ["programme", "envoye", "publie"].includes(x.statut) && dansM(x) && !(x.contenu && x.contenu.hors_plafond) && !(autorises && horsOffreDe(x, autorises))).length;
+    const suite = plaf && nM < plaf ? ` <span id="publications-du-mois-plafond">${t("acc.pub.mois.plafond", { n: nM, m: plaf })}</span>` : "";
+    return `<p class="texte2" id="publications-du-mois">${avis ? t("acc.pub.mois.avis", { mois: MOIS[m], l, d: t("acc.pub.mois.detail", { p: duM.length - avis, a: avis }) }) : t("acc.pub.mois", { mois: MOIS[m], l })}${suite} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
   }
   // « Temps gagné ce mois-ci » (bilan) : estimation, réponses aux avis publiées × 10 min, publications parties × 20 min, vidéos × 45 min, depuis le 1er.
   const MINUTES_GAGNEES = { reponse: 10, publication: 20, video: 45 };
@@ -681,14 +695,15 @@
   // Du 1er au 5 (01/11/2026, tour 7 Premium) : calculé depuis le bilan du mois écoulé (bilanMois, même source que la carte Bilan de Résultats :
   // reponses_publiees, publications), pour que les deux écrans disent les mêmes chiffres. Le bilan ne distingue pas les vidéos : chaque
   // publication y compte 20 min. Le reste du mois : avis et calendrier, comme avant.
-  function tempsGagne(av, cal, bilanP) {
+  // Tour 11 (v37) : une offre sans vidéo (Essentiel, Croissance) ne lit plus « 45 min par vidéo » dans l'estimation.
+  function tempsGagne(av, cal, bilanP, avecVideos) {
     const prec = debutDeMoisCivil(), t0 = prec ? debutMoisPrecedent() : debutDuMois(), t1 = prec ? debutDuMois() : Date.now() + 1;
     const dans = d => !!d && Date.parse(d) >= t0 && Date.parse(d) < t1 && Date.parse(d) <= Date.now(), typeDe = x => (x.contenu && x.contenu.type) || x.type;
     const n = prec && bilanP ? (+bilanP.reponses_publiees || 0) * MINUTES_GAGNEES.reponse + (+bilanP.publications || 0) * MINUTES_GAGNEES.publication
       : av.filter(x => x.statut === "publie" && dans(x.repondu_le || x.traite_le || x.cree_le)).length * MINUTES_GAGNEES.reponse
       + cal.filter(x => x.statut === "publie" && dans(x.publie_le || x.prevu_le)).reduce((s_, x) => s_ + (typeDe(x) === "video" ? MINUTES_GAGNEES.video : MINUTES_GAGNEES.publication), 0);
     if (!n) return ""; const h = Math.floor(n / 60), mn = n % 60, d = h ? (mn >= 15 && mn < 45 ? t("acc.temps.hdemi", { h }) : t("acc.temps.h", { h: mn >= 45 ? h + 1 : h })) : t("acc.temps.min", { m: n });
-    return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${prec ? t("acc.temps.mois", { d, mois: MOIS[new Date(t0).getMonth()] }) : t("acc.temps", { d })}</span> <span class="note">${t("acc.temps.estimation")}</span></p>`;
+    return `<p class="texte2 temps-gagne" id="temps-gagne"><span class="fort">${prec ? t("acc.temps.mois", { d, mois: MOIS[new Date(t0).getMonth()] }) : t("acc.temps", { d })}</span> <span class="note">${t(avecVideos ? "acc.temps.estimation" : "acc.temps.estimation.sans.video")}</span></p>`;
   }
   // Autorisation photos sur l'accueil : une ligne (texte complet dans Photos), plus jamais après « Non merci » (photos_autorisation_refusee_le).
   // Petite carte (01/11/2026, tour 8) : la question et une phrase qui dit à quoi sert l'autorisation (avant : une ligne seule, sans explication).
@@ -792,9 +807,9 @@
         ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
       ${moisPlein && !c.en_pause ? `<p class="texte2" id="acc-mois-complet">${t("acc.mois.complet", { mois: (new Date().getMonth() + 1) % 12 })}</p>` : ""}
       ${lienPublications(c)}
-      ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c))}
+      ${ligneMois(cal, window.RENOM_RESEAUX_AUTORISES(c), k)}
       ${ligneSemaine(c, av, cal, cm)}
-      ${tempsGagne(av, cal, bilanP)}
+      ${tempsGagne(av, cal, bilanP, +k.videos_plafond > 0)}
       ${ligneFiche}
       ${ligneContact(contact, "contact-accueil")}
       ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>` : ""}
@@ -851,7 +866,10 @@
           $("acc-annuler-oui").onclick = async () => { $("acc-annuler-oui").disabled = true; let k_ = 0, er1 = null;
             for (const f of aAnnuler) { try { await D.annuler(f.pub); k_++; } catch (er) { er1 = er1 || er; } }
             await accueil(); toast(t("acc.programmes.annulees", { n: k_ }) + (er1 ? " " + ph(er1.message) : "")); majCompteurs(); }; } }
-      else msg(ph(er0 ? er0.message : "")); majCompteurs(); };
+      else msg(ph(er0 ? er0.message : ""));
+      // Tour 11 (v37) : lancé depuis la carte du bas (« Programmer tout » sous les prochaines publications), la confirmation restait hors de l'écran
+      // (#msg, en haut de l'accueil, à y = -1741 sur iPhone 13). Après le rendu, elle est amenée en haut de l'écran.
+      amenerMsg($("msg")); majCompteurs(); };
     brancherAutomatisations(vue, accueil);
     if ($("aut-oui")) $("aut-oui").onclick = async () => { const b = $("aut-oui"); b.disabled = true;
       try { await D.autoriserPhotos(); const c2 = await D.commerce(); await accueil(); toast(t("aut.toast")); msg(t(sansReseaux(c2) ? "aut.donnee.google" : "aut.donnee", { d: date(c2.photos_autorisees_le || new Date().toISOString()) })); }
@@ -1323,13 +1341,16 @@
     if (filtre === "hors_offre" && !nbf.hors_offre) filtre = (FILTRES.find(f => nbf[f[0]]) || FILTRES[0])[0];
     const liste = l.filter(x => famille(x, c) === filtre), urls = await Promise.all(liste.map(x => urlSure(x))), vids = await Promise.all(liste.map(videoSure));
     const u9s = await Promise.all(liste.map(url916));   // onglet TikTok de chaque publication photo : le 9:16 qui part
-    const formatCourt = x => t("format.court." + M.formatDe(x));
-    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil contenus-tete">${entete(t("groupe.avalider"), t("contenus.titre"), `<span class="sur-ordi">${t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo")}</span><span class="sur-tel">${t(delegationActive(c) ? "contenus.chapo.delegation" : "contenus.chapo.court")}</span>`)}
-        <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees">${t("idees.titre")}</button></div>
+    const formatCourt = x => t("format.court." + M.formatDe(x)), etroit = matchMedia("(max-width: 359px)").matches;
+    vue.innerHTML = `${pauseBandeau(c)}<div class="entete-accueil contenus-tete">${entete(t("groupe.avalider"), t("contenus.titre"), `<span class="sur-ordi">${t(delegationActive(c) ? "contenus.chapo.delegation" : sansReseaux(c) ? "contenus.chapo.google" : "contenus.chapo")}</span><span class="sur-tel">${delegationActive(c) ? t("contenus.chapo.delegation") : `<span class="lib-long">${t("contenus.chapo.court")}</span><span class="lib-court">${t("contenus.chapo.mini")}</span>`}</span>`)}
+        <button type="button" class="bouton second" id="proposer-idees" aria-expanded="${ideesOuvertes}" aria-controls="idees"><span class="lib-long">${t("idees.titre")}</span><span class="lib-court">${t("idees.titre.court")}</span></button></div>
       ${ideesOuvertes ? await panneauIdees(c) : ""}
       ${await proposition(c)}
-      ${ligneDelegation(c)}
-      ${l.length ? `<div class="filtres" role="group" aria-label="${t("filtres.aria")}">${FILTRES.filter(([k]) => k !== "hors_offre" || nbf[k]).map(([k, nom]) => `<button type="button" data-f="${k}" aria-pressed="${k === filtre}">${nom}, ${nbf[k]}</button>`).join("")}</div>
+      ${/* Sous 360 px (tour 11), la proposition de délégation passe sous les contenus : « Valider » d'abord. */ ""}
+      ${etroit ? "" : ligneDelegation(c)}
+      ${/* Tour 11 (v37, 320 px : « Valider » à 1 137 px) : sous 360 px, seul le filtre actif reste affiché, avec « Autres filtres, N » qui déplie les autres
+         (feuille de style : .filtres:not(.ouverts)) ; au-dessus de 360 px, le bouton n'est pas rendu et tous les filtres restent visibles. */ ""}
+      ${l.length ? `<div class="filtres" role="group" aria-label="${t("filtres.aria")}">${FILTRES.filter(([k]) => k !== "hors_offre" || nbf[k]).map(([k, nom]) => `<button type="button" data-f="${k}" aria-pressed="${k === filtre}">${nom}, ${nbf[k]}</button>`).join("")}${matchMedia("(max-width: 359px)").matches ? `<button type="button" class="filtres-plus" id="filtres-plus" aria-expanded="false">${t("filtres.autres", { n: FILTRES.filter(([k]) => (k !== "hors_offre" || nbf[k]) && k !== filtre).length })}</button>` : ""}</div>
       <p class="msg" id="msg" role="status"></p>
       ${liste.length && filtre === "approuve" && !approuveRecent ? noteCreneaux(c.metier) : ""}
       ${liste.length ? `<div class="cartes">${liste.map((x, i) => `<article class="carte contenu" data-contenu="${e(x.id)}">
@@ -1345,7 +1366,10 @@
             : `<div class="actions"><button type="button" class="bouton second" data-remettre="${e(x.id)}">${t("contenus.remettre")}</button></div>`) : ""}</div></article>`).join("")}</div>`
       : `<section class="carte"><p class="texte2">${VIDE_FILTRE[filtre]}${filtre === "a_valider" && nbf.approuve ? ` <span id="vide-a-programmer">${t("filtre.vide.a_programmer", { n: nbf.approuve, lien: `<a href="#/calendrier">${e(ECRANS.calendrier)}</a>` })}</span>` : ""}</p></section>`}`
       : `<section class="carte"><h2>${t("contenus.vide.titre")}</h2><p class="texte2">${t("contenus.vide.texte")}</p><p class="pied"><a class="bouton" href="#/photos">${t("photos.deposer")}</a></p></section><p class="msg" id="msg" role="status"></p>`}`;
+    if (etroit && ligneDelegation(c)) vue.insertAdjacentHTML("beforeend", ligneDelegation(c));   // sous 360 px : après les contenus (tour 11)
     vue.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filtre = b.dataset.f; contenus(); });
+    if ($("filtres-plus")) $("filtres-plus").onclick = () => { const b_ = $("filtres-plus"), f_ = b_.closest(".filtres"), ouvert = !f_.classList.contains("ouverts");
+      f_.classList.toggle("ouverts", ouvert); b_.setAttribute("aria-expanded", String(ouvert)); b_.textContent = ouvert ? t("filtres.replier") : t("filtres.autres", { n: f_.querySelectorAll("[data-f][aria-pressed=false]").length }); };
     if ($("contenus-delegation-activer")) $("contenus-delegation-activer").onclick = async () => { const b = $("contenus-delegation-activer"); b.disabled = true;
       try { await D.reglerDelegation(true); await contenus(); toast(t("offre.deleg.ok.active")); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
     vue.querySelectorAll("[data-remettre]").forEach(b => b.onclick = async () => { b.disabled = true;
@@ -1653,8 +1677,7 @@
   // sinon contact du commerce, au format du pays) et jour (aujourd'hui, ou demain ; après 17 h, demain seulement), appel entre 9 h et 18 h.
   // Ensuite : « Nous vous appelons au +32 …, demain entre 9 h et 18 h. » (retenue_telephone, retenue_jour), et « Modifier ».
   let retenueOuverte = null;
-  // Heure de Paris (0-23), lue par formatToParts : format() rend « 18 h » en fr-FR, donc NaN (tour 10).
-  const heureParis = () => +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date()).find(x => x.type === "hour") || {}).value;
+  // Heure de Paris (tour 10 : lue par formatToParts) : désormais dans M.joursRappelA (partiesParis), qui décale les jours proposés à 17 h (tour 11).
   const quandRappel = j => !j ? "" : j === jourParis(Date.now()) ? t("avis.rappel.auj") : j === jourParis(Date.now() + 864e5) ? t("avis.rappel.demain") : t("avis.rappel.le", { d: date(j + "T12:00:00") });
   // Numéro préenregistré (01/11/2026, tour 7 Premium) : ATTENTION, un numéro dont l'indicatif ne correspond pas au pays du commerce (+33 pour un
   // commerce belge, +32 pour un français) est signalé ici (console) et dans le champ (aide « vérifiez ce numéro ») ; il reste proposé, un
@@ -1669,12 +1692,15 @@
   // Jours proposés (01/11/2026, tour 7 Croissance) : jamais « Aujourd'hui » un dimanche ni un jour férié du pays ; alors le jour ouvré suivant, nommé
   // (« Lundi 2 novembre »), puis le suivant. Mêmes jours que retenir_reponse_avis (jour_ouvre, bloc « Plat et prix au dépôt de la photo »).
   const libJourRappel = (j, auj) => j === auj ? t("avis.rappel.auj.cap") : j === jourParis(Date.parse(auj + "T12:00:00Z") + 864e5) ? t("avis.rappel.demain.cap") : cap(I.jourEtDate(new Date(j + "T12:00:00")));
-  const formRetenue = (x, c) => { const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c && c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj, tel = x.retenue_telephone || telRetenue(c);
+  // Tour 11 (v37) : toujours DEUX jours ouvrés (ni samedi, ni dimanche, ni férié du pays), à partir de demain à 17 h et après (M.joursRappelA, même
+  // règle que jours_rappel() en base) ; avant, un seul jour était proposé après 17 h. Même bloc pour l'avis, TikTok et la montée d'offre (radiosJours).
+  const radiosJours = (nom, jr, auj) => `<label class="option"><input type="radio" name="${nom}" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>
+        <label class="option"><input type="radio" name="${nom}" value="demain" data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label>`;
+  const formRetenue = (x, c) => { const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c && c.pays), tel = x.retenue_telephone || telRetenue(c);
     return `<form class="pile serre encart" data-retenir-f="${e(x.id)}" novalidate><p class="fort">${t("avis.rappel.titre")}</p>
       <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}${numeroHorsPays(tel, c) ? " " + t("rappel.hors.pays") : ""}</p></div>
       <fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${tard ? "" : `<label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
-        <label class="option"><input type="radio" name="ret-jour-${e(x.id)}" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
+        ${radiosJours("ret-jour-" + e(x.id), jr, auj)}</fieldset>
       <fieldset><legend>${t("avis.rappel.heure")}</legend>
         <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value=""${x.retenue_creneau === "15-17" ? "" : " checked"}><span>${t("avis.rappel.plage.journee")}</span></label>
         <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value="_15_17"${x.retenue_creneau === "15-17" ? " checked" : ""}><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label>
@@ -1931,11 +1957,10 @@
     const tel = telTiktok(c) || telRetenue(c);   // même numéro préenregistré que le formulaire d'avis (01/11/2026, tour 7 Premium)
     // Jour et heure (01/11/2026, tour 7 Premium) : mêmes jours que le formulaire d'avis (M.joursRappel : jamais un dimanche ni un jour férié du pays)
     // et même choix d'heure (9 h-18 h, ou 15 h-17 h, « après le service » pour un restaurant) ; base : preciser_rappel.
-    const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj;
+    const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c.pays);
     return `<form id="tiktok-f" class="pile serre" novalidate><div class="f"><label for="tiktok-tel">${t("compte.tiktok.tel")}</label><input id="tiktok-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="tiktok-aide"><p class="aide" id="tiktok-aide">${t("rappel.aide", numParams(c))}</p></div>
       ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${tard ? "" : `<label class="option"><input type="radio" name="tiktok-jour" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
-        <label class="option"><input type="radio" name="tiktok-jour" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
+        ${radiosJours("tiktok-jour", jr, auj)}</fieldset>
       <fieldset><legend>${t("avis.rappel.heure")}</legend>
         <label class="option"><input type="radio" name="tiktok-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
         <label class="option"><input type="radio" name="tiktok-plage" value="_15_17"><span>${t(c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
@@ -2052,20 +2077,19 @@
   const minJour = s_ => I.langue === "en" ? s_ : s_.charAt(0).toLowerCase() + s_.slice(1);
   // Jour ouvré du rappel d'une demande faite à l'instant d (tour 10, v36 : partagé par le changement d'offre, « Je n'y arrive pas : rappelez-moi »
   // et TikTok) : M.joursRappel (jamais un dimanche ni un férié du pays), et après 17 h (heure de Paris) le jour ouvré suivant.
-  function jourRappelDe(c, d) { const j0 = jourParis(Date.parse(d)), h0 = +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(d)).find(x => x.type === "hour") || {}).value, jr = M.joursRappel(j0, c && c.pays);
-    return h0 >= 17 && jr.aujourdhui === j0 ? jr.demain : jr.aujourdhui; }
+  // Tour 11 (v37) : le premier des deux jours proposés à l'instant de la demande (M.joursRappelA : ni samedi, ni dimanche, ni férié ; après 17 h, à partir de demain).
+  function jourRappelDe(c, d) { return M.joursRappelA(Date.parse(d), c && c.pays).aujourdhui; }
   const quandJour = j => minJour(I.jourEtDate(new Date(j + "T12:00:00")));
   function quandChgOffre(c, d) {
     let q = null; try { q = JSON.parse(localStorage.getItem(cleChgOffre(c)) || "null"); } catch (er) { q = null; }
     if (!q || q.demande !== String(d)) q = { jour: jourRappelDe(c, d), creneau: "9-18", telephone: null };
     return { quand: minJour(I.jourEtDate(new Date(q.jour + "T12:00:00"))), plage: q.creneau === "15-17" ? "15-17" : "9-18", tel: q.telephone ? window.RENOM_WHATSAPP.lisible(q.telephone) : "" };
   }
-  const formChgOffre = (c, suiv, nom) => { const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c && c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj, tel = telRetenue(c);
+  const formChgOffre = (c, suiv, nom) => { const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c && c.pays), tel = telRetenue(c);
     return `<form id="chg-f" class="pile serre" novalidate data-offre="${e(suiv)}"><p class="fort">${t("avis.rappel.titre")}</p>
       <div class="f"><label for="chg-tel">${t("avis.rappel.tel")}</label><input id="chg-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="chg-aide"><p class="aide" id="chg-aide">${t("rappel.aide", numParams(c))}</p></div>
       ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${tard ? "" : `<label class="option"><input type="radio" name="chg-jour" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
-        <label class="option"><input type="radio" name="chg-jour" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
+        ${radiosJours("chg-jour", jr, auj)}</fieldset>
       <fieldset><legend>${t("avis.rappel.heure")}</legend>
         <label class="option"><input type="radio" name="chg-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
         <label class="option"><input type="radio" name="chg-plage" value="_15_17"><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
@@ -2108,7 +2132,9 @@
         ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
         <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
         <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
-        <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
+        ${/* Tour 11 (v37) : abonnement en cours (actif, ou impayé à régulariser) sur une offre qui comprend la mise en route : elle est faite, plus de
+            « Frais de mise en route : 190 € HT » à un client qui paie déjà. */ ""}
+        <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : ab && ["actif", "impaye"].includes(ab.statut) ? t("offre.frais.deja.faite") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
       ${o.delegation ? "" : (() => { const h = offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), suiv = offreCible(c, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), s_ = (window.RENOM_OFFRES || {})[suiv];
         return h && s_ ? `<details class="repliable carte" id="offre-dessus-repli"${/dessus/.test(paramRoute) || demandeChgOffre ? " open" : ""}><summary><span class="fort">${t("offre.dessus.ligne", { nom: e(I.offre(suiv)), n: s_.contenus, prix: euros(window.RENOM_PRIX_MONTEE(o, s_, ab).cible) })}</span></summary>${h}</details>` : ""; })()}
@@ -2139,7 +2165,7 @@
       try { const r = await D.demanderRappel("changement_offre", num, b.dataset.offre); demandeChgOffre = (r && r.cree_le) || new Date().toISOString();
         const jv = (vue.querySelector("input[name=chg-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=chg-plage]:checked") || {}).value || "";
         const q = jv && D.preciserRappel ? await D.preciserRappel("changement_offre", jv + pv).catch(() => null) : null;
-        try { localStorage.setItem(cleChgOffre(c), JSON.stringify({ demande: String(demandeChgOffre), jour: q && q.jour ? String(q.jour).slice(0, 10) : M.joursRappel(jourParis(Date.now()), c.pays)[jv === "demain" ? "demain" : "aujourdhui"], creneau: (q && q.creneau) || (pv ? "15-17" : "9-18"), telephone: (r && r.telephone) || num })); } catch (er) {}
+        try { localStorage.setItem(cleChgOffre(c), JSON.stringify({ demande: String(demandeChgOffre), jour: q && q.jour ? String(q.jour).slice(0, 10) : M.joursRappelA(Date.now(), c.pays)[jv === "demain" ? "demain" : "aujourdhui"], creneau: (q && q.creneau) || (pv ? "15-17" : "9-18"), telephone: (r && r.telephone) || num })); } catch (er) {}
         await offre(); const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); toast(t("offre.dessus.demande.toast", quandChgOffre(c, demandeChgOffre))); }
       catch (er) { b.disabled = false; if (m) m.textContent = ph(er.message); } };
     // Mode délégation (Premium) : activé ou désactivé par le commerçant ; l'écran est relu (règle de publication, historique).

@@ -271,12 +271,17 @@
   const paysDe = pays => String(pays || "FR").toUpperCase() === "BE" ? "BE" : "FR";
   const estFerie = (jour, pays) => (paysDe(pays) === "BE" ? feriesBe : feriesFr)(+jour.slice(0, 4)).has(jour);
   // Jour ouvré (01/11/2026, tour 7 Croissance) : à partir de jour (AAAA-MM-JJ) inclus, le premier qui n'est ni un dimanche ni un jour férié du pays.
-  // Même règle que jour_ouvre() (bloc « Plat et prix au dépôt de la photo » de schema.sql) : « Attendez mon appel » ne propose jamais « Aujourd'hui »
-  // un dimanche ni un jour férié. joursRappel() : les deux jours proposés (« aujourdhui » et « demain » au sens de retenir_reponse_avis).
+  // Tour 11 (v37, décision de PJ) : ni un samedi non plus, jour de plus gros service d'un restaurant. Même règle que jour_ouvre() (bloc « Tour 11 »
+  // de schema.sql). joursRappel() : les deux jours proposés à partir d'un jour donné (« aujourdhui » et « demain » au sens de retenir_reponse_avis).
   const jourOuvre = (jour, pays) => { const d = new Date(jour + "T12:00:00Z"); let j = jour;
-    for (let i = 0; i < 14; i++, d.setUTCDate(d.getUTCDate() + 1)) { j = d.toISOString().slice(0, 10); if (d.getUTCDay() !== 0 && !estFerie(j, pays)) return j; } return j; };
+    for (let i = 0; i < 14; i++, d.setUTCDate(d.getUTCDate() + 1)) { j = d.toISOString().slice(0, 10); if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !estFerie(j, pays)) return j; } return j; };
   const lendemain = j => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
   const joursRappel = (auj, pays) => { const a = jourOuvre(auj, pays); return { aujourdhui: a, demain: jourOuvre(lendemain(a), pays) }; };
+  // Les deux jours proposés à l'instant t (tour 11, v37) : à partir d'aujourd'hui (heure de Paris), ou de demain à 17 h et après ; donc toujours deux
+  // jours ouvrés, même tard (avant : un seul jour après 17 h). Même règle que jours_rappel() de schema.sql (bloc « Tour 11 »), appelée par
+  // retenir_reponse_avis et preciser_rappel : « aujourdhui » vaut le premier jour proposé, « demain » le second.
+  const HEURE_RAPPEL_TARDIVE = 17;
+  const joursRappelA = (t, pays) => { const p = partiesParis(t), auj = ymd(p.a, p.m, p.j); return joursRappel(p.h >= HEURE_RAPPEL_TARDIVE ? lendemain(auj) : auj, pays); };
   const jourParisDe = t => { const p = partiesParis(t); return ymd(p.a, p.m, p.j); };
   // Rythme selon l'offre : Essentiel (2 par mois) 7 jours d'écart au moins, Croissance 2 jours, Premium 1 jour (espacement_offre de schema.sql).
   const ESPACEMENT = { essentiel: 7, standard: 2, premium: 1 };
@@ -1259,7 +1264,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { contientTelephone, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { contientTelephone, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
