@@ -129,6 +129,8 @@
   // ---------------- Dates et heures, dans la langue de l'interface (i18n.js)
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
   const jourMois = I.jourMois, date = I.date, heure = I.heure, heureCourte = I.heureCourte, dateHeure = I.dateHeure;
+  // Heure de la grille du mois : « 18 h 30 » avec une espace sécable avant les minutes (« 18:<wbr>30 » hors français), pour passer sur deux lignes si besoin.
+  const heureGrille = d => e(heure(d)).replace(":", ":<wbr>").replace(/\u00a0(\d\d)$/, " $1");
   const memeJour = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   const jourRelatif = d => { const j = new Date(d), n = new Date(), h = new Date(Date.now() - 86400000); return memeJour(j, n) ? t("jour.aujourdhui") : memeJour(j, h) ? t("jour.hier") : cap(date(d)); };
   const jourLocal = d => { d = new Date(d); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
@@ -746,7 +748,8 @@
     // Un bouton par action en attente, dans l'ordre des gestes : valider, puis mettre en route, puis envoyer les photos.
     const actions = [
       aValider.length ? { id: "contenus", href: "#/contenus", texte: t("acc.act.contenus", { n: aValider.length }) } : null,
-      sansDate.length ? { id: "programmer", bouton: true, texte: t("acc.act.programmer", { n: sansDate.length }) } : null,
+      // Tour 10 (v36) : sous 360 px, « Programmer N validées » (libellé court), pour que la 2e action tienne au premier écran de l'iPhone SE.
+      sansDate.length ? { id: "programmer", bouton: true, texte: `<span class="lib-long">${t("acc.act.programmer", { n: sansDate.length })}</span><span class="lib-court">${t("acc.act.programmer.court", { n: sansDate.length })}</span>` } : null,
       reponses.length ? { id: "avis", href: "#/avis", texte: t("acc.act.avis", { n: reponses.length }) } : null,
       aDecider.length ? { id: "avis-sensible", href: "#/avis", texte: t("acc.act.sensible", { n: aDecider.length }) } : null,
       cmValider.length + cmHumains.length ? { id: "commentaires", href: "#/commentaires", texte: t("acc.act.commentaires", { n: cmValider.length + cmHumains.length }) } : null,
@@ -851,7 +854,7 @@
       else msg(ph(er0 ? er0.message : "")); majCompteurs(); };
     brancherAutomatisations(vue, accueil);
     if ($("aut-oui")) $("aut-oui").onclick = async () => { const b = $("aut-oui"); b.disabled = true;
-      try { await D.autoriserPhotos(); const c2 = await D.commerce(); await accueil(); msg(t(sansReseaux(c2) ? "aut.donnee.google" : "aut.donnee", { d: date(c2.photos_autorisees_le || new Date().toISOString()) })); }
+      try { await D.autoriserPhotos(); const c2 = await D.commerce(); await accueil(); toast(t("aut.toast")); msg(t(sansReseaux(c2) ? "aut.donnee.google" : "aut.donnee", { d: date(c2.photos_autorisees_le || new Date().toISOString()) })); }
       catch (er) { b.disabled = false; msg(ph(er.message)); } };
     if ($("aut-non")) $("aut-non").onclick = async () => { try { await D.refuserAutorisationPhotos(); await accueil(); msg(t("aut.non.merci")); } catch (er) { msg(ph(er.message)); } };
   }
@@ -1451,7 +1454,7 @@
       grille = `<div class="cal" role="grid" aria-label="${MOIS[ref.getMonth()]} ${ref.getFullYear()}">${JOURS.map(j => `<div class="ent">${j}</div>`).join("")}` + Array.from({ length: Math.ceil((dec + n) / 7) * 7 }, (_, i) => {
         const j = i - dec + 1; if (j < 1 || j > n) return `<div class="hors"></div>`; const d = new Date(ref.getFullYear(), ref.getMonth(), j), it = du(d);
         // Jour qui a une publication (31/10/2026, test client Premium, tour 5) : tout le jour est un bouton (44 px au moins) qui mène à la publication.
-        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }) + " (" + I.liste(it.map(x => heure(x.prevu_le))) + ")")}"><span class="n">${j}</span>${it.map(x => `<span data-cell${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}><span class="h-long">${heureCourte(x.prevu_le)}</span><span class="h-court" aria-hidden="true">${I.heureMini(x.prevu_le)}</span></span>`).join("")}</button></div>`;
+        if (it.length) return `<div class="a-pub"${memeJour(d, aujourd) ? ' aria-current="date"' : ""}><button type="button" class="cal-saut" data-saut="${e(it[0].id)}" aria-label="${e(t("cal.saut.aria", { d: I.jourEtDate(d), n: it.length }) + " (" + I.liste(it.map(x => heure(x.prevu_le))) + ")")}"><span class="n">${j}</span>${it.map(x => `<span data-cell${horsOffreDe(x, autorises) ? ' class="hors-offre"' : ""}><span class="h-long">${heureGrille(x.prevu_le)}</span><span class="h-court" aria-hidden="true">${I.heureMini(x.prevu_le)}</span></span>`).join("")}</button></div>`;
         return `<div${memeJour(d, aujourd) ? ' aria-current="date"' : ""}>${libre(d) ? boutonLibre(d, `<span class="n">${j}</span>`) : `<span class="n">${j}</span>`}</div>`; }).join("") + "</div>";
     } else {
       grille = `<ul class="liste semaine" aria-label="${t("cal.semaine.aria")}">` + Array.from({ length: 7 }, (_, i) => { const d = new Date(lundi); d.setDate(lundi.getDate() + i); const it = du(d);
@@ -1518,9 +1521,12 @@
     if (pv) requestAnimationFrame(() => { const li = vue.querySelector(`.programmations li[data-id="${CSS.escape(pv.id)}"]`); if (!li) return; ouvrirPour(li); li.setAttribute("tabindex", "-1"); li.classList.add("designee"); li.scrollIntoView({ block: "center" }); li.focus({ preventScroll: true }); });
     // Grille du mois (tour 9, 01/11/2026) : « 11 h 30 » quand l'heure tient dans sa pastille ; sinon toute la grille passe à « 11 h » (un point hors
     // français) : sous 360 px toujours, et sur les téléphones où « 11 h 30 » dépasserait. L'heure complète reste dans le nom du bouton et dans la liste.
-    const grilleM = vue.querySelector(".cal"), ajusterGrille = () => { if (!grilleM || !grilleM.isConnected) return; grilleM.classList.remove("court");
-      if ([...grilleM.querySelectorAll("[data-cell]")].some(x => x.scrollWidth > x.clientWidth + 0.5)) grilleM.classList.add("court"); };
-    if (grilleM) { ajusterGrille(); if (!cal.ecouteGrille) { cal.ecouteGrille = true; addEventListener("resize", () => { const g_ = document.querySelector("#vue .cal"); if (g_) { g_.classList.remove("court"); if ([...g_.querySelectorAll("[data-cell]")].some(x => x.scrollWidth > x.clientWidth + 0.5)) g_.classList.add("court"); } }); } }
+    // Tour 10 (v36) : de 360 px et plus, l'heure reste entière ; si « 18 h 30 » ne tient pas sur une ligne, la pastille passe sur deux lignes
+    // (« 18 h » puis « 30 ») au lieu de devenir « 18 h ». Sous 360 px seulement, « 18 h » (feuille de style), l'heure complète restant dans le nom du bouton.
+    const ajusterGrille = g_ => { if (!g_ || !g_.isConnected) return; g_.classList.remove("deux", "court");
+      if ([...g_.querySelectorAll("[data-cell]")].some(x => x.scrollWidth > x.clientWidth + 0.5)) g_.classList.add("deux"); };
+    const grilleM = vue.querySelector(".cal");
+    if (grilleM) { ajusterGrille(grilleM); if (!cal.ecouteGrille) { cal.ecouteGrille = true; addEventListener("resize", () => ajusterGrille(document.querySelector("#vue .cal"))); } }
     vue.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { const n = +b.dataset.n, d = new Date(cal.ref); if (cal.mode === "mois") { d.setDate(1); d.setMonth(d.getMonth() + n); } else d.setDate(d.getDate() + 7 * n); cal.ref = d; calendrier(); });
     const majDestinations = () => { const x = prets.find(y => y.id === ($("contenu") || {}).value); if (!x) return; const ok = M.reseauxDuContenu(x, autorises);
       vue.querySelectorAll("[data-res-lib]").forEach(lb => { const i = lb.querySelector("input"), dedans = ok.includes(lb.dataset.resLib); lb.hidden = !dedans; if (!dedans) i.checked = false; });
@@ -1919,14 +1925,14 @@
     const qd = (() => { try { return JSON.parse(localStorage.getItem(cleTiktok(c) + ":quand") || "null"); } catch (er) { return null; } })();
     const telLu = telD ? `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(telD))}</span>` : "";
     if (d && !modifTiktok) return `<div class="pile serre"><p class="texte2" id="tiktok-demande" role="status">${telD && recente && qd && qd.jour ? t("compte.tiktok.envoyee.le", { d: date(d) }) + " " + t(qd.creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: telLu, quand: quandRappel(String(qd.jour).slice(0, 10)) })
-      : telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: telLu, quand: recente ? t("compte.tiktok.quand") : "" }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
+      : telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: telLu, quand: recente ? t("compte.tiktok.quand", { j: quandJour(jourRappelDe(c, d)) }) : "" }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
       ${recente && merSql(c) ? `<p><button type="button" class="lien" id="tiktok-modifier">${t("compte.tiktok.modifier")}</button></p>` : ""}</div>`;
     if (!merSql(c)) return `<p class="actions"><a class="bouton second" id="activer-tiktok" href="${mail}">${t("compte.tiktok.demander")}</a></p>`;
     const tel = telTiktok(c) || telRetenue(c);   // même numéro préenregistré que le formulaire d'avis (01/11/2026, tour 7 Premium)
     // Jour et heure (01/11/2026, tour 7 Premium) : mêmes jours que le formulaire d'avis (M.joursRappel : jamais un dimanche ni un jour férié du pays)
     // et même choix d'heure (9 h-18 h, ou 15 h-17 h, « après le service » pour un restaurant) ; base : preciser_rappel.
     const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj;
-    return `<form id="tiktok-f" class="pile serre" novalidate><div class="f"><label for="tiktok-tel">${t("compte.tiktok.tel")}</label><input id="tiktok-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel)}" placeholder="${e(exNum(c))}" aria-describedby="tiktok-aide"><p class="aide" id="tiktok-aide">${t("rappel.aide", numParams(c))}</p></div>
+    return `<form id="tiktok-f" class="pile serre" novalidate><div class="f"><label for="tiktok-tel">${t("compte.tiktok.tel")}</label><input id="tiktok-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="tiktok-aide"><p class="aide" id="tiktok-aide">${t("rappel.aide", numParams(c))}</p></div>
       ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
         ${tard ? "" : `<label class="option"><input type="radio" name="tiktok-jour" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>`}
         <label class="option"><input type="radio" name="tiktok-jour" value="demain"${tard ? " checked" : ""} data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label></fieldset>
@@ -2044,10 +2050,14 @@
   // ailleurs, le jour ouvré qui suit la demande (après 17 h : le suivant), même calcul que joursRappel.
   const cleChgOffre = c => "renom-chg-offre:" + ((c && c.id) || "");
   const minJour = s_ => I.langue === "en" ? s_ : s_.charAt(0).toLowerCase() + s_.slice(1);
+  // Jour ouvré du rappel d'une demande faite à l'instant d (tour 10, v36 : partagé par le changement d'offre, « Je n'y arrive pas : rappelez-moi »
+  // et TikTok) : M.joursRappel (jamais un dimanche ni un férié du pays), et après 17 h (heure de Paris) le jour ouvré suivant.
+  function jourRappelDe(c, d) { const j0 = jourParis(Date.parse(d)), h0 = +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(d)).find(x => x.type === "hour") || {}).value, jr = M.joursRappel(j0, c && c.pays);
+    return h0 >= 17 && jr.aujourdhui === j0 ? jr.demain : jr.aujourdhui; }
+  const quandJour = j => minJour(I.jourEtDate(new Date(j + "T12:00:00")));
   function quandChgOffre(c, d) {
     let q = null; try { q = JSON.parse(localStorage.getItem(cleChgOffre(c)) || "null"); } catch (er) { q = null; }
-    if (!q || q.demande !== String(d)) { const j0 = jourParis(Date.parse(d)), h0 = +(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(d)).find(x => x.type === "hour") || {}).value, jr = M.joursRappel(j0, c && c.pays);
-      q = { jour: h0 >= 17 && jr.aujourdhui === j0 ? jr.demain : jr.aujourdhui, creneau: "9-18", telephone: null }; }
+    if (!q || q.demande !== String(d)) q = { jour: jourRappelDe(c, d), creneau: "9-18", telephone: null };
     return { quand: minJour(I.jourEtDate(new Date(q.jour + "T12:00:00"))), plage: q.creneau === "15-17" ? "15-17" : "9-18", tel: q.telephone ? window.RENOM_WHATSAPP.lisible(q.telephone) : "" };
   }
   const formChgOffre = (c, suiv, nom) => { const auj = jourParis(Date.now()), jr = M.joursRappel(auj, c && c.pays), tard = heureParis() >= 17 && jr.aujourdhui === auj, tel = telRetenue(c);
@@ -2224,15 +2234,21 @@
   // calendrier (rien d'inventé). Tour 9 (01/11/2026) : plus de promesse « Statistiques (vues, abonnés) : bientôt » ; à la place, ce qui existe
   // vraiment pour le mois : les réponses publiées à vos commentaires (table commentaires, statut « publie », répondues ce mois-ci), par réseau.
   // Vues et abonnés : la base ne les lit pas, donc rien n'est affiché.
-  function blocReseauxMois(c, cal, cms) {
+  function blocReseauxMois(c, cal, cms, cpt) {
     // 31/10/2026 (test client Croissance) : mois en heure locale (plus en UTC) ; « À venir » = toutes les publications programmées futures,
     // y compris celles du mois prochain (avant, une publication du 2 novembre n'apparaissait nulle part le 31 octobre).
     const res = ORDRE_RES.filter(r => window.RENOM_RESEAUX_AUTORISES(c).includes(r)), auj = new Date(), maintenant = auj.getTime();
     const duMois = x => { const d = new Date(x.prevu_le || 0); return d.getFullYear() === auj.getFullYear() && d.getMonth() === auj.getMonth(); };
     const n = (r, st) => cal.filter(x => (st === "programme" ? Date.parse(x.prevu_le) >= maintenant : duMois(x)) && x.statut === st && (x.reseaux || []).includes(r)).length, sociaux = res.filter(r => r !== "google");
+    // Tour 10 (v36) : un réseau non connecté (comptes lus, état autre que « connecte ») et sans rien ce mois-ci n'affiche plus « 0 / 0 » mais
+    // « Non connecté » (« Activation demandée » pour TikTok déjà demandé). Comptes illisibles : les chiffres, comme avant.
+    const connectes = cpt ? cpt.filter(x => x.etat === "connecte").map(x => x.reseau) : null;
+    const ligne = r => connectes && !connectes.includes(r) && !n(r, "publie") && !n(r, "programme")
+      ? `<td data-l="${t("res.reseaux.etat")}" colspan="2" class="note" data-non-connecte>${t(r === "tiktok" && tiktokDemande(c) ? "res.reseaux.tiktok.demande" : r === "google" ? "res.reseaux.non.connectee" : "res.reseaux.non.connecte")}</td>`
+      : `<td data-l="${t("res.reseaux.parties")}">${nombre(n(r, "publie"))}</td><td data-l="${t("res.reseaux.programmees")}">${nombre(n(r, "programme"))}</td>`;
     return `<section class="carte" id="reseaux-mois" aria-labelledby="r-reseaux"><h2 id="r-reseaux">${t(sociaux.length ? "res.reseaux.titre" : "res.reseaux.titre.google")}</h2>
       <table class="tab compact"><thead><tr><th>${t("res.reseaux.col")}</th><th>${t("res.reseaux.parties")}</th><th>${t("res.reseaux.programmees")}</th></tr></thead><tbody>
-      ${res.map(r => `<tr data-reseau="${r}"><td data-l="${t("res.reseaux.col")}">${RES[r]}</td><td data-l="${t("res.reseaux.parties")}">${nombre(n(r, "publie"))}</td><td data-l="${t("res.reseaux.programmees")}">${nombre(n(r, "programme"))}</td></tr>`).join("")}</tbody></table>
+      ${res.map(r => `<tr data-reseau="${r}"><td data-l="${t("res.reseaux.col")}">${RES[r]}</td>${ligne(r)}</tr>`).join("")}</tbody></table>
       ${sociaux.length && offreDe(c).commentaires ? (() => { const rep = (cms || []).filter(x => x.statut === "publie" && duMoisCm(x)), parRes = ORDRE_RES.map(r => [r, rep.filter(x => x.reseau === r).length]).filter(([, k]) => k);
         return `<p class="texte2" id="reseaux-commentaires">${t("res.reseaux.cm", { n: rep.length, l: parRes.length ? I.liste(parRes.map(([r, k]) => RES[r] + " " + nombre(k))) : "" })}</p>`; })() : ""}</section>`;
   }
@@ -2260,11 +2276,11 @@
       ${premium ? `<p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p>` : ""}</section>`;
   }
   async function resultats() {
-    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR, cmsR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
-      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois(), D.commentaires ? D.commentaires().catch(() => []) : []]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR, cmsR, cptR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
+      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois(), D.commentaires ? D.commentaires().catch(() => []) : [], D.comptes().catch(() => null)]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     // Tant que BoostImpact n'a pas accès à la fiche Google (étape « google » de la mise en route), aucun chiffre ne peut arriver : le point de départ.
     const etapeGoogle = ((mr && mr.points) || []).find(x => x.point === "google");
-    if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR, cmsR)); return; }
+    if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR, cmsR, cptR)); return; }
     // Thèmes nommés en français par la démonstration (FAMILLES de donnees.js) : traduits dans la langue d'affichage ; ceux de Claude, tels quels.
     const THEMES_CONNUS = { "L'accueil et le service": "accueil", "Le matériel": "materiel", "Le parcours et les paysages": "parcours", "L'attente": "attente", "Les plats": "plats", "L'ambiance": "ambiance", "Les prix": "prix" };
     const prem = avecNote[0], dern = avecNote[avecNote.length - 1], rep = (R && R.reponses) || {}, audit = (R && R.audit) || [], conc = (R && R.concurrents) || [], themes = (R && R.themes) || [], col = (R && R.collecte) || {};
@@ -2282,7 +2298,7 @@
       ${/* Tour 9 (01/11/2026) : ce que la fiche a rapporté juste sous le bilan du mois écoulé, avant le mois en cours. */ ""}
       ${blocFicheRapporte(R, lg)}
       ${bilanBloc(bilan, NR)}
-      ${blocReseauxMois(c, calR, cmsR)}
+      ${blocReseauxMois(c, calR, cmsR, cptR)}
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.note, +dern.note, 1), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
           ${dern ? `<p><span class="chiffre grand-chiffre">${nombre(dern.note, 1)}</span> <span class="note">${t(enCours ? "res.sur5.auj" : "res.sur5.fin", { mois: moisLong(dern.mois) })}</span></p>` : ""}
@@ -2521,7 +2537,7 @@
     // Étape réseaux (bloc SQL « Emails au commerçant », 27/10/2026) : tant que l'équipe n'a pas envoyé le lien (lien_envoye_le vide), rien à faire.
     const ptRes = ((mr && mr.points) || []).find(x => x.point === "metricool"), attenteLien = !!ptRes && ptRes.etat === "a_faire" && "lien_envoye_le" in ptRes && !ptRes.lien_envoye_le;
     const g = sansReseaux(c), avecReseaux = "metricool" in pts, eg = ficheDemandee(c) ? "demande" : pts.google || "a_faire", eph = ph_.length ? "fait" : "a_faire";
-    const tel = c.whatsapp_numero || (window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? c.contact : "");
+    const tel = c.whatsapp_numero ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? c.contact : "";
     const google = eg === "fait" ? `<p class="texte2">${t("mer2.google.fait")}</p>`
       : eg === "demande" ? `<div class="pile serre" id="fiche-demandee"><p class="texte2">${t("mer2.fiche.demandee", { d: date(c.fiche_google_demande_le) })}</p>
           <ol class="pas">${(c.fiche_google_cas === "pas_a_mon_nom" ? ["nom.1", "nom.2", "3"] : ["1", "2", "3"]).map(i => `<li>${t("mer2.fiche.suite." + i)}</li>`).join("")}</ol>
@@ -2561,7 +2577,7 @@
     if ($("rappel-f")) $("rappel-f").onsubmit = async ev => { ev.preventDefault(); const m = $("rappel-msg");
       try { const r = await D.demanderRappel("mise_en_route", $("rappel-tel").value); $("rappel-f").hidden = true; $("rappel-ouvrir").setAttribute("aria-expanded", "false");
         const n_ = window.RENOM_WHATSAPP.numero($("rappel-tel").value, c.pays);
-        m.textContent = t(r && r.deja ? "rappel.deja" : "rappel.merci", { tel: (n_ ? window.RENOM_WHATSAPP.lisible(n_) : $("rappel-tel").value.trim()).replace(/\s+/g, "\u00a0") }); } catch (er) { m.textContent = ph(er.message); } };
+        m.textContent = t(r && r.deja ? "rappel.deja" : "rappel.merci", { tel: (n_ ? window.RENOM_WHATSAPP.lisible(n_) : $("rappel-tel").value.trim()).replace(/\s+/g, "\u00a0"), quand: quandJour(jourRappelDe(c, (r && r.cree_le) || new Date().toISOString())) }); } catch (er) { m.textContent = ph(er.message); } };
     if ($("mer-continuer")) $("mer-continuer").onclick = async () => { dem.vue = "questions"; await demarrage(); const q = vue.querySelector("#dem-champ, input[name=dem-choix]"); if (q) q.focus(); };
     if ($("dem-plus-tard")) $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }

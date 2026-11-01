@@ -175,6 +175,7 @@
     "acc.tout.voir": [v => `Tout voir, ${v.n} de plus`, v => `See all, ${v.n} more`, v => `Alles bekijken, nog ${v.n}`],   // 01/11/2026, tour 8 (petit écran)
     "acc.attendent": [v => v.n > 1 ? `${v.n} validées attendent une date.` : "1 validée attend une date.", v => v.n > 1 ? `${v.n} approved posts are waiting for a date.` : "1 approved post is waiting for a date.", v => v.n > 1 ? `${v.n} goedgekeurde posts wachten op een datum.` : "1 goedgekeurde post wacht op een datum."],
     "acc.programmer.tout": ["Programmer tout", "Schedule all", "Alles inplannen"],
+    "acc.act.programmer.court": [v => v.n > 1 ? `Programmer ${v.n} validées` : "Programmer 1 validée", v => v.n > 1 ? `Schedule ${v.n} approved` : "Schedule 1 approved", v => v.n > 1 ? `${v.n} goedgekeurde inplannen` : "1 goedgekeurde inplannen"],   // v36 : sous 360 px
     "acc.act.programmer": [v => v.n > 1 ? `Programmer ${v.n} publications validées` : "Programmer 1 publication validée", v => v.n > 1 ? `Schedule ${v.n} approved posts` : "Schedule 1 approved post", v => v.n > 1 ? `${v.n} goedgekeurde posts inplannen` : "1 goedgekeurde post inplannen"],
     // « Programmer tout » (01/11/2026, tour 7 Croissance) : annuler ces programmations, une à une, après confirmation.
     "acc.programmes.annuler": [v => v.n > 1 ? "Annuler ces programmations" : "Annuler cette programmation", v => v.n > 1 ? "Cancel these schedules" : "Cancel this schedule", v => v.n > 1 ? "Deze planningen annuleren" : "Deze planning annuleren"],
@@ -2104,8 +2105,9 @@
     "rappel.tel": ["Votre numéro de téléphone", "Your phone number", "Uw telefoonnummer"],
     "rappel.aide": ["Avec l'indicatif du pays, par exemple {ex}. Un numéro qui commence par 0 reçoit l'indicatif {ind}.", "With the country code, for example {ex}. A number starting with 0 gets the {ind} country code.", "Met het landnummer, bijvoorbeeld {ex}. Een nummer dat met 0 begint, krijgt landnummer {ind}."],
     "rappel.envoyer": ["Être rappelé", "Request a call back", "Teruggebeld worden"],
-    "rappel.merci": ["Demande envoyée. Nous vous rappelons au {tel} aujourd'hui ou demain, entre 9 h et 18 h, pour le faire avec vous.", "Request sent. We'll call you back on {tel} today or tomorrow, between 9 am and 6 pm, to do it with you.", "Aanvraag verstuurd. Wij bellen u terug op {tel}, vandaag of morgen tussen 9 en 18 uur, om het samen te doen."],
-    "rappel.deja": ["Votre demande est déjà enregistrée : nous vous rappelons aujourd'hui ou demain, entre 9 h et 18 h.", "Your request is already saved: we'll call you back today or tomorrow, between 9 am and 6 pm.", "Uw aanvraag is al opgeslagen: wij bellen u terug, vandaag of morgen tussen 9 en 18 uur."],
+    // Tour 10 (v36) : le vrai jour ouvré du rappel ({quand} : « lundi 2 novembre »), plus « aujourd'hui ou demain ».
+    "rappel.merci": ["Demande envoyée. Nous vous rappelons au {tel} {quand}, entre 9 h et 18 h, pour le faire avec vous.", "Request sent. We'll call you back on {quand}, between 9 am and 6 pm, on {tel}, to do it with you.", "Aanvraag verstuurd. Wij bellen u terug op {tel}, op {quand} tussen 9 en 18 uur, om het samen te doen."],
+    "rappel.deja": ["Votre demande est déjà enregistrée : nous vous rappelons {quand}, entre 9 h et 18 h.", "Your request is already saved: we'll call you back on {quand}, between 9 am and 6 pm.", "Uw aanvraag is al opgeslagen: wij bellen u terug op {quand}, tussen 9 en 18 uur."],
     "dem5.repli.autorisation": ["Facultatif : réutiliser vos photos déjà publiées", "Optional: reuse photos you've already published", "Niet verplicht: uw reeds gepubliceerde foto's hergebruiken"],
     "dem5.repli.whatsapp": ["Facultatif : vos alertes sur WhatsApp", "Optional: your alerts on WhatsApp", "Niet verplicht: uw meldingen via WhatsApp"],
     "mer.voir.etapes": ["Voir les étapes", "See the steps", "De stappen bekijken"],
@@ -2131,6 +2133,7 @@
     "aut.ligne.explication.google": ["Nous pouvons reprendre celles que votre commerce a déjà publiées sur sa fiche Google : vous aurez moins de photos à envoyer. C'est facultatif.",
       "We can reuse the ones your business has already published on its Google profile: you'll have fewer photos to send. It's optional.", "We kunnen de foto's hergebruiken die uw zaak al op haar Google-profiel publiceerde: zo hoeft u er minder te sturen. Het is vrijblijvend."],
     "aut.ligne.accord": ["En touchant « Autoriser »\u00a0:", "By tapping \u201cAllow\u201d:", "Door op \u201cToestaan\u201d te tikken:"],   // tour 9 : l'accord en un geste, texte complet dans la carte
+    "aut.toast": ["Autorisation enregistrée", "Authorisation saved", "Toestemming opgeslagen"],   // v36 (tour 10) : confirmation visible après « Autoriser »
     "aut.autoriser": ["Autoriser", "Allow", "Toestaan"], "aut.non": ["Non merci", "No thanks", "Nee, bedankt"],
     "aut.non.merci": ["C'est noté : nous ne vous le proposerons plus ici. Vous pouvez toujours l'accorder dans Photos.", "Noted: we won't suggest it here again. You can still allow it in Photos.", "Genoteerd: wij stellen het hier niet meer voor. U kunt het nog altijd toestaan bij Foto's."],
     "avis.sensible.texte.espace": ["Notre équipe s'en charge. Nous préparons une réponse : vous l'approuverez ici. Rien n'est publié sans votre accord. N'y répondez pas vous-même sur Google.", "Our team is handling it. We're preparing a reply: you'll approve it here. Nothing is published without your approval. Please don't reply yourself on Google.", "Ons team neemt het op zich. Wij bereiden een antwoord voor: u keurt het hier goed. Niets wordt gepubliceerd zonder uw akkoord. Antwoord er zelf niet op via Google."],
@@ -2335,7 +2338,7 @@
     "compte.tiktok.envoyee": ["Demande envoyée le {d} : notre équipe vous rappelle pour activer TikTok.", "Request sent on {d}: our team will call you back to set up TikTok.", "Aanvraag verstuurd op {d}: ons team belt u terug om TikTok te activeren."],
     "compte.tiktok.envoyee.tel": ["Demande envoyée le {d}. Notre équipe vous rappelle au {tel}, {quand}entre 9 h et 18 h, pour activer TikTok.", "Request sent on {d}. Our team will call you on {tel}, {quand}between 9 am and 6 pm, to set up TikTok.", "Aanvraag verstuurd op {d}. Ons team belt u op {tel}, {quand}tussen 9 en 18 uur, om TikTok te activeren."],
     "compte.tiktok.envoyee.le": ["Demande d'activation de TikTok envoyée le {d}.", "TikTok activation request sent on {d}.", "Aanvraag om TikTok te activeren verstuurd op {d}."],
-    "compte.tiktok.quand": ["aujourd'hui ou demain, ", "today or tomorrow, ", "vandaag of morgen, "],
+    "compte.tiktok.quand": ["{j}, ", "on {j}, ", "op {j}, "],   // v36 : le vrai jour ouvré (avant : « aujourd'hui ou demain »)
     "compte.tiktok.modifier": ["Modifier le numéro", "Change the number", "Nummer wijzigen"],
     "compte.tiktok.ou": ["Vous préférez l'email ?", "Prefer email?", "Liever per e-mail?"], "compte.tiktok.email": ["Écrire à l'équipe", "Email the team", "Het team mailen"],
     "compte.tiktok.sujet": ["Activation TikTok : {nom}", "TikTok activation: {nom}", "Activering TikTok: {nom}"],
@@ -2393,6 +2396,8 @@
     "offre.dessus.ligne": [v => `L'offre au-dessus : ${v.nom}, ${v.n} contenus par mois, ${v.prix} HT par mois`, v => `The plan above: ${v.nom}, ${v.n} posts a month, ${v.prix} excl. VAT a month`, v => `De formule erboven: ${v.nom}, ${v.n} posts per maand, ${v.prix} excl. btw per maand`],
     "abo.sans.lien": ["Pour arrêter ou recevoir vos factures : info@boostimpact.agency", "To stop or get your invoices: info@boostimpact.agency", "Om te stoppen of uw facturen te ontvangen: info@boostimpact.agency"],
     "res.reseaux.titre": ["Vos réseaux ce mois-ci", "Your networks this month", "Uw netwerken deze maand"], "res.reseaux.titre.google": ["Votre fiche Google ce mois-ci", "Your Google profile this month", "Uw Google-profiel deze maand"],
+    "res.reseaux.etat": ["État", "Status", "Status"], "res.reseaux.non.connecte": ["Non connecté", "Not connected", "Niet gekoppeld"], "res.reseaux.non.connectee": ["Non connectée", "Not connected", "Niet gekoppeld"],   // v36 (tour 10)
+    "res.reseaux.tiktok.demande": ["Activation demandée", "Activation requested", "Activatie aangevraagd"],
     "res.reseaux.col": ["Réseau", "Network", "Netwerk"], "res.reseaux.parties": ["Publiées sur ce réseau", "Published on this network", "Gepubliceerd op dit netwerk"], "res.reseaux.programmees": ["À venir", "Upcoming", "Gepland"],
     // Tour 9 (01/11/2026) : remplace « Statistiques (vues, abonnés) : bientôt » (promesse retirée) ; seulement des chiffres lus dans la base.
     "res.reseaux.cm": [v => v.n ? `Réponses publiées à vos commentaires ce mois-ci : ${v.n}${v.l ? " (" + v.l + ")" : ""}.` : "Aucune réponse à un commentaire publiée ce mois-ci.",

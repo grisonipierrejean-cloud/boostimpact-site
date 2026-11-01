@@ -353,6 +353,8 @@ video.visuel{object-fit:contain;background:#000}
 .cal [data-cell]{white-space:nowrap;overflow:hidden;text-overflow:clip;box-sizing:border-box}
 .cal .h-court{display:none}
 .cal.court .h-long{display:none}.cal.court .h-court{display:inline}
+/* Tour 10 (v36) : de 360 px et plus, « 18 h 30 » qui ne tient pas sur une ligne passe sur deux (« 18 h », puis « 30 ») ; jamais « 18 h ». */
+.cal.deux [data-cell]{white-space:normal;overflow:visible;line-height:1.15;padding:1px 2px;width:100%}
 @media (max-width:359px){.cal .h-long{display:none}.cal .h-court{display:inline}.cal [data-cell]{padding:1px 2px}}
 
 /* ---------- Avis */
@@ -957,6 +959,8 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
      Avant (tour 7) : une seule ligne qui défilait au doigt, les derniers filtres cachés à droite. */
   .filtres:not(.bascule){flex-wrap:wrap;overflow-x:visible;gap:4px}
   .filtres button{flex:0 0 auto;padding:8px 10px}
+  /* Tour 10 (v36) : de 360 à 399 px, deux lignes au plus (à 375 px, « Programmées » passait seul sur une 2e ligne et « Refusées » sur une 3e). */
+  @media (min-width:360px) and (max-width:399px){.filtres:not(.bascule){gap:3px;padding:3px}.filtres:not(.bascule) button{padding:8px 7px}}
   @media (max-width:359px){.filtres:not(.bascule){gap:2px;padding:3px}.filtres:not(.bascule) button{padding:8px 5px;font-size:14px}}
   /* Accueil : l'offre passe sous « À faire maintenant ». */
   .entete-accueil.offre-sous .offre-accueil{margin-top:0}
@@ -1137,3 +1141,6 @@ p .lien,.note .lien{min-height:0;padding:12px 4px;margin:-12px 0;vertical-align:
 .carte-autorisation .ligne-autorisation{padding:0}
 #acc-attendent .actions{margin-top:8px}
 #fiche-rapporte .bilan-chiffre .chiffre .note{white-space:normal}
+/* Tour 10 (v36) : libellé court d'une action sous 360 px (« Programmer 3 validées »). */
+.lib-court{display:none}
+@media (max-width:359px){.lib-long{display:none}.lib-court{display:inline}}
