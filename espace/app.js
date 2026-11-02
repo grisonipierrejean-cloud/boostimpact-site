@@ -115,7 +115,7 @@
     "AVIS_EFFACES_30_JOURS", "COMMENTAIRES_EFFACES_30_JOURS", "ABONNEMENT_EN_ATTENTE", "ABONNEMENT_ACTIF", "ABONNEMENT_IMPAYE", "ABONNEMENT_RESILIE",
     // Types écrits par la base (schema.sql), n8n et le moteur que le commerçant voit dans Offre > Historique (les types internes sont filtrés :
     // journal_interne() de schema.sql, RENOM_JOURNAL_INTERNE de donnees.js). Un type inconnu s'affiche « Autre étape du service », jamais en code brut.
-    "VALIDATION_TACITE", "PROGRAMMATION_AUTO", "APPROUVE_NON_PROGRAMME", "PHOTOS_DEPOSEES", "VALIDATION_PAR_LIEN", "NOTIFICATION_VALIDATION", "BIENVENUE",
+    "VALIDATION_TACITE", "PROGRAMMATION_AUTO", "APPROUVE_NON_PROGRAMME", "PHOTOS_DEPOSEES", "TIKTOK_CARROUSEL", "VALIDATION_PAR_LIEN", "NOTIFICATION_VALIDATION", "BIENVENUE",
     "BILAN_ENVOYE", "AVIS_TRAITE", "AVIS_PROPOSE", "AVIS_RELANCE", "AVIS_EQUIPE", "AVIS_ESCALADE", "ACTION_FICHE_CREEE", "ACTION_FICHE_A_PUBLIER", "ACTION_FICHE_REFUSE",
     "IDEE_SEMAINE", "IDEE_RETENUE", "IDEE_ECARTEE", "CLIENTS_IMPORTES", "OPPOSITION_AJOUTEE", "DESINSCRIPTION", "MISE_EN_ROUTE", "MISE_EN_ROUTE_DECLAREE",
     "EMAIL_MISE_EN_ROUTE", "EMAIL_RELANCE_VALIDATION", "EMAIL_RELANCE_PHOTOS", "EMAIL_OFFRE_SUPERIEURE", "DELEGATION_SIGNEE", "DELEGATION_RETIREE", "RESEAUX_RETENUS",
@@ -2063,6 +2063,9 @@
   // Premium : bilan commenté et point de 30 min chaque mois (CGV, tableau des offres et article 3), mode délégation activé ou désactivé ICI
   // (D.reglerDelegation, fonction regler_delegation : accord horodaté avec la version des CGV) ; base sans ce bloc : texte « écrivez-nous ».
   const ORDRE_OFFRES = ["essentiel", "standard", "premium"];
+  // « Prix de lancement » (02/11/2026, décision de PJ) : Croissance seulement, en note sous le prix, comme sur le site ; aucun prix changé, aucun prix
+  // barré ni prix futur chiffré (règle des annonces de réduction de prix : un prix de référence barré doit avoir été pratiqué).
+  const PRIX_LANCEMENT = ["standard"];
   const offreCible = (c, voulue) => { const i = ORDRE_OFFRES.indexOf(c.offre_id), j = ORDRE_OFFRES.indexOf(voulue);
     return i >= 0 && j > i ? voulue : i >= 0 && i < ORDRE_OFFRES.length - 1 ? ORDRE_OFFRES[i + 1] : null; };
   // Montée en offre sans email (01/11/2026, tour 6 Croissance) : abonnement en cours (ou aucun lien de paiement) = « Passer en <offre> » fait une
@@ -2106,7 +2109,7 @@
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
       ${P.enCours && P.actuel ? `<p class="texte2" id="dessus-vous">${t(mensuelP ? "offre.dessus.vous.mensuel" : "offre.dessus.vous.annuel", { prix: euros(P.actuel) })}</p>` : ""}
-      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>
+      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>${PRIX_LANCEMENT.includes(suiv) ? `<p class="note" id="dessus-lancement">${t("offre.lancement")}</p>` : ""}
       <p class="texte2" id="dessus-mensuel">${t(mensuelP ? "offre.dessus.annuel.ou" : "offre.dessus.mensuel", { prix: euros(P.autre) })}</p>
       ${frais ? `<p class="texte2" id="dessus-frais">${frais}</p>` : ""}
       ${ecartPrix > 0 ? `<p class="texte2" id="dessus-difference">${t("offre.dessus.difference", { prix: euros(ecartPrix) })}</p>` : ""}
@@ -2171,6 +2174,7 @@
           mensuel s'il est inconnu) ; avant, 79 € « payé à l'année » ici et 95 € par mois dans « Passer à Croissance », sur le même écran. */ ""}
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2>${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht
           ? `<p class="prix-offre" id="offre-prix-vous" data-rythme="mensuel"><span class="chiffre">${euros(o.prix_mensuel_ht)}</span> ${t("offre.ht.mois.mensuel")}</p>` : `<p class="prix-offre" id="offre-prix-vous" data-rythme="annuel"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>`}
+        ${PRIX_LANCEMENT.includes(c.offre_id) ? `<p class="note" id="offre-lancement">${t("offre.lancement")}</p>` : ""}
         ${ab && ab.statut !== "resilie" && ab.rythme ? `<p class="note" id="offre-votre-rythme">${t("offre.votre.rythme." + (ab.rythme === "mensuel" ? "mensuel" : "annuel"))}</p>` : ""}
         ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
         <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
@@ -2200,6 +2204,21 @@
       ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c)) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
       ${repli("offre-historique", t("offre.historique"), j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
+    // Paiement en euros (02/11/2026) : « Payer au mois / à l'année » sans abonnement en cours et « Passer à <offre> » sans abonnement demandent une
+    // session Checkout en euros (D.sessionPaiement : jeton de la base puis webhook n8n renom-checkout), puis y vont. REPLI, comme site/app.js : pas de
+    // réponse en 8 s, refus ou réseau coupé -> le lien de paiement du bouton ; clic avec Ctrl, Cmd, Maj ou molette : le lien tel quel, dans un onglet.
+    // Démonstration (pas de D.sessionPaiement) et portail client (adresse billing.stripe.com, non reconnue par D.demandeDeLien) : rien ne change.
+    ["offre-payer", "offre-payer-annuel", "offre-passer"].forEach(id => { const a = $(id), d = a && D.sessionPaiement && D.demandeDeLien ? D.demandeDeLien(a.getAttribute("href")) : null;
+      if (!d) return;
+      a.addEventListener("click", ev => {
+        if (ev.defaultPrevented || ev.button > 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+        ev.preventDefault(); if (a.getAttribute("aria-busy") === "true") return;
+        const html = a.innerHTML, lien = a.href; a.setAttribute("aria-busy", "true"); a.setAttribute("aria-disabled", "true"); a.textContent = t("pub.chargement").replace(/\.$/, "…");
+        let fini = false; const aller = u => { if (fini) return; fini = true; location.href = u; };
+        Promise.race([D.sessionPaiement(c, d), new Promise((_, ko) => setTimeout(() => ko(new Error("délai")), 8000))]).then(aller, () => aller(lien));
+        window.addEventListener("pageshow", () => { a.removeAttribute("aria-busy"); a.removeAttribute("aria-disabled"); a.innerHTML = html; fini = false; }, { once: true });
+      });
+    });
     if ($("chg-f")) $("chg-f").onsubmit = async ev => { ev.preventDefault(); const b = $("offre-demander"), m = $("msg-chg"); b.disabled = true;
       // Tour 7 Essentiel (01/11/2026) : le bloc replié s'ouvre dès qu'une demande existe (avant : seulement avec « ?dessus » dans l'adresse, donc la
       // confirmation restait cachée dans un bloc fermé) ; un toast le dit aussi. Tour 9 : numéro obligatoire, comme « Attendez mon appel ».

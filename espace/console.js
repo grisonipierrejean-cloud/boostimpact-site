@@ -292,7 +292,8 @@
           ${(x.deja || []).length ? `<p class="note">${t("con.pm.deja", { res: x.deja.map(r => NOM_RESEAU[r] || e(r)).join(", ") })}</p>` : ""}
           ${x.son ? `<p class="note fort">${t("con.pm.son", { a: e(x.son.ambiance || "naturel") })}</p>` : ""}
           <div class="f"><label for="pm-${i}">${t("con.pm.legende", { res: NOM_RESEAU[x.reseau] || e(x.reseau) })}</label><textarea id="pm-${i}" readonly data-pm-legende translate="no" rows="${Math.min(12, Math.max(3, Math.ceil(String(x.legende || "").length / 34) + 1))}">${e(x.legende || "")}</textarea></div>
-          <div class="actions"><button type="button" class="bouton second petit" data-pm-media>${t(x.type === "video" ? "con.pm.video" : "con.pm.visuel")}</button><button type="button" class="bouton second petit" data-pm-copier>${t("con.pm.copier")}</button><button type="button" class="bouton petit" data-pm-publiee>${t("con.pm.marquer")}</button></div></article>`;
+          ${(x.chemins || []).length > 1 ? `<p class="note fort" data-pm-carrousel>${t("con.pm.carrousel", { n: x.chemins.length })}</p>` : ""}
+          <div class="actions"><button type="button" class="bouton second petit" data-pm-media>${(x.chemins || []).length > 1 ? t("con.pm.visuels", { n: x.chemins.length }) : t(x.type === "video" ? "con.pm.video" : "con.pm.visuel")}</button><button type="button" class="bouton second petit" data-pm-copier>${t("con.pm.copier")}</button><button type="button" class="bouton petit" data-pm-publiee>${t("con.pm.marquer")}</button></div></article>`;
   const carteCommentaireAPublier = x => `<article class="carte" data-id="${e(x.id)}" data-cm-pub><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.validee.le", { res: RESEAUX_CM[x.reseau] || e(x.reseau), d: dh(x.decide_le || x.cree_le) })}</span></div>
           <p class="note">${t("con.cm.titre")}</p>
           ${x.texte ? `<p class="note">${t("con.commentaire.de", { de: x.auteur ? t("con.de", { a: e(x.auteur) }) : "", x: `<span translate="no">${e(x.texte)}</span>` })}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}
@@ -512,9 +513,13 @@
     sur("[data-publie]", b => agir(() => D.adminCommentairePublie(b.closest("article").dataset.id), t("con.publiee.equipe"), b));
     const pm = b => afCtx.pubs[+b.closest("article").dataset.pmI];
     sur("[data-pm-copier]", b => copier(b.closest("article").querySelector("[data-pm-legende]"), "con.pm.copiee"));
+    // Carrousel TikTok (02/11/2026, admin_publications_a_publier : « chemins ») : une image après l'autre, numérotées dans l'ordre de l'envoi.
     sur("[data-pm-media]", async b => { b.disabled = true;
-      try { const u = await D.adminLienMedia(pm(b)); if (!u) { msg(t("con.pm.sans.media")); return; }
-        const a = document.createElement("a"); a.href = u; a.download = ""; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); msg(t("con.pm.telechargement")); }
+      try { const x = pm(b), liste = (x.chemins || []).length > 1 ? x.chemins.map((c, i) => Object.assign({}, x, { chemin: c, rang: i + 1 })) : [x];
+        for (const y of liste) { const u = await D.adminLienMedia(y); if (!u) { msg(t("con.pm.sans.media")); return; }
+          const a = document.createElement("a"); a.href = u; a.download = ""; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+          if (liste.length > 1) await new Promise(r => setTimeout(r, 400)); }
+        msg(t("con.pm.telechargement")); }
       catch (er) { msg(ph(er.message)); } finally { b.disabled = false; } });
     sur("[data-pm-publiee]", b => { const x = pm(b); agir(async () => { const r = await D.adminPublicationPubliee(x.id, x.reseau); return t("con.pm.notee", { res: NOM_RESEAU[x.reseau] || x.reseau, h: dh(r.publie_le) }); }, null, b); });
     sur("[data-copier-gbp]", b => copier(b.closest("article").querySelector("[data-rep-gbp]"), "con.copiee"));

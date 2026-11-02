@@ -15,8 +15,8 @@
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
-  // (schema.sql, bloc « Essentiel à 4 publications et CGV du 2 novembre 2026 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "2 novembre 2026";
+  // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "2 novembre 2026, version 2";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -642,6 +642,8 @@
     AVIS_RETENU: "Avis : le commerçant attend votre appel avant toute publication",
     // Fiches Google reliées automatiquement (02/11/2026, rapprocher_fiches_google de schema.sql) : une fiche du compte Google sans commerce sûr
     FICHE_A_RELIER: "Fiche Google à relier",
+    // Carrousel TikTok (02/11/2026, reprendre_carrousel_tiktok de schema.sql) : la publication qui portait le carrousel est annulée ou en échec.
+    TIKTOK_CARROUSEL_A_REPRENDRE: "TikTok : photos d'un carrousel à reprendre",
     // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
     ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
@@ -673,6 +675,7 @@
       if (d.motif === "invitation") return `Invitation ${f}${d.type ? " (" + d.type + ")" : ""} : ${m}${d.erreur ? " (" + d.erreur + ")" : ""}. Elle reste en attente chez Google et sera retentée dans 30 minutes ; si l'erreur revient, l'accepter à la main (business.google.com, connecté en team@boostimpact.agency).`;
       if (d.motif === "different" || d.motif === "prise") return `Fiche ${f} (${d.location || d.cle || "?"}) : ${m}${d.actuelle ? " (" + d.actuelle + ")" : ""}${d.commerce_actuel_nom ? " (" + d.commerce_actuel_nom + ")" : ""}${d.commerce_vise_nom ? ", visée par " + d.commerce_vise_nom : ""}. Rien n'a été remplacé. Vérifier, puis, pour remplacer : éditeur SQL, select relier_fiche_google('<commerce>', '${d.location || d.cle || ""}', true);`;
       return `Fiche ${f} accessible au compte Google de BoostImpact, non reliée : ${m}${(d.noms || []).length ? " (" + d.noms.join(", ") + ")" : ""}.${d.place_id ? " place_id : " + d.place_id + "." : ""} Coller ce place_id dans la fiche du bon client, Comptes : la fiche se relie au passage suivant (30 minutes au plus). Fiche d'un autre établissement : « Traité ».`; }
+    if (a.type === "TIKTOK_CARROUSEL_A_REPRENDRE") return `La publication qui portait le carrousel TikTok est ${d.statut === "echec" ? "en échec" : "annulée"}. ${(d.contenus || []).length} photo(s) déjà envoyée(s) ou entamée(s) ne paraîtront pas sur TikTok : les publier à la main sur TikTok si le commerçant le veut${d.reprises ? ` (${d.reprises} autre(s) ont retrouvé TikTok seules)` : ""}.`;
     if (a.type === "FICHE_GOOGLE_RECHERCHE_BLOQUEE") return `Recherche automatique sans réponse depuis ${d.heures} h (n8n « RENOM, identification de la fiche Google » ou GitHub Actions). Lien collé : ${d.lien || "aucun"}. Coller l'identifiant (place_id) dans la fiche du client, Comptes.`;
     if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
     if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
@@ -757,6 +760,21 @@
     const base = lienAbonnement(null, c, offreSuivante, maintenant, rythme, dejaPayes); if (!base) return null;
     const em = String((c || {}).email_validation || "").trim().toLowerCase();
     return /^[^\s@"<>]+@[^\s@"<>]+\.[^\s@"<>]+$/.test(em) ? base + "&prefilled_email=" + encodeURIComponent(em) : base;
+  }
+  // ---- Paiement en euros depuis l'espace (02/11/2026, décision de PJ) : les boutons « Payer mon abonnement » (lienAbonnement, aucun abonnement ou
+  // abonnement résilié) et « Passer à <offre> » sans abonnement en cours (lienMonteeOffre) demandent une session Checkout en euros au webhook n8n
+  // renom-checkout (n8n/build_checkout.py : tarification adaptative coupée, comme le site), au lieu d'ouvrir le lien buy.stripe.com (qui peut montrer
+  // une autre devise hors zone euro). Le navigateur n'envoie qu'un JETON (jeton_paiement de schema.sql : membre du commerce, usage unique,
+  // 15 minutes) et l'offre, le rythme et le cas de frais du lien ; n8n relit le commerce dans la base (lire_jeton_paiement) : référence,
+  // offre actuelle, abonnement et adresse viennent de la base, jamais du navigateur. REPLI : le lien de paiement du bouton (app.js).
+  // Le site et l'espace sont servis sur la même origine (https://boostimpact.agency, espace sous /espace/) : l'origine autorisée du webhook ne change pas.
+  const CHECKOUT_URL = "https://peejay.app.n8n.cloud/webhook/renom-checkout";
+  // Lien de paiement (tel que lienAbonnement / lienMonteeOffre le rendent) -> {offre, rythme, frais} d'après config.js (stripe.liens) ; inconnu : null.
+  function demandeDeLien(u) {
+    const base = String(u || "").split(/[?#]/)[0], L = (cfg.stripe || {}).liens || {};
+    if (!/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]+$/.test(base)) return null;
+    for (const o of Object.keys(L)) for (const r of Object.keys(L[o] || {})) for (const f of Object.keys(L[o][r] || {})) if (L[o][r][f] === base) return { offre: o, rythme: r, frais: f };
+    return null;
   }
   // Abonnement à montrer : le plus récent qui n'est pas résilié (après une montée, l'ancien, arrêté, reste dans la table), sinon le plus récent.
   const abonnementCourant = l => (l || []).find(x => x.statut !== "resilie") || (l || [])[0] || null;
@@ -1005,7 +1023,17 @@
       // Abonnement Stripe du commerce (lecture seule : la table n'est écrite que par le webhook, schema.sql, bloc « abonnements Stripe »).
       // « * » : la colonne rythme n'existe qu'avec le bloc SQL du 27/10/2026 (sans lui : lien de montée mensuel).
       async abonnement() { const c = await self.commerce(); return abonnementCourant(ok(await sb.from("abonnements").select("*").eq("commerce_id", c.id).order("maj_le", { ascending: false }).limit(5))); },
-      lienAbonnement, lienMonteeOffre,
+      lienAbonnement, lienMonteeOffre, demandeDeLien,
+      // Session Checkout en euros (voir CHECKOUT_URL) : jeton de la base, puis le webhook ; toute erreur remonte (app.js retombe sur le lien).
+      async sessionPaiement(c, d) {
+        const j = ok(await sb.rpc("jeton_paiement", { p_commerce: c.id }));
+        if (!j || !/^[0-9a-f]{64}$/.test(j.jeton || "")) throw new Error("jeton de paiement illisible");
+        const r = await fetch(CHECKOUT_URL, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jeton: j.jeton, offre: d.offre, rythme: d.rythme, frais: d.frais, langue: langueStripe() }) });
+        const x = await r.json().catch(() => null);
+        if (!r.ok || !x || x.ok !== true || typeof x.url !== "string" || !/^https:\/\/checkout\.stripe\.com\/[^\s"<>]+$/.test(x.url)) throw new Error("session de paiement refusée");
+        return x.url;
+      },
       // Mode délégation par bouton (27/10/2026) : seulement si la base a le bloc « Changement d'offre en libre-service et mode délégation dans
       // l'espace » (colonne delegation_version_cgv lue par select *). Sans lui : l'écran Offre garde « écrivez-nous ».
       delegationParBouton(c) { return !!c && Object.prototype.hasOwnProperty.call(c, "delegation_version_cgv"); },
@@ -1218,7 +1246,8 @@
       async adminPublicationPubliee(id, reseau) { return ok(await sb.rpc("admin_publication_publiee", { p_id: id, p_reseau: reseau })); },
       async adminLienMedia(x) {
         if (!x.chemin) return null; const ext = (x.chemin.match(/\.([a-z0-9]{2,4})$/i) || [, "jpg"])[1].toLowerCase();
-        const nom = [String(x.commerce || "commerce").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40), x.reseau, String(x.prevu_le || "").slice(0, 10)].filter(Boolean).join("-") + "." + ext;
+        const nom = [String(x.commerce || "commerce").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40), x.reseau, String(x.prevu_le || "").slice(0, 10),
+          x.rang ? String(x.rang) : ""].filter(Boolean).join("-") + "." + ext;   // rang : image d'un carrousel TikTok (1, 2, 3… dans l'ordre de l'envoi)
         const r = ok(await sb.storage.from("contenus").createSignedUrl(x.chemin, 3600, { download: nom })); return r.signedUrl;
       },
       async adminLibererAvis(id) { return ok(await sb.rpc("admin_liberer_avis", { p_avis: id })); },
