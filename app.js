@@ -104,6 +104,73 @@ var b=document.querySelectorAll('.offre-payer .offre-choisir');
 for(var i=0;i<b.length;i++){var u=b[i].getAttribute('href');if(u&&/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u))b[i].setAttribute('href',u+'?locale='+lg)}
 })();
 
+// ---- Paiement en euros (31/10/2026). Un lien de paiement Stripe convertit le prix dans la devise du client (tarification adaptative, environ 4 %
+// de frais, impossible à couper sur un lien). Le bouton demande donc une session Checkout en euros au webhook n8n renom-checkout
+// (n8n/build_checkout.py, adaptive_pricing désactivé) et y redirige. Le navigateur n'envoie que l'offre, le rythme, le cas de frais et la langue :
+// n8n refuse toute combinaison hors de sa liste blanche et lit les prix dans Stripe. REPLI : pas de réponse en 8 s, refus, réponse illisible ou
+// réseau coupé -> le lien de paiement du bouton (href, avec la langue), comme avant : aucun client bloqué. Clic avec Ctrl, Cmd, Maj ou molette :
+// le lien tel quel. Pendant la demande : « Chargement… », second clic sans effet ; retour arrière depuis Stripe : bouton remis à neuf.
+// Table : liens des boutons de la page (espace/stripe-public.json) -> [offre, rythme, frais] ; moteur/tests/test_checkout.js vérifie qu'elle suit
+// stripe-public.json et la règle des frais (site/legal.json). Option (attribut data-paiement-option, aucun bouton de ce type sur la page à ce jour) : {option}.
+var BOOST_CHECKOUT='https://peejay.app.n8n.cloud/webhook/renom-checkout';
+var BOOST_LIENS={
+  'https://buy.stripe.com/9B6aEX2at0M49rA8Irf7i00':['essentiel','mensuel','sans_frais'],
+  'https://buy.stripe.com/3cI14ncP7dyQfPY2k3f7i02':['essentiel','annuel','sans_frais'],
+  'https://buy.stripe.com/3cIcN57uN52kfPY7Enf7i06':['standard','mensuel','factures'],
+  'https://buy.stripe.com/6oUfZhcP79iA7js9Mvf7i07':['standard','annuel','offerts'],
+  'https://buy.stripe.com/6oUeVdaGZ0M447g5wff7i0c':['premium','mensuel','factures'],
+  'https://buy.stripe.com/3cIbJ116p66o33ccYHf7i0d':['premium','annuel','offerts']
+};
+var BOOST_DELAI=8000;
+function boostSession(demande){
+  var H={'Content-Type':'application/json'};
+  var envoi=fetch(BOOST_CHECKOUT,{method:'POST',headers:H,body:JSON.stringify(demande)})
+  .then(function(r){return r.json().catch(function(){return null}).then(function(j){
+    if(!r.ok||!j||j.ok!==true||typeof j.url!=='string'||!/^https:\/\/checkout\.stripe\.com\/[^\s"<>]+$/.test(j.url))throw new Error('session refusée');return j.url})});
+  var delai=new Promise(function(ok,ko){setTimeout(function(){ko(new Error('délai'))},BOOST_DELAI)});
+  return Promise.race([envoi,delai]);
+}
+(function(){
+if(!document.querySelector('.offre-payer, [data-paiement-option]'))return;
+var lg=(document.documentElement.lang||'fr').slice(0,2);if(['fr','en','nl'].indexOf(lg)<0)lg='fr';
+var CHARGEMENT=RENOM_NL?'Laden…':RENOM_EN?'Loading…':'Chargement…';
+var boutons=document.querySelectorAll('.offre-payer .offre-choisir, [data-paiement-option]');
+function demandeDe(a){
+  var o=a.getAttribute('data-paiement-option');if(o)return {option:o,langue:lg};
+  var t=BOOST_LIENS[String(a.getAttribute('href')||'').split(/[?#]/)[0]];
+  return t?{offre:t[0],rythme:t[1],frais:t[2],langue:lg}:null;
+}
+function repli(a){var u=a.getAttribute('href')||'';
+  if(/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u))u+='?locale='+lg;
+  return u}
+function remettre(a){if(a.getAttribute('aria-busy')!=='true')return;a.removeAttribute('aria-busy');a.removeAttribute('aria-disabled');
+  a.classList.remove('est-chargement');a.style.cursor='';a.style.opacity='';if(a._boostHtml!==undefined)a.innerHTML=a._boostHtml}
+Array.prototype.forEach.call(boutons,function(a){
+  a.addEventListener('click',function(e){
+    if(e.defaultPrevented||e.button>0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;
+    var d=demandeDe(a);if(!d)return;
+    e.preventDefault();
+    if(a.getAttribute('aria-busy')==='true')return;
+    a.setAttribute('aria-busy','true');a.setAttribute('aria-disabled','true');a.classList.add('est-chargement');a.style.cursor='progress';a.style.opacity='0.75';
+    a._boostHtml=a.innerHTML;a.textContent=CHARGEMENT;
+    var fini=false;
+    function aller(u){if(fini)return;fini=true;location.href=u}
+    boostSession(d).then(aller,function(){var u=repli(a);if(u)aller(u);else remettre(a)});
+  });
+});
+// Retour arrière depuis Stripe (page gardée en mémoire par le navigateur) : boutons utilisables à nouveau.
+if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('pageshow',function(){Array.prototype.forEach.call(boutons,remettre)});
+})();
+
+// ---- Page de remerciement après un paiement (success_url de la session Checkout : merci.html#paiement, en/thank-you.html#paiement,
+// nl/bedankt.html#paiement) : le texte du paiement remplace celui de l'audit. Aucune donnée du client dans l'adresse.
+(function(){
+var p=document.getElementById('suite-paiement');if(!p||location.hash!=='#paiement')return;
+['suite-audit','suite-sans-fiche'].forEach(function(i){var x=document.getElementById(i);if(x)x.hidden=true});
+var c=document.querySelector('.chapo');if(c)c.hidden=true;
+p.hidden=false;
+})();
+
 // ---- Simulateur (page secondaire site/simulateur.html, en/simulator.html, nl/simulator.html ; retiré de la page de vente le 16/10/2026). Aucun réseau, rien n'est envoyé ni gardé.
 // Fourchette : une étoile de plus = +5 à +9 % de chiffre d'affaires (Luca, Harvard Business School, working paper 12-016, 2011 :
 // restaurants indépendants de Seattle, notes Yelp). Sources : ordres/SOURCES-PAGE.md.

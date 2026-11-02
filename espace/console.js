@@ -580,6 +580,8 @@
   const FG = window.RENOM_FICHE;
   const ligneFiche = c => !FG.sql(c) ? "" : `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>
       <p class="note" data-etat-fiche="${e(FG.etat(c))}">${t("con.fg.etat." + FG.etat(c))}</p>
+      ${"google_location_id" in c ? `<p class="note" id="fg-reliee" data-fiche-reliee="${/^locations\/[0-9]+$/.test(c.google_location_id || "") ? 1 : 0}">${/^locations\/[0-9]+$/.test(c.google_location_id || "")
+        ? t("con.fg.reliee", { l: `<span class="casse" translate="no">${e(c.google_location_id)}</span>` }) : t("con.fg.non.reliee")}</p>` : ""}
       ${c.fiche_google_lien ? `<p class="note casse">${t("con.fg.lien")} <a href="${e(c.fiche_google_lien)}" target="_blank" rel="noopener" translate="no" id="fg-lien-client">${e(c.fiche_google_lien)}</a></p>` : `<p class="note">${t("con.fg.aucun.lien")}</p>`}
       <div class="f"><label for="fg-id">${t("con.fg.id.lib")}</label><input id="fg-id" type="text" autocomplete="off" maxlength="500" value="${e(c.google_place_id || "")}" aria-describedby="fg-aide" translate="no">
         <p class="aide" id="fg-aide">${t("con.fg.aide")}${c.google_place_id && c.google_place_id_source ? " " + t("con.fg.source." + c.google_place_id_source) : ""}</p></div>

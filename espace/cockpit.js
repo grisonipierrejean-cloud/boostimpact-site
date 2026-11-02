@@ -31,6 +31,10 @@
   const INVITATION_BLOQUEE_MIN = 30;      // une invitation « à envoyer » depuis plus de 30 minutes : le workflow d'invitation n'est pas passé
   const ATTENTE_LONGUE_JOURS = 5;         // même seuil que la mise en route bloquée (alerte MISE_EN_ROUTE_BLOQUEE, score de santé)
   const ECHECS_JOURS = 7;                 // emails et WhatsApp en échec : 7 derniers jours
+  // Usage raisonnable des avis (CGV art. 9, version du 2 novembre 2026) : réponses comprises jusqu'à 100 avis reçus par mois civil (heure de Paris) et
+  // par établissement ; au-delà, elles continuent et PJ peut proposer une offre adaptée, rien n'est facturé sans accord écrit. Même seuil que
+  // admin_avis_du_mois() de schema.sql (bloc « Essentiel à 4 publications et CGV du 2 novembre 2026 »), qui compte les avis du mois de Paris.
+  const AVIS_USAGE_RAISONNABLE = 100;
 
   function calculer(x) {
     const maintenant = x.maintenant || Date.now(), periode = periodeValide(x.periode), debut = debutPeriode(periode, maintenant);
@@ -192,7 +196,12 @@
     // Fiche Google : un client servi sans identifiant de fiche n'a ni relevé d'avis, ni réponse : rien ne se passe pour lui, sans aucun bruit.
     const etatFiche = x.etatFiche || (c => /^[A-Za-z0-9_-]{10,255}$/.test(c.google_place_id || "") ? "reconnue" : "aucune");
     const sansFiche = actifs.filter(c => etatFiche(c) !== "reconnue").map(c => ({ cid: c.id, nom: c.nom, cle: etatFiche(c) }));
-    ctl("fiche_google", sansFiche.length ? "alerte" : "ok", sansFiche);
+    // Fiches Google reliées automatiquement (02/11/2026) : une fiche du compte Google de BoostImpact sans commerce sûr (alerte FICHE_A_RELIER) est une
+    // alerte ; un client reconnu dont la fiche n'est pas encore reliée (commerces.google_location_id vide, colonne lue) n'a aucun chiffre Google :
+    // « à vérifier » (invitation pas encore envoyée, ou relié dans les 30 minutes).
+    const aRelier = alertes.filter(a => a.code === "FICHE_A_RELIER").map(a => ({ cid: a.commerce_id || null, nom: a.commerce || "", cle: "a_relier", texte: a.texte || "", quand: ms(a.date) }));
+    const nonReliee = actifs.filter(c => etatFiche(c) === "reconnue" && "google_location_id" in c && !/^locations\/[0-9]+$/.test(c.google_location_id || "")).map(c => ({ cid: c.id, nom: c.nom, cle: "non_reliee" }));
+    ctl("fiche_google", sansFiche.length || aRelier.length ? "alerte" : nonReliee.length ? "a_verifier" : "ok", [...sansFiche, ...aRelier, ...nonReliee]);
     // Emails aux commerçants et alertes WhatsApp en échec (7 jours).
     const depuis7 = maintenant - ECHECS_JOURS * J;
     const env = (brut.envois || []).filter(e => e.statut === "echec" && (ms(e.cree_le) || 0) >= depuis7).map(e => ({ cid: e.commerce_id, nom: nom(e.commerce_id), cle: e.categorie, texte: e.erreur || "", quand: ms(e.cree_le) }));
@@ -202,6 +211,11 @@
     // Metricool : Croissance et Premium sans marque Metricool = publications à faire à la main (file « À publier »).
     const sansMc = actifs.filter(c => (OFFRES[c.offre_id] || {}).reseaux_sociaux && !c.metricool_blog_id).map(c => ({ cid: c.id, nom: c.nom }));
     ctl("metricool", sansMc.length ? "a_verifier" : "ok", sansMc);
+    // Avis reçus dans le mois de Paris au-delà de l'usage raisonnable (brut.avis_mois : [{ commerce_id, nom, avis }], déjà filtrés au-delà du seuil par
+    // la base ; null : lecture impossible, par exemple bloc SQL pas encore collé). « À vérifier » : rien n'est bloqué ni facturé, c'est une alerte pour PJ.
+    const avisMois = brut.avis_mois == null ? null : brut.avis_mois.filter(a => a && a.commerce_id && !tests.has(a.commerce_id) && Number(a.avis) > AVIS_USAGE_RAISONNABLE)
+      .map(a => ({ cid: a.commerce_id, nom: nom(a.commerce_id) || a.nom || "", cle: "defaut", texte: String(a.avis) }));
+    ctl("avis_volume", avisMois == null ? "inconnu" : avisMois.length ? "a_verifier" : "ok", avisMois || []);
     // Clients de test encore présents.
     const restes = commerces.filter(c => tests.has(c.id)).map(c => ({ cid: c.id, nom: c.nom }));
     if (restes.length) ctl("tests_restants", "a_verifier", restes);
@@ -235,6 +249,6 @@
     };
   }
 
-  const api = { calculer, moisOffert, periodeValide, PERIODES, jourParis };
+  const api = { calculer, moisOffert, periodeValide, PERIODES, jourParis, AVIS_USAGE_RAISONNABLE };
   if (typeof module === "object" && module.exports) module.exports = api; else racine.RENOM_COCKPIT = api;
 })(typeof window !== "undefined" ? window : globalThis);

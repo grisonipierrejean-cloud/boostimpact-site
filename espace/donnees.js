@@ -8,15 +8,15 @@
   // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
-    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 2, publications: 2, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
+    essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 4, publications: 4, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
     standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
     premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
     croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
-  // (schema.sql, bloc « CGV du 1er novembre 2026 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "1er novembre 2026";
+  // (schema.sql, bloc « Essentiel à 4 publications et CGV du 2 novembre 2026 ») ; égalité testée par espace/test_ecrans.py.
+  const VERSION_CGV = "2 novembre 2026";
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -283,8 +283,9 @@
   const HEURE_RAPPEL_TARDIVE = 17;
   const joursRappelA = (t, pays) => { const p = partiesParis(t), auj = ymd(p.a, p.m, p.j); return joursRappel(p.h >= HEURE_RAPPEL_TARDIVE ? lendemain(auj) : auj, pays); };
   const jourParisDe = t => { const p = partiesParis(t); return ymd(p.a, p.m, p.j); };
-  // Rythme selon l'offre : Essentiel (2 par mois) 7 jours d'écart au moins, Croissance 2 jours, Premium 1 jour (espacement_offre de schema.sql).
-  const ESPACEMENT = { essentiel: 7, standard: 2, premium: 1 };
+  // Rythme selon l'offre : Essentiel (4 par mois depuis le 02/11/2026) 3 jours d'écart au moins, Croissance 2 jours, Premium 1 jour (espacement_offre
+  // de schema.sql). Avant : 7 jours pour 2 par mois ; avec 4 par mois, 7 jours d'écart repoussaient au mois suivant les publications validées après le 9.
+  const ESPACEMENT = { essentiel: 3, standard: 2, premium: 1 };
   // Moment du texte (31/10/2026, capture v26 : « l'heure du déjeuner » programmée à 18 h 30) : midi, soir, ou null (les deux ou aucun).
   // Mêmes mots que moment_legende de schema.sql (égalité testée) ; sert à la programmation automatique ET à la suggestion de « Programmer à la main ».
   const MOTS_MIDI = /\b(midi|dejeuner|dejeuners|lunch|lunchen|middag|noon)\b/;
@@ -639,6 +640,8 @@
     FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
     AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis sensible : version du commerçant à lire avant de publier",
     AVIS_RETENU: "Avis : le commerçant attend votre appel avant toute publication",
+    // Fiches Google reliées automatiquement (02/11/2026, rapprocher_fiches_google de schema.sql) : une fiche du compte Google sans commerce sûr
+    FICHE_A_RELIER: "Fiche Google à relier",
     // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
     ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
@@ -652,6 +655,10 @@
   const MOTIFS_FICHE = { introuvable: "aucune fiche trouvée", ambigu: "plusieurs fiches possibles", nom: "le nom de la fiche trouvée ne correspond pas au commerce",
     ville: "la fiche trouvée n'est pas dans la ville du commerce", sans_ville: "ville du commerce inconnue, recherche par nom impossible", cle_absente: "clé Google Places absente",
     erreur_google: "erreur de Google Places", lien_illisible: "lien illisible", different: "le lien désigne une autre fiche que l'identifiant déjà posé", inconnu: "motif inconnu" };
+  // Fiche Google à relier (02/11/2026) : pourquoi la fiche n'a pas été reliée seule (rapprocher_fiches_google, relier_fiche_google).
+  const MOTIFS_RELIER = { aucun: "aucun commerce n'a ce place_id, ni dans son identifiant ni dans le lien de sa fiche", plusieurs: "plusieurs commerces ont ce place_id",
+    sans_place_id: "Google ne donne pas de place_id pour cette fiche", different: "ce commerce est déjà relié à une autre fiche", prise: "cette fiche est déjà reliée à un autre commerce",
+    invitation: "invitation de Google non acceptée" };
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
@@ -660,6 +667,12 @@
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
     if (a.type === "FICHE_GOOGLE_A_IDENTIFIER") return `Recherche automatique sans résultat sûr (${MOTIFS_FICHE[d.motif] || d.motif || "motif inconnu"}). Lien collé par le commerçant : ${d.lien || "aucun"}.${(d.candidats || []).length ? " Fiches proches : " + d.candidats.join(", ") + "." : ""} Ouvrir le lien, trouver la fiche, puis coller son identifiant (place_id) dans la fiche du client, Comptes.`;
+    // Fiche Google à relier (02/11/2026) : jamais reliée par le nom ; le place_id posé dans la fiche du bon client la relie au passage suivant.
+    if (a.type === "FICHE_A_RELIER") {
+      const f = `« ${d.titre || "fiche sans titre"} »${d.adresse ? ", " + d.adresse : ""}`, m = MOTIFS_RELIER[d.motif] || d.motif || "motif inconnu";
+      if (d.motif === "invitation") return `Invitation ${f}${d.type ? " (" + d.type + ")" : ""} : ${m}${d.erreur ? " (" + d.erreur + ")" : ""}. Elle reste en attente chez Google et sera retentée dans 30 minutes ; si l'erreur revient, l'accepter à la main (business.google.com, connecté en team@boostimpact.agency).`;
+      if (d.motif === "different" || d.motif === "prise") return `Fiche ${f} (${d.location || d.cle || "?"}) : ${m}${d.actuelle ? " (" + d.actuelle + ")" : ""}${d.commerce_actuel_nom ? " (" + d.commerce_actuel_nom + ")" : ""}${d.commerce_vise_nom ? ", visée par " + d.commerce_vise_nom : ""}. Rien n'a été remplacé. Vérifier, puis, pour remplacer : éditeur SQL, select relier_fiche_google('<commerce>', '${d.location || d.cle || ""}', true);`;
+      return `Fiche ${f} accessible au compte Google de BoostImpact, non reliée : ${m}${(d.noms || []).length ? " (" + d.noms.join(", ") + ")" : ""}.${d.place_id ? " place_id : " + d.place_id + "." : ""} Coller ce place_id dans la fiche du bon client, Comptes : la fiche se relie au passage suivant (30 minutes au plus). Fiche d'un autre établissement : « Traité ».`; }
     if (a.type === "FICHE_GOOGLE_RECHERCHE_BLOQUEE") return `Recherche automatique sans réponse depuis ${d.heures} h (n8n « RENOM, identification de la fiche Google » ou GitHub Actions). Lien collé : ${d.lien || "aucun"}. Coller l'identifiant (place_id) dans la fiche du client, Comptes.`;
     if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
     if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
@@ -1231,7 +1244,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -1242,8 +1255,11 @@
           lire("journal", sb.from("journal").select("commerce_id,type,detail,cree_le").eq("detail->>test", "true").gte("cree_le", d7).limit(20)),
           // Alerte de test déjà notée « Traité » (vue_le) : plus comptée.
           lire("alertes_exploitant", sb.from("alertes_exploitant").select("commerce_id,type,detail,cree_le").eq("detail->>test", "true").is("vue_le", null).gte("cree_le", d30).limit(20)),
+          // Avis reçus dans le mois de Paris au-delà de l'usage raisonnable (CGV art. 9) : compte fait par la base (admin_avis_du_mois, bloc du
+          // 02/11/2026), donc jamais limité par le plafond de lignes de Supabase. Fonction absente (bloc pas encore collé) : « admin_avis_du_mois » illisible.
+          lire("admin_avis_du_mois", sb.rpc("admin_avis_du_mois", { p_seuil: 100 })),
         ]);
-        return { abonnements, invitations, envois, whatsapp, avis: av, creations, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },
     };

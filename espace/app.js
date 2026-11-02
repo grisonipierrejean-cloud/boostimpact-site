@@ -15,12 +15,16 @@
   const ligneContact = (x, id) => { const k = contactDe(x), tel = window.RENOM_WHATSAPP.lisible(k.telephone).replace(/ /g, "\u00a0");
     return `<p class="contact-ligne" id="${id}">${k.photo ? `<img class="contact-photo" src="${e(k.photo)}" alt="" width="40" height="40" loading="lazy">` : ""}<span>${t("contact.votre", { p: e(k.prenom || ""), tel: `<a href="${e(lienWa(k.telephone))}" target="_blank" rel="noopener">${e(tel)}</a>` })}</span></p>`; };
   const monContact = () => (D.monContact ? D.monContact().catch(() => null) : Promise.resolve(null));
-  // Point mensuel Premium de 30 min (décision de PJ du 01/11/2026) : « Réserver mon point du mois » ouvre WhatsApp (wa.me/33699080539) avec un
-  // message prérempli. Lien seul, sans état « Point demandé le … » : demander_rappel n'a pas de sujet « point_mensuel » (il faudrait un numéro, un
-  // sujet de plus en base et dans la console), et un lien wa.me ne dit pas si le message est vraiment parti : afficher « demandé » serait faux.
+  // Point mensuel Premium de 30 min (décision de PJ du 01/11/2026) : « Réserver mon point du mois ». 02/11/2026 : le bouton ouvre la page de réservation
+  // Calendly de l'équipe (AGENDA_POINT_MOIS, « Monthly Meeting - 30mins - BoostImpact Team » ; avant : page Google Agenda de PJ), dans un nouvel
+  // onglet ; repli dessous : WhatsApp (wa.me/33699080539) avec le message prérempli d'avant. Lien seul, sans état « Point demandé le … » : la réservation
+  // se fait chez Calendly, l'espace ne sait pas si elle a abouti.
+  const AGENDA_POINT_MOIS = "https://calendly.com/team-boostimpact/30min";
   const lienPointMois = c => "https://wa.me/33699080539?text=" + encodeURIComponent(t("point.mois.message", { nom: (c && c.nom) || "" }));
-  const boutonPointMois = (c, id) => c && (window.RENOM_OFFRES || {})[c.offre_id] && window.RENOM_OFFRES[c.offre_id].delegation
-    ? `<a class="bouton second" id="${id}" href="${e(lienPointMois(c))}" target="_blank" rel="noopener">${t("point.mois.reserver")}</a>` : "";
+  const pointMoisInclus = c => !!(c && (window.RENOM_OFFRES || {})[c.offre_id] && window.RENOM_OFFRES[c.offre_id].delegation);
+  const boutonPointMois = (c, id) => pointMoisInclus(c)
+    ? `<a class="bouton second" id="${id}" href="${e(AGENDA_POINT_MOIS)}" target="_blank" rel="noopener" aria-describedby="${id}-note">${t("point.mois.reserver")}</a>` : "";
+  const notePointMois = (c, id) => pointMoisInclus(c) ? `<p class="note" id="${id}-note">${t("point.mois.note", { wa: `<a href="${e(lienPointMois(c))}" target="_blank" rel="noopener" id="${id}-wa">${e(window.RENOM_WHATSAPP.lisible("+33699080539")).replace(/ /g, "\u00a0")}</a>` })}</p>` : "";
   const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const MOIS = I.mois(), JOURS = I.joursCourts();
   const ST_PHOTO = I.carte("st.photo", ["a_traiter", "en_cours", "traitee", "refusee"]);
@@ -71,6 +75,12 @@
     ? `<div class="pile serre fiche-lien" id="${id}"><div class="f"><label for="${id}-champ">${t("fg.lib")}</label><input id="${id}-champ" type="url" value="${e(c.fiche_google_lien)}" readonly aria-describedby="${id}-aide">
         <p class="aide" id="${id}-aide">${t("fiche.lien.boost")}</p></div><p class="note" id="${id}-etat" role="status" data-etat-fiche="${e(FG.etat(c))}">${etatFiche(c)}</p></div>`
     : `<p class="texte2 fiche-lien" id="${id}">${t("fg.lecture.vide")}</p>`;
+  // Fiche reliée (02/11/2026, bloc SQL « Fiches Google reliées automatiquement ») : commerces.google_location_id, posé par relier_fiche_google
+  // (n8n « RENOM, fiches Google : invitations et liens »), lisible par le commerçant ; jamais montré (pas de « locations/… » côté client).
+  // Colonne absente (démonstration, base d'avant) : rien.
+  const ficheReliee = c => !c || !("google_location_id" in c) ? "" : /^locations\/[0-9]+$/.test(c.google_location_id || "")
+    ? `<div class="pile serre" id="fiche-reliee" data-fiche-reliee="1"><p class="fort">${t("fg.reliee")}</p><p class="texte2">${t("fg.reliee.texte", { lien: `<a href="#/resultats">${t("ecran.resultats")}</a>` })}</p></div>`
+    : `<p class="note" id="fiche-reliee" data-fiche-reliee="0">${t("fg.non.reliee")}</p>`;
   const brancherFiche = (id, apres) => { const f = $(id); if (!f) return;
     f.onsubmit = async ev => { ev.preventDefault(); const b = $(id + "-ok"); b.disabled = true;
       try { const r = await D.enregistrerFicheGoogle($(id + "-champ").value); await apres(); const z = $(id + "-etat"); if (z) z.textContent = (r && r.deja ? t("fg.deja") + " " : "") + t("fg.etat." + r.etat); }
@@ -113,7 +123,9 @@
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible »)
     "NOM_CONFIRME", "RAPPEL_DEMANDE", "FICHE_GOOGLE_DEMANDEE", "FICHE_GOOGLE_DEMANDE_ANNULEE", "FICHE_GOOGLE_VERIFIEE", "PHOTOS_AUTORISATION_REFUSEE", "AVIS_REPONSE_APPROUVEE", "AVIS_EN_PARLER",
     // Fiche Google du client venu du site et photos hors sujet (28/10/2026, bloc SQL du même nom)
-    "FICHE_GOOGLE_LIEN", "FICHE_GOOGLE_IDENTIFIEE", "FICHE_GOOGLE_A_IDENTIFIER", "PHOTO_HORS_SUJET"]);
+    "FICHE_GOOGLE_LIEN", "FICHE_GOOGLE_IDENTIFIEE", "FICHE_GOOGLE_A_IDENTIFIER", "PHOTO_HORS_SUJET",
+    // Fiches Google reliées automatiquement (02/11/2026, relier_fiche_google)
+    "FICHE_RELIEE"]);
   const ST_ABO = I.carte("abo.st", ["en_attente", "actif", "impaye", "resilie"]);
   const M = window.RENOM_MAJ;
   // Exemple de numéro selon le pays du commerce (31/10/2026, test client Premium belge) : +32 470 12 34 56 en Belgique, +33 6 12 34 56 78 sinon.
@@ -841,7 +853,7 @@
       ${tempsGagne(av, cal, bilanP, +k.videos_plafond > 0)}
       ${ligneFiche}
       ${ligneContact(contact, "contact-accueil")}
-      ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>` : ""}
+      ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>${notePointMois(c, "point-mois-accueil")}` : ""}
       ${blocMiseEnRoute(mr, c)}
       ${ligneAutorisation(c)}
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
@@ -1779,6 +1791,10 @@
           <p class="pied"><a href="#/offre">${t("acc.voir.offre")}</a></p></section>
       </div>`;
     brancherAvis(vue, avis);
+    // Lien d'une alerte (WhatsApp ou email, 02/11/2026) : #/avis?avis=<id> ouvre l'écran sur CET avis, une fois (le paramètre est ensuite retiré).
+    const avisVoulu = decodeURIComponent((/(?:^|&)avis=([A-Za-z0-9_-]{1,64})(?:&|$)/.exec(paramRoute) || [])[1] || "");
+    if (avisVoulu) { paramRoute = ""; history.replaceState(null, "", "#/avis"); hashPrecedent = "#/avis";
+      const z = vue.querySelector(`[data-avis="${CSS.escape(avisVoulu)}"]`); if (z) z.scrollIntoView({ block: "center" }); }
     vue.querySelectorAll("form[data-version]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const b = f.querySelector("button"), id = f.dataset.version; b.disabled = true;
       try { await D.donnerVersionAvis(id, f.querySelector("textarea").value); await avis(); toast(t("avis.version.merci")); }   // le toast seul (role=status) : plus de 2e phrase en clair sous la liste
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
@@ -2000,7 +2016,7 @@
     // TikTok demandé (01/11/2026, tour 6 Premium) : « · Activation demandée », sans la phrase d'aide (la confirmation dit déjà la suite).
     const tiktokEnAttente = x => x.reseau === "tiktok" && x.etat !== "connecte" && !!tiktokDemande(c) && !modifTiktok;
     vue.innerHTML = `${retourOrigine()}${entete(t("groupe.reglages"), t(g ? "reg.comptes.google" : "ecran.comptes"), (D.mode === "demo" ? t("comptes.demo") + " " : "") + t(g ? "comptes.chapo.google" : "comptes.chapo"))}
-      <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${tiktokEnAttente(x) ? t("etat.tiktok.demande") : ETAT[x.etat] || e(x.etat)}</span></h2>${tiktokEnAttente(x) ? "" : `<p class="texte2">${AIDE[x.reseau]}</p>`}${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
+      <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${tiktokEnAttente(x) ? t("etat.tiktok.demande") : ETAT[x.etat] || e(x.etat)}</span></h2>${x.reseau === "google" ? ficheReliee(c) : ""}${tiktokEnAttente(x) ? "" : `<p class="texte2">${AIDE[x.reseau]}</p>`}${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
     if ($("tiktok-f")) $("tiktok-f").onsubmit = async ev => { ev.preventDefault(); const b = $("activer-tiktok"); b.disabled = true;
       try { const r = await D.demanderRappel("reseaux", $("tiktok-tel").value), d = (r && r.cree_le) || new Date().toISOString(), n = (r && r.telephone) || window.RENOM_WHATSAPP.numero($("tiktok-tel").value, c.pays) || "";
         const jv = (vue.querySelector("input[name=tiktok-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=tiktok-plage]:checked") || {}).value || "";
@@ -2065,7 +2081,7 @@
       return `<section class="carte" id="offre-premium"><h2>${t("offre.premium.titre")}</h2><ul class="liste">
         <li id="premium-videos"><span>${t("offre.inc.videos")}</span><span class="fort">${t("offre.premium.videos", { v: o.videos })}</span></li>
         <li id="premium-point"><span>${t("offre.premium.point")}</span><span class="fort">${t("compris")}</span></li></ul>
-        ${boutonPointMois(c, "premium-reserver-point") ? `<p class="pied" id="premium-point-pied">${boutonPointMois(c, "premium-reserver-point")}</p>` : ""}
+        ${boutonPointMois(c, "premium-reserver-point") ? `<p class="pied" id="premium-point-pied">${boutonPointMois(c, "premium-reserver-point")}</p>${notePointMois(c, "premium-reserver-point")}` : ""}
         <ul class="liste"><li id="premium-delegation"><span>${t("offre.premium.delegation")}</span><span class="fort">${t(actif ? "offre.premium.delegation.active" : "offre.premium.delegation.inactive")}</span></li></ul>
         ${reglage}<p class="msg" id="msg-deleg" role="status"></p></section>`;
     }
