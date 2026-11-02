@@ -116,6 +116,11 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 @media (max-width:439px){html[lang=nl] .haut-reglages a>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}   /* 01/11/2026 : langues à 44 px, « Instellingen » ne tient plus à 390 px : icône seule, nom lu */
 .actions-attente{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
 .actions-attente .bouton{width:100%;justify-content:flex-start;text-align:left}
+/* Tour 16 (02/11/2026, audit UX Premium) : sur téléphone, seule l'action principale reste un bouton plein ; les suivantes sont une liste de liens
+   (même cible de 44 px, soulignés comme les autres liens de l'espace). */
+@media (max-width:899px){.actions-attente{gap:0}.actions-attente li+li{border-top:1px solid var(--filet)}
+  .actions-attente .bouton.second{background:none;border:0;border-radius:0;padding:10px 0;min-height:44px;color:var(--encre);text-decoration:underline;text-underline-offset:3px}
+  .actions-attente .bouton.second:hover{background:none;border-color:transparent;color:var(--encre);text-decoration-thickness:2px}}
 .reglages .liste a{gap:12px;padding:6px 0;text-decoration:none}
 .reglages .liste a .fort{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
 @media (hover:hover){.reglages .liste a:hover .fort{text-decoration-thickness:2px}}
@@ -274,7 +279,8 @@ legend{padding:0;margin-bottom:4px}
 .entete-accueil .entete{flex:1 1 280px}
 .gestes-accueil{display:flex;flex-wrap:wrap;gap:8px}
 /* Offre souscrite sous le titre de l'accueil (26/10/2026) : un filet fin, le nom, une ligne, un lien. Ni badge, ni couleur d'accent. */
-.offre-accueil{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--filet);max-width:640px;font-size:15px;line-height:1.45}
+.offre-accueil{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding-top:12px;border-top:1px solid var(--filet);width:100%;font-size:15px;line-height:1.45}
+/* Tour 16 (v43) : plus de largeur à part (640 px) ; le filet et les lignes de l'offre prennent la largeur des cartes, comme sur l'écran Offre. */
 /* Fluidité téléphone (30/10/2026) : offre en deux lignes (nom et lien sur la première, ce qu'elle comprend dessous, en plus petit) ;
    « Cette semaine » passe sous les deux gestes. L'action du jour arrive au premier écran. */
 @media (max-width:899px){.entete-accueil .offre-accueil{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;margin-top:4px;padding-top:4px}
@@ -358,6 +364,9 @@ video.visuel{object-fit:contain;background:#000}
 /* Tour 10 (v36) : de 360 px et plus, « 18 h 30 » qui ne tient pas sur une ligne passe sur deux (« 18 h », puis « 30 ») ; jamais « 18 h ». */
 .cal.deux [data-cell]{white-space:normal;overflow:visible;line-height:1.15;padding:1px 2px;width:100%}
 @media (max-width:359px){.cal .h-long{display:none}.cal .h-court{display:inline}.cal [data-cell]{padding:1px 2px}}
+/* Tour 16 (02/11/2026, audit UX Premium) : sur téléphone, chaque jour fait 44 px de large au moins (42 avant, à 375 px) : la grille prend la marge
+   intérieure de la carte (16 px, il en reste 2) et l'écart passe à 2 px. Dès 360 px de large : 44 px et plus. */
+@media (max-width:899px){.cal{gap:2px;margin-left:-14px;margin-right:-14px}}
 
 /* ---------- Avis */
 .citation{color:var(--texte2)}

@@ -706,16 +706,23 @@
   const mentionMois = x => { const d = new Date(x.prevu_le), mc = moisContenu(x);
     return x.contenu && x.contenu.hors_plafond ? t("acc.pub.avis.semaine") : mc && (mc.m !== d.getMonth() || mc.a !== d.getFullYear()) ? t("acc.pub.compte.en", { mois: MOIS[mc.m] }) : ""; };
   // prevu : les publications du mois sont toutes prévues (accueil, moisPrevu) ; alors pas de « Les suivantes viendront avec vos prochaines photos ».
+  // Tour 16 (02/11/2026, audit UX Premium) : « Prochaine publication : mercredi 4 novembre, 18 h 30. » (heure de Paris, comme la liste « Prochaines
+  // publications ») puis « Ce mois-ci : 4 contenus sur 16 (2 photos sur 12, 2 vidéos sur 4). », ou sans vidéo « 2 publications sur 8. ». Mêmes
+  // chiffres que Photos (pubReservees, borné au plafond) et Offre : vue compteur, contenus.mois. Avant : « Vos publications de novembre : le 4. »
   function ligneMois(cal, autorises, k, prevu) {
-    const it = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).sort((a, b) => Date.parse(a.prevu_le) - Date.parse(b.prevu_le)); if (!it.length) return "";
-    const d0 = new Date(it[0].prevu_le), m = d0.getMonth(), a = d0.getFullYear(), dansM = x => { const d = new Date(x.prevu_le); return d.getMonth() === m && d.getFullYear() === a; }, duM = it.filter(dansM);
-    // Une entrée par jour et par mention (rien, compté sur un autre mois, avis de la semaine) : « le 5, le 12 (compté en octobre) et le 19 (avis de la semaine, non compté) ».
-    const vus_ = new Set(), l = I.liste(duM.map(x => { const j = new Date(x.prevu_le).getDate(), mention = mentionMois(x);
-      const cle = j + "|" + mention; if (vus_.has(cle)) return null; vus_.add(cle); return t("acc.pub.le", { j }) + mention; }).filter(Boolean));
-    const plaf = (+(k && k.publications_plafond) || 0) + (+(k && k.videos_plafond) || 0), km = k && k.mois ? new Date(k.mois + "T12:00:00") : null;
-    const compteur = plaf && km && km.getMonth() === m && km.getFullYear() === a ? (n => ` <span id="publications-du-mois-plafond" data-n="${n}" data-m="${plaf}">${t("acc.pub.mois.offre", { n, m: plaf, mois: MOIS[m], suite: !prevu })}</span>`)(nMoisOffre(k)) : "";
-    return `<p class="texte2" id="publications-du-mois">${t("acc.pub.mois", { mois: MOIS[m], l })}${compteur} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
+    const it = cal.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) > Date.now() && !(autorises && horsOffreDe(x, autorises))).sort((a, b) => Date.parse(a.prevu_le) - Date.parse(b.prevu_le));
+    const pp = +(k && k.publications_plafond) || 0, vp = +(k && k.videos_plafond) || 0;
+    const prochaine = it.length ? t("acc.pub.prochaine", { d: I.dateHeureDans(it[0].prevu_le), mention: mentionMois(it[0]) }) : "";
+    let compteur = "";
+    if (pp > 0) {
+      const p_ = Math.min(pubReservees(k), pp), vi = Math.min(+k.videos_utilisees || 0, vp), n = p_ + vi, m = pp + vp;
+      compteur = `<span id="publications-du-mois-plafond" data-n="${vp > 0 ? n : p_}" data-m="${vp > 0 ? m : pp}">${vp > 0
+        ? t("acc.compteur.mois.videos", { n, m, p: p_, pp, vi, vp, suite: !prevu }) : t("acc.compteur.mois", { p: p_, pp, suite: !prevu })}</span>`;
+    }
+    if (!prochaine && !compteur) return "";
+    return `<p class="texte2" id="publications-du-mois">${[prochaine, compteur].filter(Boolean).join(" ")} <a href="#/calendrier">${t("acc.ouvrir.calendrier")}</a></p>`;
   }
+
   // « Temps gagné ce mois-ci » (bilan) : estimation, réponses aux avis publiées × 10 min, publications parties × 20 min, vidéos × 45 min, depuis le 1er.
   const MINUTES_GAGNEES = { reponse: 10, publication: 20, video: 45 };
   // Du 1er au 5 du mois (01/11/2026, tour 6 Premium) : le mois écoulé, avec son nom (« Temps gagné en octobre »), au lieu d'un mois en cours presque vide.
@@ -738,10 +745,9 @@
   // Petite carte (01/11/2026, tour 8) : la question et une phrase qui dit à quoi sert l'autorisation (avant : une ligne seule, sans explication).
   // Un seul geste (01/11/2026, tour 9 : « Autoriser » menait à Photos, où il fallait cocher puis enregistrer) : le texte de l'accord est écrit dans la
   // carte, « Autoriser » l'enregistre tout de suite (D.autoriserPhotos, fonction autoriser_photos : même trace d'accord, datée, qu'avant).
-  const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<section class="carte carte-autorisation" id="autorisation-ligne" aria-labelledby="aut-ligne-titre">
-      <p class="fort" id="aut-ligne-titre">${t("aut.ligne")}</p><p class="texte2">${t(sansReseaux(c) ? "aut.ligne.explication.google" : "aut.ligne.explication")}</p>
-      <p class="note" id="aut-ligne-accord">${t("aut.ligne.accord")} ${t(sansReseaux(c) ? "aut.case.google" : "aut.case", { comptes: I.liste(ORDRE_RES.filter(x => x !== "google" && window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => RES[x])) })}</p>
-      <div class="ligne-autorisation"><button type="button" class="bouton second petit" id="aut-oui">${t("aut.autoriser")}</button>${merSql(c) ? `<button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</div></section>`;
+  // Tour 16 (02/11/2026, audit UX Premium) : sur l'accueil, une ligne seulement ; le texte complet de l'accord et la case restent dans Photos.
+  const ligneAutorisation = c => autorisationAJour(c) || c.photos_autorisation_refusee_le ? "" : `<p class="texte2" id="autorisation-ligne"><span id="aut-ligne-titre">${t("aut.ligne")}</span>
+      <a href="#/photos" id="aut-voir">${t("acc.aut.voir")}</a>${merSql(c) ? ` <button type="button" class="lien" id="aut-non">${t("aut.non")}</button>` : ""}</p>`;
   const k0 = () => new Date().toISOString().slice(0, 7) + "-01";
   const plusTard = id => { try { return localStorage.getItem("renom-demarrage-plus-tard:" + id) === "1"; } catch (er) { return false; } };
   // Photos du mois : aucune photo envoyée depuis le 1er du mois (heure de l'appareil), commerce actif.
@@ -782,7 +788,7 @@
     // Compteur (31/10/2026) : exactement ce que liste « À faire maintenant », dans la même phrase (validations, puis messages à lire).
     // Compteur unique (01/11/2026) : les décisions (même chiffre que le badge et Résultats), « à programmer » à part, puis les retours à lire.
     const nv = N.decisions + N.aProgrammer, na = nonLus ? 1 : 0;
-    const phrase = nv ? t("compte.phrase", { n: N.decisions, p: N.aProgrammer, k: na })
+    let phrase = nv ? t("compte.phrase", { n: N.decisions, p: N.aProgrammer, k: na })
       : na ? t("acc.messages", { n: na }) : merEnCours ? t("acc.reste.mer") : merAttente ? merAttenteTexte : t("acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
     const photosDuMois = p.filter(x => Date.parse(x.cree_le) >= debutDuMois()).length;
@@ -821,6 +827,9 @@
     // Tour 12 (v38) : jamais une action facultative en bouton principal vert. Le vert va à la première action requise ; s'il ne reste que du
     // facultatif (envoyer une photo, créer une vidéo), aucun bouton vert sur l'accueil.
     const principale = requises[0] || null;
+    // Tour 16 (02/11/2026, audit UX Premium) : l'en-tête redit la liste « À faire maintenant », mêmes mots et même compte (TikTok compris) ;
+    // avant, « 2 décisions, 4 à programmer, 1 message à lire. » au-dessus d'une liste de 5 actions.
+    if (!sansAFaire && actions.length) phrase = t("acc.chapo.actions", { n: actions.length });
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
     // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
@@ -1687,8 +1696,9 @@
   // Libellé de la réponse : « Réponse publiée… » seulement quand elle l'est réellement. Mode de secours des avis (20/10/2026) : une réponse prête,
   // publiée à la main par l'équipe tant que l'API de Google n'est pas ouverte, reste « en cours de publication » ; une fois collée sur la fiche,
   // elle est « publiée » (jamais « publiée automatiquement » : elle ne l'a pas été). Même promesse qu'avant pour le commerçant.
-  const etiquetteReponse = x => x.statut === "a_publier_main" ? "avis.rep.encours" : x.escalade_le ? "avis.rep.renomia"
-    : x.statut === "publie" && x.publie_par === "equipe" && x.decision === "publication_automatique" ? "avis.rep.publiee"
+  // Tour 16 (02/11/2026, audit UX Premium) : une réponse PUBLIÉE dit toujours « Réponse publiée pour vous : », quel que soit le chemin (automatique,
+  // validée par le commerçant, équipe) ; avant, une réponse validée puis publiée gardait « Réponse validée : ».
+  const etiquetteReponse = x => x.statut === "a_publier_main" ? "avis.rep.encours" : x.statut === "publie" ? "avis.rep.auto" : x.escalade_le ? "avis.rep.renomia"
     : x.decision === "publication_automatique" ? "avis.rep.auto" : "avis.rep.validee";
   // Avis sensible (décision de PJ du 22/10/2026) : notre équipe s'en charge, le commerçant est prévenu et n'a rien à faire. En attente : texte de
   // l'offre (Premium : l'équipe répond ; sinon la réponse lui est envoyée par email pour accord) ; réponse proposée (propose_le) : la date de l'email ;
@@ -1711,7 +1721,7 @@
   // Échéance passée (01/11/2026, tour 6 Essentiel) : une heure précise au lieu de « Nous la publions sur votre fiche » : l'heure pleine qui suit
   // dans au moins 30 minutes (« vers 15 h »).
   // « Attendez mon appel » (décision de PJ du 01/11/2026) : sous une réponse proposée pas encore publiée, le commerçant retient la publication
-  // (D.retenirReponseAvis, fonction retenir_reponse_avis) ; ensuite « Nous ne publions rien avant de vous avoir appelé(e). » et son contact.
+  // (D.retenirReponseAvis, fonction retenir_reponse_avis) ; ensuite « Nous ne publions rien avant votre appel. » et son contact.
   const proposee = x => !!x.propose_le && !!String(x.reponse_proposee || "").trim();
   // Numéro et jour du rappel (01/11/2026, tour 6 Premium ; comme la demande TikTok) : l'appui ouvre un petit formulaire, numéro prérempli (WhatsApp,
   // sinon contact du commerce, au format du pays) et jour (aujourd'hui, ou demain ; après 17 h, demain seulement), appel entre 9 h et 18 h.
@@ -1753,7 +1763,7 @@
     : proposee(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
-        ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5 > Date.now() ? t("avis.sensible.publication", { d: dateHeure(new Date(Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
+        ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5 > Date.now() ? t("avis.sensible.publication", { d: I.dateHeureDans(new Date(Date.parse(x.cree_le) + ECHEANCE_AVIS_H * 36e5).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
       ${blocRetenue(x, contact, c)}
       ${champVersion(x)}
       ${x.retenue_le && D.retenirReponseAvis ? "" : ligneContact(contact, "contact-avis-" + x.id)}</div>`;
@@ -2198,11 +2208,11 @@
           : D.mode === "demo" ? `<p class="note">${t("abo.demo")}</p><p class="note" id="abo-sans-lien">${t("abo.sans.lien")}</p>` : `<p class="note" id="abo-sans-lien">${t("abo.sans.lien")}</p>`}
         ${baisse ? `<p class="note" id="offre-baisse">${t("offre.baisse")}</p>` : ""}</section>
       <section class="carte replis" id="offre-plus">${repli("offre-regle", t("offre.regle.titre"), `${regleAvisBlocs(c)}
-        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? "offre.regle.contenus.delegation.option" : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p>`)}
+        <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? (D.reglerDelegation && D.delegationParBouton && D.delegationParBouton(c) ? "offre.regle.contenus.delegation.bouton" : "offre.regle.contenus.delegation.option") : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p>`)}
       ${repli("offre-processus", t("offre.processus.titre"), `<ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol>`)}
       ${/* Renvoi au bouton « Passer à … » seulement si ce bouton existe (lien Stripe configuré, 01/11/2026, tour 6 Essentiel). */ ""}
       ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c)) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
-      ${repli("offre-historique", t("offre.historique"), j.length ? `<ul class="liste">${j.slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
+      ${repli("offre-historique", t("offre.historique"), j.filter(x => x.type !== "EMAIL_VALIDATION").length ? `<ul class="liste">${j.filter(x => x.type !== "EMAIL_VALIDATION").slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
     // Paiement en euros (02/11/2026) : « Payer au mois / à l'année » sans abonnement en cours et « Passer à <offre> » sans abonnement demandent une
     // session Checkout en euros (D.sessionPaiement : jeton de la base puis webhook n8n renom-checkout), puis y vont. REPLI, comme site/app.js : pas de
