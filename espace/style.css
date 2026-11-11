@@ -1177,3 +1177,24 @@ p.bandeau-demo .note{color:var(--texte2)}
 /* Tour 12 (v38) : Résultats sur téléphone, les tuiles chiffrées du bilan passent juste sous son titre, avant la phrase : au moins une tuile au premier
    écran à 320 px, et à 375 px elles ne touchent plus la barre d'onglets. Ordinateur : ordre inchangé. */
 @media (max-width:599px){.carte.bilan>.carte-tete{order:0}.carte.bilan>.bilan-chiffres{order:1}.carte.bilan>:not(.carte-tete):not(.bilan-chiffres){order:2}}
+/* Aide fixe des blocs de la fiche client et mode d'emploi de la console (11/11/2026). Texte seul, couleurs et tailles existantes : ni filet de
+   couleur, ni pastille, ni encadré en plus. L'en-tête de chaque ligne (« À quoi ça sert. ») est en graisse moyenne, dans la couleur du texte. */
+.aide-bloc{display:flex;flex-direction:column;gap:2px;max-width:72ch;margin-top:-4px}
+.aide-bloc .note{line-height:1.45}
+.aide-lib{color:var(--texte2);font-weight:var(--graisse-moyenne)}
+.console .haut-guide{font-size:14px;color:var(--discret);text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center;white-space:nowrap}
+.console .haut-guide[aria-current]{color:var(--encre)}
+@media (max-width:599px){.console .haut .haut-guide{display:none}}   /* téléphone : lien « Mode d'emploi » dans la page (cockpit, fiche client), l'en-tête n'a pas la place */
+.lien-guide{font-size:14px;color:var(--discret)}
+#nav-aide{margin-top:4px}
+.guide-sommaire ol,.guide-liste{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.guide-liste{gap:10px;color:var(--texte2);max-width:72ch}
+.guide-partie{margin-top:8px}
+.guide-dl{margin:0;display:flex;flex-direction:column;gap:12px}
+.guide-dl>div{display:grid;grid-template-columns:1fr;gap:2px}
+.guide-dl dt{font-size:14px;font-weight:var(--graisse-forte);color:var(--texte2)}
+.guide-dl dd{margin:0;max-width:72ch}
+@media (min-width:700px){.guide-dl>div{grid-template-columns:170px minmax(0,1fr);gap:16px}}
+.guide-message .texte2{max-width:72ch}
+.guide-message .bouton{align-self:flex-start;margin-top:8px}
+.guide-message{display:flex;flex-direction:column;gap:4px}

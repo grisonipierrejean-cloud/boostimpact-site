@@ -216,6 +216,17 @@
     const avisMois = brut.avis_mois == null ? null : brut.avis_mois.filter(a => a && a.commerce_id && !tests.has(a.commerce_id) && Number(a.avis) > AVIS_USAGE_RAISONNABLE)
       .map(a => ({ cid: a.commerce_id, nom: nom(a.commerce_id) || a.nom || "", cle: "defaut", texte: String(a.avis) }));
     ctl("avis_volume", avisMois == null ? "inconnu" : avisMois.length ? "a_verifier" : "ok", avisMois || []);
+    // Vidéo IA du Premium (11/11/2026) : seul le DERNIER état connu est lisible depuis le navigateur, celui que le moteur écrit dans le journal PRODUIT
+    // (moteur/rendu_cloud.py, clé video_ia : faite, plan_b avec son motif, desactivee). La clé Higgsfield est un secret GitHub et le solde ne se lit pas
+    // d'ici : l'écran le dit (workflow GitHub « Vérifier la clé Higgsfield »). Motifs du plan B (moteur/video_ia.py, higgsfield_api.py) : personne,
+    // controle_personne, moderation = protection normale, la vidéo IA reste active ; cle (clé refusée ou absente), credits (solde vide) = alerte ;
+    // tout autre motif (cout, modele, reseau, delai, echec, clip, montage, schema, erreur...) = à vérifier. desactivee : variable RENOM_VIDEO_IA
+    // différente de « oui » au dernier montage = à vérifier. Rien lu : inconnu (jamais une alerte).
+    const vIa = brut.video_ia === undefined ? null : brut.video_ia, dIa = vIa && vIa.derniere;
+    const MOTIFS_NORMAUX = ["personne", "controle_personne", "moderation"], MOTIFS_GRAVES = ["cle", "credits"];
+    const etatIa = !vIa || !dIa ? "inconnu" : dIa.etat === "faite" ? "ok" : dIa.etat === "plan_b" ? (MOTIFS_GRAVES.includes(dIa.motif) ? "alerte" : MOTIFS_NORMAUX.includes(dIa.motif) ? "ok" : "a_verifier") : "a_verifier";
+    ctl("video_ia", etatIa, dIa ? [{ cid: dIa.commerce_id || null, nom: nom(dIa.commerce_id), cle: dIa.etat === "plan_b" ? "plan_b" : dIa.etat || "inconnu", motif: dIa.motif || null, modele: dIa.modele || null,
+      texte: dIa.message || "", quand: ms(dIa.quand) }] : [{ cle: vIa ? "jamais" : "illisible" }]);
     // Clients de test encore présents.
     const restes = commerces.filter(c => tests.has(c.id)).map(c => ({ cid: c.id, nom: c.nom }));
     if (restes.length) ctl("tests_restants", "a_verifier", restes);

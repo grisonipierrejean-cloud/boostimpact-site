@@ -33,6 +33,7 @@
   // Instagram, Facebook, TikTok si l'offre comprend les réseaux sociaux ET s'ils sont retenus (aucun choix enregistré : ceux de l'offre).
   const reseauxAutorises = c => { const o = OFFRES[(c || {}).offre_id] || {}, ret = Array.isArray((c || {}).reseaux_retenus) ? c.reseaux_retenus : ["instagram", "facebook", "tiktok"];
     return ["instagram", "facebook", "google", "tiktok"].filter(r => r === "google" || (o.reseaux_sociaux && ret.includes(r) && (r !== "tiktok" || o.tiktok))); };
+  const METIER_EQUIPE = "Le métier de votre commerce se change par l'équipe BoostImpact : remettez le métier d'avant et écrivez-nous, nous le corrigeons.";
   const FICHE = ["nom", "metier", "ville", "ton", "specialites", "horaires", "mots_cles", "mentions_autorisees", "contact", "email_validation", "couleurs", "reglage_avis", "lien_avis", "notifications", "commentaires_compliments_auto"];
   const RESEAUX = ["instagram", "facebook", "tiktok", "google"];   // ordre fixe d'affichage (31/10/2026) : Instagram, Facebook, TikTok, Fiche Google
   // Même refus que le déclencheur a_reseaux_retenus de schema.sql : un réseau hors de l'offre ou non retenu à la mise en route ne se programme pas.
@@ -935,7 +936,12 @@
         if (!m) throw new Error("Aucun commerce n'est rattaché à ce compte. Contactez BoostImpact.");
         return (cache = ok(await sb.from("commerces").select("*").eq("id", m.commerce_id).single()));
       },
-      async enregistrer(ch) { const c = await self.commerce(); const m = {}; FICHE.forEach(k => { if (k in ch) m[k] = ch[k]; }); ok(await sb.from("commerces").update(m).eq("id", c.id)); cache = null; },
+      // Métier (11/11/2026) : la colonne metier n'est dans aucun « grant update » (schema.sql) ; l'envoyer faisait refuser TOUTE la mise à jour de
+      // « Ma fiche » (permission denied, prouvé dans espace/supabase/test/metier_admin.test.mjs). Inchangé : il n'est plus envoyé ; changé : message
+      // clair, rien n'est envoyé (l'équipe le corrige par admin_metier, console, État et offre).
+      async enregistrer(ch) { const c = await self.commerce(); const m = {}; FICHE.forEach(k => { if (k in ch) m[k] = ch[k]; });
+        if ("metier" in m) { if (m.metier && m.metier !== c.metier) throw new Error(METIER_EQUIPE); delete m.metier; }
+        if (Object.keys(m).length) ok(await sb.from("commerces").update(m).eq("id", c.id)); cache = null; },
       // « * » (28/10/2026) : refus_motif (photo hors sujet) quand le bloc SQL est appliqué, sans erreur avant.
       // Vignettes de Photos (01/11/2026, tour 9) : une version de 200 px, seulement si le stockage la fournit, c'est-à-dire la transformation
       // d'image de Supabase (forfait payant ; le projet est sur le forfait gratuit, voir ordres/BRANCHEMENT.md) et RENOM_CONFIG.vignettes200 à
@@ -1258,6 +1264,7 @@
       async adminManquement(id, statut, motif) { return ok(await sb.rpc("admin_manquement", { p_id: id, p_statut: statut, p_motif: motif || null })); },
       async adminReseaux(cid, reseaux) { return ok(await sb.rpc("admin_reseaux", { p_commerce: cid, p_reseaux: reseaux })); },
       async adminPays(cid, pays) { return ok(await sb.rpc("admin_pays", { p_commerce: cid, p_pays: pays })); },
+      async adminMetier(cid, metier) { return ok(await sb.rpc("admin_metier", { p_commerce: cid, p_metier: metier })); },
       async adminDelegation(cid, signee) { return ok(await sb.rpc("admin_delegation", { p_commerce: cid, p_signee: !!signee })); },
       async adminCommentairesEquipe() { return ok(await sb.rpc("admin_commentaires_equipe", {})) || []; },
       async adminCommentaireDecider(id, decision, texte) { return ok(await sb.rpc("admin_commentaire_decider", { p_id: id, p_decision: decision, p_texte: texte || null })); },
@@ -1273,7 +1280,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -1287,8 +1294,14 @@
           // Avis reçus dans le mois de Paris au-delà de l'usage raisonnable (CGV art. 9) : compte fait par la base (admin_avis_du_mois, bloc du
           // 02/11/2026), donc jamais limité par le plafond de lignes de Supabase. Fonction absente (bloc pas encore collé) : « admin_avis_du_mois » illisible.
           lire("admin_avis_du_mois", sb.rpc("admin_avis_du_mois", { p_seuil: 100 })),
+          // Vidéo IA (11/11/2026) : la dernière ligne PRODUIT du journal qui porte « video_ia » (moteur/rendu_cloud.py : faite, plan_b avec son motif,
+          // ou desactivee). Seul état lisible depuis le navigateur : la clé Higgsfield est un secret GitHub, le solde ne se lit pas d'ici. Lecture
+          // à part : un échec donne « inconnu » sur ce seul contrôle, jamais une alerte « données illisibles ».
+          sb.from("journal").select("commerce_id,detail,cree_le").eq("type", "PRODUIT").not("detail->video_ia", "is", null).order("cree_le", { ascending: false }).limit(1).then(r => r.error ? null : r.data || [], () => null),
         ]);
-        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
+        const vi = videoIa && videoIa[0];
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null,
+          video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },
     };

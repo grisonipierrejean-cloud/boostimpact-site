@@ -39,14 +39,17 @@
     ["clients", t("con.entree.clients"), trait('<path d="M4 10l1.5-5h13L20 10"></path><path d="M5 10v10h14V10"></path><path d="M4 10h16M10 20v-5h4v5"></path>')],
     ["prospects", t("con.entree.prospects"), trait('<circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5"></path><path d="M16 6.5h5M18.5 4v5"></path>')],
   ];
+  // Mode d'emploi (11/11/2026, demande de PJ : « un tuto explicatif ») : hors des quatre onglets. Barre latérale : groupe « Aide » sous le menu ;
+  // téléphone : lien dans l'en-tête, comme « Réglages » dans l'espace (jamais un 5e onglet en bas).
+  const GUIDE = ["guide", t("con.entree.guide"), trait('<path d="M5 4.5h9a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"></path><path d="M17 7.5h2V20"></path><path d="M8.5 9h5M8.5 12.5h5"></path>')];
   const large = window.matchMedia("(min-width: 900px)"); let route = "cockpit", connecte = false;
   function dessinerNav() {
     document.body.classList.toggle("hors-session", !connecte);
     const lat = $("lat"), haut = $("haut"), onglets = $("onglets"); lat.innerHTML = haut.innerHTML = onglets.innerHTML = "";
     if (!connecte) return;
     const lien = ([r, nom, icone], avecIcone) => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : ""}>${avecIcone ? `<span class="onglet-icone">${icone}</span>` : ""}<span>${nom}</span></a>`;
-    if (large.matches) lat.innerHTML = `<div class="lat-in"><a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("con.titre")}"><div class="groupe"><p class="groupe-lib">${t("con.titre")}</p>${ENTREES.map(x => lien(x, false)).join("")}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
-    else { haut.innerHTML = `<a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><span class="haut-note">${t("con.titre")}</span>${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button>`;
+    if (large.matches) lat.innerHTML = `<div class="lat-in"><a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("con.titre")}"><div class="groupe"><p class="groupe-lib">${t("con.titre")}</p>${ENTREES.map(x => lien(x, false)).join("")}</div></nav><nav id="nav-aide" class="menu" aria-label="${t("con.entree.guide")}"><div class="groupe">${lien(GUIDE, false)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
+    else { haut.innerHTML = `<a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><span class="haut-note">${t("con.titre")}</span><a class="haut-guide" href="#/guide" data-r="guide"${route === "guide" ? ' aria-current="page"' : ""}>${t("con.entree.guide")}</a>${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button>`;
       onglets.innerHTML = ENTREES.map(x => lien(x, true)).join(""); }
   }
 
@@ -583,7 +586,7 @@
   // Fiche Google de chaque commerce (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : état, lien collé par le
   // client (à ouvrir pour trouver la fiche), identifiant de lieu à poser ou corriger (admin_fiche_google_lieu). Sans le bloc SQL : rien.
   const FG = window.RENOM_FICHE;
-  const ligneFiche = c => !FG.sql(c) ? "" : `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>
+  const ligneFiche = c => !FG.sql(c) ? "" : `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>${aide("fiche", nowFiche(c))}
       <p class="note" data-etat-fiche="${e(FG.etat(c))}">${t("con.fg.etat." + FG.etat(c))}</p>
       ${"google_location_id" in c ? `<p class="note" id="fg-reliee" data-fiche-reliee="${/^locations\/[0-9]+$/.test(c.google_location_id || "") ? 1 : 0}">${/^locations\/[0-9]+$/.test(c.google_location_id || "")
         ? t("con.fg.reliee", { l: `<span class="casse" translate="no">${e(c.google_location_id)}</span>` }) : t("con.fg.non.reliee")}</p>` : ""}
@@ -597,6 +600,43 @@
       <div class="f"><label for="${id}-tel">${t("con.contact.tel")}</label><input id="${id}-tel" type="tel" inputmode="tel" autocomplete="off" value="${e((x || {}).telephone ? window.RENOM_WHATSAPP.lisible(x.telephone) : "")}" placeholder="+33 6 12 34 56 78"></div></div>
       <div class="f"><label for="${id}-photo">${t("con.contact.photo")}</label><input id="${id}-photo" type="url" inputmode="url" maxlength="500" autocomplete="off" value="${e((x || {}).photo || "")}"><p class="aide">${t("con.contact.aide")}</p></div>
       <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>`;
+  // ---------------- Aide de chaque bloc de la fiche client (11/11/2026, demande de PJ : « au moins une phrase ou deux explicatives dans chaque partie…
+  // je ne sais pas si c'est moi ou le client »). Trois lignes au plus, même style que les textes d'aide : à quoi ça sert, qui le fait, ce que vous
+  // faites maintenant. « Maintenant » suit l'état réel lu ici (mise en route, accès, fiche Google, dates de la garantie, lien d'avis...). Textes :
+  // con.ai.* de i18n.js. Chaque phrase décrit ce que fait le code (schema.sql, workflows n8n) ; un texte vide n'est pas affiché.
+  const aide = (cle, now, o = {}) => { const tx = k => o[k] !== undefined ? o[k] : I.a("con.ai." + cle + "." + k) ? t("con.ai." + cle + "." + k) : "";
+    const l = [["sert", tx("sert")], ["qui", tx("qui")], ["now", now || ""]].filter(([, x]) => x);
+    return l.length ? `<div class="aide-bloc" data-aide="${cle}">${l.map(([k, x]) => `<p class="note"${k === "now" ? " data-aide-now" : ""}><span class="aide-lib">${t("con.ai." + k)}</span> ${x}</p>`).join("")}</div>` : ""; };
+  const H24 = 24 * 3600000;
+  const nowEtat = c => t(c.en_pause ? "con.ai.etat.pause" : c.metier === "autre" ? "con.ai.etat.autre" : "con.ai.etat.defaut");
+  const nowSante = s_ => !s_ ? "" : t("con.ai.sante." + (["vert", "orange", "rouge"].includes(s_.niveau) ? s_.niveau : "orange"));
+  // Mise en route : l'étape la plus urgente seulement (un accès Google déclaré d'abord, il a une échéance de fait ; puis le compte, qui bloque tout).
+  const nowMer = s_ => { const m = s_ && s_.mise_en_route; if (!m) return ""; const pts = Object.fromEntries((m.points || []).map(x => [x.point, x]));
+    if (!(m.points || []).some(x => x.etat !== "fait")) return t("con.ai.mer.fini");
+    const g = pts.google, r = pts.metricool, k = pts.compte, d = pts.demarrage;
+    if (g && g.etat === "declare") return t(Date.now() - Date.parse(g.maj) > H24 ? "con.ai.mer.google.vieux" : "con.ai.mer.google.declare", { d: dh(g.maj) });
+    if (k && k.etat !== "fait") return t("con.ai.mer.compte");
+    if (g && g.etat === "a_faire") return t("con.ai.mer.google.afaire");
+    if (r && r.etat === "declare") return t("con.ai.mer.reseaux.declare");
+    if (r && r.etat === "a_faire") return r.lien_envoye_le ? t("con.ai.mer.reseaux.attente", { d: I.date(r.lien_envoye_le) }) : t("con.ai.mer.reseaux.lien");
+    return d && d.etat !== "fait" ? t("con.ai.mer.demarrage") : ""; };
+  const nowComptes = c => { const off = window.RENOM_RESEAUX_AUTORISES(c).filter(r => ((c.comptes || {})[r] || {}).etat !== "connecte");
+    return off.length ? t("con.ai.comptes.off", { l: off.map(r => NOM_RESEAU[r] || e(r)).join(", ") }) : t("con.ai.comptes.on"); };
+  const nowFiche = c => { const et = FG.etat(c), reliee = /^locations\/[0-9]+$/.test(c.google_location_id || "");
+    return t("con.ai.fiche." + (et === "reconnue" ? (reliee || !("google_location_id" in c) ? "reliee" : "reconnue") : et)); };
+  const nowStyle = c => { const m = c.marque; return +c.demandes_style ? t("con.ai.style.demande") : !(m && m.verrouille) ? t("con.ai.style.valider") : t(c.photos_autorisees_le ? "con.ai.style.ok" : "con.ai.style.sans.photos"); };
+  const nowDelais = (g, o) => { if (!g) return t("con.ai.delais.aucun");
+    if (!g.depart) { const l = [!g.acces_remis_le ? t("con.ai.delais.manque.acces") : "", o.reseaux_sociaux !== false && !g.photos_recues_le ? t("con.ai.delais.manque.photos") : ""].filter(Boolean);
+      return l.length ? t("con.ai.delais.attente", { l: I.liste(l) }) : t("con.ai.delais.ok"); }
+    return g.fiche && !g.fiche.fait_le && g.fiche.echeance ? t("con.ai.delais.fiche", { d: dh(g.fiche.echeance) }) : t("con.ai.delais.ok"); };
+  const nowRet = (c, o) => !o.reseaux_sociaux ? t("con.ai.ret.google") : t("con.ai.ret.now") + (o.delegation && !c.delegation_signee_le ? " " + t("con.ai.ret.accord") : "");
+  const nowVideos = l => !l.length ? t("con.ai.videos.aucun") : l.some(d => relancable(d) || d.statut === "refuse") ? t("con.ai.videos.bloque") : t("con.ai.videos.ok");
+  const nowLien = c => t(String(c.lien_avis || "").trim() ? "con.ai.lien.ok" : /^[A-Za-z0-9_-]+$/.test(c.google_place_id || "") ? "con.ai.lien.place" : "con.ai.lien.aucun");
+  const nowContact = x => { const k = x && x.commerce && x.commerce.prenom ? x.commerce : x && x.global && x.global.prenom ? x.global : null, W = window.RENOM_WHATSAPP;
+    return t("con.ai.contact.voit", { p: k ? e(k.prenom) + (k.telephone ? ", " + e(W ? W.lisible(k.telephone) : k.telephone) : "") : "PJ, +33 6 99 08 05 39" }); };
+  // Métier (11/11/2026, fonction SQL admin_metier) : un client venu du paiement en ligne est créé en « Autre commerce ». Sans la fonction (adaptateur
+  // sans adminMetier), le choix n'est pas montré.
+  const choixMetier = c => !D.adminMetier ? "" : `<div class="pile serre" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
     const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
@@ -606,45 +646,45 @@
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
-      <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a></p><p class="msg" id="msg" role="status"></p>
-      <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>
+      <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
+      <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
-        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div></div>
+        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}</div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
-      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${sante(c.sante)}<h3>${C_("mer")}</h3>${miseEnRoute(c.sante)}</section>
-      ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2></section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
-      <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2><p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
-      <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${ligneStyle(c)}</section>
-      <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>
-        <h3>${t("con.delais.titre")}</h3>${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
+      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", nowMer(c.sante))}${miseEnRoute(c.sante)}</section>
+      ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
+      <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
+      <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
+      <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>${aide("gar", "")}
+        <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
           : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="datetime-local" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
-        ${mq.length ? `<h3>${t("con.mq.titre")}</h3><div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
-        <h3>${t("con.ret.titre")}</h3><div class="pile serre" data-ret="${e(cid)}">${o.reseaux_sociaux ? `<div class="pile serre">${RESEAUX_RET.map(r => `<label class="option"><input type="checkbox" value="${r}" data-ret-res${ret.includes(r) ? " checked" : ""}><span>${NOM_RES[r]}</span></label>`).join("")}<button type="button" class="bouton second petit" data-ret-enregistrer>${t("enregistrer")}</button></div>` : `<p class="note">${t("con.ret.google.seul")}</p>`}
+        ${mq.length ? `<h3>${t("con.mq.titre")}</h3>${aide("mq", t("con.ai.mq.now"))}<div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
+        <h3>${t("con.ret.titre")}</h3>${aide("ret", nowRet(c, o))}<div class="pile serre" data-ret="${e(cid)}">${o.reseaux_sociaux ? `<div class="pile serre">${RESEAUX_RET.map(r => `<label class="option"><input type="checkbox" value="${r}" data-ret-res${ret.includes(r) ? " checked" : ""}><span>${NOM_RES[r]}</span></label>`).join("")}<button type="button" class="bouton second petit" data-ret-enregistrer>${t("enregistrer")}</button></div>` : `<p class="note">${t("con.ret.google.seul")}</p>`}
           ${o.delegation ? `<label class="option"><input type="checkbox" data-delegation${c.delegation_signee_le ? " checked" : ""}><span>${t(c.delegation_signee_le ? "con.ret.delegation.le" : "con.ret.delegation.non", { d: c.delegation_signee_le ? I.date(jourDe(c.delegation_signee_le)) : "" })}</span></label>` : `<p class="note">${t("con.ret.delegation.sans")}</p>`}</div>
-        <h3>${t("con.gar.titre")}</h3><p class="note">${t("con.obj.chapo")}</p>${gar ? `<div class="pile serre" data-gar="${e(cid)}"><p>${t("con.gar.avis", { n: gar.avis_actuel })} · ${t("con.gar.gagnes", { n: gar.gagnes, o: gar.objectif })} · <span class="etat${gar.etat === "atteinte" ? " actif" : ""}">${ETAT_OBJ[gar.etat] || e(gar.etat)}</span></p>
+        <h3>${t("con.gar.titre")}</h3><p class="note">${t("con.obj.chapo")}</p>${aide("obj", t(gar ? "con.ai.obj.suivi" : "con.ai.obj.aucun"))}${gar ? `<div class="pile serre" data-gar="${e(cid)}"><p>${t("con.gar.avis", { n: gar.avis_actuel })} · ${t("con.gar.gagnes", { n: gar.gagnes, o: gar.objectif })} · <span class="etat${gar.etat === "atteinte" ? " actif" : ""}">${ETAT_OBJ[gar.etat] || e(gar.etat)}</span></p>
             <p class="note">${t("con.gar.jour", { n: gar.jour })} · ${I.date(gar.echeance)}${gar.prolongation_jours ? " · " + t("con.gar.prolongee", { n: gar.prolongation_jours }) : ""}${gar.cartes_en_place_le ? " · " + t("con.gar.cartes", { d: I.date(gar.cartes_en_place_le) }) : ""}</p>
             ${!gar.en_vue && gar.etat === "en_cours" && gar.jour >= COND_O.rappel_jour ? `<p class="note fort">${t("con.gar.pas.en.vue", { s: gar.seuil_en_vue })}</p>` : ""}
             <div class="f etroit"><label for="rel-${e(cid)}">${t("con.gar.releve.lib")}</label><input id="rel-${e(cid)}" type="number" min="0" inputmode="numeric" data-releve></div>
             <button type="button" class="bouton second petit" data-gar-releve>${t("con.gar.enregistrer")}</button>${!gar.cartes_en_place_le ? `<button type="button" class="bouton second petit" data-gar-cartes>${t("con.gar.cartes.ok")}</button>` : ""}</div>`
           : `<form id="f-gar-client" class="pile serre"><div class="champs deux"><div class="f"><label for="gar-date">${t("con.gar.date")}</label><input id="gar-date" type="date" required></div><div class="f"><label for="gar-avis">${t("con.gar.avis.capture")}</label><input id="gar-avis" type="number" min="0" inputmode="numeric" required></div></div>
             <div class="f etroit"><label for="gar-cartes">${t("con.gar.cartes.lib")}</label><input id="gar-cartes" type="date"></div><p class="note">${t("con.gar.regle")}</p><button class="bouton second petit" type="submit">${t("con.gar.demarrer.bouton")}</button></form>`}</section>
-      ${mesOpts.length ? `<section class="carte" id="client-options"><h2>${t("con.opt.titre")}</h2></section><div class="pile">${mesOpts.map(x => carteOption(x, cs)).join("")}</div>` : ""}
-      ${!mesDepots.length && +k.videos_plafond > 0 ? `<section class="carte" id="client-videos"><h2>${t("con.entree.videos")}</h2><p class="texte2">${t("con.aucun.depot")}</p><p class="note">${t("con.videos.client", { b: k.videos_plafond })}</p></section>` : ""}
-      ${mesDepots.length ? `<section class="carte tableau" id="client-videos"><h2>${t("con.entree.videos")}</h2><p class="texte2">${t("con.videos.client", { b: k.videos_plafond || 0 })}</p><table class="tab"><thead><tr><th>${C_("depot")}</th><th>${C_("fichiers")}</th><th>${C_("statut")}</th><th>${C_("actions")}</th></tr></thead><tbody>${mesDepots.map(d =>
+      ${mesOpts.length ? `<section class="carte" id="client-options"><h2>${t("con.opt.titre")}</h2>${aide("opt", t("con.ai.opt.now"))}</section><div class="pile">${mesOpts.map(x => carteOption(x, cs)).join("")}</div>` : ""}
+      ${!mesDepots.length && +k.videos_plafond > 0 ? `<section class="carte" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.aucun.depot")}</p><p class="note">${t("con.videos.client", { b: k.videos_plafond })}</p></section>` : ""}
+      ${mesDepots.length ? `<section class="carte tableau" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.videos.client", { b: k.videos_plafond || 0 })}</p><table class="tab"><thead><tr><th>${C_("depot")}</th><th>${C_("fichiers")}</th><th>${C_("statut")}</th><th>${C_("actions")}</th></tr></thead><tbody>${mesDepots.map(d =>
         `<tr data-depot="${e(d.id)}"><td data-l="${C_("depot")}"><p>${dh(d.cree_le)}</p>${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}</td>
           <td data-l="${C_("fichiers")}">${d.nb_videos ? t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: "" }) + secDv(d.duree_totale_s) : ""}${d.rushes_effaces_le ? `<p class="note">${t("dv.efface.le", { d: I.date(d.rushes_effaces_le) })}</p>` : ""}</td>
           <td data-l="${C_("statut")}"><p class="fort">${ST_DV[d.statut] || e(d.statut)}</p>${d.motif ? `<p class="note">${e(ph(d.motif))}</p>` : ""}${d.essais ? `<p class="note">${t("con.essais", { n: d.essais })}</p>` : ""}</td>
           <td data-l="${C_("actions")}">${actionsDepot(d) ? `<div class="pile serre">${actionsDepot(d)}</div>` : ""}</td></tr>`).join("")}</tbody></table></section>` : ""}
-      <section class="carte" id="client-reglages-espace"><h2>${t("con.lien.avis")}</h2><form id="f-lien-avis" class="pile serre" novalidate><div class="f"><label for="lien-avis-client">${t("con.lien.avis")}</label>
+      <section class="carte" id="client-reglages-espace"><h2>${t("con.lien.avis")}</h2>${aide("lien", nowLien(c))}<form id="f-lien-avis" class="pile serre" novalidate><div class="f"><label for="lien-avis-client">${t("con.lien.avis")}</label>
           <input id="lien-avis-client" type="url" inputmode="url" maxlength="500" autocomplete="off" value="${e(c.lien_avis || "")}" placeholder="https://g.page/r/…/review"><p class="aide">${t("con.lien.avis.aide")}</p></div>
           <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
-        <h2>${t("con.langues.titre")}</h2><form id="f-langues-client" class="pile serre"><div class="f"><label for="langues-client">${t("con.langues.titre")}</label>
+        <h2>${t("con.langues.titre")}</h2>${aide("langue", t("con.ai.langue.now"))}<form id="f-langues-client" class="pile serre"><div class="f"><label for="langues-client">${t("con.langues.titre")}</label>
           <select id="langues-client">${[["fr", "fiche.langues.fr"], ["nl", "fiche.langues.nl"], ["fr,nl", "fiche.langues.frnl"]].map(([v, k]) => `<option value="${v}"${(Array.isArray(c.langues_publication) && c.langues_publication.length ? ["fr", "nl"].filter(x => c.langues_publication.includes(x)).join(",") : c.langue === "nl" ? "nl" : "fr") === v ? " selected" : ""}>${t(k)}</option>`).join("")}</select></div>
           <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
-        <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>
-      <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${tableJournal("jc")}</details>`;
+        <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${aide("contact", nowContact(contacts))}${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>
+      <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${aide("journal", t("con.ai.journal.now"))}${tableJournal("jc")}</details>`;
     remplirJournal("jc", journalClient);
     const fLg = $("f-langues-client"); if (fLg) fLg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminReglerLanguesPublication(cid, $("langues-client").value.split(",")); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
     const fl = $("f-lien-avis"); if (fl) fl.onsubmit = async ev => { ev.preventDefault(); try { await D.adminLienAvis(cid, $("lien-avis-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
@@ -657,6 +697,7 @@
     // Changement d'offre (27/10/2026) : la base arrête ce qui est hors de la nouvelle offre et ajoute la tâche « Mettre Stripe à jour » si besoin.
     // Pays du commerce (31/10/2026) : jours fériés de France ou de Belgique pour la programmation et l'idée de la semaine (fonction SQL admin_pays).
     zc.querySelector("[data-a=pays]").onclick = async () => { try { await D.adminPays(cid, $("pays-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    const zm = zc.querySelector("[data-a=metier]"); if (zm) zm.onclick = async () => { zm.disabled = true; try { await D.adminMetier(cid, $("metier-client").value); await client(cid); msg(t("con.metier.ok")); } catch (er) { zm.disabled = false; msg(ph(er.message)); } };
     zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("con.offre.changee")); } catch (er) { msg(ph(er.message)); } };
     vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async () => { const r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
       if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
@@ -789,11 +830,16 @@
   const ligneControle = (c, x) => { const qui = x.nom ? lienClient(x.cid, x.nom) : "", q = x.quand ? dh(x.quand) : "";
     const k = I.a("con.ck.c.i." + c.k + "." + x.cle) ? "con.ck.c.i." + c.k + "." + x.cle : "con.ck.c.i." + c.k + ".defaut";
     return `<li>${t(k, { qui, d: q, texte: x.texte ? `<span class="casse" translate="no">${e(String(x.texte).slice(0, 160))}</span>` : "" })}</li>`; };
+  // Vidéo IA (11/11/2026) : seulement ce que la base sait (dernière ligne PRODUIT du journal, cockpit.js) ; la clé et le solde ne se lisent pas d'ici.
+  const ligneVideoIa = c => { const x = c.details[0] || {}, qui = x.nom ? " · " + lienClient(x.cid, x.nom) : "", d = x.quand ? dh(x.quand) : "";
+    const motif = x.motif ? (I.a("con.ck.c.ia.motif." + x.motif) ? t("con.ck.c.ia.motif." + x.motif) : t("con.ck.c.ia.motif.defaut", { x: `<span translate="no">${e(x.motif)}</span>` })) : "";
+    const k = x.cle === "faite" ? "faite" : x.cle === "plan_b" ? (c.etat === "ok" ? "normal" : c.etat === "alerte" ? "grave" : "planb") : x.cle === "desactivee" ? "coupee" : x.cle === "illisible" ? "illisible" : x.cle === "jamais" ? "jamais" : "planb";
+    return `<p class="note" data-video-ia="${e(x.cle || "")}">${t("con.ck.c.ia." + k, { d, qui, motif, m: x.modele ? ` (<span translate="no">${e(x.modele)}</span>)` : "" })}</p><p class="note">${t("con.ck.c.ia.fixe")}</p>`; };
   function blocControles(r) {
     return `<section class="carte ck-bloc" id="controles"><h2>${t("con.ck.c.titre")}</h2><p class="note ck-chapo">${t("con.ck.c.chapo")}</p>
       <ul class="ck-controles">${r.controles.map(c => `<li class="ck-c ck-c-${c.etat}" data-controle="${c.k}" data-etat="${c.etat}">${glyphe(c.etat)}<div>
         <p class="ck-c-tete"><span class="fort">${t("con.ck.c." + c.k)}</span><span class="ck-c-etat">${t("con.ck.etat." + c.etat)}</span></p>
-        ${c.etat === "ok" ? `<p class="note">${t("con.ck.c.ok." + c.k)}</p>` : c.k === "donnees" ? `<p class="note">${t("con.ck.c.i.donnees", { l: e(c.details.map(d => d.texte).join(", ")) })}</p>`
+        ${c.k === "video_ia" ? ligneVideoIa(c) : c.etat === "ok" ? `<p class="note">${t("con.ck.c.ok." + c.k)}</p>` : c.k === "donnees" ? `<p class="note">${t("con.ck.c.i.donnees", { l: e(c.details.map(d => d.texte).join(", ")) })}</p>`
           : `<ul class="ck-c-det">${c.details.slice(0, 5).map(x => ligneControle(c, x)).join("")}${c.details.length > 5 ? `<li class="note">${t("con.ck.c.plus", { n: c.details.length - 5 })}</li>` : ""}</ul>${I.a("con.ck.c.pourquoi." + c.k) ? `<p class="note">${t("con.ck.c.pourquoi." + c.k)}</p>` : ""}`}
       </div></li>`).join("")}</ul></section>`; }
 
@@ -830,7 +876,7 @@
     vue.innerHTML = `<div class="entete ck-entete"><h1>${t("con.entree.cockpit")}</h1>
         <nav class="filtres ck-periode" id="periode" aria-label="${t("con.ck.periode")}">${Object.keys(CK.PERIODES).map(k => `<a href="#/cockpit/${k}" data-periode="${k}"${k === periode ? ' aria-current="page"' : ""}>${t("con.ck.per.bouton." + k)}</a>`).join("")}</nav></div>
       <p class="ck-verdict ck-verdict-${r.niveau}" id="verdict" data-niveau="${r.niveau}">${e(verdictTexte(r))}</p>
-      <p class="note ck-lu" id="lu">${t("con.ck.lu", { h: I.heure(maintenant) })} <button type="button" class="lien" id="relire">${t("con.ck.relire")}</button></p><p class="msg" id="msg" role="status"></p>
+      <p class="note ck-lu" id="lu">${t("con.ck.lu", { h: I.heure(maintenant) })} <button type="button" class="lien" id="relire">${t("con.ck.relire")}</button> · <a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
       ${blocKpi(r)}
       <div class="ck-grille">${blocGaranties(r)}${blocControles(r)}</div>
       ${blocPipeline(r)}
@@ -840,11 +886,34 @@
     brancherCartes(() => cockpit(periode));
   }
 
+  // ================= Mode d'emploi (11/11/2026, demande de PJ : « il me faudrait un tuto explicatif ») : le parcours d'un nouveau client, du paiement
+  // à « actif », étape par étape (le client, le robot, vous, où cliquer, combien de temps, si ça bloque, message prêt à copier), la routine du jour
+  // et le glossaire. Textes fixes (con.guide.* de i18n.js), rien n'est lu dans la base. #/guide/<ancre> descend à la partie demandée.
+  const ETAPES_GUIDE = ["e1", "e2", "e3", "e4", "e5", "e6", "e7"], ROUTINE = [1, 2, 3, 4, 5, 6];
+  const GLOSSAIRE = ["place_id", "reliee", "acces", "declare", "delegation", "garanties", "metricool", "apublier", "sensible", "ia", "sante", "objectif"];
+  async function guide(ancre) {
+    const L = k => t("con.guide.l." + k), G = (e_, k) => t("con.guide." + e_ + "." + k);
+    const etape = (k, i) => `<section class="carte guide-etape" id="guide-${k}"><h2>${i + 1}. ${G(k, "titre")}</h2>
+        <dl class="guide-dl">${["client", "robot", "vous", "ou", "duree", "bloque"].map(r => `<div data-role="${r}"><dt>${L(r)}</dt><dd>${G(k, r)}</dd></div>`).join("")}</dl>
+        ${I.a("con.guide." + k + ".message") ? `<div class="encart guide-message"><p class="fort">${L("message")}</p><p class="texte2" data-message>${G(k, "message")}</p><button type="button" class="bouton second petit" data-copier-message>${t("con.guide.copier")}</button></div>` : ""}</section>`;
+    vue.innerHTML = `${entete(t("con.entree.guide"), t("con.guide.chapo"))}<p class="msg" id="msg" role="status"></p>
+      <nav class="carte guide-sommaire" id="guide-sommaire" aria-label="${t("con.guide.sommaire")}"><p class="fort">${t("con.guide.sommaire")}</p>
+        <ol>${ETAPES_GUIDE.map(k => `<li><a href="#/guide/${k}">${G(k, "titre")}</a></li>`).join("")}</ol>
+        <p><a href="#/guide/routine">${t("con.guide.routine.titre")}</a> · <a href="#/guide/glossaire">${t("con.guide.glossaire")}</a></p></nav>
+      <h2 class="guide-partie" id="guide-parcours">${t("con.guide.parcours")}</h2>
+      <div class="pile" id="guide-etapes">${ETAPES_GUIDE.map(etape).join("")}</div>
+      <section class="carte" id="guide-routine"><h2>${t("con.guide.routine.titre")}</h2><ol class="guide-liste">${ROUTINE.map(n => `<li>${t("con.guide.routine." + n)}</li>`).join("")}</ol></section>
+      <section class="carte" id="guide-glossaire"><h2>${t("con.guide.glossaire")}</h2><dl class="guide-dl guide-glossaire">${GLOSSAIRE.map(k => `<div data-terme="${k}"><dt translate="no">${t("con.guide.g." + k + ".t")}</dt><dd>${t("con.guide.g." + k)}</dd></div>`).join("")}</dl></section>`;
+    vue.querySelectorAll("[data-copier-message]").forEach(b => b.onclick = async () => { const x = b.parentElement.querySelector("[data-message]").textContent;
+      try { await navigator.clipboard.writeText(x); msg(t("con.guide.copie")); } catch (er) { const r = document.createRange(); r.selectNodeContents(b.parentElement.querySelector("[data-message]")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); msg(t("con.selectionnee")); } });
+    const z = ancre && $("guide-" + ancre); if (z) z.scrollIntoView({ block: "start" });
+  }
+
   // Routes. Anciennes adresses (emails d'alerte, workflows n8n, favoris) : chacune ouvre le même contenu à sa nouvelle place, sans étape d'historique.
-  const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient, depot: depotClient };
+  const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient, depot: depotClient, guide };
   const ANCIENNES = { commerces: "clients", alertes: "afaire/alertes", apublier: "afaire/apublier", garanties: "afaire/garanties", videos: "afaire/videos", invitations: "nouveau", creer: "nouveau" };
   // Onglet allumé pour chaque écran.
-  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", depot: "clients", prospects: "prospects" };
+  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", depot: "clients", prospects: "prospects", guide: "guide" };
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();
