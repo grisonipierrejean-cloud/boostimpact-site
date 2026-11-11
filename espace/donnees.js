@@ -99,7 +99,7 @@
   window.RENOM_WHATSAPP = { numero: numeroWhatsapp, exemple: exempleNumero, fixe: numeroFixe, lisible: numeroLisible, PHRASE_FIXE };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
-    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE", "METRICOOL_MARQUE_NOTEE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
   const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
   const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
@@ -1201,6 +1201,8 @@
           sante: sa.find(s => s.commerce_id === c.id) || null, demandes_style: ds.filter(d => d.commerce_id === c.id).length }));
       },
       async adminJournal() { const cs = ok(await sb.from("commerces").select("id,nom")), j = ok(await sb.from("journal").select("*").order("cree_le", { ascending: false }).limit(300)); return j.map(x => ({ ...x, commerce: (cs.find(c => c.id === x.commerce_id) || {}).nom })); },
+      // Journal d'UN client (v46, fiche client) : requête à part, la lecture de tous les clients s'arrête à 300 lignes (un client actif en sortait vite).
+      async adminJournalClient(cid) { const c = ok(await sb.from("commerces").select("id,nom").eq("id", cid)), j = ok(await sb.from("journal").select("*").eq("commerce_id", cid).order("cree_le", { ascending: false }).limit(500)); const nom = ((c || [])[0] || {}).nom; return j.map(x => ({ ...x, commerce: nom })); },
       // 26/10/2026 (console, garantie des 24 h) : chaque alerte porte son code, son commerce, l'avis (« Ouvrir l'avis ») ou l'identifiant de l'alerte
       // de l'exploitant (« Traité » : admin_alerte_vue, fonction du bloc « Automatisations de service ») ; une alerte traitée (vue_le) n'est plus lue.
       async adminAlertes() {

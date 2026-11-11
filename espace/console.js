@@ -83,16 +83,35 @@
   const NIVEAUX = I.carte("con.niveau", ["vert", "orange", "rouge"]), RANG = { rouge: 0, orange: 1, vert: 2 };
   const COURT = I.carte("con.court", ["compte", "google", "metricool", "demarrage"]);
   const sante = s => s ? `<p><span class="sante sante-${e(s.niveau)}">${NIVEAUX[s.niveau] || e(s.niveau)}</span></p>${s.raisons.length ? `<ul class="raisons">${s.raisons.map(r => `<li>${e(ph(r))}</li>`).join("")}</ul>` : `<p class="note">${t("con.rien.signaler")}</p>`}` : `<p class="note">${t("con.non.calcule")}</p>`;
-  const miseEnRoute = s => { const m = s && s.mise_en_route; if (!m) return ""; const reste = m.points.filter(x => x.etat !== "fait");
-    // Étape réseaux (27/10/2026) : l'équipe note l'envoi du lien de connexion (« Lien envoyé ») ; avant, l'étape n'est relancée ni comptée au commerçant.
-    // lien_envoye_le absent (base d'avant le bloc « Emails au commerçant ») : rien n'est affiché de plus.
-    const lien = x => x.point !== "metricool" || x.etat !== "a_faire" || !("lien_envoye_le" in x) ? ""
-      : `<p class="note">${x.lien_envoye_le ? t("con.mer.lien.envoye", { d: I.date(x.lien_envoye_le) }) : t("con.mer.lien.attente")}</p><button type="button" class="bouton second petit" data-mer-lien>${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>`;
-    return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${lien(x)}${["google", "metricool"].includes(x.point) ? `<button type="button" class="bouton second petit" data-mer="${e(x.point)}">${t("con.verifie", { x: x.point === "google" ? "Google" : "Metricool" })}</button>` : ""}`).join("")}`; };
+  // ---------------- Un seul bouton par fait (v46, 11/11/2026, relecture « exploitation » : « deux boutons pour un même fait »). Avant, « Google vérifié »
+  // (mise en route) ne cochait que l'étape (admin_mise_en_route) et lançait la garantie, sans relier le compte, quand « Accès vérifié » Google (Comptes)
+  // reliait le compte (admin_acces_reseau) : deux effets différents pour un même constat. Désormais les deux passent par la même action complète
+  // (brancherCartes, verifier) : admin_acces_reseau (compte « connecté », la base coche l'étape par le déclencheur suivre_mise_en_route et programme les
+  // publications déjà validées), puis pour Google la date de départ de la garantie si elle manque (noterAccesGoogle), après une confirmation explicite.
+  // Un seul bouton visible par fait : dans la mise en route tant que l'étape n'est pas faite, dans Comptes ensuite. Même règle pour les réseaux sociaux
+  // et l'étape Metricool (un bouton « Instagram vérifié »… par réseau, au lieu de « Metricool vérifié » + « Accès vérifié »). Une étape cochée par erreur
+  // se remet « à faire » (« Annuler » : admin_mise_en_route accepte « a_faire » ; les accès notés vérifiés sont notés retirés).
+  const RES_SOCIAUX = ["instagram", "facebook", "tiktok"];
+  const etapeOuverte = (c, r) => { const m = c.sante && c.sante.mise_en_route, pt = r === "google" ? "google" : RES_SOCIAUX.includes(r) ? "metricool" : null;
+    const x = m && pt && (m.points || []).find(y => y.point === pt); return !!x && x.etat !== "fait"; };
+  const actionMer = (c, x) => { const cid = e(c.id);
+    if (x.etat === "fait") return ["google", "metricool"].includes(x.point) ? `<button type="button" class="lien" data-mer-annuler="${e(x.point)}" data-cid="${cid}">${t("con.mer.annuler")}</button>` : "";
+    if (x.point === "google") return `<button type="button" class="bouton second petit" data-mer="google" data-cid="${cid}">${t("con.verifie", { x: "Google" })}</button>`;
+    if (x.point !== "metricool") return "";
+    const avecLien = "lien_envoye_le" in x, aVerifier = !avecLien || !!x.lien_envoye_le || x.etat === "declare";
+    const lien = avecLien && x.etat === "a_faire" ? `<button type="button" class="bouton ${x.lien_envoye_le ? "second " : ""}petit" data-mer-lien data-cid="${cid}">${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : "";
+    const sociaux = window.RENOM_RESEAUX_AUTORISES(c).filter(r => RES_SOCIAUX.includes(r) && ((c.comptes || {})[r] || {}).etat !== "connecte");
+    const verif = !aVerifier ? "" : sociaux.length ? sociaux.map(r => `<button type="button" class="bouton petit" data-acces="${r}" data-oui="1" data-cid="${cid}">${t("con.verifie", { x: NOM_RESEAU[r] })}</button>`).join("")
+      : `<button type="button" class="bouton petit" data-mer="metricool" data-cid="${cid}">${t("con.verifie", { x: "Metricool" })}</button>`;
+    return lien + verif; };
+  // Carte « Mise en route » de À faire : les étapes qui restent, chacune avec les mêmes boutons que la fiche (actionMer).
+  const miseEnRoute = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return ""; const reste = (m.points || []).filter(x => x.etat !== "fait");
+    return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => { const a = actionMer(c, x);
+      return `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${a ? `<div class="actions">${a}</div>` : ""}`; }).join("")}`; };
   // Mise en route sur la fiche du client (11/11/2026, retour de PJ : « je ne comprends pas ») : les étapes de l'offre TOUJOURS, une ligne chacune (nom
-  // clair, état en mots avec sa date, action de l'équipe à droite), quand cliquer ou non « Google vérifié », la procédure Metricool en étapes numérotées
-  // selon l'état, puis les réponses du client aux 5 questions (commerces.demarrage). La carte de « À faire » garde la forme courte (miseEnRoute).
-  // Mêmes textes dans la page « Mode d'emploi » (quandGoogle, procReseaux sans état).
+  // clair, état en mots avec sa date, action de l'équipe à droite), puis les réponses du client aux 5 questions (commerces.demarrage), repliées.
+  // v46 : « X sur 5 répondues » dans la ligne de l'étape ; « quand cliquer Google vérifié » et la procédure Metricool ne sont plus sur la fiche (trop de
+  // texte) : un lien mène au Mode d'emploi, qui les garde (quandGoogle, procReseaux sans état). La carte de « À faire » garde la forme courte.
   const TONS = I.carte("ton", ["chaleureux", "sobre", "enjoue"]), ACTIONS = I.carte("action", ["reserver", "appeler", "venir", "acheter"]);
   const etatMer = x => x.etat === "fait" ? (x.maj ? t("con.mer.etat.fait.le", { d: I.date(x.maj) }) : t("con.mer.etat.fait"))
     : x.etat === "declare" ? (x.maj ? t("con.mer.etat.declare.le", { d: dh(x.maj) }) : t("con.mer.etat.declare")) : t("con.mer.etat.afaire");
@@ -107,16 +126,16 @@
       if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? e(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
       const s_ = Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : ""; return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
     return `<details class="repliable mer-reponses" id="mer-reponses"><summary><h3>${t("con.mer.rep.titre")}</h3></summary>
-      ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}<dl class="mer-rep">${["phrase", "distinctions", "ton", "interdits", "action"].map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${t("q." + k + ".titre")}</dt><dd>${val(k)}</dd></div>`).join("")}</dl></details>`; };
+      ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}<dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${t("q." + k + ".titre")}</dt><dd>${val(k)}</dd></div>`).join("")}</dl></details>`; };
+  const QUESTIONS = ["phrase", "distinctions", "ton", "interdits", "action"];
+  const nbReponses = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
+    return QUESTIONS.filter(k => { const v = r[k]; if (k === "action" && typeof r.action_detail === "string" && r.action_detail.trim()) return true;
+      return Array.isArray(v) ? v.some(x => String(x || "").trim()) : typeof v === "string" ? !!v.trim() : !!v; }).length; };
   const merFiche = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return "";
-    const action = x => { if (x.etat === "fait") return "";
-      if (x.point === "google") return `<button type="button" class="bouton second petit" data-mer="google">${t("con.verifie", { x: "Google" })}</button>`;
-      if (x.point !== "metricool") return "";
-      const avecLien = "lien_envoye_le" in x, aVerifier = !avecLien || x.lien_envoye_le || x.etat === "declare";
-      return `${avecLien ? `<button type="button" class="bouton second petit" data-mer-lien>${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : ""}${aVerifier ? `<button type="button" class="bouton second petit" data-mer="metricool">${t("con.verifie", { x: "Metricool" })}</button>` : ""}`; };
-    const detail = x => x.etat === "fait" ? "" : x.point === "google" ? quandGoogle() : x.point === "metricool" ? procReseaux(x) : "";
-    return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { const a = action(x);
-      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etatMer(x)}</p></div>${a ? `<div class="mer-action">${a}</div>` : ""}</div>${detail(x)}</li>`; }).join("")}</ol>
+    const guide = x => x.etat === "fait" || !["google", "metricool"].includes(x.point) ? "" : `<p class="note"><a class="lien-guide" href="#/guide/${x.point === "google" ? "e3" : "e4"}">${t("con.mer.guide")}</a></p>`;
+    const etat = x => etatMer(x) + (x.point === "demarrage" ? " · " + `<span data-reponses>${t("con.mer.rep.n", { n: nbReponses(c) })}</span>` : "");
+    return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { const a = actionMer(c, x);
+      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etat(x)}</p></div>${a ? `<div class="mer-action">${a}</div>` : ""}</div>${guide(x)}</li>`; }).join("")}</ol>
       ${reponsesDemarrage(c)}`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
@@ -199,9 +218,10 @@
   // Accès vérifié (22/10/2026, admin_acces_reseau) : par réseau compris dans l'offre (et retenu), l'état réel et le bouton « Accès vérifié » (l'équipe a
   // accepté l'invitation : fiche Google, Meta Business Suite, TikTok) ou « Accès retiré » (le client a retiré l'accès). Sans réseau « connecté »,
   // la base ne programme rien et la file « Contenus à publier » reste vide.
-  const ligneAcces = c => `<div class="pile serre acces-ligne">${window.RENOM_RESEAUX_AUTORISES(c).map(r => { const k = (c.comptes || {})[r] || {}, on = k.etat === "connecte";
-    return `<div class="pile serre" data-acces-res="${e(r)}"><p class="note${on ? " fort" : ""}">${on ? (k.maj ? t("con.acces.etat.on", { res: NOM_RESEAU[r] || e(r), d: dh(k.maj) }) : t("con.acces.etat.connecte", { res: NOM_RESEAU[r] || e(r) })) : t("con.acces.etat.off", { res: NOM_RESEAU[r] || e(r) })}</p>
-      <button type="button" class="bouton ${on ? "second " : ""}petit" data-acces="${e(r)}" data-oui="${on ? 0 : 1}">${t(on ? "con.acces.retirer" : "con.acces.verifier")}</button></div>`; }).join("")}</div>`;
+  // v46 : « Accès vérifié » n'est ici que si l'étape de mise en route du réseau est faite (sinon le bouton est dans la mise en route : un seul par fait).
+  const ligneAcces = c => `<div class="pile serre acces-ligne">${window.RENOM_RESEAUX_AUTORISES(c).map(r => { const k = (c.comptes || {})[r] || {}, on = k.etat === "connecte", ailleurs = !on && etapeOuverte(c, r);
+    return `<div class="pile serre" data-acces-res="${e(r)}"><p class="note${on ? " fort" : ""}">${on ? (k.maj ? t("con.acces.etat.on", { res: NOM_RESEAU[r] || e(r), d: dh(k.maj) }) : t("con.acces.etat.connecte", { res: NOM_RESEAU[r] || e(r) })) : t("con.acces.etat.off", { res: NOM_RESEAU[r] || e(r) })}${ailleurs ? " " + t("con.acces.dans.mer") : ""}</p>
+      ${ailleurs ? "" : `<button type="button" class="bouton ${on ? "second " : ""}petit" data-acces="${e(r)}" data-oui="${on ? 0 : 1}" data-cid="${e(c.id)}">${t(on ? "con.acces.retirer" : "con.acces.verifier")}</button>`}</div>`; }).join("")}</div>`;
   // Marque Metricool du commerce (22/10/2026, bloc « Marque Metricool par commerce » de schema.sql) : un blogId par commerce, jamais une marque commune.
   // Sans blogId, ses publications vont dans la file « À publier à la main ». Standard et Premium seulement (l'Essentiel ne publie que sur la fiche Google).
   const ligneMarque = c => !(OFFRES[c.offre_id] || {}).reseaux_sociaux ? "" : `<div class="pile serre marque-metricool"><div class="f etroit"><label for="mc-${e(c.id)}">${t("con.mc.lib")}</label>
@@ -458,8 +478,19 @@
   // déclaré fait par le commerçant, que l'équipe doit vérifier.
   const ageJours = c => c.cree_le ? Math.floor((Date.now() - Date.parse(c.cree_le)) / 86400000) : null;
   const merBloquee = c => { const m = c.sante && c.sante.mise_en_route; if (!m || m.faits >= m.total) return false; return m.points.some(x => x.etat === "declare") || (ageJours(c) ?? 0) >= 5; };
-  const carteMiseEnRoute = c => `<article class="carte attention" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
-          <p class="note">${t("con.col.mer")}</p>${miseEnRoute(c.sante)}</article>`;
+  // Tâches de l'équipe dès le jour 0 (v46) : fiche à vérifier (nom pas confirmé, ou métier « Autre commerce » d'un client venu par le paiement en
+  // ligne, jamais corrigé), lien Metricool à envoyer, blogId à noter. Les étapes du client n'entrent dans « À faire » qu'à leur date d'appel (merBloquee).
+  // jl : journal de CE client (COMMERCE_CREE « paiement_en_ligne », METIER_COMMERCE) ; sans lui, le métier n'est pas contrôlé.
+  const metierAVerifier = (c, jl) => c.metier === "autre" && Array.isArray(jl) && jl.some(x => x.type === "COMMERCE_CREE" && (x.detail || {}).origine === "paiement_en_ligne") && !jl.some(x => x.type === "METIER_COMMERCE");
+  const tachesAdmin = (c, jl) => { if (c.en_pause) return []; const l = [], o = OFFRES[c.offre_id] || {}, m = c.sante && c.sante.mise_en_route, r = m && (m.points || []).find(x => x.point === "metricool");
+    if ("nom_confirme_le" in c && !c.nom_confirme_le) l.push("fiche"); else if (metierAVerifier(c, jl)) l.push("metier");
+    if (r && r.etat === "a_faire" && "lien_envoye_le" in r && !r.lien_envoye_le) l.push("lien");
+    if (o.reseaux_sociaux && !c.metricool_blog_id) l.push("blog");
+    return l; };
+  const carteMiseEnRoute = (c, taches) => { const bloque = merBloquee(c), lien = taches.includes("lien") && !bloque;
+    return `<article class="carte${bloque ? " attention" : ""}" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
+          <p class="note">${t("con.col.mer")}</p>${taches.length ? `<ul class="taches-admin">${taches.map(k => `<li data-tache="${k}">${t("con.af.tache." + k)}</li>`).join("")}</ul>` : ""}
+          ${lien ? `<div class="actions"><button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button></div>` : ""}${bloque ? miseEnRoute(c) : ""}</article>`; };
 
   // ================= Écran « À faire » : une seule file, triée par urgence (en retard d'abord, puis l'échéance la plus proche, puis le reste, le plus
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
@@ -492,7 +523,10 @@
     (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id, cid: g.commerce_id }); });
     // Mois offerts : une carte par client et par mois offert ; un mois déjà offert reste à clore, sans être « en retard » (aucun geste Stripe).
     (dl || []).flatMap(groupesManquements).forEach(m => ajout("garanties", carteManquement(m), !m.deja, T_(m.echeance), NaN, { cle: "manquement:" + m.ids[0], cid: m.commerce_id }));
-    cs.filter(merBloquee).forEach(c => ajout("miseenroute", carteMiseEnRoute(c), (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }));
+    // Métier à contrôler : journal de chaque client encore en « Autre commerce » (peu nombreux), lu à part.
+    const jls = Object.fromEntries(await Promise.all(cs.filter(c => c.metier === "autre" && D.adminJournalClient).map(async c => [c.id, await D.adminJournalClient(c.id).catch(() => null)])));
+    cs.forEach(c => { const tk = tachesAdmin(c, jls[c.id]), bloque = merBloquee(c);
+      if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), bloque && (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
     (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
     items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
     return { items, alertes, pubs, dl, cs, erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null) };
@@ -532,8 +566,20 @@
   }
   // Actions des cartes (À faire et fiche du client) : chaque bouton appelle la fonction de la base, puis l'écran est redessiné (apres) et le message
   // dit ce qui a été noté.
+  // « Fait à 19 h 12 : … » (v46, retour de PJ : « on clique, il y a un petit message mais ça disparaît ») : le dernier geste sur la fiche ouverte reste
+  // affiché sous la bannière jusqu'au geste suivant, même après un aller-retour vers un autre écran (mémoire de la page ; le journal garde tout).
+  let ficheCourante = null, dernierFait = null;
+  const noterFait = (texte, lib) => { dernierFait = ficheCourante ? { cid: ficheCourante, x: texte === t("enregistre") && lib ? t("con.fait.bouton", { b: lib }) : texte, h: Date.now() } : dernierFait; };
   function brancherCartes(apres) {
-    const agir = async (f, ok, b) => { if (b) b.disabled = true; try { const m = await f(); if (m === null) { if (b) b.disabled = false; return; } await apres(); msg(ok != null ? ok : typeof m === "string" ? m : t("enregistre")); } catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
+    const agir = async (f, ok, b) => { const lib = b ? b.textContent.trim() : ""; if (b) b.disabled = true;
+      try { const m = await f(); if (m === null) { if (b) b.disabled = false; return; } const x = ok != null ? ok : typeof m === "string" ? m : t("enregistre"); noterFait(x, lib); await apres(); msg(x); }
+      catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
+    const cidDe = b => b.dataset.cid || ((b.closest("[data-mer-commerce]") || {}).dataset || {}).merCommerce;
+    // Vérifier un accès, Google ou un réseau social : confirmation explicite, puis la même action complète d'où que vienne le clic (voir actionMer).
+    const verifier = (b, r) => { const cid = cidDe(b), res = NOM_RESEAU[r] || r;
+      if (!window.confirm(r === "google" ? t("con.verif.google.confirmer") : t("con.verif.res.confirmer", { res }))) return;
+      agir(async () => { const x = await D.adminAccesReseau(cid, r, true), dep = r === "google" ? await noterAccesGoogle(cid) : null;
+        return t("con.acces.ok", { res, n: x.programmes || 0 }) + (dep ? " " + dep.replace(/^[^.]*\.\s*/, "") : ""); }, null, b); };
     const copier = async (x, ok) => { try { await navigator.clipboard.writeText(x.value); msg(t(ok)); } catch (er) { x.select(); msg(t("con.selectionnee")); } };
     const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => f(b, b.closest("[data-type], article, tr, section")); });
     // Alertes de l'exploitant : « Traité » (admin_alerte_vue) ; prise en charge : « Je prends », « Je prends à la place », « Je laisse ».
@@ -578,10 +624,21 @@
     sur("[data-gar-cartes]", b => agir(() => D.adminGarantie(b.closest("[data-gar]").dataset.gar, { cartes_en_place_le: window.RENOM_MAJ.aujourdhui() })));
     // Dépôts vidéo, mise en route, options
     sur("[data-relancer]", b => agir(() => D.adminRelancerMontage(b.closest("[data-depot]").dataset.depot), t("con.relance.ok"), b));
-    sur("[data-mer]", b => { const cid = b.closest("[data-mer-commerce]").dataset.merCommerce;
-      agir(async () => { await D.adminMiseEnRoute(cid, b.dataset.mer, "fait"); return (b.dataset.mer === "google" && await noterAccesGoogle(cid)) || t("enregistre"); }, null, b); });
+    // « Google vérifié » : action complète (verifier). « Metricool vérifié » ne reste que pour une offre à réseaux sans réseau social retenu.
+    sur("[data-mer]", b => b.dataset.mer === "google" ? verifier(b, "google")
+      : agir(async () => { await D.adminMiseEnRoute(cidDe(b), b.dataset.mer, "fait"); return t("con.mer.fait.ok", { x: t("con.mer.nom." + b.dataset.mer) }); }, null, b));
+    // « Accès vérifié » (Comptes, ou « Instagram vérifié »… dans la mise en route) et « Accès retiré ».
+    sur("[data-acces]", b => { const r = b.dataset.acces, res = NOM_RESEAU[r] || r; if (b.dataset.oui === "1") { verifier(b, r); return; }
+      if (!window.confirm(t("con.acces.confirmer", { res }))) return;
+      agir(async () => { await D.adminAccesReseau(cidDe(b), r, false); return t("con.acces.retire", { res }); }, null, b); });
+    // Étape cochée par erreur : remise « à faire » (admin_mise_en_route, état « a_faire ») ; les accès de l'étape notés vérifiés sont notés retirés,
+    // sinon la base (et la démonstration) la recocheraient au premier passage. La date de départ de la garantie n'est pas effacée (Garanties).
+    sur("[data-mer-annuler]", b => { const cid = cidDe(b), p = b.dataset.merAnnuler, c = (afCtx.cs || []).find(x => x.id === cid) || {}, nom = t("con.mer.nom." + p);
+      const lies = window.RENOM_RESEAUX_AUTORISES(c).filter(r => (p === "google" ? r === "google" : RES_SOCIAUX.includes(r)) && ((c.comptes || {})[r] || {}).etat === "connecte");
+      if (!window.confirm(p === "google" ? t("con.mer.annuler.google") : lies.length ? t("con.mer.annuler.reseaux", { l: I.liste(lies.map(r => NOM_RESEAU[r])) }) : t("con.mer.annuler.simple", { x: nom }))) return;
+      agir(async () => { for (const r of lies) await D.adminAccesReseau(cid, r, false); await D.adminMiseEnRoute(cid, p, "a_faire"); return t("con.mer.annule", { x: nom }); }, null, b); });
     // Étape réseaux (27/10/2026, branche nuit-emails) : l'équipe note l'envoi du lien de connexion (admin_lien_reseaux).
-    sur("[data-mer-lien]", b => agir(() => D.adminLienReseaux(b.closest("[data-mer-commerce]").dataset.merCommerce, true)));
+    sur("[data-mer-lien]", b => agir(async () => { await D.adminLienReseaux(cidDe(b), true); return t("con.mer.lien.ok"); }, null, b));
     sur("[data-opt-elements]", b => { const a = b.closest("article"); agir(async () => { const r = await D.adminCommandeOptionElements(a.dataset.opt, a.querySelector("[data-opt-date]").value); return t("con.opt.elements.ok", { d: I.dateLongue(r.livraison_prevue_le) }); }, null, b); });
     sur("[data-opt-livree]", b => { const a = b.closest("article"); agir(async () => { if (!window.confirm(t("con.opt.livree.confirmer"))) return null; const r = await D.adminCommandeOptionLivree(a.dataset.opt);
       return r.second_test_prevu_le ? t("con.opt.livree.ok.second", { d: I.dateLongue(r.second_test_prevu_le) }) : t("con.opt.livree.ok"); }, null, b); });
@@ -633,22 +690,14 @@
   // je ne sais pas si c'est moi ou le client »). Trois lignes au plus, même style que les textes d'aide : à quoi ça sert, qui le fait, ce que vous
   // faites maintenant. « Maintenant » suit l'état réel lu ici (mise en route, accès, fiche Google, dates de la garantie, lien d'avis...). Textes :
   // con.ai.* de i18n.js. Chaque phrase décrit ce que fait le code (schema.sql, workflows n8n) ; un texte vide n'est pas affiché.
+  // v46 (relecture « exploitation » : trop de texte) : l'aide de chaque bloc tient en UNE ligne repliable ; la prochaine action de la fiche est dans la
+  // bannière du haut ; les explications longues sont dans le Mode d'emploi.
   const aide = (cle, now, o = {}) => { const tx = k => o[k] !== undefined ? o[k] : I.a("con.ai." + cle + "." + k) ? t("con.ai." + cle + "." + k) : "";
     const l = [["sert", tx("sert")], ["qui", tx("qui")], ["now", now || ""]].filter(([, x]) => x);
-    return l.length ? `<div class="aide-bloc" data-aide="${cle}">${l.map(([k, x]) => `<p class="note"${k === "now" ? " data-aide-now" : ""}><span class="aide-lib">${t("con.ai." + k)}</span> ${x}</p>`).join("")}</div>` : ""; };
+    return l.length ? `<details class="aide-bloc" data-aide="${cle}"><summary>${t("con.ai.lib")}</summary>${l.map(([k, x]) => `<p class="note"${k === "now" ? " data-aide-now" : ""}><span class="aide-lib">${t("con.ai." + k)}</span> ${x}</p>`).join("")}</details>` : ""; };
   const H24 = 24 * 3600000;
   const nowEtat = c => t(c.en_pause ? "con.ai.etat.pause" : c.metier === "autre" ? "con.ai.etat.autre" : "con.ai.etat.defaut");
   const nowSante = s_ => !s_ ? "" : t("con.ai.sante." + (["vert", "orange", "rouge"].includes(s_.niveau) ? s_.niveau : "orange"));
-  // Mise en route : l'étape la plus urgente seulement (un accès Google déclaré d'abord, il a une échéance de fait ; puis le compte, qui bloque tout).
-  const nowMer = s_ => { const m = s_ && s_.mise_en_route; if (!m) return ""; const pts = Object.fromEntries((m.points || []).map(x => [x.point, x]));
-    if (!(m.points || []).some(x => x.etat !== "fait")) return t("con.ai.mer.fini");
-    const g = pts.google, r = pts.metricool, k = pts.compte, d = pts.demarrage;
-    if (g && g.etat === "declare") return t(Date.now() - Date.parse(g.maj) > H24 ? "con.ai.mer.google.vieux" : "con.ai.mer.google.declare", { d: dh(g.maj) });
-    if (k && k.etat !== "fait") return t("con.ai.mer.compte");
-    if (g && g.etat === "a_faire") return t("con.ai.mer.google.afaire");
-    if (r && r.etat === "declare") return t("con.ai.mer.reseaux.declare");
-    if (r && r.etat === "a_faire") return r.lien_envoye_le ? t("con.ai.mer.reseaux.attente", { d: I.date(r.lien_envoye_le) }) : t("con.ai.mer.reseaux.lien");
-    return d && d.etat !== "fait" ? t("con.ai.mer.demarrage") : ""; };
   const nowComptes = c => { const off = window.RENOM_RESEAUX_AUTORISES(c).filter(r => ((c.comptes || {})[r] || {}).etat !== "connecte");
     return off.length ? t("con.ai.comptes.off", { l: off.map(r => NOM_RESEAU[r] || e(r)).join(", ") }) : t("con.ai.comptes.on"); };
   const nowFiche = c => { const et = FG.etat(c), reliee = /^locations\/[0-9]+$/.test(c.google_location_id || "");
@@ -666,22 +715,83 @@
   // Métier (11/11/2026, fonction SQL admin_metier) : un client venu du paiement en ligne est créé en « Autre commerce ». Sans la fonction (adaptateur
   // sans adminMetier), le choix n'est pas montré.
   const choixMetier = c => !D.adminMetier ? "" : `<div class="pile serre" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
+  // ---------------- Prochaine action (v46, 11/11/2026 ; relecture « exploitation » : « aucune prochaine action unique ») : UNE phrase tout en haut de la
+  // fiche, le responsable d'abord (VOUS, CLIENT, ROBOT), au plus un bouton. Les règles de l'équipe passent dans l'ordre de PRIORITE ci-dessous (la
+  // première qui s'applique gagne). Sinon, ce qu'on attend du client ou du robot, avec la date avant laquelle il n'y a rien à faire : pour le client, sa
+  // date d'appel, création + J_APPEL jours (même seuil que la carte « Mise en route » de À faire et que l'alerte MISE_EN_ROUTE_BLOQUEE), ou lien
+  // Metricool + 72 h (il expire à 71 h) ; pour le robot des fiches Google, accès déclaré + 24 h. Date passée : la tâche du client devient « appelez-le ».
+  const J_APPEL = 5, H72 = 72 * 3600000;
+  function prochaineAction(c, g, jl, avis = []) {
+    const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {};
+    const maintenant = Date.now(), appel = c.cree_le ? Date.parse(c.cree_le) + J_APPEL * 864e5 : maintenant, gg = pts.google, rr = pts.metricool;
+    const aller = (id, cle) => `<button type="button" class="bouton second petit" data-aller="${e(id)}">${t("con.pa.b." + cle)}</button>`;
+    const attentes = [];
+    if (pts.compte && pts.compte.etat !== "fait") attentes.push({ qui: "client", k: "compte", d: appel });
+    if (gg && gg.etat === "declare") attentes.push({ qui: "robot", k: "google", d: (gg.maj ? Date.parse(gg.maj) : maintenant) + H24 });
+    else if (gg && gg.etat === "a_faire") attentes.push({ qui: "client", k: "google", d: appel });
+    if (rr && rr.etat === "a_faire" && rr.lien_envoye_le) attentes.push({ qui: "client", k: "reseaux", d: Date.parse(rr.lien_envoye_le) + H72, v: { d: I.date(rr.lien_envoye_le) } });
+    if (pts.demarrage && pts.demarrage.etat !== "fait") attentes.push({ qui: "client", k: "questions", d: appel, v: { n: nbReponses(c) } });
+    if (!(g && g.photos_recues_le)) attentes.push({ qui: "client", k: "photos", d: appel });
+    const PRIORITE = [
+      // Avis à traiter par l'équipe (garantie des 24 h) : avant tout le reste, sinon la bannière dirait « Rien à faire » avec un avis sensible ouvert.
+      ["avis", () => avis.length > 0 && { texte: t(avis.some(a => a.sensible || a.retenue_le) ? "con.pa.avis.sensible" : "con.pa.avis", { n: avis.length, d: dh(avis.map(a => a.echeance).filter(Boolean).sort()[0] || Date.now()) }), bouton: aller("client-avis", "avis") }],
+      ["pause", () => c.en_pause && { texte: t("con.pa.pause"), bouton: aller("client-etat", "etat") }],
+      ["fiche", () => "nom_confirme_le" in c && !c.nom_confirme_le && { texte: t("con.pa.fiche"), bouton: aller("nom-console", "fiche") }],
+      ["metier", () => metierAVerifier(c, jl) && { texte: t("con.pa.metier"), bouton: aller("metier-client", "fiche") }],
+      ["google_24h", () => gg && gg.etat === "declare" && gg.maj && maintenant - Date.parse(gg.maj) > H24 && { texte: t("con.pa.google.vieux", { d: dh(gg.maj) }), bouton: "" }],
+      ["reseaux_declares", () => rr && rr.etat === "declare" && { texte: t("con.pa.reseaux.declare"), bouton: aller("mer-etapes", "mer") }],
+      ["lien_metricool", () => rr && rr.etat === "a_faire" && "lien_envoye_le" in rr && !rr.lien_envoye_le && { texte: t("con.pa.lien"), bouton: `<button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button>` }],
+      ["blogid", () => o.reseaux_sociaux && !c.metricool_blog_id && { texte: t("con.pa.blog"), bouton: aller("mc-" + c.id, "blog") }],
+      ["appeler", () => { const l = attentes.filter(a => a.qui === "client" && maintenant >= a.d);
+        return l.length > 0 && { texte: t("con.pa.appeler", { l: I.liste(l.map(a => t("con.pa.a." + a.k, a.v))), d: I.date(Math.min(...l.map(a => a.d))) }), bouton: "" }; }],
+      ["style", () => (+c.demandes_style > 0 || !(c.marque && c.marque.verrouille)) && { texte: t(+c.demandes_style > 0 ? "con.pa.style.demande" : "con.pa.style"),
+        bouton: `<a class="bouton second petit" href="${I.lien("console.html")}#/style/${encodeURIComponent(c.id)}" data-style="${e(c.id)}">${t("con.pa.b.style")}</a>` }],
+      ["fiche_optimisee", () => g && g.fiche && !g.fiche.fait_le && g.fiche.echeance && { texte: t("con.pa.optimiser", { d: dh(g.fiche.echeance) }), bouton: aller("client-garanties", "garanties") }],
+    ];
+    for (const [regle, f] of PRIORITE) { const r = f(); if (r) return { qui: "vous", regle, ...r }; }
+    if (attentes.length) { attentes.sort((a, b) => a.d - b.d); const qui = attentes[0].qui, l = attentes.filter(a => a.qui === qui);
+      return { qui, regle: "attente", texte: t(qui === "robot" ? "con.pa.robot" : "con.pa.attente", { d: qui === "robot" ? dh(l[0].d) : I.date(l[0].d), l: I.liste(l.map(a => t("con.pa.c." + a.k, a.v))) }), bouton: "" }; }
+    return { qui: "robot", regle: "fini", texte: t("con.pa.fini"), bouton: "" };
+  }
+  const banniere = (c, pa) => `<section class="carte prochaine" id="prochaine-action" data-qui="${pa.qui}" data-regle="${pa.regle}"><h2 class="prochaine-lib">${t("con.pa.titre")}</h2>
+      <p class="prochaine-phrase"><span class="pastille" data-pastille>${t("con.pa.qui." + pa.qui)}</span> ${pa.texte}</p>${pa.bouton ? `<div class="actions">${pa.bouton}</div>` : ""}
+      ${dernierFait && dernierFait.cid === c.id ? `<p class="note fait-recent" id="fait-recent">${t("con.fait.ligne", { h: I.heure(dernierFait.h), x: e(dernierFait.x) })}</p>` : ""}</section>`;
+  // ---------------- Dernières actions sur ce client (v46, retour de PJ : « quand on revient, on n'a pas le récapitulatif ») : les 5 dernières lignes du
+  // journal de CE client (lu à part, adminJournalClient), lisibles : quoi, quand, qui (console, robot ou client, quand le détail ou le type le dit),
+  // puis le journal complet replié. Chaque geste de la fiche redessine la fiche : sa ligne apparaît en tête.
+  const QUI_PAR = { administrateur: "console", console: "console", equipe: "console", automatique: "robot", recherche: "robot", renomia: "robot", commercant: "client", client: "client", espace: "client" };
+  const TYPES_CONSOLE = ["MISE_EN_ROUTE", "MISE_EN_ROUTE_LIEN_RESEAUX", "MISE_EN_PAUSE", "REPRISE", "PAYS_COMMERCE", "METIER_COMMERCE", "RESEAUX_RETENUS", "METRICOOL_MARQUE_NOTEE"];
+  const quiJournal = x => { const p = ((x.detail && typeof x.detail === "object" ? x.detail : {}).par || "").toLowerCase();
+    if (x.type === "COMMERCE_CREE") return (x.detail || {}).origine === "paiement_en_ligne" ? "robot" : "console";   // paiement en ligne : créé par le robot (client_en_ligne)
+    return QUI_PAR[p] || (TYPES_CONSOLE.includes(x.type) ? "console" : x.type === "MISE_EN_ROUTE_DECLAREE" ? "client" : ""); };
+  const resumeJournal = x => { const d = x.detail && typeof x.detail === "object" ? x.detail : {}, pt = d.point && I.a("con.mer.nom." + d.point) ? t("con.mer.nom." + d.point) : e(d.point || "");
+    if (x.type === "MISE_EN_ROUTE") return t("con.hist.mer", { p: pt, e: I.a("con.hist.etat." + d.etat) ? t("con.hist.etat." + d.etat) : e(d.etat || "") });
+    const plus = x.type === "MISE_EN_ROUTE_DECLAREE" ? pt : /^ACCES_RESEAU_/.test(x.type) ? NOM_RESEAU[d.reseau] || e(d.reseau || "") : x.type === "PAYS_COMMERCE" ? (I.a("con.pays." + d.pays) ? t("con.pays." + d.pays) : e(d.pays || ""))
+      : x.type === "METIER_COMMERCE" ? METIERS[d.apres] || e(d.apres || "") : x.type === "OFFRE_CHANGEE" && d.offre ? e(I.offre(d.offre)) : x.type === "METRICOOL_MARQUE_NOTEE" ? e(d.blog_id || t("con.hist.retire")) : "";
+    return e(libelleEtape(x.type)) + (plus ? t("deux.points") + plus : ""); };
+  const blocHistorique = l => `<section class="carte" id="historique-client"><h2>${t("con.hist.titre")}</h2>
+      ${l.length ? `<ol class="historique" id="historique-liste">${l.slice(0, 5).map(x => { const q = quiJournal(x);
+        return `<li data-type="${e(x.type)}"><p class="fort">${resumeJournal(x)}</p><p class="note">${dh(x.cree_le)}${q ? ` · <span data-qui="${q}">${t("con.hist.qui." + q)}</span>` : ""}</p></li>`; }).join("")}</ol>` : `<p class="note" id="historique-vide">${t("con.hist.vide")}</p>`}
+      <details class="repliable sous" id="journal-client"><summary><h3>${t("con.hist.tout", { n: l.length })}</h3></summary>${tableJournal("jc")}</details></section>`;
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
-    const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
+    // Journal de CE client lu à part (v46) : adminJournal s'arrête aux 300 lignes les plus récentes de tous les clients.
+    const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournalClient ? D.adminJournalClient(cid) : D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
     const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
+    ficheCourante = cid;
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
+      ${banniere(c, prochaineAction(c, g, journalClient, mesAvis))}${blocHistorique(journalClient)}
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
         <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}</div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
-      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", nowMer(c.sante))}${merFiche(c)}</section>
+      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", "")}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
@@ -712,30 +822,33 @@
         <h2>${t("con.langues.titre")}</h2>${aide("langue", t("con.ai.langue.now"))}<form id="f-langues-client" class="pile serre"><div class="f"><label for="langues-client">${t("con.langues.titre")}</label>
           <select id="langues-client">${[["fr", "fiche.langues.fr"], ["nl", "fiche.langues.nl"], ["fr,nl", "fiche.langues.frnl"]].map(([v, k]) => `<option value="${v}"${(Array.isArray(c.langues_publication) && c.langues_publication.length ? ["fr", "nl"].filter(x => c.langues_publication.includes(x)).join(",") : c.langue === "nl" ? "nl" : "fr") === v ? " selected" : ""}>${t(k)}</option>`).join("")}</select></div>
           <button class="bouton second petit" type="submit">${t("enregistrer")}</button></form>
-        <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${aide("contact", nowContact(contacts))}${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>
-      <details class="carte tableau" id="journal-client"><summary>${t("con.journal.client")}, ${journalClient.length}</summary>${aide("journal", t("con.ai.journal.now"))}${tableJournal("jc")}</details>`;
+        <h2>${t("con.contact.titre")}</h2><p class="note">${t("con.contact.chapo")}</p>${aide("contact", nowContact(contacts))}${formContact("contact-tous", (contacts || {}).global, t("con.contact.titre"))}${formContact("contact-client", (contacts || {}).commerce, t("con.contact.client"))}</section>`;
     remplirJournal("jc", journalClient);
-    const fLg = $("f-langues-client"); if (fLg) fLg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminReglerLanguesPublication(cid, $("langues-client").value.split(",")); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    const fl = $("f-lien-avis"); if (fl) fl.onsubmit = async ev => { ev.preventDefault(); try { await D.adminLienAvis(cid, $("lien-avis-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    [["contact-tous", null], ["contact-client", cid]].forEach(([id, pour]) => { const f = $(id); if (f) f.onsubmit = async ev => { ev.preventDefault();
-      try { await D.adminReglerContact(pour, { prenom: $(id + "-prenom").value, telephone: $(id + "-tel").value, photo: $(id + "-photo").value }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } }; });
-    const zc = $("client-etat");
-    zc.querySelector("[data-a=pause]").onclick = async () => { try { await D.adminPause(cid, !c.en_pause); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    const zn = zc.querySelector("[data-a=nom]"); if (zn) zn.onclick = async () => { try { await D.adminConfirmerNom(cid, $("nom-console").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    const zf = zc.querySelector("[data-a=fiche-verifiee]"); if (zf) zf.onclick = async () => { try { await D.adminFicheGoogleVerifiee(cid, $("fiche-verif").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    // Chaque geste de la fiche : la fonction de la base, puis la fiche redessinée (sa ligne apparaît dans « Dernières actions »), le message, et
+    // « Fait à … » qui reste sous la bannière (noterFait).
+    const faire = async (b, f, ok) => { const lib = b ? b.textContent.trim() : ""; if (b) b.disabled = true;
+      try { const r = await f(); const x = typeof ok === "function" ? ok(r) : ok || t("enregistre"); noterFait(x, lib); await client(cid); msg(x); }
+      catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
+    const envoi = (id, f, ok) => { const fo = $(id); if (fo) fo.onsubmit = ev => { ev.preventDefault(); faire(ev.submitter || fo.querySelector("[type=submit]"), f, ok); }; };
+    envoi("f-langues-client", () => D.adminReglerLanguesPublication(cid, $("langues-client").value.split(",")));
+    envoi("f-lien-avis", () => D.adminLienAvis(cid, $("lien-avis-client").value));
+    [["contact-tous", null], ["contact-client", cid]].forEach(([id, pour]) => envoi(id, () => D.adminReglerContact(pour, { prenom: $(id + "-prenom").value, telephone: $(id + "-tel").value, photo: $(id + "-photo").value })));
+    const zc = $("client-etat"), clic = (z, sel, f, ok) => { const b = z && z.querySelector(sel); if (b) b.onclick = () => faire(b, f, ok); };
+    clic(zc, "[data-a=pause]", () => D.adminPause(cid, !c.en_pause));
+    clic(zc, "[data-a=nom]", () => D.adminConfirmerNom(cid, $("nom-console").value));
+    clic(zc, "[data-a=fiche-verifiee]", () => D.adminFicheGoogleVerifiee(cid, $("fiche-verif").value));
     // Changement d'offre (27/10/2026) : la base arrête ce qui est hors de la nouvelle offre et ajoute la tâche « Mettre Stripe à jour » si besoin.
     // Pays du commerce (31/10/2026) : jours fériés de France ou de Belgique pour la programmation et l'idée de la semaine (fonction SQL admin_pays).
-    zc.querySelector("[data-a=pays]").onclick = async () => { try { await D.adminPays(cid, $("pays-client").value); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    const zm = zc.querySelector("[data-a=metier]"); if (zm) zm.onclick = async () => { zm.disabled = true; try { await D.adminMetier(cid, $("metier-client").value); await client(cid); msg(t("con.metier.ok")); } catch (er) { zm.disabled = false; msg(ph(er.message)); } };
-    zc.querySelector("[data-a=offre]").onclick = async () => { try { await D.adminOffre(cid, $("offre-client").value); await client(cid); msg(t("con.offre.changee")); } catch (er) { msg(ph(er.message)); } };
-    vue.querySelectorAll("[data-acces]").forEach(b => b.onclick = async () => { const r = b.dataset.acces, oui = b.dataset.oui === "1", res = NOM_RESEAU[r] || r;
-      if (!oui && !window.confirm(t("con.acces.confirmer", { res }))) return; b.disabled = true;
-      try { const x = await D.adminAccesReseau(cid, r, oui), dep = oui && r === "google" ? await noterAccesGoogle(cid) : null; await client(cid);
-        msg(t(oui ? "con.acces.ok" : "con.acces.retire", { res, n: x.programmes || 0 }) + (dep ? " " + dep.replace(/^[^.]*\.\s*/, "") : "")); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
-    const zl = vue.querySelector("[data-a=fiche-lieu]"); if (zl) zl.onclick = async () => { zl.disabled = true; try { await D.adminFicheGoogleLieu(cid, $("fg-id").value); await client(cid); msg(t("con.fg.ok")); } catch (er) { zl.disabled = false; msg(ph(er.message)); } };
-    vue.querySelectorAll("[data-mc-enregistrer]").forEach(b => b.onclick = async () => { try { await D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value); await client(cid); msg(t("con.mc.ok")); } catch (er) { msg(ph(er.message)); } });
-    const fd = $("f-delais-client"); if (fd) fd.onsubmit = async ev => { ev.preventDefault(); try { await D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
-    const fg = $("f-gar-client"); if (fg) fg.onsubmit = async ev => { ev.preventDefault(); try { await D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }); await client(cid); msg(t("enregistre")); } catch (er) { msg(ph(er.message)); } };
+    clic(zc, "[data-a=pays]", () => D.adminPays(cid, $("pays-client").value));
+    clic(zc, "[data-a=metier]", () => D.adminMetier(cid, $("metier-client").value), t("con.metier.ok"));
+    clic(zc, "[data-a=offre]", () => D.adminOffre(cid, $("offre-client").value), t("con.offre.changee"));
+    clic(vue, "[data-a=fiche-lieu]", () => D.adminFicheGoogleLieu(cid, $("fg-id").value), t("con.fg.ok"));
+    clic(vue, "[data-mc-enregistrer]", () => D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value), t("con.mc.ok"));
+    envoi("f-delais-client", () => D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }));
+    envoi("f-gar-client", () => D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }));
+    // Bouton de la bannière qui mène au bon champ (« Vérifier la fiche », « Noter le blogId »…) : défilement et focus, sans changer d'adresse.
+    vue.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { const z = $(b.dataset.aller); if (!z) return;
+      const d = z.closest("details"); if (d) d.open = true; z.scrollIntoView({ block: "center" }); if (z.matches("input, select, textarea, button")) z.focus({ preventScroll: true }); });
     brancherCartes(() => client(cid));
     if (ancre === "avis") { const z = $("client-avis"); if (z) z.scrollIntoView({ block: "start" }); }
   }
@@ -930,9 +1043,10 @@
     vue.innerHTML = `${entete(t("con.entree.guide"), t("con.guide.chapo"))}<p class="msg" id="msg" role="status"></p>
       <nav class="carte guide-sommaire" id="guide-sommaire" aria-label="${t("con.guide.sommaire")}"><p class="fort">${t("con.guide.sommaire")}</p>
         <ol>${ETAPES_GUIDE.map(k => `<li><a href="#/guide/${k}">${G(k, "titre")}</a></li>`).join("")}</ol>
-        <p><a href="#/guide/mer">${t("con.guide.mer.titre")}</a> · <a href="#/guide/routine">${t("con.guide.routine.titre")}</a> · <a href="#/guide/glossaire">${t("con.guide.glossaire")}</a></p></nav>
+        <p><a href="#/guide/fiche">${t("con.guide.fiche.titre")}</a> · <a href="#/guide/mer">${t("con.guide.mer.titre")}</a> · <a href="#/guide/routine">${t("con.guide.routine.titre")}</a> · <a href="#/guide/glossaire">${t("con.guide.glossaire")}</a></p></nav>
       <h2 class="guide-partie" id="guide-parcours">${t("con.guide.parcours")}</h2>
       <div class="pile" id="guide-etapes">${ETAPES_GUIDE.map(etape).join("")}</div>
+      <section class="carte" id="guide-fiche"><h2>${t("con.guide.fiche.titre")}</h2><ol class="guide-liste">${[1, 2, 3, 4, 5].map(n => `<li>${t("con.guide.fiche." + n)}</li>`).join("")}</ol></section>
       <section class="carte" id="guide-mer"><h2>${t("con.guide.mer.titre")}</h2><p class="texte2">${t("con.guide.mer.chapo")}</p>
         <dl class="guide-dl">${["compte", "google", "metricool", "demarrage"].map(k => `<div data-point="${k}"><dt>${t("con.mer.nom." + k)}</dt><dd>${t("con.guide.mer." + k)}</dd></div>`).join("")}</dl></section>
       <section class="carte" id="guide-routine"><h2>${t("con.guide.routine.titre")}</h2><ol class="guide-liste">${ROUTINE.map(n => `<li>${t("con.guide.routine." + n)}</li>`).join("")}</ol></section>
@@ -959,6 +1073,7 @@
     const [r, param, sous] = location.hash.replace("#/", "").split("/");
     if (ANCIENNES[r]) { history.replaceState(null, "", "#/" + ANCIENNES[r] + (param ? "/" + param : "")); return rendre(); }
     const ecran = ROUTES[r] ? r : "cockpit";
+    ficheCourante = null;   // « Fait à … » ne se note que pour un geste fait sur la fiche ouverte (client la rouvre et la remet)
     route = ONGLET[ecran]; connecte = true; dessinerNav();
     const cle = ecran + "/" + (param || "") + "/" + (sous || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
     try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined, sous ? decodeURIComponent(sous) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }

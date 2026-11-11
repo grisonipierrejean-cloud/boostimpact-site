@@ -1179,8 +1179,31 @@ p.bandeau-demo .note{color:var(--texte2)}
 @media (max-width:599px){.carte.bilan>.carte-tete{order:0}.carte.bilan>.bilan-chiffres{order:1}.carte.bilan>:not(.carte-tete):not(.bilan-chiffres){order:2}}
 /* Aide fixe des blocs de la fiche client et mode d'emploi de la console (11/11/2026). Texte seul, couleurs et tailles existantes : ni filet de
    couleur, ni pastille, ni encadré en plus. L'en-tête de chaque ligne (« À quoi ça sert. ») est en graisse moyenne, dans la couleur du texte. */
-.aide-bloc{display:flex;flex-direction:column;gap:2px;max-width:72ch;margin-top:-4px}
+.aide-bloc{max-width:72ch;margin-top:-4px}
 .aide-bloc .note{line-height:1.45}
+/* v46 : aide d'un bloc de la fiche client en une ligne repliable (ouverte, 2 ou 3 lignes). */
+.aide-bloc>summary{display:inline-flex;align-items:center;min-height:44px;font-size:14px;color:var(--discret);cursor:pointer;text-decoration:underline;text-underline-offset:3px;list-style:none}
+.aide-bloc>summary::-webkit-details-marker{display:none}
+.aide-bloc[open]>summary{margin-bottom:2px}
+.aide-bloc[open]{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+/* v46 : prochaine action de la fiche client. Pastille texte (VOUS, CLIENT, ROBOT) à l'encre, sans couleur d'accent ni trait coloré. */
+.prochaine{border:1px solid var(--bord-fort)}
+.prochaine .prochaine-lib{font-size:14px;font-weight:var(--graisse-forte);color:var(--discret);letter-spacing:.01em}
+.prochaine-phrase{margin-top:6px;font-size:18px;line-height:1.45;max-width:60ch;overflow-wrap:anywhere}
+.pastille{display:inline-block;vertical-align:.12em;margin-right:6px;padding:1px 7px;border:1px solid var(--encre);border-radius:4px;font-size:12px;font-weight:var(--graisse-forte);letter-spacing:.06em;line-height:1.5;color:var(--encre);white-space:nowrap}
+.prochaine .actions{margin-top:12px}
+.fait-recent{margin-top:10px;padding-top:10px;border-top:1px solid var(--filet);overflow-wrap:anywhere}
+/* v46 : dernières actions sur ce client. */
+.historique{list-style:none;margin:8px 0 0;padding:0}
+.historique li{padding:8px 0;border-top:1px solid var(--filet)}
+.historique li:first-child{border-top:0;padding-top:2px}
+.historique p{margin:0;overflow-wrap:anywhere}
+#historique-client #journal-client{margin-top:8px;border-top:1px solid var(--filet)}
+#historique-client #journal-client .tab{margin-top:8px}
+#historique-client .tab tr{padding-left:0;padding-right:0}
+#historique-client .tab td{overflow-wrap:anywhere}
+@media (min-width:900px){#historique-client .tab th:first-child,#historique-client .tab td:first-child{padding-left:0}#historique-client .tab th:last-child,#historique-client .tab td:last-child{padding-right:0}}
+.taches-admin{margin:6px 0 0;padding-left:20px;font-size:15px}
 .aide-lib{color:var(--texte2);font-weight:var(--graisse-moyenne)}
 .console .haut-guide{font-size:14px;color:var(--discret);text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center;white-space:nowrap}
 .console .haut-guide[aria-current]{color:var(--encre)}
