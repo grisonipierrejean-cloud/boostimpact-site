@@ -89,6 +89,35 @@
     const lien = x => x.point !== "metricool" || x.etat !== "a_faire" || !("lien_envoye_le" in x) ? ""
       : `<p class="note">${x.lien_envoye_le ? t("con.mer.lien.envoye", { d: I.date(x.lien_envoye_le) }) : t("con.mer.lien.attente")}</p><button type="button" class="bouton second petit" data-mer-lien>${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>`;
     return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${lien(x)}${["google", "metricool"].includes(x.point) ? `<button type="button" class="bouton second petit" data-mer="${e(x.point)}">${t("con.verifie", { x: x.point === "google" ? "Google" : "Metricool" })}</button>` : ""}`).join("")}`; };
+  // Mise en route sur la fiche du client (11/11/2026, retour de PJ : « je ne comprends pas ») : les étapes de l'offre TOUJOURS, une ligne chacune (nom
+  // clair, état en mots avec sa date, action de l'équipe à droite), quand cliquer ou non « Google vérifié », la procédure Metricool en étapes numérotées
+  // selon l'état, puis les réponses du client aux 5 questions (commerces.demarrage). La carte de « À faire » garde la forme courte (miseEnRoute).
+  // Mêmes textes dans la page « Mode d'emploi » (quandGoogle, procReseaux sans état).
+  const TONS = I.carte("ton", ["chaleureux", "sobre", "enjoue"]), ACTIONS = I.carte("action", ["reserver", "appeler", "venir", "acheter"]);
+  const etatMer = x => x.etat === "fait" ? (x.maj ? t("con.mer.etat.fait.le", { d: I.date(x.maj) }) : t("con.mer.etat.fait"))
+    : x.etat === "declare" ? (x.maj ? t("con.mer.etat.declare.le", { d: dh(x.maj) }) : t("con.mer.etat.declare")) : t("con.mer.etat.afaire");
+  // Étape en cours : lien pas encore noté « envoyé », 1 et 2 ; noté, 4 (1 à 3 faites). Sans x (Mode d'emploi) : la procédure seule.
+  const procReseaux = x => { const lien = x && x.lien_envoye_le, cur = !x || x.etat === "fait" ? 0 : lien || x.etat === "declare" ? 4 : 1;
+    return `<ol class="mer-proc">${[1, 2, 3, 4].map(n => { const fait = !!x && (x.etat === "fait" || (!!lien && n < 4)), en = !!cur && (n === cur || (cur === 1 && n === 2));
+      return `<li${fait ? ' class="fait"' : ""}${en ? ' aria-current="step"' : ""}>${t("con.mer.proc." + n)}${n === 3 && lien ? ` <span class="mer-proc-etat">${t("con.mer.lien.envoye.court", { d: I.date(lien) })}</span>` : fait ? ` <span class="mer-proc-etat">${t("con.mer.proc.fait")}</span>` : ""}</li>`; }).join("")}</ol>`; };
+  const quandGoogle = () => `<div class="mer-quand"><p class="note"><span class="aide-lib">${t("con.mer.google.quand.lib")}</span> ${t("con.mer.google.quand")}</p><p class="note"><span class="aide-lib">${t("con.mer.google.pas.lib")}</span> ${t("con.mer.google.pas")}</p></div>`;
+  const reponsesDemarrage = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null, vide = `<span class="texte2">${t("con.mer.rep.vide")}</span>`;
+    const val = k => { const v = r ? r[k] : null;
+      if (k === "ton") return TONS[v === "enjoué" ? "enjoue" : v] || (v ? e(v) : vide);
+      if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? e(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
+      const s_ = Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : ""; return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
+    return `<details class="repliable mer-reponses" id="mer-reponses"><summary><h3>${t("con.mer.rep.titre")}</h3></summary>
+      ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}<dl class="mer-rep">${["phrase", "distinctions", "ton", "interdits", "action"].map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${t("q." + k + ".titre")}</dt><dd>${val(k)}</dd></div>`).join("")}</dl></details>`; };
+  const merFiche = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return "";
+    const action = x => { if (x.etat === "fait") return "";
+      if (x.point === "google") return `<button type="button" class="bouton second petit" data-mer="google">${t("con.verifie", { x: "Google" })}</button>`;
+      if (x.point !== "metricool") return "";
+      const avecLien = "lien_envoye_le" in x, aVerifier = !avecLien || x.lien_envoye_le || x.etat === "declare";
+      return `${avecLien ? `<button type="button" class="bouton second petit" data-mer-lien>${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : ""}${aVerifier ? `<button type="button" class="bouton second petit" data-mer="metricool">${t("con.verifie", { x: "Metricool" })}</button>` : ""}`; };
+    const detail = x => x.etat === "fait" ? "" : x.point === "google" ? quandGoogle() : x.point === "metricool" ? procReseaux(x) : "";
+    return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { const a = action(x);
+      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etatMer(x)}</p></div>${a ? `<div class="mer-action">${a}</div>` : ""}</div>${detail(x)}</li>`; }).join("")}</ol>
+      ${reponsesDemarrage(c)}`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
     const etat = m && m.verrouille ? t("con.sty.ligne." + (m.valide_par === "renom" ? "renom" : "commercant"), { d: I.date(m.verrouille_le || m.maj) }) : t(m ? "con.sty.ligne.attente" : "con.sty.ligne.aucun");
@@ -652,7 +681,7 @@
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
         <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}</div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
-      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", nowMer(c.sante))}${miseEnRoute(c.sante)}</section>
+      <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", nowMer(c.sante))}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
@@ -895,13 +924,17 @@
     const L = k => t("con.guide.l." + k), G = (e_, k) => t("con.guide." + e_ + "." + k);
     const etape = (k, i) => `<section class="carte guide-etape" id="guide-${k}"><h2>${i + 1}. ${G(k, "titre")}</h2>
         <dl class="guide-dl">${["client", "robot", "vous", "ou", "duree", "bloque"].map(r => `<div data-role="${r}"><dt>${L(r)}</dt><dd>${G(k, r)}</dd></div>`).join("")}</dl>
+        ${k === "e3" ? `<div class="encart guide-mer" id="guide-google-verifie"><p class="fort">${t("con.mer.google.titre")}</p>${quandGoogle()}</div>` : ""}
+        ${k === "e4" ? `<div class="encart guide-mer" id="guide-reseaux-proc"><p class="fort">${t("con.mer.proc.titre")}</p>${procReseaux()}</div>` : ""}
         ${I.a("con.guide." + k + ".message") ? `<div class="encart guide-message"><p class="fort">${L("message")}</p><p class="texte2" data-message>${G(k, "message")}</p><button type="button" class="bouton second petit" data-copier-message>${t("con.guide.copier")}</button></div>` : ""}</section>`;
     vue.innerHTML = `${entete(t("con.entree.guide"), t("con.guide.chapo"))}<p class="msg" id="msg" role="status"></p>
       <nav class="carte guide-sommaire" id="guide-sommaire" aria-label="${t("con.guide.sommaire")}"><p class="fort">${t("con.guide.sommaire")}</p>
         <ol>${ETAPES_GUIDE.map(k => `<li><a href="#/guide/${k}">${G(k, "titre")}</a></li>`).join("")}</ol>
-        <p><a href="#/guide/routine">${t("con.guide.routine.titre")}</a> · <a href="#/guide/glossaire">${t("con.guide.glossaire")}</a></p></nav>
+        <p><a href="#/guide/mer">${t("con.guide.mer.titre")}</a> · <a href="#/guide/routine">${t("con.guide.routine.titre")}</a> · <a href="#/guide/glossaire">${t("con.guide.glossaire")}</a></p></nav>
       <h2 class="guide-partie" id="guide-parcours">${t("con.guide.parcours")}</h2>
       <div class="pile" id="guide-etapes">${ETAPES_GUIDE.map(etape).join("")}</div>
+      <section class="carte" id="guide-mer"><h2>${t("con.guide.mer.titre")}</h2><p class="texte2">${t("con.guide.mer.chapo")}</p>
+        <dl class="guide-dl">${["compte", "google", "metricool", "demarrage"].map(k => `<div data-point="${k}"><dt>${t("con.mer.nom." + k)}</dt><dd>${t("con.guide.mer." + k)}</dd></div>`).join("")}</dl></section>
       <section class="carte" id="guide-routine"><h2>${t("con.guide.routine.titre")}</h2><ol class="guide-liste">${ROUTINE.map(n => `<li>${t("con.guide.routine." + n)}</li>`).join("")}</ol></section>
       <section class="carte" id="guide-glossaire"><h2>${t("con.guide.glossaire")}</h2><dl class="guide-dl guide-glossaire">${GLOSSAIRE.map(k => `<div data-terme="${k}"><dt translate="no">${t("con.guide.g." + k + ".t")}</dt><dd>${t("con.guide.g." + k)}</dd></div>`).join("")}</dl></section>`;
     vue.querySelectorAll("[data-copier-message]").forEach(b => b.onclick = async () => { const x = b.parentElement.querySelector("[data-message]").textContent;

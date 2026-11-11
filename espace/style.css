@@ -1198,3 +1198,26 @@ p.bandeau-demo .note{color:var(--texte2)}
 .guide-message .texte2{max-width:72ch}
 .guide-message .bouton{align-self:flex-start;margin-top:8px}
 .guide-message{display:flex;flex-direction:column;gap:4px}
+/* Mise en route de la fiche client (11/11/2026, retour de PJ) : une ligne par étape (nom, état en mots, bouton à droite), filet neutre entre les
+   lignes, procédure réseaux numérotée (étape en cours en graisse moyenne, étapes faites en gris), réponses du client repliées. Aucune couleur en plus. */
+.mer-etapes{list-style:none;margin:8px 0 0;padding:0}
+.mer-etape{padding:12px 0;border-top:1px solid var(--filet)}
+.mer-etape:first-child{border-top:0;padding-top:4px}
+.mer-ligne{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 16px}
+.mer-nom{min-width:0;flex:1 1 220px}
+.mer-nom p{margin:0}
+.mer-action{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+@media (max-width:599px){.mer-action{justify-content:flex-start}}
+.mer-quand{margin-top:8px;display:flex;flex-direction:column;gap:4px;max-width:72ch}
+.mer-quand .note{line-height:1.45}
+.mer-proc{margin:10px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:8px;max-width:72ch;font-size:14px;line-height:1.45;color:var(--texte2)}
+.mer-proc li[aria-current]{color:var(--encre);font-weight:var(--graisse-moyenne)}
+.mer-proc li.fait{color:var(--discret)}
+.mer-proc-etat{color:var(--discret);font-weight:var(--graisse-texte)}
+.mer-reponses{margin-top:12px;border-top:1px solid var(--filet);padding-top:4px}
+details.repliable.mer-reponses>summary h3{margin:0}
+.mer-rep{margin:0;display:flex;flex-direction:column;gap:12px}
+.mer-rep dt{font-size:14px;font-weight:var(--graisse-forte);color:var(--texte2)}
+.mer-rep dd{margin:2px 0 0;max-width:72ch}
+.mer-rep-texte{white-space:pre-line;overflow-wrap:anywhere}
+.guide-mer{display:flex;flex-direction:column;gap:4px}
