@@ -66,6 +66,10 @@
   const PHRASES_MARQUE = { invalide: "Identifiant de marque Metricool invalide : des chiffres seulement (blogId, lu dans l'adresse de la marque sur Metricool).",
     prise: "Cette marque Metricool est déjà celle d'un autre commerce." };
   const phraseWhatsapp = pays => "Numéro WhatsApp invalide : indiquez l'indicatif du pays, par exemple " + exempleNumero(pays) + ".";
+  // Numéro WhatsApp obligatoire au démarrage (11/11/2026, décision de PJ ; même phrase que enregistrer_demarrage, bloc « Numéro WhatsApp obligatoire
+  // au démarrage » de schema.sql) : WhatsApp actif = numéro E.164, accord daté, notifications.whatsapp vrai (whatsapp_actif de schema.sql).
+  const PHRASE_WA_MANQUANT = "Numéro WhatsApp manquant : indiquez votre numéro WhatsApp et cochez la case d'accord, puis terminez le démarrage.";
+  const whatsappActifDe = c => !!(c && c.whatsapp_numero && c.whatsapp_accord_le && (c.notifications || {}).whatsapp);
   // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : mêmes règles et mêmes phrases que la base.
   const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible", "changement_offre"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
     TEXTES: { nom_vide: "Indiquez le nom de votre commerce.", nom_long: "Le nom est trop long (120 caractères au plus).",
@@ -96,7 +100,7 @@
     // Recherche automatique sans réponse depuis 2 h (n8n ou GitHub Actions en panne) : carte « Identifier la fiche Google » dans la console.
     ATTENTE_HEURES: 2 };
   window.RENOM_FICHE = FG;
-  window.RENOM_WHATSAPP = { numero: numeroWhatsapp, exemple: exempleNumero, fixe: numeroFixe, lisible: numeroLisible, PHRASE_FIXE };
+  window.RENOM_WHATSAPP = { numero: numeroWhatsapp, exemple: exempleNumero, fixe: numeroFixe, lisible: numeroLisible, actif: whatsappActifDe, PHRASE_FIXE, PHRASE_WA_MANQUANT };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
     "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE", "METRICOOL_MARQUE_NOTEE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
@@ -971,7 +975,7 @@
       async autoriserPhotos() { const c = await self.commerce(), r = await sb.rpc("autoriser_photos", { p_commerce: c.id }); if (r.error) throw new Error(phrasePhotos(r.error.message)); cache = null; return r.data; },
       // ---- Alertes WhatsApp (22/10/2026) : la case du commerçant (regler_whatsapp : numéro E.164, heure de l'accord, journal WHATSAPP_ACCORD).
       async reglerWhatsapp(numero, accord) {
-        const c = await self.commerce(), n = accord ? numeroWhatsapp(numero, c.pays) : null; if (accord && !n) throw new Error(phraseWhatsapp(c.pays)); if (accord && numeroFixe(n)) throw new Error(PHRASE_FIXE);
+        const c = await self.commerce(), n = accord ? numeroWhatsapp(numero, paysDe(c.pays)) : null; if (accord && !n) throw new Error(phraseWhatsapp(paysDe(c.pays))); if (accord && numeroFixe(n)) throw new Error(PHRASE_FIXE);
         const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });
         if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? phraseWhatsapp(c.pays) : r.error.message); cache = null; return r.data;
       },

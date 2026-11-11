@@ -482,10 +482,16 @@
   // ligne, jamais corrigé), lien Metricool à envoyer, blogId à noter. Les étapes du client n'entrent dans « À faire » qu'à leur date d'appel (merBloquee).
   // jl : journal de CE client (COMMERCE_CREE « paiement_en_ligne », METIER_COMMERCE) ; sans lui, le métier n'est pas contrôlé.
   const metierAVerifier = (c, jl) => c.metier === "autre" && Array.isArray(jl) && jl.some(x => x.type === "COMMERCE_CREE" && (x.detail || {}).origine === "paiement_en_ligne") && !jl.some(x => x.type === "METIER_COMMERCE");
+  // Numéro WhatsApp obligatoire (11/11/2026, bloc SQL « Numéro WhatsApp obligatoire au démarrage ») : WhatsApp actif = numéro, accord daté,
+  // notifications.whatsapp vrai (whatsapp_actif de schema.sql). Client actif (pas en pause) sans WhatsApp après sa date d'appel (création +
+  // J_APPEL jours) : tâche « WhatsApp manquant » de À faire, en retard.
+  const waActif = c => !!(c && c.whatsapp_numero && c.whatsapp_accord_le && (c.notifications || {}).whatsapp);
+  const waEnRetard = c => !c.en_pause && !waActif(c) && (ageJours(c) ?? 0) >= J_APPEL;
   const tachesAdmin = (c, jl) => { if (c.en_pause) return []; const l = [], o = OFFRES[c.offre_id] || {}, m = c.sante && c.sante.mise_en_route, r = m && (m.points || []).find(x => x.point === "metricool");
     if ("nom_confirme_le" in c && !c.nom_confirme_le) l.push("fiche"); else if (metierAVerifier(c, jl)) l.push("metier");
     if (r && r.etat === "a_faire" && "lien_envoye_le" in r && !r.lien_envoye_le) l.push("lien");
     if (o.reseaux_sociaux && !c.metricool_blog_id) l.push("blog");
+    if (waEnRetard(c)) l.push("whatsapp");
     return l; };
   const carteMiseEnRoute = (c, taches) => { const bloque = merBloquee(c), lien = taches.includes("lien") && !bloque;
     return `<article class="carte${bloque ? " attention" : ""}" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
@@ -526,7 +532,7 @@
     // Métier à contrôler : journal de chaque client encore en « Autre commerce » (peu nombreux), lu à part.
     const jls = Object.fromEntries(await Promise.all(cs.filter(c => c.metier === "autre" && D.adminJournalClient).map(async c => [c.id, await D.adminJournalClient(c.id).catch(() => null)])));
     cs.forEach(c => { const tk = tachesAdmin(c, jls[c.id]), bloque = merBloquee(c);
-      if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), bloque && (ageJours(c) ?? 0) >= 5, NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
+      if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), (bloque && (ageJours(c) ?? 0) >= 5) || tk.includes("whatsapp"), NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
     (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
     items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
     return { items, alertes, pubs, dl, cs, erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null) };
@@ -715,6 +721,10 @@
   // Métier (11/11/2026, fonction SQL admin_metier) : un client venu du paiement en ligne est créé en « Autre commerce ». Sans la fonction (adaptateur
   // sans adminMetier), le choix n'est pas montré.
   const choixMetier = c => !D.adminMetier ? "" : `<div class="pile serre" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
+  // Numéro WhatsApp du client (v47) : lisible, avec la date de l'accord ; sinon « WhatsApp manquant ».
+  const blocWhatsapp = c => `<div class="pile serre" id="client-wa" data-wa="${waActif(c) ? "actif" : "manquant"}"><p class="note">${t("con.wa.lib")}</p>${waActif(c)
+    ? `<p><a class="casse fort" href="https://wa.me/${e(String(c.whatsapp_numero).replace(/^\+/, ""))}" target="_blank" rel="noopener" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero)}</a></p><p class="note">${t("con.wa.accord", { d: I.date(c.whatsapp_accord_le) })}</p>`
+    : `<p class="fort">${t("con.wa.manquant")}</p><p class="note">${t("con.wa.manquant.note")}</p>`}</div>`;
   // ---------------- Prochaine action (v46, 11/11/2026 ; relecture « exploitation » : « aucune prochaine action unique ») : UNE phrase tout en haut de la
   // fiche, le responsable d'abord (VOUS, CLIENT, ROBOT), au plus un bouton. Les règles de l'équipe passent dans l'ordre de PRIORITE ci-dessous (la
   // première qui s'applique gagne). Sinon, ce qu'on attend du client ou du robot, avec la date avant laquelle il n'y a rien à faire : pour le client, sa
@@ -731,6 +741,7 @@
     else if (gg && gg.etat === "a_faire") attentes.push({ qui: "client", k: "google", d: appel });
     if (rr && rr.etat === "a_faire" && rr.lien_envoye_le) attentes.push({ qui: "client", k: "reseaux", d: Date.parse(rr.lien_envoye_le) + H72, v: { d: I.date(rr.lien_envoye_le) } });
     if (pts.demarrage && pts.demarrage.etat !== "fait") attentes.push({ qui: "client", k: "questions", d: appel, v: { n: nbReponses(c) } });
+    if (!c.demarrage_fini && !waActif(c)) attentes.push({ qui: "client", k: "whatsapp", d: appel });   // numéro obligatoire, demandé à la fin du démarrage
     if (!(g && g.photos_recues_le)) attentes.push({ qui: "client", k: "photos", d: appel });
     const PRIORITE = [
       // Avis à traiter par l'équipe (garantie des 24 h) : avant tout le reste, sinon la bannière dirait « Rien à faire » avec un avis sensible ouvert.
@@ -738,6 +749,8 @@
       ["pause", () => c.en_pause && { texte: t("con.pa.pause"), bouton: aller("client-etat", "etat") }],
       ["fiche", () => "nom_confirme_le" in c && !c.nom_confirme_le && { texte: t("con.pa.fiche"), bouton: aller("nom-console", "fiche") }],
       ["metier", () => metierAVerifier(c, jl) && { texte: t("con.pa.metier"), bouton: aller("metier-client", "fiche") }],
+      // Démarré sans numéro WhatsApp (ancien client, ou accord retiré dans Notifications) : à demander au client (11/11/2026).
+      ["whatsapp", () => !c.en_pause && c.demarrage_fini && !waActif(c) && { texte: t("con.pa.wa"), bouton: "" }],
       ["google_24h", () => gg && gg.etat === "declare" && gg.maj && maintenant - Date.parse(gg.maj) > H24 && { texte: t("con.pa.google.vieux", { d: dh(gg.maj) }), bouton: "" }],
       ["reseaux_declares", () => rr && rr.etat === "declare" && { texte: t("con.pa.reseaux.declare"), bouton: aller("mer-etapes", "mer") }],
       ["lien_metricool", () => rr && rr.etat === "a_faire" && "lien_envoye_le" in rr && !rr.lien_envoye_le && { texte: t("con.pa.lien"), bouton: `<button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button>` }],
@@ -789,7 +802,7 @@
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
-        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}</div>
+        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}${blocWhatsapp(c)}</div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", "")}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}

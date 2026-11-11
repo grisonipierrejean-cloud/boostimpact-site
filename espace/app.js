@@ -826,7 +826,7 @@
     const requises = actions.filter(a => !a.facultatif), sansAFaire = !requises.length && !humains.length;
     // Tour 12 (v38) : jamais une action facultative en bouton principal vert. Le vert va à la première action requise ; s'il ne reste que du
     // facultatif (envoyer une photo, créer une vidéo), aucun bouton vert sur l'accueil.
-    const principale = requises[0] || null;
+    const principale = waManquant(c) ? null : requises[0] || null;   // numéro WhatsApp manquant : le seul bouton vert est celui de sa carte
     // Tour 16 (02/11/2026, audit UX Premium) : l'en-tête redit la liste « À faire maintenant », mêmes mots et même compte (TikTok compris) ;
     // avant, « 2 décisions, 4 à programmer, 1 message à lire. » au-dessus d'une liste de 5 actions.
     if (!sansAFaire && actions.length) phrase = t("acc.chapo.actions", { n: actions.length });
@@ -837,6 +837,7 @@
     // « Attendez mon appel » (01/11/2026, tour 6 Premium) : un avis retenu (retenue_le) n'est pas « publié sous 24 h » : « Nous attendons de vous
     // appeler avant de publier. »
     vue.innerHTML = `${pauseBandeau(c)}
+      ${waManquant(c) ? carteWaManquant(c) : ""}
       ${sensibleEnTete ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
@@ -874,6 +875,7 @@
       </section>
       ${blocIdeeSemaine(idee, c, tfT)}`;
     // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
+    brancherWaManquant(c);
     vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
     // Petit écran (tour 9, 01/11/2026 : sur iPhone SE, « Tout voir, 2 de plus » tombait sous la barre d'onglets) : tant que le lien passe sous la
@@ -2575,10 +2577,42 @@
   // tant que l'accord n'est pas donné) et dans Notifications. La case reprend le numéro saisi, mot pour mot : « Je souhaite recevoir les alertes de
   // BoostImpact sur WhatsApp au numéro … ». Sans case cochée, aucun WhatsApp (regler_whatsapp de schema.sql : heure de l'accord, journal).
   const whatsappActif = c => !!((c.notifications || {}).whatsapp && c.whatsapp_numero);
-  const champsWhatsapp = c => `<div class="f"><label for="awa-numero">${t("awa.numero")}</label><input id="awa-numero" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(c.whatsapp_numero || "")}" placeholder="${e(exNum(c))}" aria-describedby="awa-exemple"><p class="aide" id="awa-exemple">${t("awa.exemple", numParams(c))}</p></div>
-      <label class="option consentement"><input type="checkbox" id="awa-case"${whatsappActif(c) ? " checked" : ""}><span>${t("awa.case", { n: `<span id="awa-echo" class="casse" translate="no">${e(c.whatsapp_numero || t("awa.vide"))}</span>` })}</span></label>
+  // Numéro WhatsApp OBLIGATOIRE (décision de PJ du 11/11/2026, 23 h ; bloc SQL « Numéro WhatsApp obligatoire au démarrage ») : demandé au démarrage
+  // (dernière étape, après les 5 questions) et, pour un client déjà démarré sans numéro, en tête de l'accueil (#wa-manquant) tant qu'il manque.
+  // Le numéro reste lié à la case d'accord (preuve : heure de l'accord et texte au journal, regler_whatsapp inchangé) : les deux sont requis.
+  // Contrôle au départ du champ (blur) : même règle que la base (E.164, « 0 » national lu avec l'indicatif du pays du commerce, fixe refusé) ;
+  // l'erreur disparaît dès que la saisie redevient valide. Phrases : awa.err.* (ce qu'il faut écrire, avec l'exemple du pays, jamais « erreur »).
+  const champsWhatsapp = (c, oblig) => `<div class="f"><label for="awa-numero">${t(oblig ? "awa.numero.oblig" : "awa.numero")}</label><input id="awa-numero" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(c.whatsapp_numero || "")}" placeholder="${e(exNum(c))}" aria-describedby="awa-exemple${oblig ? " awa-erreur" : ""}"${oblig ? ' required aria-required="true"' : ""}><p class="aide" id="awa-exemple">${t("awa.exemple", numParams(c))}</p>${oblig ? '<p class="erreur-champ" id="awa-erreur" hidden></p>' : ""}</div>
+      <label class="option consentement"><input type="checkbox" id="awa-case"${whatsappActif(c) ? " checked" : ""}${oblig ? ' required aria-describedby="awa-case-erreur"' : ""}><span>${t("awa.case", { n: `<span id="awa-echo" class="casse" translate="no">${e(c.whatsapp_numero || t("awa.vide"))}</span>` })}</span></label>${oblig ? '<p class="erreur-champ" id="awa-case-erreur" hidden></p>' : ""}
       ${whatsappActif(c) ? `<p class="note" id="awa-etat">${t("awa.actif", { n: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(c.whatsapp_numero).replace(/ /g, "\u00a0"))}</span>`, d: date(c.whatsapp_accord_le) })}</p>` : ""}`;
   function brancherEchoWhatsapp() { const i = $("awa-numero"); if (i) i.oninput = () => { $("awa-echo").textContent = i.value.trim() || t("awa.vide"); }; }
+  const erreurNumeroWa = (v, c) => { const W = window.RENOM_WHATSAPP, ex = exNum(c), x = String(v || "").trim(); if (!x) return t("awa.err.vide", { ex });
+    const n = W.numero(x, M.paysDe((c || {}).pays)); return !n ? t("awa.err.format", { ex }) : W.fixe(n) ? t("awa.err.fixe", { ex }) : ""; };
+  // Branche le contrôle du numéro et de la case obligatoires ; rend verifier() (vrai si tout est bon, sinon erreurs affichées, focus sur le 1er champ).
+  function brancherWhatsappOblig(c) {
+    brancherEchoWhatsapp();
+    const i = $("awa-numero"), er = $("awa-erreur"), k = $("awa-case"), ke = $("awa-case-erreur");
+    const montrer = (p, x, champ) => { p.textContent = x; p.hidden = !x; if (x) champ.setAttribute("aria-invalid", "true"); else champ.removeAttribute("aria-invalid"); };
+    let touche = false;
+    i.addEventListener("input", () => { touche = true; if (!er.hidden && !erreurNumeroWa(i.value, c)) montrer(er, "", i); });
+    i.addEventListener("blur", () => { if (touche || i.value.trim()) montrer(er, erreurNumeroWa(i.value, c), i); });
+    k.addEventListener("change", () => { if (k.checked) montrer(ke, "", k); });
+    return {
+      verifier() { const x = erreurNumeroWa(i.value, c); montrer(er, x, i); montrer(ke, k.checked ? "" : t("awa.err.case"), k);
+        if (x) { i.focus(); return false; } if (!k.checked) { k.focus(); return false; } return true; },
+      erreur(x) { montrer(er, x, i); i.focus(); },
+    };
+  }
+  // Client déjà démarré sans numéro (ou accord retiré dans Notifications) : en tête de l'accueil, tant qu'il manque.
+  const waManquant = c => !!c.demarrage_fini && !whatsappActif(c);
+  const carteWaManquant = c => `<section class="carte wa-manquant" id="wa-manquant" aria-labelledby="wa-manquant-titre"><h2 id="wa-manquant-titre">${t("awa.manquant.titre")}</h2><p class="texte2">${t("awa.manquant.texte")}</p>
+      <form id="awa-f" novalidate>${champsWhatsapp(c, true)}<div class="actions"><button type="submit" class="bouton" id="awa-ok">${t("awa.manquant.bouton")}</button></div></form></section>`;
+  function brancherWaManquant(c) {
+    const f = $("awa-f"); if (!f || !$("wa-manquant")) return; const ctl = brancherWhatsappOblig(c);
+    f.onsubmit = async ev => { ev.preventDefault(); if (!ctl.verifier()) return; $("awa-ok").disabled = true;
+      try { await D.reglerWhatsapp($("awa-numero").value.trim(), true); await accueil(); msg(t("awa.manquant.merci")); }
+      catch (er) { $("awa-ok").disabled = false; ctl.erreur(ph(er.message)); } };
+  }
   // Rend l'état WhatsApp enregistré (vrai ou faux), ou null si la saisie est incomplète (message affiché).
   async function enregistrerWhatsapp(c) {
     const coche = $("awa-case").checked, num = $("awa-numero").value.trim();
@@ -2687,6 +2721,7 @@
     // Par défaut : « Pour démarrer » tant que la mise en route n'est pas finie (premier accès), sinon les questions (réponses à modifier).
     if (!dem.vue) { const mr = await D.miseEnRoute().catch(() => null); dem.vue = mr && mr.points && mr.faits < mr.total && !dem.fini ? "essentiel" : "questions"; }
     if (dem.vue === "essentiel") return ecranEssentiel(c);
+    if (dem.i === 5 && !dem.fini) return etapeWhatsapp(c);
     if (dem.fini) {
       // Fin des questions : la suite, puis l'autorisation photos et les alertes WhatsApp, repliées et facultatives (27/10/2026, constat 3).
       vue.innerHTML = `${entete(t("dem5.fini"), e(c.nom), t("dem5.fini.chapo"))}<p class="msg" id="msg-aut" role="status"></p>
@@ -2708,25 +2743,47 @@
           ${q.choix ? `<fieldset><legend class="q-titre" id="q-titre">${q.titre}</legend><p class="aide">${q.aide}</p>${Object.entries(q.choix).map(([k, lib]) => `<label class="option"><input type="radio" name="dem-choix" value="${k}"${v === k ? " checked" : ""}><span>${lib}</span></label>`).join("")}</fieldset>
             ${q.detail ? `<div class="f"><label for="dem-detail">${q.detail}</label><input id="dem-detail" type="text" maxlength="200" value="${e(dem.rep.action_detail || "")}"></div>` : ""}`
           : `<div class="f"><label for="dem-champ" class="q-titre" id="q-titre">${q.titre}</label><p class="aide" id="q-aide">${q.aide}</p><textarea id="dem-champ" class="haut-texte" maxlength="600" aria-describedby="q-aide"${lc()}>${e(v)}</textarea></div>`}
-          <div class="actions"><button class="bouton" type="submit" id="dem-suivant">${t(dem.i === 4 ? "dem5.terminer" : "dem5.suivant")}</button><button type="button" class="bouton second" id="dem-passer">${t("dem5.passer")}</button>${dem.i ? `<button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button>` : ""}</div>
+          <div class="actions"><button class="bouton" type="submit" id="dem-suivant">${t(dem.i === 4 && whatsappActif(c) ? "dem5.terminer" : "dem5.suivant")}</button><button type="button" class="bouton second" id="dem-passer">${t("dem5.passer")}</button>${dem.i ? `<button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button>` : ""}</div>
           <p class="msg" id="msg" role="status"></p></form></section>
       <p class="note">${merEnCoursDem ? `<a href="#/miseenroute" id="dem-retour-etapes">${t("mer2.retour.etapes")}</a> · ` : ""}<button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button> ${t("dem5.plus.tard.note")}</p>`;
     const lire = () => { if (q.choix) { const x = document.querySelector("input[name=dem-choix]:checked"); dem.rep[q.cle] = x ? x.value : ""; if (q.detail) dem.rep.action_detail = $("dem-detail").value.trim(); } else dem.rep[q.cle] = $("dem-champ").value.trim(); };
     const avancer = async () => {
       if (dem.i < 4) { dem.i++; await demarrage(); const f = vue.querySelector("#dem-champ, input[name=dem-choix]"); if (f) f.focus(); return; }
-      try {
-        await D.enregistrerDemarrage(dem.rep);
-        const c2 = await D.commerce(), r = dem.rep, pre = {};   // la fiche est préremplie, sans écraser ce qui y est déjà
-        if (!c2.specialites && (r.phrase || r.distinctions)) pre.specialites = [r.phrase, r.distinctions].filter(Boolean).join("\n");
-        // Le ton de la fiche est écrit dans la langue du commerce (BoostImpact écrit dans cette langue).
-        if (!c2.ton && TONS_LIB[r.ton]) pre.ton = t("ton." + r.ton, null, langueCommerce).toLowerCase();
-        if (Object.keys(pre).length) await D.enregistrer(pre);
-        dem.fini = true; await demarrage(); majCompteurs();
-      } catch (er) { msg(ph(er.message)); }
+      // Numéro WhatsApp obligatoire (11/11/2026) : sans WhatsApp actif, la dernière étape le demande avant d'enregistrer le démarrage.
+      if (!whatsappActif(await D.commerce())) { dem.i = 5; await demarrage(); const f = $("awa-numero"); if (f) f.focus(); return; }
+      try { await finirDemarrage(); } catch (er) { msg(ph(er.message)); }
     };
     $("dem-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
     $("dem-passer").onclick = async () => { await avancer(); };
     if ($("dem-precedent")) $("dem-precedent").onclick = async () => { lire(); dem.i--; await demarrage(); };
+    $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
+  }
+
+  async function finirDemarrage() {
+    await D.enregistrerDemarrage(dem.rep);
+    const c2 = await D.commerce(), r = dem.rep, pre = {};   // la fiche est préremplie, sans écraser ce qui y est déjà
+    if (!c2.specialites && (r.phrase || r.distinctions)) pre.specialites = [r.phrase, r.distinctions].filter(Boolean).join("\n");
+    // Le ton de la fiche est écrit dans la langue du commerce (BoostImpact écrit dans cette langue).
+    if (!c2.ton && TONS_LIB[r.ton]) pre.ton = t("ton." + r.ton, null, langueCommerce).toLowerCase();
+    if (Object.keys(pre).length) await D.enregistrer(pre);
+    dem.fini = true; await demarrage(); majCompteurs();
+  }
+  // Dernière étape du démarrage (11/11/2026) : le numéro WhatsApp et la case d'accord, obligatoires ; « Terminer » enregistre l'accord
+  // (regler_whatsapp), puis le démarrage (enregistrer_demarrage, qui refuse sans WhatsApp actif).
+  function etapeWhatsapp(c) {
+    vue.innerHTML = `${entete(t("ecran.demarrage"), e(c.nom), t("dem5.wa.chapo"))}
+      <section class="carte demarrage" id="dem-whatsapp">
+        <div class="mesure"><div class="mesure-tete"><span class="fort">${t("dem5.wa.etape")}</span></div>${jauge(5, 5)}</div>
+        <form id="awa-f" novalidate><h2 class="q-titre" id="q-titre">${t("dem5.wa.titre")}</h2><p class="aide">${t("dem5.wa.aide")}</p>
+          ${champsWhatsapp(c, true)}
+          <div class="actions"><button class="bouton" type="submit" id="dem-terminer">${t("dem5.terminer")}</button><button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button></div>
+          <p class="msg" id="msg" role="status"></p></form></section>
+      <p class="note"><button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button> ${t("dem5.wa.plus.tard")}</p>`;
+    const ctl = brancherWhatsappOblig(c);
+    $("awa-f").onsubmit = async ev => { ev.preventDefault(); if (!ctl.verifier()) return; const b = $("dem-terminer"); b.disabled = true;
+      try { await D.reglerWhatsapp($("awa-numero").value.trim(), true); } catch (er) { b.disabled = false; ctl.erreur(ph(er.message)); return; }
+      try { await finirDemarrage(); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
+    $("dem-precedent").onclick = async () => { dem.i = 4; await demarrage(); };
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
 

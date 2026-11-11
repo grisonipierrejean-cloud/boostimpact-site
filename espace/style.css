@@ -687,6 +687,12 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .etape-etat{align-items:flex-end;text-align:right;flex:0 0 auto}
 .consentement{align-items:flex-start;line-height:1.4}
 .consentement input{margin-top:3px;flex:0 0 auto}
+/* Numéro WhatsApp obligatoire (v47, 11/11/2026) : erreur sous le champ, en rouge de la santé « Rouge » (8,4:1 sur blanc), sans icône ni trait
+   devant ; le champ en faute prend le même rouge pour son filet. Carte de l'accueil « Il manque votre numéro WhatsApp » : une carte ordinaire. */
+.erreur-champ{color:var(--danger);font-size:15px;line-height:1.4;margin-top:6px}
+input[aria-invalid="true"]{border-color:var(--danger)}
+.consentement input[aria-invalid="true"]{outline:2px solid var(--danger);outline-offset:2px}
+.wa-manquant form{margin-top:12px}
 details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-height:44px;padding-top:10px;text-decoration:underline;text-underline-offset:3px}
 .sante{display:inline-block;font-size:13px;font-weight:var(--graisse-forte);line-height:1.4;border-radius:6px;padding:2px 8px;border:1px solid var(--bord);background:var(--releve);color:var(--encre)}
 /* Santé (24/10/2026) : teintes de la charte, le mot reste écrit. Vert : contour ardoise, texte ardoise clair (8,4:1) ; orange : pastille pleine
