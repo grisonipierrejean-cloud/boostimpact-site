@@ -69,6 +69,9 @@
   // Numéro WhatsApp obligatoire au démarrage (11/11/2026, décision de PJ ; même phrase que enregistrer_demarrage, bloc « Numéro WhatsApp obligatoire
   // au démarrage » de schema.sql) : WhatsApp actif = numéro E.164, accord daté, notifications.whatsapp vrai (whatsapp_actif de schema.sql).
   const PHRASE_WA_MANQUANT = "Numéro WhatsApp manquant : indiquez votre numéro WhatsApp et cochez la case d'accord, puis terminez le démarrage.";
+  // Case de l'équipe (12/11/2026, admin_regler_whatsapp) : même phrase que la base.
+  const PHRASE_WA_ACCORD_EQUIPE = "Cochez la case : le client doit avoir donné son accord pour recevoir ses alertes par WhatsApp.";
+  const PHRASE_PHOTOS_ACCORD_EQUIPE = "Cochez la case : le client doit avoir donné son accord pour que BoostImpact utilise ses photos.";
   const whatsappActifDe = c => !!(c && c.whatsapp_numero && c.whatsapp_accord_le && (c.notifications || {}).whatsapp);
   // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : mêmes règles et mêmes phrases que la base.
   const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible", "changement_offre"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
@@ -979,6 +982,7 @@
         const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });
         if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? phraseWhatsapp(c.pays) : r.error.message); cache = null; return r.data;
       },
+      async adminAutoriserPhotos(cid, accord) { if (!accord) throw new Error(PHRASE_PHOTOS_ACCORD_EQUIPE); return ok(await sb.rpc("admin_autoriser_photos", { p_commerce: cid, p_accord: true })); },
       async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
       async adminEnvoyerPhoto(cid, f, o = {}) {
         const k = await window.RENOM_ENVOI.controler(f); if (k.genre !== "photo") throw new Error(PHOTOS.PHRASES.format); if (k.raison) throw new Error(PHOTOS.PHRASES.lourde);
@@ -1271,6 +1275,19 @@
       async adminReseaux(cid, reseaux) { return ok(await sb.rpc("admin_reseaux", { p_commerce: cid, p_reseaux: reseaux })); },
       async adminPays(cid, pays) { return ok(await sb.rpc("admin_pays", { p_commerce: cid, p_pays: pays })); },
       async adminMetier(cid, metier) { return ok(await sb.rpc("admin_metier", { p_commerce: cid, p_metier: metier })); },
+      // WhatsApp saisi par l'équipe (12/11/2026) : contrôle d'abord ici (mêmes phrases que la base), puis admin_regler_whatsapp (est_admin, journal).
+      async adminReglerWhatsapp(cid, numero, accord) {
+        const brut = String(numero == null ? "" : numero).trim();
+        if (brut || accord) { if (!accord) throw new Error(PHRASE_WA_ACCORD_EQUIPE);
+          const c = ok(await sb.from("commerces").select("pays").eq("id", cid).single()), n = numeroWhatsapp(brut, paysDe(c.pays));
+          if (!n) throw new Error(phraseWhatsapp(paysDe(c.pays))); if (numeroFixe(n)) throw new Error(PHRASE_FIXE); }
+        return ok(await sb.rpc("admin_regler_whatsapp", { p_commerce: cid, p_numero: brut || null, p_accord: !!accord })); },
+      // Dernier passage des robots (table passages_robots, lisible par l'administrateur) ; table absente (bloc SQL du 12/11 pas collé) : null.
+      async adminPassagesRobots() { const r = await sb.from("passages_robots").select("robot,passe_le,bilan").then(x => x, () => ({ error: true }));
+        return r.error ? null : Object.fromEntries((r.data || []).map(x => [x.robot, x])); },
+      async adminAlertesClient(cid) {
+        const r = await sb.from("alertes_exploitant").select("id,type,commerce_id,detail,cree_le").is("vue_le", null).or(`commerce_id.eq.${cid},and(type.eq.FICHE_A_RELIER,commerce_id.is.null)`).order("cree_le", { ascending: false }).limit(50);
+        return (ok(r) || []).map(a => ({ id: a.id, type: a.type, commerce_id: a.commerce_id || null, detail: a.detail || {}, texte: texteAlerte(a), date: a.cree_le })); },
       async adminDelegation(cid, signee) { return ok(await sb.rpc("admin_delegation", { p_commerce: cid, p_signee: !!signee })); },
       async adminCommentairesEquipe() { return ok(await sb.rpc("admin_commentaires_equipe", {})) || []; },
       async adminCommentaireDecider(id, decision, texte) { return ok(await sb.rpc("admin_commentaire_decider", { p_id: id, p_decision: decision, p_texte: texte || null })); },

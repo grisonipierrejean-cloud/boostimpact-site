@@ -96,7 +96,9 @@
     const x = m && pt && (m.points || []).find(y => y.point === pt); return !!x && x.etat !== "fait"; };
   const actionMer = (c, x) => { const cid = e(c.id);
     if (x.etat === "fait") return ["google", "metricool"].includes(x.point) ? `<button type="button" class="lien" data-mer-annuler="${e(x.point)}" data-cid="${cid}">${t("con.mer.annuler")}</button>` : "";
-    if (x.point === "google") return `<button type="button" class="bouton second petit" data-mer="google" data-cid="${cid}">${t("con.verifie", { x: "Google" })}</button>`;
+    // v48 (12/11/2026, retour de PJ : « je ne dois rien vérifier moi-même ») : le robot des fiches Google coche l'étape seul ; la vérification à la main
+    // n'est plus qu'un recours discret (même action complète, même confirmation).
+    if (x.point === "google") return `<button type="button" class="lien recours" data-mer="google" data-cid="${cid}">${t("con.mer.g.manuel")}</button>`;
     if (x.point !== "metricool") return "";
     const avecLien = "lien_envoye_le" in x, aVerifier = !avecLien || !!x.lien_envoye_le || x.etat === "declare";
     const lien = avecLien && x.etat === "a_faire" ? `<button type="button" class="bouton ${x.lien_envoye_le ? "second " : ""}petit" data-mer-lien data-cid="${cid}">${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : "";
@@ -107,7 +109,7 @@
   // Carte « Mise en route » de À faire : les étapes qui restent, chacune avec les mêmes boutons que la fiche (actionMer).
   const miseEnRoute = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return ""; const reste = (m.points || []).filter(x => x.etat !== "fait");
     return `<p>${t("sur", { a: m.faits, b: m.total })}</p>${reste.map(x => { const a = actionMer(c, x);
-      return `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? "con.mer.declare" : "con.mer.afaire")}</p>${a ? `<div class="actions">${a}</div>` : ""}`; }).join("")}`; };
+      return `<p class="note">${COURT[x.point] || e(x.point)}${t("deux.points")}${t(x.etat === "declare" ? (x.point === "google" ? "con.mer.declare.google" : "con.mer.declare") : "con.mer.afaire")}</p>${a ? `<div class="actions">${a}</div>` : ""}`; }).join("")}`; };
   // Mise en route sur la fiche du client (11/11/2026, retour de PJ : « je ne comprends pas ») : les étapes de l'offre TOUJOURS, une ligne chacune (nom
   // clair, état en mots avec sa date, action de l'équipe à droite), puis les réponses du client aux 5 questions (commerces.demarrage), repliées.
   // v46 : « X sur 5 répondues » dans la ligne de l'étape ; « quand cliquer Google vérifié » et la procédure Metricool ne sont plus sur la fiche (trop de
@@ -120,22 +122,51 @@
     return `<ol class="mer-proc">${[1, 2, 3, 4].map(n => { const fait = !!x && (x.etat === "fait" || (!!lien && n < 4)), en = !!cur && (n === cur || (cur === 1 && n === 2));
       return `<li${fait ? ' class="fait"' : ""}${en ? ' aria-current="step"' : ""}>${t("con.mer.proc." + n)}${n === 3 && lien ? ` <span class="mer-proc-etat">${t("con.mer.lien.envoye.court", { d: I.date(lien) })}</span>` : fait ? ` <span class="mer-proc-etat">${t("con.mer.proc.fait")}</span>` : ""}</li>`; }).join("")}</ol>`; };
   const quandGoogle = () => `<div class="mer-quand"><p class="note"><span class="aide-lib">${t("con.mer.google.quand.lib")}</span> ${t("con.mer.google.quand")}</p><p class="note"><span class="aide-lib">${t("con.mer.google.pas.lib")}</span> ${t("con.mer.google.pas")}</p></div>`;
-  const reponsesDemarrage = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null, vide = `<span class="texte2">${t("con.mer.rep.vide")}</span>`;
+  // v48 (12/11/2026, retour de PJ : « je ne trouve pas les réponses aux 5 questions ») : volet ouvert d'emblée tant que les 5 ne sont pas répondues,
+  // « pas répondu » bien visible (mer-rep-vide), nombre de réponses dans le titre, lien « Voir les 5 réponses » sur la ligne de l'étape.
+  const reponsesDemarrage = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null, vide = `<span class="mer-rep-vide" data-rep-vide>${t("con.mer.rep.vide")}</span>`;
     const val = k => { const v = r ? r[k] : null;
       if (k === "ton") return TONS[v === "enjoué" ? "enjoue" : v] || (v ? e(v) : vide);
       if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? e(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
       const s_ = Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : ""; return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
-    return `<details class="repliable mer-reponses" id="mer-reponses"><summary><h3>${t("con.mer.rep.titre")}</h3></summary>
+    return `<details class="repliable mer-reponses" id="mer-reponses"${nbReponses(c) < QUESTIONS.length ? " open" : ""}><summary><h3>${t("con.mer.rep.titre")}, ${t("con.mer.rep.n", { n: nbReponses(c) })}</h3></summary>
       ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}<dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${t("q." + k + ".titre")}</dt><dd>${val(k)}</dd></div>`).join("")}</dl></details>`; };
   const QUESTIONS = ["phrase", "distinctions", "ton", "interdits", "action"];
   const nbReponses = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
     return QUESTIONS.filter(k => { const v = r[k]; if (k === "action" && typeof r.action_detail === "string" && r.action_detail.trim()) return true;
       return Array.isArray(v) ? v.some(x => String(x || "").trim()) : typeof v === "string" ? !!v.trim() : !!v; }).length; };
+  // Étape « Accès à la fiche Google » pas encore faite (v48, 12/11/2026, retour de PJ : « Déclaré par le client…, à vérifier » + « Google vérifié »
+  // lui demandaient une vérification inutile). Le robot n8n « RENOM, fiches Google : invitations et liens » (toutes les 30 min) accepte l'invitation
+  // reçue par team@boostimpact.agency, relie la fiche (rapprocher_fiches_google) et coche l'étape seul. La fiche dit donc : ce qu'on attend du client,
+  // le dernier passage du robot (passages_robots ; plus de 2 h : « robot muet »), ce qui l'empêcherait de relier seul (ni place_id ni lien de fiche,
+  // alerte « Fiche Google à relier » de ce client, fiches reçues sans client trouvé) et, passé le délai, d'appeler le client. Le délai : 24 h après
+  // l'invitation annoncée par le client ; sans annonce, sa date d'appel (création + J_APPEL jours), comme la bannière « Prochaine action ».
+  // robotsFiche est lu par client() avant le dessin (adminPassagesRobots, adminAlertesClient) ; undefined : lecture impossible, rien n'est inventé.
+  let robotsFiche = { passage: undefined, alertes: [] };
+  const H2 = 2 * 3600000;
+  const robotGoogle = () => { const p = robotsFiche.passage, ms = p && Date.parse(p.passe_le); return ms ? { connu: true, ms, muet: Date.now() - ms > H2 } : { connu: false }; };
+  const sansIdGoogle = c => FG.sql(c) && !FG.ID.test(c.google_place_id || "") && !String(c.fiche_google_lien || "").trim();
+  const alertesGoogle = c => { const l = (robotsFiche.alertes || []).filter(a => a.type === "FICHE_A_RELIER"); return { propres: l.filter(a => a.commerce_id === c.id), orphelines: l.filter(a => !a.commerce_id) }; };
+  const limiteGoogle = (c, x) => x.etat === "declare" ? (x.maj ? Date.parse(x.maj) + H24 : null) : c.cree_le ? Date.parse(c.cree_le) + J_APPEL * 864e5 : null;
+  const etapeGoogle = (c, x) => { const decl = x.etat === "declare", r = robotGoogle(), lim = limiteGoogle(c, x), al = alertesGoogle(c), l = [];
+    l.push(`<p class="note" data-google-attente="${decl ? "declare" : "client"}">${decl ? t("con.mer.g.declare", { d: x.maj ? dh(x.maj) : "" }) : t("con.mer.g.attente")}</p>`);
+    l.push(r.muet ? `<p class="note fort alerte-ligne" data-robot="muet">${t("con.mer.g.muet", { h: dh(r.ms) })}</p>`
+      : `<p class="note" data-robot="${r.connu ? "ok" : "inconnu"}">${r.connu ? t("con.mer.g.robot", { h: dh(r.ms) }) : t("con.mer.g.robot.inconnu")}</p>`);
+    if (sansIdGoogle(c)) l.push(`<p class="note fort alerte-ligne" data-google-sans-id>${t("con.mer.g.sans.id")}</p>`);
+    al.propres.forEach(a => l.push(`<p class="note fort alerte-ligne" data-google-alerte>${t("con.mer.g.alerte", { x: e(a.texte || "") })}</p>`));
+    if (al.orphelines.length) l.push(`<p class="note" data-google-orphelines="${al.orphelines.length}">${t("con.mer.g.orphelines", { n: al.orphelines.length })}</p>`);
+    l.push(lim != null && Date.now() >= lim ? `<p class="note fort" data-google-appeler>${t("con.mer.g.appeler")}</p>`
+      : `<p class="note">${lim == null ? t("con.mer.g.si.sans") : t(decl ? "con.mer.g.si24" : "con.mer.g.si.appel", { d: decl ? dh(lim) : I.date(lim) })}</p>`);
+    return `<div class="mer-google" id="mer-google-auto">${l.join("")}</div>`; };
+  const etatMerFiche = x => x.point === "google" && x.etat !== "fait" ? t(x.etat === "declare" ? "con.mer.etat.g.declare" : "con.mer.etat.g.client") : etatMer(x);
   const merFiche = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return "";
     const guide = x => x.etat === "fait" || !["google", "metricool"].includes(x.point) ? "" : `<p class="note"><a class="lien-guide" href="#/guide/${x.point === "google" ? "e3" : "e4"}">${t("con.mer.guide")}</a></p>`;
-    const etat = x => etatMer(x) + (x.point === "demarrage" ? " · " + `<span data-reponses>${t("con.mer.rep.n", { n: nbReponses(c) })}</span>` : "");
-    return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { const a = actionMer(c, x);
-      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etat(x)}</p></div>${a ? `<div class="mer-action">${a}</div>` : ""}</div>${guide(x)}</li>`; }).join("")}</ol>
+    const etat = x => etatMerFiche(x) + (x.point === "demarrage" ? " · " + `<span data-reponses>${t("con.mer.rep.n", { n: nbReponses(c) })}</span>` : "");
+    return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { let a = actionMer(c, x);
+      // Google pas encore fait (v48) : l'état automatique d'abord, le recours « J'ai vérifié moi-même dans team@ » ensuite, discret.
+      const gAuto = x.point === "google" && x.etat !== "fait";
+      if (x.point === "demarrage") a = `<button type="button" class="lien" data-voir-reponses>${t("con.mer.rep.voir")}</button>` + (a || "");
+      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etat(x)}</p></div>${a && !gAuto ? `<div class="mer-action">${a}</div>` : ""}</div>${gAuto ? etapeGoogle(c, x) + (a ? `<div class="mer-recours">${a}</div>` : "") : ""}${guide(x)}</li>`; }).join("")}</ol>
       ${reponsesDemarrage(c)}`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
@@ -146,7 +177,11 @@
   // Autorisation photos (CGV article 11, 26/10/2026) : « fiche Google seulement » pour un Essentiel, ou une autorisation donnée en Essentiel et pas encore
   // étendue par le commerçant (commerces.photos_autorisees_perimetre) : l'équipe ne reprend alors que les photos publiées sur la fiche Google.
   const phAutorise = c => t((OFFRES[c.offre_id] || {}).reseaux_sociaux === false || c.photos_autorisees_perimetre === "fiche_google" ? "con.ph.autorise.google" : "con.ph.autorise", { d: I.date(c.photos_autorisees_le) });
-  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? phAutorise(c) : t("con.ph.non")}</p>
+  // Autorisation enregistrée par l'équipe (v48, 12/11/2026, demande de PJ : « je veux déposer moi-même les photos de Fleur ») : même modèle que le
+  // WhatsApp, case obligatoire jamais précochée (l'accord est celui du client, recueilli par l'équipe), admin_autoriser_photos.
+  const autoriserPhotos = suffixe => !D.adminAutoriserPhotos ? "" : `<div class="pile serre" id="ph-autoriser${suffixe}"><label class="option"><input type="checkbox" id="ph-accord${suffixe}"><span>${t("con.ph.accord.equipe")}</span></label>
+    <button type="button" class="bouton second petit" data-a="photos-autoriser" id="ph-autoriser-ok${suffixe}">${t("con.ph.autoriser")}</button></div>`;
+  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? phAutorise(c) : t("con.ph.non")}</p>${c.photos_autorisees_le ? "" : autoriserPhotos("-fiche")}
     <a class="bouton second petit" href="${I.lien("console.html")}#/photos/${encodeURIComponent(c.id)}" data-photos="${e(c.id)}">${t("con.ph.bouton")}</a></div>`;
   // Panneau « Déposer des photos pour ce client » : fermé sans l'autorisation du commerçant (la base le refuse aussi : admin_deposer_photos et la règle du
   // seau). Envoi de chaque photo dans le dossier du commerce (même envoi que l'espace), puis un seul enregistrement (1 à 10 photos), source « equipe ».
@@ -157,8 +192,12 @@
       <section class="carte" id="ph-client"><p class="fort">${ouvert ? phAutorise(c) : t("con.ph.non")}</p>
       ${ouvert ? `<form id="ph-f"><div class="f"><label for="ph-fichiers">${t("con.ph.choisir")}</label><input id="ph-fichiers" type="file" accept="image/jpeg,image/png,image/webp,image/heic" multiple></div>
         <div class="actions"><button class="bouton" type="submit" id="ph-ok">${t("con.ph.deposer")}</button><button type="button" class="lien" id="ph-retirer">${t("con.ph.retirer")}</button></div></form>`
-      : `<p class="texte2" id="ph-ferme">${t("con.ph.sans")}</p>`}<p class="msg" id="msg" role="status"></p></section>`;
-    if (!ouvert) return;
+      : `<p class="texte2" id="ph-ferme">${t("con.ph.sans")}</p>${autoriserPhotos("")}`}<p class="msg" id="msg" role="status"></p></section>`;
+    if (!ouvert) { const b = $("ph-autoriser-ok"); if (b) b.onclick = async () => { b.disabled = true;
+        try { if (!$("ph-accord").checked) throw new Error(t("con.ph.accord.requis")); const r = await D.adminAutoriserPhotos(cid, true);
+          await photosClient(cid); msg(t(r && r.etat === "deja" ? "con.ph.autorisee.deja" : "con.ph.autorisee.ok")); }   // #msg est juste sous le dépôt, dans la même carte
+        catch (er) { b.disabled = false; msg(ph(er.message)); } };
+      return; }
     $("ph-f").onsubmit = async ev => {
       ev.preventDefault(); const fs = [...$("ph-fichiers").files];
       if (!fs.length) return msg(t("con.ph.aucune")); if (fs.length > 10) return msg(t("con.ph.trop"));
@@ -574,12 +613,33 @@
   // dit ce qui a été noté.
   // « Fait à 19 h 12 : … » (v46, retour de PJ : « on clique, il y a un petit message mais ça disparaît ») : le dernier geste sur la fiche ouverte reste
   // affiché sous la bannière jusqu'au geste suivant, même après un aller-retour vers un autre écran (mémoire de la page ; le journal garde tout).
-  let ficheCourante = null, dernierFait = null;
+  let ficheCourante = null, dernierFait = null, clicCourant = null;
+  const ANNULE = Symbol("annulé");
   const noterFait = (texte, lib) => { dernierFait = ficheCourante ? { cid: ficheCourante, x: texte === t("enregistre") && lib ? t("con.fait.bouton", { b: lib }) : texte, h: Date.now() } : dernierFait; };
+  // Confirmation à côté du bouton cliqué (v48, 12/11/2026, retour de PJ sur « Comme Chez Fleur » : « Changer l'offre », plus bas dans la fiche, écrivait
+  // son message dans #msg, tout en haut, hors de l'écran : « je crois que rien n'est enregistré »). Avant le geste, on note comment retrouver le bouton
+  // (son formulaire, son id ou son attribut data-*, dans sa carte) ; après le nouveau dessin de l'écran, le message (role="status") s'affiche juste
+  // sous le bouton, ou en tête de son bloc si le bouton a disparu (étape cochée...), et reste jusqu'au geste suivant. #msg est toujours écrit aussi.
+  const selAttr = el => { const a = [...el.attributes].find(x => x.name.startsWith("data-") && !["data-cid", "data-l", "data-types", "data-prio"].includes(x.name));
+    return a ? `[${a.name}${a.value ? `="${a.value.replace(/["\\]/g, "\\$&")}"` : ""}]` : ""; };
+  const repereBouton = b => { if (!b || !b.closest) return null; const f = b.closest("form[id]");
+    const soi = f && (b.type === "submit" || !b.id && !selAttr(b)) ? "#" + f.id + " [type=submit]" : b.id ? "#" + b.id : selAttr(b) + (b.dataset.cid ? `[data-cid="${b.dataset.cid}"]` : "");
+    const porteur = !f && !b.id && b.closest("article, tr, li[data-point]"), pa = porteur ? selAttr(porteur) : "";
+    const zone = b.closest("[id]:not(#vue)");
+    return { bouton: soi ? (pa ? porteur.tagName.toLowerCase() + pa + " " : "") + soi : null, zone: zone ? "#" + zone.id : null }; };
+  function msgPres(rep, x, erreur) {
+    vue.querySelectorAll("[data-msg-local]").forEach(p => p.remove()); if (!rep || !x) return;
+    const q = s_ => { try { return s_ ? vue.querySelector(s_) : null; } catch (er) { return null; } };
+    const p = document.createElement("p"); p.className = "msg-local" + (erreur ? " erreur" : ""); p.setAttribute("role", erreur ? "alert" : "status"); p.dataset.msgLocal = ""; p.textContent = x;
+    const b = q(rep.bouton), z = q(rep.zone);
+    if (b) (b.closest(".actions, .mer-action, .mer-recours, .mer-ligne") || b).insertAdjacentElement("afterend", p);
+    else if (z) { const h = z.querySelector(":scope > h2, :scope > h3"); h ? h.insertAdjacentElement("afterend", p) : z.prepend(p); }
+    else return;
+    p.scrollIntoView({ block: "nearest" }); }
   function brancherCartes(apres) {
-    const agir = async (f, ok, b) => { const lib = b ? b.textContent.trim() : ""; if (b) b.disabled = true;
-      try { const m = await f(); if (m === null) { if (b) b.disabled = false; return; } const x = ok != null ? ok : typeof m === "string" ? m : t("enregistre"); noterFait(x, lib); await apres(); msg(x); }
-      catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
+    const agir = async (f, ok, b) => { const lib = b ? b.textContent.trim() : "", rep = repereBouton(b || clicCourant); if (b) b.disabled = true;
+      try { const m = await f(); if (m === null) { if (b) b.disabled = false; return; } const x = ok != null ? ok : typeof m === "string" ? m : t("enregistre"); noterFait(x, lib); await apres(); msg(x); msgPres(rep, x); }
+      catch (er) { if (b) b.disabled = false; const x = ph(er.message); msg(x); msgPres(rep, x, true); } };
     const cidDe = b => b.dataset.cid || ((b.closest("[data-mer-commerce]") || {}).dataset || {}).merCommerce;
     // Vérifier un accès, Google ou un réseau social : confirmation explicite, puis la même action complète d'où que vienne le clic (voir actionMer).
     const verifier = (b, r) => { const cid = cidDe(b), res = NOM_RESEAU[r] || r;
@@ -587,7 +647,7 @@
       agir(async () => { const x = await D.adminAccesReseau(cid, r, true), dep = r === "google" ? await noterAccesGoogle(cid) : null;
         return t("con.acces.ok", { res, n: x.programmes || 0 }) + (dep ? " " + dep.replace(/^[^.]*\.\s*/, "") : ""); }, null, b); };
     const copier = async (x, ok) => { try { await navigator.clipboard.writeText(x.value); msg(t(ok)); } catch (er) { x.select(); msg(t("con.selectionnee")); } };
-    const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => f(b, b.closest("[data-type], article, tr, section")); });
+    const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => { clicCourant = b; return f(b, b.closest("[data-type], article, tr, section")); }; });
     // Alertes de l'exploitant : « Traité » (admin_alerte_vue) ; prise en charge : « Je prends », « Je prends à la place », « Je laisse ».
     sur("[data-alerte-vue]", b => agir(() => D.adminAlerteVue(b.closest("article").dataset.alerte), t("con.al.traite.ok"), b));
     sur("[data-prendre]", b => { if (!moi) { msg(t("con.moi.dabord")); const i = $("moi-prenom"); if (i) i.focus(); return; }
@@ -722,9 +782,19 @@
   // sans adminMetier), le choix n'est pas montré.
   const choixMetier = c => !D.adminMetier ? "" : `<div class="pile serre" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
   // Numéro WhatsApp du client (v47) : lisible, avec la date de l'accord ; sinon « WhatsApp manquant ».
-  const blocWhatsapp = c => `<div class="pile serre" id="client-wa" data-wa="${waActif(c) ? "actif" : "manquant"}"><p class="note">${t("con.wa.lib")}</p>${waActif(c)
-    ? `<p><a class="casse fort" href="https://wa.me/${e(String(c.whatsapp_numero).replace(/^\+/, ""))}" target="_blank" rel="noopener" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero)}</a></p><p class="note">${t("con.wa.accord", { d: I.date(c.whatsapp_accord_le) })}</p>`
-    : `<p class="fort">${t("con.wa.manquant")}</p><p class="note">${t("con.wa.manquant.note")}</p>`}</div>`;
+  // v48 (12/11/2026, demande de PJ : « je veux pouvoir saisir moi-même le numéro quand je l'ai ») : présenté comme Offre, Pays et Métier : libellé,
+  // champ prérempli, case d'accord de l'équipe dessous (obligatoire, jamais précochée : l'accord est celui du client, recueilli par l'équipe), bouton
+  // « Enregistrer le WhatsApp » (admin_regler_whatsapp : mêmes règles que la case du client, journal WHATSAPP_SAISI_PAR_EQUIPE). « Effacer le
+  // numéro » : discret, avec confirmation. Sans adminReglerWhatsapp (adaptateur ancien) : l'affichage de la v47 seul.
+  const blocWhatsapp = c => { const W = window.RENOM_WHATSAPP, lis = n => W ? W.lisible(n) : n, actif = waActif(c), ex = W ? W.exemple(c.pays) : "+33 6 12 34 56 78";
+    const etat = actif ? `<p class="note"><a class="casse" href="https://wa.me/${e(String(c.whatsapp_numero).replace(/^\+/, ""))}" target="_blank" rel="noopener" translate="no">${t("con.wa.ouvrir")}</a> · ${t("con.wa.accord", { d: I.date(c.whatsapp_accord_le) })}</p>`
+      : `<p class="fort" data-wa-manquant>${t("con.wa.manquant")}</p>`;
+    if (!D.adminReglerWhatsapp) return `<div class="pile serre" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><p class="note">${t("con.wa.lib")}</p>${actif ? `<p class="casse fort" translate="no">${e(lis(c.whatsapp_numero))}</p>` : ""}${etat}</div>`;
+    return `<div class="pile serre" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><label for="wa-client-num">${t("con.wa.lib")}</label>
+      <input id="wa-client-num" type="tel" inputmode="tel" autocomplete="off" maxlength="30" value="${e(c.whatsapp_numero ? lis(c.whatsapp_numero) : "")}" placeholder="${e(ex)}" aria-describedby="wa-client-aide" translate="no">
+      <p class="aide" id="wa-client-aide">${t("con.wa.aide", { ex: e(ex) })}</p>${etat}
+      <label class="option"><input type="checkbox" id="wa-client-accord"><span>${t("con.wa.accord.equipe")}</span></label>
+      <button type="button" class="bouton second petit" data-a="whatsapp">${t("con.wa.enregistrer")}</button>${actif ? `<button type="button" class="lien recours" data-a="wa-effacer">${t("con.wa.effacer")}</button>` : ""}</div>`; };
   // ---------------- Prochaine action (v46, 11/11/2026 ; relecture « exploitation » : « aucune prochaine action unique ») : UNE phrase tout en haut de la
   // fiche, le responsable d'abord (VOUS, CLIENT, ROBOT), au plus un bouton. Les règles de l'équipe passent dans l'ordre de PRIORITE ci-dessous (la
   // première qui s'applique gagne). Sinon, ce qu'on attend du client ou du robot, avec la date avant laquelle il n'y a rien à faire : pour le client, sa
@@ -750,7 +820,13 @@
       ["fiche", () => "nom_confirme_le" in c && !c.nom_confirme_le && { texte: t("con.pa.fiche"), bouton: aller("nom-console", "fiche") }],
       ["metier", () => metierAVerifier(c, jl) && { texte: t("con.pa.metier"), bouton: aller("metier-client", "fiche") }],
       // Démarré sans numéro WhatsApp (ancien client, ou accord retiré dans Notifications) : à demander au client (11/11/2026).
-      ["whatsapp", () => !c.en_pause && c.demarrage_fini && !waActif(c) && { texte: t("con.pa.wa"), bouton: "" }],
+      ["whatsapp", () => !c.en_pause && c.demarrage_fini && !waActif(c) && { texte: t("con.pa.wa"), bouton: aller("wa-client-num", "wa") }],
+      // Accès Google (v48) : tant que la fiche n'est pas arrivée, CLIENT ou ROBOT (attentes ci-dessus) ; VOUS seulement si le robot ne peut pas faire
+      // son travail (muet depuis plus de 2 h, alerte « Fiche Google à relier » de ce client, invitation annoncée sans identifiant ni lien de fiche),
+      // ou, passé le délai, pour appeler le client (google_24h, appeler).
+      ["google_robot", () => gg && gg.etat !== "fait" && robotGoogle().muet && { texte: t("con.pa.google.muet", { h: dh(robotGoogle().ms) }), bouton: aller("mer-google-auto", "mer") }],
+      ["google_alerte", () => gg && gg.etat !== "fait" && alertesGoogle(c).propres.length > 0 && { texte: t("con.pa.google.alerte"), bouton: aller("fg-id", "fg") }],
+      ["google_sans_id", () => gg && gg.etat === "declare" && sansIdGoogle(c) && { texte: t("con.pa.google.sans.id"), bouton: aller("fg-id", "fg") }],
       ["google_24h", () => gg && gg.etat === "declare" && gg.maj && maintenant - Date.parse(gg.maj) > H24 && { texte: t("con.pa.google.vieux", { d: dh(gg.maj) }), bouton: "" }],
       ["reseaux_declares", () => rr && rr.etat === "declare" && { texte: t("con.pa.reseaux.declare"), bouton: aller("mer-etapes", "mer") }],
       ["lien_metricool", () => rr && rr.etat === "a_faire" && "lien_envoye_le" in rr && !rr.lien_envoye_le && { texte: t("con.pa.lien"), bouton: `<button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button>` }],
@@ -782,9 +858,13 @@
     const plus = x.type === "MISE_EN_ROUTE_DECLAREE" ? pt : /^ACCES_RESEAU_/.test(x.type) ? NOM_RESEAU[d.reseau] || e(d.reseau || "") : x.type === "PAYS_COMMERCE" ? (I.a("con.pays." + d.pays) ? t("con.pays." + d.pays) : e(d.pays || ""))
       : x.type === "METIER_COMMERCE" ? METIERS[d.apres] || e(d.apres || "") : x.type === "OFFRE_CHANGEE" && d.offre ? e(I.offre(d.offre)) : x.type === "METRICOOL_MARQUE_NOTEE" ? e(d.blog_id || t("con.hist.retire")) : "";
     return e(libelleEtape(x.type)) + (plus ? t("deux.points") + plus : ""); };
+  // v48 (12/11/2026, demande de PJ) : « Voir tout l'historique » déplie TOUTES les lignes du journal de ce client (lu par client, 500 au plus), même
+  // forme que les 5 dernières : libellé lisible, date, par qui. Le journal complet (tableau filtrable, détail brut) reste replié dessous.
+  const ligneHist = x => { const q = quiJournal(x);
+    return `<li data-type="${e(x.type)}"><p class="fort">${resumeJournal(x)}</p><p class="note">${dh(x.cree_le)}${q ? ` · <span data-qui="${q}">${t("con.hist.qui." + q)}</span>` : ""}</p></li>`; };
   const blocHistorique = l => `<section class="carte" id="historique-client"><h2>${t("con.hist.titre")}</h2>
-      ${l.length ? `<ol class="historique" id="historique-liste">${l.slice(0, 5).map(x => { const q = quiJournal(x);
-        return `<li data-type="${e(x.type)}"><p class="fort">${resumeJournal(x)}</p><p class="note">${dh(x.cree_le)}${q ? ` · <span data-qui="${q}">${t("con.hist.qui." + q)}</span>` : ""}</p></li>`; }).join("")}</ol>` : `<p class="note" id="historique-vide">${t("con.hist.vide")}</p>`}
+      ${l.length ? `<ol class="historique" id="historique-liste">${l.slice(0, 5).map(ligneHist).join("")}</ol>${l.length > 5 ? `<button type="button" class="lien" id="historique-voir-tout" aria-expanded="false" aria-controls="historique-tout">${t("con.hist.voir.tout", { n: l.length })}</button>
+      <ol class="historique" id="historique-tout" hidden>${l.slice(5).map(ligneHist).join("")}</ol>` : ""}` : `<p class="note" id="historique-vide">${t("con.hist.vide")}</p>`}
       <details class="repliable sous" id="journal-client"><summary><h3>${t("con.hist.tout", { n: l.length })}</h3></summary>${tableJournal("jc")}</details></section>`;
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
@@ -792,6 +872,12 @@
     const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournalClient ? D.adminJournalClient(cid) : D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
     const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
     ficheCourante = cid;
+    // v48 : dernier passage du robot des fiches Google et alertes de ce client (étape « Accès à la fiche Google », bannière). Lus seulement tant que
+    // l'étape n'est pas faite ; illisibles (bloc SQL du 12/11/2026 pas collé) : undefined, la fiche dit « pas encore noté ».
+    const gPt = ((c.sante && c.sante.mise_en_route && c.sante.mise_en_route.points) || []).find(x => x.point === "google");
+    if (gPt && gPt.etat !== "fait") { const [pr, al] = await Promise.all([D.adminPassagesRobots ? sur(D.adminPassagesRobots()) : null, D.adminAlertesClient ? sur(D.adminAlertesClient(cid)) : null]);
+      robotsFiche = { passage: pr ? pr.liens_google || null : undefined, alertes: al || [] }; }
+    else robotsFiche = { passage: undefined, alertes: [] };
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
@@ -839,9 +925,10 @@
     remplirJournal("jc", journalClient);
     // Chaque geste de la fiche : la fonction de la base, puis la fiche redessinée (sa ligne apparaît dans « Dernières actions »), le message, et
     // « Fait à … » qui reste sous la bannière (noterFait).
-    const faire = async (b, f, ok) => { const lib = b ? b.textContent.trim() : ""; if (b) b.disabled = true;
-      try { const r = await f(); const x = typeof ok === "function" ? ok(r) : ok || t("enregistre"); noterFait(x, lib); await client(cid); msg(x); }
-      catch (er) { if (b) b.disabled = false; msg(ph(er.message)); } };
+    // v48 : le message s'affiche aussi à côté du bouton (msgPres). f() rend ANNULE : geste annulé (confirmation refusée), rien n'est redessiné.
+    const faire = async (b, f, ok) => { const lib = b ? b.textContent.trim() : "", rep = repereBouton(b); if (b) b.disabled = true;
+      try { const r = await f(); if (r === ANNULE) { if (b) b.disabled = false; return; } const x = typeof ok === "function" ? ok(r) : ok || t("enregistre"); noterFait(x, lib); await client(cid); msg(x); msgPres(rep, x); }
+      catch (er) { if (b) b.disabled = false; const x = ph(er.message); msg(x); msgPres(rep, x, true); } };
     const envoi = (id, f, ok) => { const fo = $(id); if (fo) fo.onsubmit = ev => { ev.preventDefault(); faire(ev.submitter || fo.querySelector("[type=submit]"), f, ok); }; };
     envoi("f-langues-client", () => D.adminReglerLanguesPublication(cid, $("langues-client").value.split(",")));
     envoi("f-lien-avis", () => D.adminLienAvis(cid, $("lien-avis-client").value));
@@ -854,11 +941,28 @@
     // Pays du commerce (31/10/2026) : jours fériés de France ou de Belgique pour la programmation et l'idée de la semaine (fonction SQL admin_pays).
     clic(zc, "[data-a=pays]", () => D.adminPays(cid, $("pays-client").value));
     clic(zc, "[data-a=metier]", () => D.adminMetier(cid, $("metier-client").value), t("con.metier.ok"));
-    clic(zc, "[data-a=offre]", () => D.adminOffre(cid, $("offre-client").value), t("con.offre.changee"));
+    // v48 : même offre qu'avant : rien n'est appelé, et le message le dit (admin_changer_offre ne change rien et ne dit rien). Après un vrai changement,
+    // la tâche « Mettre Stripe à jour » (STRIPE_A_METTRE_A_JOUR, créée par admin_changer_offre seulement si le commerce a un abonnement Stripe en
+    // cours d'une autre offre) est relue : le message dit si elle est dans À faire ; Stripe n'est jamais mis à jour par la console.
+    clic(zc, "[data-a=offre]", async () => { const v = $("offre-client").value; if (v === c.offre_id) return { meme: true, v };
+      await D.adminOffre(cid, v); const al = D.adminAlertesClient ? await D.adminAlertesClient(cid).catch(() => null) : null;
+      return { v, stripe: al ? al.some(a => a.type === "STRIPE_A_METTRE_A_JOUR") : null }; },
+      r => r.meme ? t("con.offre.meme", { o: I.offre(r.v) }) : t(r.stripe ? "con.offre.changee.stripe" : r.stripe === false ? "con.offre.changee.sans" : "con.offre.changee", { o: I.offre(r.v) }));
+    // WhatsApp saisi par l'équipe (v48) : la case d'accord d'abord, puis le numéro (mêmes règles que le client, phrases de la base).
+    clic(zc, "[data-a=whatsapp]", async () => { const n = $("wa-client-num").value.trim(), ok_ = $("wa-client-accord").checked;
+      if (!n) throw new Error(t("con.wa.vide")); if (!ok_) throw new Error(t("con.wa.accord.requis"));
+      return D.adminReglerWhatsapp(cid, n, true); }, r => t(r && r.etat === "deja" ? "con.wa.ok.deja" : "con.wa.ok", { n: window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(r && r.numero) : (r && r.numero) }));
+    clic(zc, "[data-a=wa-effacer]", async () => { if (!window.confirm(t("con.wa.effacer.confirmer"))) return ANNULE; return D.adminReglerWhatsapp(cid, null, false); }, t("con.wa.ok.efface"));
     clic(vue, "[data-a=fiche-lieu]", () => D.adminFicheGoogleLieu(cid, $("fg-id").value), t("con.fg.ok"));
+    clic(vue, "#ph-autoriser-ok-fiche", async () => { if (!$("ph-accord-fiche").checked) throw new Error(t("con.ph.accord.requis")); return D.adminAutoriserPhotos(cid, true); },
+      r => t(r && r.etat === "deja" ? "con.ph.autorisee.deja" : "con.ph.autorisee.ok"));
     clic(vue, "[data-mc-enregistrer]", () => D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value), t("con.mc.ok"));
     envoi("f-delais-client", () => D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }));
     envoi("f-gar-client", () => D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }));
+    // « Voir les 5 réponses » (v48) : ouvre le volet des réponses et y descend. « Voir tout l'historique » : affiche ou masque le reste du journal.
+    vue.querySelectorAll("[data-voir-reponses]").forEach(b => b.onclick = () => { const d = $("mer-reponses"); if (!d) return; d.open = true; d.scrollIntoView({ block: "start" }); });
+    const vt = $("historique-voir-tout"); if (vt) vt.onclick = () => { const o = $("historique-tout"), ouvrir = o.hidden; o.hidden = !ouvrir; vt.setAttribute("aria-expanded", String(ouvrir));
+      vt.textContent = ouvrir ? t("con.hist.masquer") : t("con.hist.voir.tout", { n: journalClient.length }); };
     // Bouton de la bannière qui mène au bon champ (« Vérifier la fiche », « Noter le blogId »…) : défilement et focus, sans changer d'adresse.
     vue.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { const z = $(b.dataset.aller); if (!z) return;
       const d = z.closest("details"); if (d) d.open = true; z.scrollIntoView({ block: "center" }); if (z.matches("input, select, textarea, button")) z.focus({ preventScroll: true }); });
