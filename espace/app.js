@@ -569,7 +569,21 @@
   // ---------------- Automatisations de service : mise en route (4 étapes) et idée de la semaine
   const AU = window.RENOM_AUTO;
   const ETATS_MR = I.carte("mer.etat", ["a_faire", "declare", "fait"]);
-  function blocMiseEnRoute(mr, c) {
+  // v49 (13/11/2026, dossier de démarrage) : la carte de mise en route reprend aussi les points du dossier que la console suit (autorisation photos,
+  // photos x sur 5 utilisables, WhatsApp), chacun avec son état et un lien vers le bon écran ; elle passe en tête de l'accueil. Les réponses (x sur 6)
+  // restent dans la ligne des questions, les réseaux dans la ligne « metricool ».
+  const PHOTOS_MIN = 5;
+  const photosUtilisables = l => (l || []).filter(x => x.statut !== "refusee" || x.refus_motif === "plafond").length;
+  const nbReponsesClient = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
+    return ["phrase", "distinctions", "ton", "interdits", "action"].filter(k => (k === "action" && String(r.action_detail || "").trim()) || String(Array.isArray(r[k]) ? r[k].join("") : r[k] || "").trim()).length
+      + (window.RENOM_RESEAUX_CLIENT.repondu(r.reseaux) ? 1 : 0); };
+  const lignesDossierClient = (c, p) => { const n = photosUtilisables(p), wa = whatsappActif(c);
+    return [{ k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
+      { k: "photos", fait: n >= PHOTOS_MIN, href: "#/photos", v: { n, m: PHOTOS_MIN } },
+      { k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/demarrage" }].map(x =>
+      `<li data-dossier="${x.k}"><div><p class="fort">${t("acc.dos." + x.k, x.v)}</p>${x.fait ? "" : `<p class="note">${t("acc.dos." + x.k + ".court", x.v)}</p>`}</div>
+        <div class="pile serre etape-etat"><span class="etat${x.fait ? " actif" : ""}">${x.fait ? ETATS_MR.fait : ETATS_MR.a_faire}</span>${x.fait ? "" : `<a class="bouton second petit" href="${x.href}">${t("acc.dos.voir")}</a>`}</div></li>`).join(""); };
+  function blocMiseEnRoute(mr, c, photosL) {
     if (!mr || !mr.points || mr.faits >= mr.total) return "";
     // Plus rien à faire par le commerçant (points déclarés, en vérification par l'équipe) : la phrase de l'accueil suffit.
     if (mr.points.every(x => x.etat !== "a_faire" || (x.point === "google" && ficheDemandee(c)))) return "";
@@ -582,8 +596,8 @@
         const demande = x.point === "google" && x.etat === "a_faire" && ficheDemandee(c);
         const action = x.etat !== "a_faire" || demande ? "" : p.declarable ? `<a class="bouton second petit" href="#/miseenroute">${t("mer.voir.etapes")}</a>`
           : x.point === "demarrage" ? `<a class="bouton second petit" href="#/demarrage?questions">${t("mer.repondre")}</a>` : "";
-        return `<li data-point="${e(x.point)}"><div><p class="fort">${e(p.titre)}</p>${x.etat === "fait" ? "" : `<p class="note">${t("mer.court." + x.point)}</p>`}</div>
-          <div class="pile serre etape-etat"><span class="etat${x.etat === "fait" ? " actif" : ""}">${demande ? t("mer2.demande.etat") : ETATS_MR[x.etat] || e(x.etat)}</span>${action}</div></li>`; }).join("")}</ol></section>`;
+        return `<li data-point="${e(x.point)}"><div><p class="fort">${e(p.titre)}${x.point === "demarrage" ? ` <span class="note" data-reponses>${t("acc.dos.reponses", { n: nbReponsesClient(c), t: 6 })}</span>` : ""}</p>${x.etat === "fait" ? "" : `<p class="note">${t("mer.court." + x.point)}</p>`}</div>
+          <div class="pile serre etape-etat"><span class="etat${x.etat === "fait" ? " actif" : ""}">${demande ? t("mer2.demande.etat") : ETATS_MR[x.etat] || e(x.etat)}</span>${action}</div></li>${x.point === "google" ? lignesDossierClient(c, photosL) : ""}`; }).join("")}</ol></section>`;
   }
   const ORIGINES = I.carte("idee.origine", ["calendrier", "meteo", "saison"]);
   // Idée d'un jour férié (moteur/temps_forts, idee_ferie : « Vos horaires du jour férié ») : on y répond par ses horaires, pas par une photo.
@@ -842,6 +856,7 @@
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
       <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <div class="msg" id="msg" role="status"></div>
+      ${blocMiseEnRoute(mr, c, p)}
       ${/* Tour 9 (01/11/2026) : « À faire maintenant » disparaît quand il n'y a rien à faire (avant : la carte restait, avec seulement « notre équipe
          s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
       ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}
@@ -864,7 +879,6 @@
       ${ligneFiche}
       ${ligneContact(contact, "contact-accueil")}
       ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>${notePointMois(c, "point-mois-accueil")}` : ""}
-      ${blocMiseEnRoute(mr, c)}
       ${ligneAutorisation(c)}
       <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
@@ -942,13 +956,17 @@
   }
 
   // ---------------- Fiche
+  // 6e question en clair (Mon commerce, mise en route) : « Instagram (compte professionnel), Facebook (avec une page) », « Aucun », ou vide.
+  const reseauxLisibles = r => { const x = window.RENOM_RESEAUX_CLIENT.normaliser(r); if (!Object.keys(x).length) return "";
+    const l = window.RENOM_RESEAUX_CLIENT.aRelier(x).map(k => k === "instagram" && x.instagram_pro ? `Instagram (${t("dem6.lis.pro." + x.instagram_pro)})` : k === "facebook" && x.facebook_page ? `Facebook (${t("dem6.lis.page." + x.facebook_page)})` : ({ instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok" })[k]);
+    return e(l.length ? l.join(", ") : t("dem6.lis.aucun")); };
   async function fiche() {
     const c = await D.commerce(), v = k => e(c[k] ?? ""), co = c.couleurs || {};
     const dm = c.demarrage || {}, sienne = x => x ? `<span${lc()}>${e(x)}</span>` : "";
     const rep = (lib, val) => `<li><span class="note">${lib}</span><span>${val || `<span class="note">${t("fiche.pas.reponse")}</span>`}</span></li>`;
     vue.innerHTML = `${retourOrigine()}${entete(t("fiche.sur"), t("fiche.titre"), t("fiche.chapo"))}
     <section class="carte fiche demarrage-resume"><div class="carte-tete"><h2>${t("fiche.dem.titre")}</h2><a href="#/demarrage">${t(c.demarrage_fini ? "fiche.dem.modifier" : "fiche.dem.repondre")}</a></div>
-      ${c.demarrage ? `<ul class="liste reponses">${rep(t("q.phrase.titre"), sienne(dm.phrase))}${rep(t("q.distinctions.titre"), sienne(dm.distinctions))}${rep(t("fiche.dem.ton"), e(TONS_LIB[dm.ton] || ""))}${rep(t("q.interdits.titre"), sienne(dm.interdits))}${rep(t("fiche.dem.action"), dm.action ? e(ACTIONS_LIB[dm.action]) + (dm.action_detail ? t("deux.points") + sienne(dm.action_detail) : "") : "")}</ul>`
+      ${c.demarrage ? `<ul class="liste reponses">${rep(t("q.phrase.titre"), sienne(dm.phrase))}${rep(t("q.distinctions.titre"), sienne(dm.distinctions))}${rep(t("fiche.dem.ton"), e(TONS_LIB[dm.ton] || ""))}${rep(t("q.interdits.titre"), sienne(dm.interdits))}${rep(t("fiche.dem.action"), dm.action ? e(ACTIONS_LIB[dm.action]) + (dm.action_detail ? t("deux.points") + sienne(dm.action_detail) : "") : "")}${rep(t("dem6.titre"), reseauxLisibles(dm.reseaux))}</ul>`
       : `<p class="texte2">${t("fiche.dem.vide")}</p>`}</section>
     <form id="f" class="fiche">
       <section class="carte"><h2>${t("fiche.commerce")}</h2><div class="champs">
@@ -2721,7 +2739,8 @@
     // Par défaut : « Pour démarrer » tant que la mise en route n'est pas finie (premier accès), sinon les questions (réponses à modifier).
     if (!dem.vue) { const mr = await D.miseEnRoute().catch(() => null); dem.vue = mr && mr.points && mr.faits < mr.total && !dem.fini ? "essentiel" : "questions"; }
     if (dem.vue === "essentiel") return ecranEssentiel(c);
-    if (dem.i === 5 && !dem.fini) return etapeWhatsapp(c);
+    if (dem.i === 5 && !dem.fini) return etapeReseaux(c);
+    if (dem.i === 6 && !dem.fini) return etapeWhatsapp(c);
     if (dem.fini) {
       // Fin des questions : la suite, puis l'autorisation photos et les alertes WhatsApp, repliées et facultatives (27/10/2026, constat 3).
       vue.innerHTML = `${entete(t("dem5.fini"), e(c.nom), t("dem5.fini.chapo"))}<p class="msg" id="msg-aut" role="status"></p>
@@ -2743,15 +2762,14 @@
           ${q.choix ? `<fieldset><legend class="q-titre" id="q-titre">${q.titre}</legend><p class="aide">${q.aide}</p>${Object.entries(q.choix).map(([k, lib]) => `<label class="option"><input type="radio" name="dem-choix" value="${k}"${v === k ? " checked" : ""}><span>${lib}</span></label>`).join("")}</fieldset>
             ${q.detail ? `<div class="f"><label for="dem-detail">${q.detail}</label><input id="dem-detail" type="text" maxlength="200" value="${e(dem.rep.action_detail || "")}"></div>` : ""}`
           : `<div class="f"><label for="dem-champ" class="q-titre" id="q-titre">${q.titre}</label><p class="aide" id="q-aide">${q.aide}</p><textarea id="dem-champ" class="haut-texte" maxlength="600" aria-describedby="q-aide"${lc()}>${e(v)}</textarea></div>`}
-          <div class="actions"><button class="bouton" type="submit" id="dem-suivant">${t(dem.i === 4 && whatsappActif(c) ? "dem5.terminer" : "dem5.suivant")}</button><button type="button" class="bouton second" id="dem-passer">${t("dem5.passer")}</button>${dem.i ? `<button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button>` : ""}</div>
+          <div class="actions"><button class="bouton" type="submit" id="dem-suivant">${t("dem5.suivant")}</button><button type="button" class="bouton second" id="dem-passer">${t("dem5.passer")}</button>${dem.i ? `<button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button>` : ""}</div>
           <p class="msg" id="msg" role="status"></p></form></section>
       <p class="note">${merEnCoursDem ? `<a href="#/miseenroute" id="dem-retour-etapes">${t("mer2.retour.etapes")}</a> · ` : ""}<button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button> ${t("dem5.plus.tard.note")}</p>`;
     const lire = () => { if (q.choix) { const x = document.querySelector("input[name=dem-choix]:checked"); dem.rep[q.cle] = x ? x.value : ""; if (q.detail) dem.rep.action_detail = $("dem-detail").value.trim(); } else dem.rep[q.cle] = $("dem-champ").value.trim(); };
     const avancer = async () => {
       if (dem.i < 4) { dem.i++; await demarrage(); const f = vue.querySelector("#dem-champ, input[name=dem-choix]"); if (f) f.focus(); return; }
-      // Numéro WhatsApp obligatoire (11/11/2026) : sans WhatsApp actif, la dernière étape le demande avant d'enregistrer le démarrage.
-      if (!whatsappActif(await D.commerce())) { dem.i = 5; await demarrage(); const f = $("awa-numero"); if (f) f.focus(); return; }
-      try { await finirDemarrage(); } catch (er) { msg(ph(er.message)); }
+      // 6e question « Vos réseaux sociaux » (13/11/2026), facultative, puis le numéro WhatsApp (obligatoire, 11/11/2026).
+      dem.i = 5; await demarrage(); const f = vue.querySelector("input[name=rs-instagram]"); if (f) f.focus();
     };
     $("dem-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
     $("dem-passer").onclick = async () => { await avancer(); };
@@ -2783,7 +2801,36 @@
     $("awa-f").onsubmit = async ev => { ev.preventDefault(); if (!ctl.verifier()) return; const b = $("dem-terminer"); b.disabled = true;
       try { await D.reglerWhatsapp($("awa-numero").value.trim(), true); } catch (er) { b.disabled = false; ctl.erreur(ph(er.message)); return; }
       try { await finirDemarrage(); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
-    $("dem-precedent").onclick = async () => { dem.i = 4; await demarrage(); };
+    $("dem-precedent").onclick = async () => { dem.i = 5; await demarrage(); };
+    $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
+  }
+  // 6e question « Vos réseaux sociaux » (13/11/2026, console v49) : Instagram (compte professionnel ?), Facebook (page ?), TikTok, oui ou non. Facultative :
+  // « Passer cette question » mène à la suite. Rangée dans demarrage.reseaux (RENOM_RESEAUX_CLIENT de donnees.js) ; elle dit à l'équipe quels réseaux
+  // relier dans Metricool et s'il faut passer l'Instagram en compte professionnel.
+  const RSC = window.RENOM_RESEAUX_CLIENT;
+  function etapeReseaux(c) {
+    const r = dem.rep.reseaux || {};
+    const q = (nom, vals, sous) => `<fieldset class="pile serre rs-question" data-rs="${nom}"${sous ? ` data-sous="${sous}"` : ""}><legend class="fort">${t("dem6." + nom)}</legend>
+      <div class="choix-ligne">${vals.map(k => `<label class="option"><input type="radio" name="rs-${nom}" value="${k}"${r[nom] === k ? " checked" : ""}><span>${t("dem6." + k)}</span></label>`).join("")}</div></fieldset>`;
+    vue.innerHTML = `${entete(t("ecran.demarrage"), e(c.nom), t("dem6.chapo"))}
+      <section class="carte demarrage" id="dem-reseaux">
+        <div class="mesure"><div class="mesure-tete"><span class="fort">${t("dem6.etape")}</span></div>${jauge(5, 5)}</div>
+        <form id="dem-rs-f" novalidate><h2 class="q-titre" id="q-titre">${t("dem6.titre")}</h2><p class="aide">${t("dem6.aide")}</p>
+          ${q("instagram", ["oui", "non"])}${q("instagram_pro", ["oui", "non", "nsp"], "instagram")}${q("facebook", ["oui", "non"])}${q("facebook_page", ["oui", "non"], "facebook")}${q("tiktok", ["oui", "non"])}
+          <div class="actions"><button class="bouton" type="submit" id="dem-suivant">${t(whatsappActif(c) ? "dem5.terminer" : "dem5.suivant")}</button><button type="button" class="bouton second" id="dem-passer">${t("dem5.passer")}</button><button type="button" class="lien" id="dem-precedent">${t("dem5.precedente")}</button></div>
+          <p class="msg" id="msg" role="status"></p></form></section>
+      <p class="note"><button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button> ${t("dem5.plus.tard.note")}</p>`;
+    const val = n => (vue.querySelector(`input[name=rs-${n}]:checked`) || {}).value || "";
+    const sous = () => vue.querySelectorAll("[data-sous]").forEach(f => { f.hidden = val(f.dataset.sous) !== "oui"; });
+    vue.querySelectorAll("#dem-rs-f input").forEach(i => { i.onchange = sous; }); sous();
+    const lire = () => { const x = RSC.normaliser({ instagram: val("instagram"), instagram_pro: val("instagram_pro"), facebook: val("facebook"), facebook_page: val("facebook_page"), tiktok: val("tiktok") });
+      if (Object.keys(x).length) dem.rep.reseaux = x; else delete dem.rep.reseaux; };
+    const avancer = async () => {
+      if (!whatsappActif(await D.commerce())) { dem.i = 6; await demarrage(); const f = $("awa-numero"); if (f) f.focus(); return; }
+      try { await finirDemarrage(); } catch (er) { msg(ph(er.message)); } };
+    $("dem-rs-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
+    $("dem-passer").onclick = async () => { await avancer(); };
+    $("dem-precedent").onclick = async () => { lire(); dem.i = 4; await demarrage(); };
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
 

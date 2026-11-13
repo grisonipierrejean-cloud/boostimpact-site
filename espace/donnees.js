@@ -395,11 +395,51 @@
   }
   // Réponses aux 5 questions de démarrage : chaque réponse est facultative (on peut passer une question).
   const TONS = ["chaleureux", "sobre", "enjoue"], ACTIONS = ["reserver", "appeler", "venir", "acheter"];
+  // 6e question « Vos réseaux sociaux » (13/11/2026, console v49) : rangée dans commerces.demarrage.reseaux, mêmes valeurs que admin_reponses_demarrage
+  // (schema.sql, bloc « Console : réponses du démarrage remplies par l'équipe… ») : instagram, facebook, tiktok « oui » ou « non » ; instagram_pro
+  // « oui », « non » ou « nsp » (je ne sais pas) et facebook_page « oui » ou « non », gardés seulement si le réseau est « oui ». Facultative.
+  const RSC = window.RENOM_RESEAUX_CLIENT = {
+    RESEAUX: ["instagram", "facebook", "tiktok"],
+    normaliser(r) { r = r && typeof r === "object" ? r : {}; const o = {};
+      for (const k of RSC.RESEAUX) if (["oui", "non"].includes(r[k])) o[k] = r[k];
+      if (o.instagram === "oui" && ["oui", "non", "nsp"].includes(r.instagram_pro)) o.instagram_pro = r.instagram_pro;
+      if (o.facebook === "oui" && ["oui", "non"].includes(r.facebook_page)) o.facebook_page = r.facebook_page;
+      return o; },
+    // Répondue : les trois réseaux ont « oui » ou « non ».
+    repondu: r => !!r && typeof r === "object" && RSC.RESEAUX.every(k => ["oui", "non"].includes(r[k])),
+    // Réseaux que le client a (à relier dans Metricool) ; Instagram pas (ou pas sûr d'être) professionnel : à passer en compte professionnel avec lui.
+    aRelier: r => r && typeof r === "object" ? RSC.RESEAUX.filter(k => r[k] === "oui") : [],
+    proAFaire: r => !!r && r.instagram === "oui" && r.instagram_pro !== "oui" };
   function controlerDemarrage(r) {
     r = r || {}; const txt = (k, n) => { const v = String(r[k] || "").trim(); if (longueur(v) > n) throw new Error("Réponse trop longue (" + n + " caractères au plus)."); return v; };
-    const ton = TONS.includes(r.ton) ? r.ton : "", action = ACTIONS.includes(r.action) ? r.action : "";
-    return { phrase: txt("phrase", 300), distinctions: txt("distinctions", 600), ton, interdits: txt("interdits", 600), action, action_detail: action ? txt("action_detail", 200) : "" };
+    const ton = TONS.includes(r.ton) ? r.ton : "", action = ACTIONS.includes(r.action) ? r.action : "", rs = RSC.normaliser(r.reseaux);
+    return { phrase: txt("phrase", 300), distinctions: txt("distinctions", 600), ton, interdits: txt("interdits", 600), action, action_detail: action ? txt("action_detail", 200) : "",
+      ...(Object.keys(rs).length ? { reseaux: rs } : {}) };
   }
+  // Réponses saisies par l'équipe (admin_reponses_demarrage) : seulement les clés fournies, mêmes contrôles que la base ; vide : réponse effacée.
+  const CLES_DEMARRAGE = { phrase: 300, distinctions: 600, interdits: 600, action_detail: 200 };
+  function fusionnerDemarrage(avant, p) {
+    if (!p || typeof p !== "object" || Array.isArray(p)) throw new Error("Réponses invalides.");
+    const o = { ...(avant && typeof avant === "object" ? avant : {}) }, champs = [];
+    for (const [k, v] of Object.entries(p)) {
+      const s = typeof v === "string" ? v.trim() : v, vide = s == null || s === "";
+      if (!(k in CLES_DEMARRAGE) && !["ton", "action", "reseaux"].includes(k)) throw new Error("Réponse inconnue : " + k + ".");
+      let n;
+      if (vide) n = undefined;
+      else if (k in CLES_DEMARRAGE) { if (typeof s !== "string") throw new Error("Réponse « " + k + " » : texte attendu."); if (longueur(s) > CLES_DEMARRAGE[k]) throw new Error("Réponse trop longue : " + CLES_DEMARRAGE[k] + " caractères au plus."); n = s; }
+      else if (k === "ton") { if (!TONS.includes(s)) throw new Error("Ton possible : chaleureux, sobre ou enjoué."); n = s; }
+      else if (k === "action") { if (!ACTIONS.includes(s)) throw new Error("Action possible : réserver, appeler, venir sur place ou acheter en ligne."); n = s; }
+      else { if (typeof s !== "object" || Array.isArray(s)) throw new Error("Réseaux sociaux : réponses invalides.");
+        for (const [rk, rv] of Object.entries(s)) if (rv != null && rv !== "" && !((["instagram", "facebook", "facebook_page", "tiktok"].includes(rk) && ["oui", "non"].includes(rv)) || (rk === "instagram_pro" && ["oui", "non", "nsp"].includes(rv))))
+          throw new Error("Réseaux sociaux : réponse « " + rk + " » invalide.");
+        n = RSC.normaliser(s); if (!Object.keys(n).length) n = undefined; }
+      if (JSON.stringify(o[k]) !== JSON.stringify(n)) champs.push(k);
+      if (n === undefined) delete o[k]; else o[k] = n;
+    }
+    return { demarrage: o, champs: champs.sort() };
+  }
+  // Les 5 premières questions répondues (mêmes règles que admin_reponses_demarrage et la console).
+  const repondues5 = r => !r ? 0 : ["phrase", "distinctions", "ton", "interdits", "action"].filter(k => (k === "action" && String(r.action_detail || "").trim()) || (Array.isArray(r[k]) ? r[k].some(x => String(x || "").trim()) : String(r[k] || "").trim())).length;
   // ---- fin des règles communes de la mise à jour
 
   // ---- Vidéo d'avis : règles communes aux deux adaptateurs. Mêmes valeurs et mêmes phrases que moteur/video_avis.py et que le
@@ -1224,11 +1264,16 @@
         return [...av.map(a => ({ type: "Avis sensible", code: "AVIS_SENSIBLE", avis_id: a.id, commerce_id: a.commerce_id, commerce: n(a.commerce_id), texte: (a.raisons || []).join(", ") + " : " + (a.texte || "").slice(0, 100), date: a.cree_le })),
           ...j.map(x => ({ type: x.type, code: x.type, journal: true, detail: x.detail, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: JSON.stringify(x.detail), date: x.cree_le })),
           ...p.map(x => ({ type: "Publication en échec", code: "PUBLICATION_ECHEC", publication_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: x.erreur || "", date: x.prevu_le })),
-          ...ae.map(a => ({ type: titreAlerte(a, n(a.commerce_id)), code: a.type, id: a.id, commerce_id: a.commerce_id || null, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le })),
+          ...ae.map(a => ({ type: titreAlerte(a, n(a.commerce_id)), code: a.type, id: a.id, commerce_id: a.commerce_id || null, commerce: n(a.commerce_id) || "", texte: texteAlerte(a), date: a.cree_le, detail_alerte: a.detail || {} })),
           ...rechercheBloquee(fb).map(x => ({ ...x, commerce: n(x.commerce_id) || "", type: titreAlerte(x, n(x.commerce_id)), texte: texteAlerte(x) })),
           ...cm.map(x => ({ type: "Commentaire sensible", code: "COMMENTAIRE_SENSIBLE", commentaire_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: (x.raisons || []).join(", ") + " : " + (x.texte || "texte effacé après 30 jours").slice(0, 100), date: x.cree_le }))];
       },
       async adminAlerteVue(id) { ok(await sb.rpc("admin_alerte_vue", { p_id: id })); },
+      // Console v49 (13/11/2026, bloc « Console : réponses du démarrage remplies par l'équipe et fiche Google ignorée ») : contrôle d'abord ici (mêmes
+      // phrases que la base), puis la fonction (est_admin, journal).
+      async adminReponsesDemarrage(cid, rep) { fusionnerDemarrage({}, rep); return ok(await sb.rpc("admin_reponses_demarrage", { p_commerce: cid, p_reponses: rep })); },
+      async adminIgnorerFicheGoogle(id) { return ok(await sb.rpc("admin_ignorer_fiche_google", { p_id: id })); },
+      async adminPhotosClient(cid) { return ok(await sb.from("photos").select("id,statut,refus_motif,cree_le").eq("commerce_id", cid).limit(200)) || []; },
       // Prises en charge (« Je prends ») et nouveau client complet : bloc « Console : garantie des 24 h tenue à deux » de schema.sql. Tant que ce bloc
       // n'est pas collé, adminPrises rend null (la console masque « Je prends ») et adminCreerClient crée le commerce par admin_creer_commerce, sans
       // ville, langue ni fiche (rend { id, partiel: true } : la console le dit).

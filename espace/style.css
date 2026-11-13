@@ -176,6 +176,39 @@ h2 .etat{font-size:inherit;font-weight:var(--graisse-forte)}
 /* Réponses aux 5 questions (v48) : « pas répondu » visible ; historique complet sous les 5 dernières lignes. */
 .mer-rep-vide{font-weight:var(--graisse-forte);color:var(--attention)}
 #historique-tout{margin-top:0}
+/* Console v49 (13/11/2026) : dossier de démarrage (une ligne par point, état en clair), réponses remplies par l'équipe, étape Metricool, trame d'appel. */
+.dossier-tab{width:100%;border-collapse:collapse;font-size:15px}
+.dossier-tab th{text-align:left;font-size:13px;font-weight:var(--graisse-forte);color:var(--discret);padding:6px 8px 6px 0;border-bottom:1px solid var(--filet)}
+.dossier-tab td{padding:10px 8px 10px 0;border-bottom:1px solid var(--filet);vertical-align:top}
+.dossier-tab tbody tr:last-child td{border-bottom:0}
+.dossier-tab td:nth-child(2){white-space:nowrap}
+.etat-dos{display:inline-block;padding:1px 8px;border:1px solid var(--bord);border-radius:4px;font-size:13px;font-weight:var(--graisse-forte);line-height:1.6;color:var(--discret);white-space:nowrap}
+.etat-dos-fait{color:var(--vert);border-color:var(--vert)}
+.etat-dos-vous{color:var(--encre);border-color:var(--encre);background:var(--releve)}
+.etat-dos-robot{border-style:dashed}
+@media (max-width:719px){
+  .dossier-tab thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .dossier-tab tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--filet)}
+  .dossier-tab tbody tr:last-child{border-bottom:0}
+  .dossier-tab td{padding:0;border:0}
+  .dossier-tab td:nth-child(3),.dossier-tab td:nth-child(4){grid-column:1/-1}
+}
+#dossier-message{width:100%;font-family:var(--sans);font-size:14px;line-height:1.5;resize:vertical}
+.form-reponses{border-top:1px solid var(--filet);padding-top:12px;margin-top:8px}
+.form-reponses>.f,.form-reponses>fieldset{align-self:stretch;max-width:760px}
+.form-reponses textarea,.form-reponses select{width:100%}
+.mer-metricool{display:grid;gap:4px;margin:6px 0 0}
+.mer-mini-guide{margin:4px 0 0;padding-left:20px;font-size:14px;color:var(--texte2)}
+.mer-mini-guide li{margin:2px 0}
+.mer-action-bas{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.trame{border-top:1px solid var(--filet);padding-top:14px;display:grid;gap:14px}
+.trame-partie h4{margin:0 0 8px;font-size:15px;font-weight:var(--graisse-forte);color:var(--discret)}
+.trame-ligne{font-size:19px;line-height:1.5;margin:0 0 10px;max-width:62ch;color:var(--encre)}
+.trame-relance{color:var(--texte2);padding-left:16px}
+/* Espace v49 : 6e question « Vos réseaux sociaux » (oui ou non côte à côte). */
+.rs-question{border:0;padding:0;margin:0 0 6px}
+.rs-question legend{padding:0;margin-bottom:2px}
+.choix-ligne{display:flex;flex-wrap:wrap;gap:4px 20px}
 
 /* ---------- Cartes et mises en page */
 .carte{background:var(--surface);border:1px solid var(--filet);border-radius:var(--r-carte);padding:18px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}

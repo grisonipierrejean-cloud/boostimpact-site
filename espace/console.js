@@ -101,7 +101,9 @@
     if (x.point === "google") return `<button type="button" class="lien recours" data-mer="google" data-cid="${cid}">${t("con.mer.g.manuel")}</button>`;
     if (x.point !== "metricool") return "";
     const avecLien = "lien_envoye_le" in x, aVerifier = !avecLien || !!x.lien_envoye_le || x.etat === "declare";
-    const lien = avecLien && x.etat === "a_faire" ? `<button type="button" class="bouton ${x.lien_envoye_le ? "second " : ""}petit" data-mer-lien data-cid="${cid}">${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : "";
+    // v49 (13/11/2026, retour de PJ : « Lien envoyé », gros bouton vert, se lisait comme un état) : un verbe, toujours en bouton secondaire ; l'état est
+    // dit en une phrase au-dessus (etapeMetricool).
+    const lien = avecLien && x.etat === "a_faire" ? `<button type="button" class="bouton second petit" data-mer-lien data-cid="${cid}">${t(x.lien_envoye_le ? "con.mer.lien.renvoye" : "con.mer.lien.bouton")}</button>` : "";
     const sociaux = window.RENOM_RESEAUX_AUTORISES(c).filter(r => RES_SOCIAUX.includes(r) && ((c.comptes || {})[r] || {}).etat !== "connecte");
     const verif = !aVerifier ? "" : sociaux.length ? sociaux.map(r => `<button type="button" class="bouton petit" data-acces="${r}" data-oui="1" data-cid="${cid}">${t("con.verifie", { x: NOM_RESEAU[r] })}</button>`).join("")
       : `<button type="button" class="bouton petit" data-mer="metricool" data-cid="${cid}">${t("con.verifie", { x: "Metricool" })}</button>`;
@@ -122,19 +124,54 @@
     return `<ol class="mer-proc">${[1, 2, 3, 4].map(n => { const fait = !!x && (x.etat === "fait" || (!!lien && n < 4)), en = !!cur && (n === cur || (cur === 1 && n === 2));
       return `<li${fait ? ' class="fait"' : ""}${en ? ' aria-current="step"' : ""}>${t("con.mer.proc." + n)}${n === 3 && lien ? ` <span class="mer-proc-etat">${t("con.mer.lien.envoye.court", { d: I.date(lien) })}</span>` : fait ? ` <span class="mer-proc-etat">${t("con.mer.proc.fait")}</span>` : ""}</li>`; }).join("")}</ol>`; };
   const quandGoogle = () => `<div class="mer-quand"><p class="note"><span class="aide-lib">${t("con.mer.google.quand.lib")}</span> ${t("con.mer.google.quand")}</p><p class="note"><span class="aide-lib">${t("con.mer.google.pas.lib")}</span> ${t("con.mer.google.pas")}</p></div>`;
-  // v48 (12/11/2026, retour de PJ : « je ne trouve pas les réponses aux 5 questions ») : volet ouvert d'emblée tant que les 5 ne sont pas répondues,
-  // « pas répondu » bien visible (mer-rep-vide), nombre de réponses dans le titre, lien « Voir les 5 réponses » sur la ligne de l'étape.
-  const reponsesDemarrage = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null, vide = `<span class="mer-rep-vide" data-rep-vide>${t("con.mer.rep.vide")}</span>`;
+  // v49 (13/11/2026, retour de PJ : « je dois pouvoir remplir pour le client pendant l'appel ») : 6 questions (la 6e, « Vos réseaux sociaux », rangée
+  // dans demarrage.reseaux, RENOM_RESEAUX_CLIENT de donnees.js) ; chaque réponse a « Modifier », qui ouvre le formulaire « Remplir pour le client »
+  // (mêmes listes de choix que l'espace : TONS, ACTIONS, oui ou non) ; « Enregistrer les réponses » n'envoie que les champs changés
+  // (admin_reponses_demarrage, journal REPONSES_DEMARRAGE_PAR_EQUIPE). Sans adminReponsesDemarrage (adaptateur ancien) : la lecture seule de la v48.
+  const RSC = window.RENOM_RESEAUX_CLIENT;
+  const QUESTIONS = ["phrase", "distinctions", "ton", "interdits", "action", "reseaux"], NB_Q = QUESTIONS.length;
+  const demarrageDe = c => c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null;
+  const texteRep = v => Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : "";
+  const OUI_NON = r => r === "oui" ? t("con.oui") : r === "non" ? t("con.non") : r === "nsp" ? t("con.nsp") : "";
+  const resumeReseaux = r => { if (!r || typeof r !== "object" || !Object.keys(r).length) return "";
+    return [r.instagram ? `Instagram${t("deux.points")}${OUI_NON(r.instagram)}${r.instagram === "oui" && r.instagram_pro ? ", " + t("con.rs.pro." + r.instagram_pro) : ""}` : "",
+      r.facebook ? `Facebook${t("deux.points")}${OUI_NON(r.facebook)}${r.facebook === "oui" && r.facebook_page ? ", " + t("con.rs.page." + r.facebook_page) : ""}` : "",
+      r.tiktok ? `TikTok${t("deux.points")}${OUI_NON(r.tiktok)}` : ""].filter(Boolean).join(" · "); };
+  const repondue = (r, k) => { if (!r) return false; if (k === "reseaux") return RSC.repondu(r.reseaux);
+    if (k === "action" && typeof r.action_detail === "string" && r.action_detail.trim()) return true; const v = r[k];
+    return Array.isArray(v) ? v.some(x => String(x || "").trim()) : typeof v === "string" ? !!v.trim() : !!v; };
+  const nbReponses = c => { const r = demarrageDe(c); return r ? QUESTIONS.filter(k => repondue(r, k)).length : 0; };
+  const nbReponses5 = c => { const r = demarrageDe(c); return r ? QUESTIONS.slice(0, 5).filter(k => repondue(r, k)).length : 0; };
+  const titreQ = k => k === "reseaux" ? t("con.rs.titre") : t("q." + k + ".titre");
+  const choix = (id, l, v, lib) => `<select id="${id}">${[["", t("con.mer.rep.vide")], ...l.map(k => [k, lib(k)])].map(([k, x]) => `<option value="${k}"${(v || "") === k ? " selected" : ""}>${e(x)}</option>`).join("")}</select>`;
+  const formReponses = c => { const r = demarrageDe(c) || {}, rs = r.reseaux && typeof r.reseaux === "object" ? r.reseaux : {};
+    const ta = (k, n) => `<div class="f" data-f-q="${k}"><label for="rq-${k}">${titreQ(k)}</label><textarea id="rq-${k}" maxlength="${n}" rows="2">${e(texteRep(r[k]))}</textarea></div>`;
+    const sel = (k, l, v, lib, libelle) => `<div class="f" data-f-q="${k}"><label for="rq-${k}">${libelle}</label>${choix("rq-" + k, l, v, lib)}</div>`;
+    return `<form id="f-reponses" class="pile serre form-reponses" novalidate hidden><h4>${t("con.rep.form.titre")}</h4><p class="note">${t("con.rep.form.aide")}</p>
+      ${ta("phrase", 300)}${ta("distinctions", 600)}${sel("ton", Object.keys(TONS), r.ton === "enjoué" ? "enjoue" : r.ton, k => TONS[k], titreQ("ton"))}${ta("interdits", 600)}
+      ${sel("action", Object.keys(ACTIONS), r.action, k => ACTIONS[k], titreQ("action"))}<div class="f" data-f-q="action_detail"><label for="rq-action_detail">${t("q.action.detail")}</label><input id="rq-action_detail" type="text" maxlength="200" value="${e(r.action_detail || "")}"></div>
+      <fieldset class="pile serre" data-f-q="reseaux"><legend class="fort">${t("con.rs.titre")}</legend><div class="champs deux">
+        ${sel("rs-instagram", ["oui", "non"], rs.instagram, OUI_NON, t("con.rs.instagram"))}${sel("rs-instagram_pro", ["oui", "non", "nsp"], rs.instagram_pro, OUI_NON, t("con.rs.instagram.pro"))}
+        ${sel("rs-facebook", ["oui", "non"], rs.facebook, OUI_NON, t("con.rs.facebook"))}${sel("rs-facebook_page", ["oui", "non"], rs.facebook_page, OUI_NON, t("con.rs.facebook.page"))}
+        ${sel("rs-tiktok", ["oui", "non"], rs.tiktok, OUI_NON, t("con.rs.tiktok"))}</div></fieldset>
+      <div class="actions"><button type="submit" class="bouton second petit" id="rq-enregistrer">${t("con.rep.enregistrer")}</button><button type="button" class="lien" id="rq-fermer">${t("con.rep.fermer")}</button></div></form>`; };
+  // Valeurs du formulaire, seulement celles qui changent (admin_reponses_demarrage ne touche pas aux autres).
+  const lireReponses = c => { const r = demarrageDe(c) || {}, v = id => ($("rq-" + id) || {}).value || "", out = {};
+    for (const k of ["phrase", "distinctions", "interdits", "action_detail"]) { const x = v(k).trim(); if (x !== texteRep(r[k]).trim()) out[k] = x; }
+    for (const k of ["ton", "action"]) { const x = v(k); if (x !== ((k === "ton" && r.ton === "enjoué" ? "enjoue" : r[k]) || "")) out[k] = x; }
+    const rs = RSC.normaliser({ instagram: v("rs-instagram"), instagram_pro: v("rs-instagram_pro"), facebook: v("rs-facebook"), facebook_page: v("rs-facebook_page"), tiktok: v("rs-tiktok") });
+    if (JSON.stringify(Object.entries(rs).sort()) !== JSON.stringify(Object.entries(RSC.normaliser(r.reseaux)).sort())) out.reseaux = rs;
+    return out; };
+  const reponsesDemarrage = c => { const r = demarrageDe(c), vide = `<span class="mer-rep-vide" data-rep-vide>${t("con.mer.rep.vide")}</span>`, modif = !!D.adminReponsesDemarrage;
     const val = k => { const v = r ? r[k] : null;
       if (k === "ton") return TONS[v === "enjoué" ? "enjoue" : v] || (v ? e(v) : vide);
       if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? e(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
-      const s_ = Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : ""; return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
-    return `<details class="repliable mer-reponses" id="mer-reponses"${nbReponses(c) < QUESTIONS.length ? " open" : ""}><summary><h3>${t("con.mer.rep.titre")}, ${t("con.mer.rep.n", { n: nbReponses(c) })}</h3></summary>
-      ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}<dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${t("q." + k + ".titre")}</dt><dd>${val(k)}</dd></div>`).join("")}</dl></details>`; };
-  const QUESTIONS = ["phrase", "distinctions", "ton", "interdits", "action"];
-  const nbReponses = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
-    return QUESTIONS.filter(k => { const v = r[k]; if (k === "action" && typeof r.action_detail === "string" && r.action_detail.trim()) return true;
-      return Array.isArray(v) ? v.some(x => String(x || "").trim()) : typeof v === "string" ? !!v.trim() : !!v; }).length; };
+      if (k === "reseaux") { const x = resumeReseaux(v); return x ? `<span class="mer-rep-texte">${e(x)}</span>${RSC.repondu(v) ? "" : " " + vide}` : vide; }
+      const s_ = texteRep(v); return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
+    return `<details class="repliable mer-reponses" id="mer-reponses"${nbReponses(c) < NB_Q ? " open" : ""}><summary><h3>${t("con.mer.rep.titre")}, <span data-reponses-n>${t("con.mer.rep.n", { n: nbReponses(c), t: NB_Q })}</span></h3></summary>
+      ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}${modif ? `<div class="actions"><button type="button" class="bouton second petit" data-rep-remplir>${t(r ? "con.rep.corriger" : "con.rep.remplir")}</button></div>` : ""}
+      <dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${titreQ(k)}</dt><dd>${val(k)}${modif ? ` <button type="button" class="lien" data-rep-modifier="${k}">${t("con.rep.modifier")}</button>` : ""}</dd></div>`).join("")}</dl>
+      ${modif ? formReponses(c) : ""}</details>`; };
   // Étape « Accès à la fiche Google » pas encore faite (v48, 12/11/2026, retour de PJ : « Déclaré par le client…, à vérifier » + « Google vérifié »
   // lui demandaient une vérification inutile). Le robot n8n « RENOM, fiches Google : invitations et liens » (toutes les 30 min) accepte l'invitation
   // reçue par team@boostimpact.agency, relie la fiche (rapprocher_fiches_google) et coche l'étape seul. La fiche dit donc : ce qu'on attend du client,
@@ -146,7 +183,8 @@
   const H2 = 2 * 3600000;
   const robotGoogle = () => { const p = robotsFiche.passage, ms = p && Date.parse(p.passe_le); return ms ? { connu: true, ms, muet: Date.now() - ms > H2 } : { connu: false }; };
   const sansIdGoogle = c => FG.sql(c) && !FG.ID.test(c.google_place_id || "") && !String(c.fiche_google_lien || "").trim();
-  const alertesGoogle = c => { const l = (robotsFiche.alertes || []).filter(a => a.type === "FICHE_A_RELIER"); return { propres: l.filter(a => a.commerce_id === c.id), orphelines: l.filter(a => !a.commerce_id) }; };
+  // v49 : seules les fiches orphelines qui ressemblent au commerce (ressemble) sont présentées sur sa fiche, avec leur titre.
+  const alertesGoogle = c => { const l = (robotsFiche.alertes || []).filter(a => a.type === "FICHE_A_RELIER"); return { propres: l.filter(a => a.commerce_id === c.id), orphelines: l.filter(a => !a.commerce_id && ressemble(c, a.detail)) }; };
   const limiteGoogle = (c, x) => x.etat === "declare" ? (x.maj ? Date.parse(x.maj) + H24 : null) : c.cree_le ? Date.parse(c.cree_le) + J_APPEL * 864e5 : null;
   const etapeGoogle = (c, x) => { const decl = x.etat === "declare", r = robotGoogle(), lim = limiteGoogle(c, x), al = alertesGoogle(c), l = [];
     l.push(`<p class="note" data-google-attente="${decl ? "declare" : "client"}">${decl ? t("con.mer.g.declare", { d: x.maj ? dh(x.maj) : "" }) : t("con.mer.g.attente")}</p>`);
@@ -154,20 +192,132 @@
       : `<p class="note" data-robot="${r.connu ? "ok" : "inconnu"}">${r.connu ? t("con.mer.g.robot", { h: dh(r.ms) }) : t("con.mer.g.robot.inconnu")}</p>`);
     if (sansIdGoogle(c)) l.push(`<p class="note fort alerte-ligne" data-google-sans-id>${t("con.mer.g.sans.id")}</p>`);
     al.propres.forEach(a => l.push(`<p class="note fort alerte-ligne" data-google-alerte>${t("con.mer.g.alerte", { x: e(a.texte || "") })}</p>`));
-    if (al.orphelines.length) l.push(`<p class="note" data-google-orphelines="${al.orphelines.length}">${t("con.mer.g.orphelines", { n: al.orphelines.length })}</p>`);
+    al.orphelines.forEach(a => l.push(`<p class="note" data-google-orphelines="1">${t("con.mer.g.orpheline", { x: e((a.detail || {}).titre || t("con.mer.g.sans.titre")) })}</p>`));
     l.push(lim != null && Date.now() >= lim ? `<p class="note fort" data-google-appeler>${t("con.mer.g.appeler")}</p>`
       : `<p class="note">${lim == null ? t("con.mer.g.si.sans") : t(decl ? "con.mer.g.si24" : "con.mer.g.si.appel", { d: decl ? dh(lim) : I.date(lim) })}</p>`);
     return `<div class="mer-google" id="mer-google-auto">${l.join("")}</div>`; };
   const etatMerFiche = x => x.point === "google" && x.etat !== "fait" ? t(x.etat === "declare" ? "con.mer.etat.g.declare" : "con.mer.etat.g.client") : etatMer(x);
   const merFiche = c => { const m = c.sante && c.sante.mise_en_route; if (!m) return "";
-    const guide = x => x.etat === "fait" || !["google", "metricool"].includes(x.point) ? "" : `<p class="note"><a class="lien-guide" href="#/guide/${x.point === "google" ? "e3" : "e4"}">${t("con.mer.guide")}</a></p>`;
-    const etat = x => etatMerFiche(x) + (x.point === "demarrage" ? " · " + `<span data-reponses>${t("con.mer.rep.n", { n: nbReponses(c) })}</span>` : "");
+    // v49 : le Mode d'emploi seulement pour Google ; l'étape Metricool porte son mini-guide de 3 lignes (etapeMetricool).
+    const guide = x => x.etat === "fait" || x.point !== "google" ? "" : `<p class="note"><a class="lien-guide" href="#/guide/e3">${t("con.mer.guide")}</a></p>`;
+    const etat = x => x.point === "metricool" && x.etat !== "fait" ? `<span data-mc-etat="${etatMetricool(c, x).k}">${etatMetricool(c, x).x}</span>`
+      : x.point === "metricool" && reseauxRelies(c).length ? `${etatMerFiche(x)} · <span data-mc-etat="fait">${etatMetricool(c, x).x}</span>` : etatMerFiche(x) + (x.point === "demarrage" ? " · " + `<span data-reponses>${t("con.mer.rep.n", { n: nbReponses(c), t: NB_Q })}</span>` : "");
     return `<p>${t("sur", { a: m.faits, b: m.total })}</p><ol class="mer-etapes" id="mer-etapes">${(m.points || []).map(x => { let a = actionMer(c, x);
       // Google pas encore fait (v48) : l'état automatique d'abord, le recours « J'ai vérifié moi-même dans team@ » ensuite, discret.
-      const gAuto = x.point === "google" && x.etat !== "fait";
+      const gAuto = x.point === "google" && x.etat !== "fait", mAuto = x.point === "metricool" && x.etat !== "fait";
       if (x.point === "demarrage") a = `<button type="button" class="lien" data-voir-reponses>${t("con.mer.rep.voir")}</button>` + (a || "");
-      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etat(x)}</p></div>${a && !gAuto ? `<div class="mer-action">${a}</div>` : ""}</div>${gAuto ? etapeGoogle(c, x) + (a ? `<div class="mer-recours">${a}</div>` : "") : ""}${guide(x)}</li>`; }).join("")}</ol>
+      // Metricool pas encore fait (v49) : l'état en une phrase (dans la ligne), puis les réseaux à relier, le mini-guide, et les boutons dessous.
+      return `<li class="mer-etape${x.etat === "fait" ? " fait" : ""}" id="mer-pt-${e(x.point)}" data-point="${e(x.point)}" data-etat="${e(x.etat)}"><div class="mer-ligne"><div class="mer-nom"><p class="fort">${I.a("con.mer.nom." + x.point) ? t("con.mer.nom." + x.point) : e(x.point)}</p><p class="note">${etat(x)}</p></div>${a && !gAuto && !mAuto ? `<div class="mer-action">${a}</div>` : ""}</div>${gAuto ? etapeGoogle(c, x) + (a ? `<div class="mer-recours">${a}</div>` : "") : ""}${mAuto ? etapeMetricool(c, x, false) + (a ? `<div class="mer-action mer-action-bas">${a}</div>` : "") : ""}${guide(x)}</li>`; }).join("")}</ol>
       ${reponsesDemarrage(c)}`; };
+  // Étape « Réseaux sociaux (Metricool) » (v49, 13/11/2026, retour de PJ : « À faire » et un gros bouton vert « Lien envoyé », on croyait que c'était un
+  // état). L'état réel en UNE phrase, dans cet ordre : étape faite (réseaux reliés), le client dit avoir relié (à vérifier), marque Metricool pas encore
+  // créée (pas de blogId), lien envoyé et encore valable (71 h, admin_lien_reseaux), lien expiré, marque prête sans lien. Puis les réseaux à relier
+  // (réponses du client à la 6e question, réduites aux réseaux de l'offre), la tâche « passer l'Instagram en compte professionnel » si besoin, et un
+  // mini-guide de 3 lignes. Le bouton du lien est un verbe en style secondaire (actionMer).
+  const H71 = 71 * 3600000;
+  const lienMetricool = x => { const ms = x && x.lien_envoye_le ? Date.parse(x.lien_envoye_le) : NaN; return isNaN(ms) ? null : { ms, fin: ms + H71, expire: Date.now() >= ms + H71 }; };
+  const sociauxOffre = c => window.RENOM_RESEAUX_AUTORISES(c).filter(r => RES_SOCIAUX.includes(r));
+  const reseauxRelies = c => sociauxOffre(c).filter(r => ((c.comptes || {})[r] || {}).etat === "connecte");
+  const instagramProAFaire = c => { const rs = (demarrageDe(c) || {}).reseaux; return RSC.proAFaire(rs) && sociauxOffre(c).includes("instagram") && ((c.comptes || {}).instagram || {}).etat !== "connecte"; };
+  const etatMetricool = (c, x) => { const li = lienMetricool(x), relies = reseauxRelies(c);
+    if (x.etat === "fait") return { k: "fait", x: relies.length ? t("con.mer.m.relies", { l: relies.map(r => NOM_RESEAU[r]).join(", ") }) : t("con.mer.m.fait") };
+    if (x.etat === "declare") return { k: "declare", x: t("con.mer.m.declare", { d: x.maj ? dh(x.maj) : "" }) };
+    if (!c.metricool_blog_id) return { k: "sans_marque", x: t("con.mer.m.sans.marque") };
+    if (li && !li.expire) return { k: "lien", x: t("con.mer.m.lien", { d: dh(li.ms), f: I.date(li.fin), h: I.heure(li.fin) }) };
+    if (li) return { k: "expire", x: t("con.mer.m.expire", { d: dh(li.fin) }) };
+    return { k: "pret", x: t("con.mer.m.pret", { b: e(c.metricool_blog_id) }) }; };
+  const etapeMetricool = (c, x, avecEtat = true) => { const et = etatMetricool(c, x), rs = (demarrageDe(c) || {}).reseaux, offre = sociauxOffre(c), relies = reseauxRelies(c), l = [];
+    if (avecEtat) l.push(`<p class="note fort" data-mc-etat="${et.k}">${et.x}</p>`);
+    if (x.etat !== "fait") {
+      const voulus = RSC.repondu(rs) || RSC.aRelier(rs).length ? RSC.aRelier(rs).filter(r => offre.includes(r)) : null;
+      l.push(`<p class="note" data-mc-a-relier>${voulus == null ? t("con.mer.m.inconnus") : voulus.length ? t("con.mer.m.a.relier", { l: voulus.map(r => NOM_RESEAU[r]).join(", ") }) : t("con.mer.m.aucun")}${relies.length ? " " + t("con.mer.m.deja", { l: relies.map(r => NOM_RESEAU[r]).join(", ") }) : ""}</p>`);
+      if (instagramProAFaire(c)) l.push(`<p class="note fort" data-instagram-pro><span class="pastille">${t("con.pa.qui.vous")}</span> ${t(rs.instagram_pro === "nsp" ? "con.mer.m.pro.nsp" : "con.mer.m.pro")}</p>`);
+      if (et.k === "sans_marque") l.push(`<div class="actions"><button type="button" class="bouton second petit" data-aller="mc-${e(c.id)}">${t("con.mer.m.coller")}</button></div>`);
+      l.push(`<ol class="mer-mini-guide" data-mc-guide>${[1, 2, 3].map(n => `<li>${t("con.mer.m.guide." + n)}</li>`).join("")}</ol>`);
+    }
+    return `<div class="mer-metricool" id="mer-metricool">${l.join("")}</div>`; };
+  // Fiches reçues sur team@ sans client trouvé (v49, 13/11/2026, vu en prod : la fiche « Gild-Tech », entreprise du gérant, présentée sur la fiche de
+  // Fleur comme « c'est peut-être celle-ci »). Sur la fiche d'un client, seulement celles dont le titre (ou l'adresse) ressemble au commerce : un mot
+  // du nom en commun (4 lettres ou plus, hors mots courants), ou le nom entier dans le titre. Les autres restent dans À faire, où « Ignorer cette fiche »
+  // les sort (admin_ignorer_fiche_google).
+  const MOTS_COURANTS = ["chez", "comme", "restaurant", "resto", "salon", "maison", "cafe", "boulangerie", "institut", "atelier", "studio", "sport", "club", "bar", "brasserie", "beaute", "coiffure", "the", "les", "des", "aux"];
+  const motsDe = x => sansAccent(x).replace(/[^a-z0-9]+/g, " ").split(" ").filter(m => m.length >= 4 && !MOTS_COURANTS.includes(m));
+  const ressemble = (c, d) => { const titre = sansAccent((d || {}).titre || "").replace(/[^a-z0-9]+/g, " ").trim(), nom = sansAccent(c.nom).replace(/[^a-z0-9]+/g, " ").trim();
+    if (!titre && !(d || {}).adresse) return false;
+    if (nom && titre && (titre.includes(nom) || nom.includes(titre))) return true;
+    const mt = new Set([...motsDe((d || {}).titre), ...motsDe((d || {}).adresse)]); return motsDe(c.nom).some(m => mt.has(m)); };
+  // ---------------- Dossier de démarrage (v49, 13/11/2026, retours de PJ sur « Comme Chez Fleur » : « on ne sait pas dire s'il faut cliquer », « on ne
+  // sait pas dire si ça a été géré »). Sous « Prochaine action », un tableau d'UNE ligne par point : Accès Google, Autorisation photos, Photos (x sur 5
+  // utilisables : 1 façade, 1 salle, 3 plats), WhatsApp, Réponses (x sur 6), Réseaux sociaux (offres avec réseaux). Pour chaque ligne : l'état en clair
+  // (Fait, En attente du client, À faire par vous, Vérification automatique), une phrase qui dit quoi faire, et « Voir » qui descend au bon bloc.
+  // Décisions (expert onboarding, validées par PJ) : appel de démarrage obligatoire sous 48 h, où le gérant remplit tout pour le client ; relances
+  // J+2 et J+5, appel à J+7. Les relances ne partent PAS seules (canal WhatsApp non vérifié) : la ligne « Relances » les donne comme tâches VOUS.
+  // « Copier le message au client » : message court, dans la langue du client, qui ne liste que ce qui lui manque, avec l'adresse de son espace.
+  const PHOTOS_MIN = 5, H48 = 48 * 3600000;
+  const photosUtilisables = l => Array.isArray(l) ? l.filter(p => p.statut !== "refusee" || p.refus_motif === "plafond").length : null;
+  function lignesDossier(c, phs) {
+    const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {}, l = [];
+    const gg = pts.google, r = robotGoogle();
+    if (gg) { const st = gg.etat === "fait" ? "fait" : r.muet || alertesGoogle(c).propres.length || (gg.etat === "declare" && sansIdGoogle(c)) ? "vous" : gg.etat === "declare" ? "robot" : "client";
+      l.push({ k: "google", st, x: t("con.dos.google." + st), cible: "mer-pt-google", manque: st !== "fait" && st !== "robot" ? "google" : null }); }
+    l.push(c.photos_autorisees_le ? { k: "autorisation", st: "fait", x: t("con.dos.autorisation.fait", { d: I.date(c.photos_autorisees_le) }), cible: "client-photos-ligne" }
+      : { k: "autorisation", st: "client", x: t("con.dos.autorisation.client"), cible: "client-photos-ligne", manque: "autorisation" });
+    const n = photosUtilisables(phs);
+    l.push(n == null ? { k: "photos", st: "client", x: t("con.dos.photos.inconnu"), n: "?", cible: "client-photos-ligne" }
+      : n >= PHOTOS_MIN ? { k: "photos", st: "fait", x: t("con.dos.photos.fait", { n }), n, cible: "client-photos-ligne" }
+      : { k: "photos", st: "client", x: t("con.dos.photos.client", { n, r: PHOTOS_MIN - n }), n, cible: "client-photos-ligne", manque: "photos", reste: PHOTOS_MIN - n });
+    l.push(waActif(c) ? { k: "whatsapp", st: "fait", x: t("con.dos.wa.fait", { n: e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero) }), cible: "wa-client-num" }
+      : { k: "whatsapp", st: "vous", x: t("con.dos.wa.vous"), cible: "wa-client-num", manque: "whatsapp" });
+    const nr = nbReponses(c);
+    l.push({ k: "reponses", st: nr >= NB_Q ? "fait" : "vous", x: t(nr >= NB_Q ? "con.dos.rep.fait" : "con.dos.rep.vous", { n: nr, t: NB_Q }), n: nr, cible: "mer-reponses", manque: nr >= NB_Q ? null : "reponses" });
+    const rr = pts.metricool;
+    if (o.reseaux_sociaux && rr) { const li = lienMetricool(rr);
+      const st = rr.etat === "fait" ? "fait" : instagramProAFaire(c) || rr.etat === "declare" || !c.metricool_blog_id || !li || li.expire ? "vous" : "client";
+      const x = rr.etat === "fait" ? etatMetricool(c, rr).x : instagramProAFaire(c) ? t("con.dos.rs.pro") : rr.etat === "declare" ? t("con.dos.rs.declare")
+        : !c.metricool_blog_id ? t("con.dos.rs.marque") : !li ? t("con.dos.rs.lien") : li.expire ? t("con.dos.rs.expire") : t("con.dos.rs.client", { d: I.date(li.fin), h: I.heure(li.fin) });
+      l.push({ k: "reseaux", st, x, cible: "mer-pt-metricool", manque: st === "client" ? "reseaux" : instagramProAFaire(c) ? "instagram_pro" : null, fin: li && li.fin }); }
+    return l;
+  }
+  // Relances (décision du 12/11/2026) : J+2 et J+5 « Relancer le client », J+7 « Appelez le client », comptés depuis la création du commerce, tant
+  // qu'il manque quelque chose au dossier. Rien n'est envoyé seul.
+  const relancesDossier = (c, l) => { if (c.en_pause || !c.cree_le || l.every(x => x.st === "fait" || x.st === "robot")) return null;
+    const d0 = Date.parse(c.cree_le), j = n => d0 + n * 864e5, now = Date.now(), d = { j2: I.date(j(2)), j5: I.date(j(5)), j7: I.date(j(7)) };
+    return now >= j(7) ? { k: "j7", x: t("con.dos.rel.j7", d), vous: true } : now >= j(5) ? { k: "j5", x: t("con.dos.rel.j5", d), vous: true }
+      : now >= j(2) ? { k: "j2", x: t("con.dos.rel.j2", d), vous: true } : { k: "prevues", x: t("con.dos.rel.prevues", d), vous: false }; };
+  // Message au client : dans SA langue (commerces.langue), seulement ce qui lui manque, l'adresse de son espace ; vide si rien ne lui manque.
+  const lienEspace = () => { try { return new URL(I.lien("index.html"), location.href).href.replace(/[?#].*$/, ""); } catch (er) { return ""; } };
+  function messageDossier(c, l) {
+    const lg = ["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr", T_ = (k, v) => t(k, v, lg), manques = l.filter(x => x.manque);
+    if (!manques.length) return "";
+    const ligne = x => x.manque === "photos" ? T_("con.msg.photos", { r: x.reste }) : x.manque === "reponses" ? T_("con.msg.reponses", { r: NB_Q - x.n })
+      : x.manque === "reseaux" ? T_("con.msg.reseaux", { d: I.date(x.fin, lg) }) : T_("con.msg." + x.manque);
+    const u = lienEspace();
+    return [T_("con.msg.bonjour"), T_("con.msg.manque"), ...manques.map((x, i) => `${i + 1}. ${ligne(x)}`), u ? T_("con.msg.espace", { u }) : T_("con.msg.espace.sans"), T_("con.msg.fin")].join("\n");
+  }
+  const ETATS_DOS = { fait: "con.dos.st.fait", client: "con.dos.st.client", vous: "con.dos.st.vous", robot: "con.dos.st.robot" };
+  function blocDossier(c, phs, contacts) {
+    const l = lignesDossier(c, phs), rel = relancesDossier(c, l), msg_ = messageDossier(c, l), faits = l.filter(x => x.st === "fait").length;
+    // Appel de démarrage : tant que le dossier n'est pas complet, pendant la première semaine (ensuite, la ligne des relances dit « Appelez le client »).
+    const lim = c.cree_le ? Date.parse(c.cree_le) + H48 : null, appel = faits < l.length && lim != null && Date.now() < Date.parse(c.cree_le) + 7 * 864e5;
+    return `<section class="carte dossier" id="dossier-demarrage" aria-labelledby="dossier-titre"><div class="carte-tete"><h2 id="dossier-titre">${t("con.dos.titre")}</h2><span class="note" data-dossier-n>${t("con.dos.n", { a: faits, b: l.length })}</span></div>
+      ${appel ? `<p class="note${Date.now() > lim ? " fort" : ""}" data-appel-demarrage>${t(Date.now() > lim ? "con.dos.appel.passe" : "con.dos.appel", { d: dh(lim) })}</p>` : ""}
+      <table class="dossier-tab"><thead><tr><th>${t("con.dos.col.point")}</th><th>${t("con.dos.col.etat")}</th><th>${t("con.dos.col.quoi")}</th><th><span class="vh">${t("con.dos.voir")}</span></th></tr></thead><tbody>
+        ${l.map(x => `<tr data-dossier="${x.k}" data-st="${x.st}"><td data-l="${t("con.dos.col.point")}" class="fort">${t("con.dos.k." + x.k, { n: x.n, t: NB_Q, m: PHOTOS_MIN })}</td>
+          <td data-l="${t("con.dos.col.etat")}"><span class="etat-dos etat-dos-${x.st}">${t(ETATS_DOS[x.st])}</span></td><td data-l="${t("con.dos.col.quoi")}" class="note">${x.x}</td>
+          <td data-l=""><button type="button" class="lien" data-aller="${x.cible}">${t("con.dos.voir")}</button></td></tr>`).join("")}</tbody></table>
+      ${rel ? `<p class="note${rel.vous ? " fort" : ""}" data-relance="${rel.k}">${rel.vous ? `<span class="pastille">${t("con.pa.qui.vous")}</span> ` : ""}${rel.x}</p>` : ""}
+      ${msg_ ? `<div class="pile serre" id="dossier-message-zone"><label for="dossier-message" class="note">${t("con.dos.message.lib", { l: t("con.dos.langue." + (["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr")) })}</label>
+        <textarea id="dossier-message" readonly rows="8" class="note" lang="${["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr"}">${e(msg_)}</textarea>
+        <div class="actions"><button type="button" class="bouton second petit" data-dossier-copier>${t("con.coh.copier")}</button></div></div>` : `<p class="note" data-dossier-complet>${t("con.dos.rien.client")}</p>`}
+      <p><button type="button" class="lien" id="trame-ouvrir" aria-expanded="false" aria-controls="trame-appel">${t("con.trame.lien")}</button></p>
+      ${trameAppel(c, contacts)}</section>`;
+  }
+  // Trame de l'appel de démarrage (v49) : format téléprompteur, une phrase par ligne, relances écrites « Si besoin : », dans l'ordre du dossier.
+  const TRAME = ["presenter", "google", "whatsapp", "autorisation", "reponses", "reseaux", "photos", "conclure"];
+  const trameAppel = (c, contacts) => { const k = contacts && contacts.commerce && contacts.commerce.prenom ? contacts.commerce : contacts && contacts.global && contacts.global.prenom ? contacts.global : null, p = k ? k.prenom : "PJ";
+    return `<div class="trame" id="trame-appel" hidden><h3>${t("con.trame.titre")}</h3>${TRAME.map((s_, i) => `<section class="trame-partie" data-trame="${s_}"><h4>${i + 1}. ${t("con.trame." + s_ + ".titre")}</h4>
+      ${t("con.trame." + s_, { p: e(p) }).split("\n").map(x => `<p class="trame-ligne${/^(Si besoin|If needed|Indien nodig)/.test(x) ? " trame-relance" : ""}">${x}</p>`).join("")}</section>`).join("")}
+      <p><button type="button" class="lien" id="trame-fermer">${t("con.trame.fermer")}</button></p></div>`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
     const etat = m && m.verrouille ? t("con.sty.ligne." + (m.valide_par === "renom" ? "renom" : "commercant"), { d: I.date(m.verrouille_le || m.maj) }) : t(m ? "con.sty.ligne.attente" : "con.sty.ligne.aucun");
@@ -181,7 +331,7 @@
   // WhatsApp, case obligatoire jamais précochée (l'accord est celui du client, recueilli par l'équipe), admin_autoriser_photos.
   const autoriserPhotos = suffixe => !D.adminAutoriserPhotos ? "" : `<div class="pile serre" id="ph-autoriser${suffixe}"><label class="option"><input type="checkbox" id="ph-accord${suffixe}"><span>${t("con.ph.accord.equipe")}</span></label>
     <button type="button" class="bouton second petit" data-a="photos-autoriser" id="ph-autoriser-ok${suffixe}">${t("con.ph.autoriser")}</button></div>`;
-  const lignePhotos = c => `<div class="pile serre photos-ligne"><p class="note">${c.photos_autorisees_le ? phAutorise(c) : t("con.ph.non")}</p>${c.photos_autorisees_le ? "" : autoriserPhotos("-fiche")}
+  const lignePhotos = c => `<div class="pile serre photos-ligne" id="client-photos-ligne"><p class="note">${c.photos_autorisees_le ? phAutorise(c) : t("con.ph.non")}</p>${c.photos_autorisees_le ? "" : autoriserPhotos("-fiche")}
     <a class="bouton second petit" href="${I.lien("console.html")}#/photos/${encodeURIComponent(c.id)}" data-photos="${e(c.id)}">${t("con.ph.bouton")}</a></div>`;
   // Panneau « Déposer des photos pour ce client » : fermé sans l'autorisation du commerçant (la base le refuse aussi : admin_deposer_photos et la règle du
   // seau). Envoi de chaque photo dans le dossier du commerce (même envoi que l'espace), puis un seul enregistrement (1 à 10 photos), source « equipe ».
@@ -351,9 +501,12 @@
     const ouvrir = a.avis_id && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>`
       : a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}" data-ouvrir-client>${t("con.al.ouvrir.client")}</a>` : "";
     const traite = a.id != null && D.adminAlerteVue ? `<button type="button" class="bouton petit" data-alerte-vue>${t("con.al.traite")}</button>` : "";
+    // v49 (13/11/2026, vu en prod : la fiche « Gild-Tech » du gérant reçue sur team@) : fiche Google sans client, « Ignorer cette fiche » (admin_ignorer_fiche_google).
+    const ignorer = a.code === "FICHE_A_RELIER" && !a.commerce_id && a.id != null && D.adminIgnorerFicheGoogle ? `<button type="button" class="bouton second petit" data-fiche-ignorer>${t("con.al.fiche.ignorer")}</button>` : "";
+    const titreFiche = a.code === "FICHE_A_RELIER" && !a.commerce_id && (a.detail_alerte || {}).titre ? `<p class="fort" data-fiche-titre>${t("con.al.fiche.titre", { x: e(a.detail_alerte.titre) })}</p>` : "";
     return `<article class="carte${retard ? " attention" : ""}" data-alerte="${e(a.id ?? "")}" data-code="${e(a.code || "")}"><div class="carte-tete"><h2>${e(a.journal ? libelleEtape(a.code) : ph(a.type))}</h2>${ech != null ? `<span class="etat${retard ? " retard" : " actif"}">${t(retard ? "con.al.retard" : "con.al.avant", { d: dh(ech) })}</span>` : `<span class="note">${dh(a.date)}</span>`}</div>
       ${a.commerce ? `<p class="fort">${e(a.commerce)}</p>` : ""}<p class="texte2 casse">${a.journal ? `<span translate="no">${e(detailJournal(a.detail))}</span>` : alerteHtml(a.texte)}</p>${ech != null ? `<p class="note">${t("con.file.recu", { d: dh(a.date) })}</p>` : ""}
-      ${a.avis_id ? `<p class="note">${t("con.al.publiee.seulement")}</p>` : ""}${ouvrir || traite ? `<div class="actions">${ouvrir}${traite}</div>` : ""}</article>`; };
+      ${titreFiche}${a.avis_id ? `<p class="note">${t("con.al.publiee.seulement")}</p>` : ""}${ouvrir || traite || ignorer ? `<div class="actions">${ouvrir}${traite}${ignorer}</div>` : ""}</article>`; };
   // File « à publier à la main » : réponses aux commentaires validées par le commerçant, tant que l'accès de Meta n'est pas accordé (ou si l'API a
   // refusé). Texte prêt à copier, lien vers la publication ; « Publiée » une fois la réponse collée sous le commentaire, sous le compte du commerce.
   const RESEAUX_CM = { instagram: "Instagram", facebook: "Facebook" };
@@ -531,11 +684,12 @@
     if (r && r.etat === "a_faire" && "lien_envoye_le" in r && !r.lien_envoye_le) l.push("lien");
     if (o.reseaux_sociaux && !c.metricool_blog_id) l.push("blog");
     if (waEnRetard(c)) l.push("whatsapp");
+    if (o.reseaux_sociaux && r && r.etat !== "fait" && instagramProAFaire(c)) l.push("instagram_pro");   // v49 : 6e question, Instagram pas professionnel
     return l; };
   const carteMiseEnRoute = (c, taches) => { const bloque = merBloquee(c), lien = taches.includes("lien") && !bloque;
     return `<article class="carte${bloque ? " attention" : ""}" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
           <p class="note">${t("con.col.mer")}</p>${taches.length ? `<ul class="taches-admin">${taches.map(k => `<li data-tache="${k}">${t("con.af.tache." + k)}</li>`).join("")}</ul>` : ""}
-          ${lien ? `<div class="actions"><button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button></div>` : ""}${bloque ? miseEnRoute(c) : ""}</article>`; };
+          ${lien ? `<div class="actions"><button type="button" class="bouton second petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button></div>` : ""}${bloque ? miseEnRoute(c) : ""}</article>`; };
 
   // ================= Écran « À faire » : une seule file, triée par urgence (en retard d'abord, puis l'échéance la plus proche, puis le reste, le plus
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
@@ -650,6 +804,8 @@
     const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => { clicCourant = b; return f(b, b.closest("[data-type], article, tr, section")); }; });
     // Alertes de l'exploitant : « Traité » (admin_alerte_vue) ; prise en charge : « Je prends », « Je prends à la place », « Je laisse ».
     sur("[data-alerte-vue]", b => agir(() => D.adminAlerteVue(b.closest("article").dataset.alerte), t("con.al.traite.ok"), b));
+    sur("[data-fiche-ignorer]", b => { if (!window.confirm(t("con.al.fiche.ignorer.confirmer"))) return;
+      agir(async () => { const r = await D.adminIgnorerFicheGoogle(b.closest("article").dataset.alerte); return t(r && r.etat === "deja" ? "con.al.fiche.ignoree.deja" : "con.al.fiche.ignoree"); }, null, b); });
     sur("[data-prendre]", b => { if (!moi) { msg(t("con.moi.dabord")); const i = $("moi-prenom"); if (i) i.focus(); return; }
       agir(async () => { const r = await D.adminPrendre(b.closest("[data-prise]").dataset.prise, moi, b.dataset.prendre === "1"); return r && r.par ? t("con.prise.ok", { p: r.par }) : t("con.prise.laissee"); }, null, b); });
     // À publier à la main
@@ -738,14 +894,23 @@
   // Fiche Google de chaque commerce (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet ») : état, lien collé par le
   // client (à ouvrir pour trouver la fiche), identifiant de lieu à poser ou corriger (admin_fiche_google_lieu). Sans le bloc SQL : rien.
   const FG = window.RENOM_FICHE;
-  const ligneFiche = c => !FG.sql(c) ? "" : `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>${aide("fiche", nowFiche(c))}
-      <p class="note" data-etat-fiche="${e(FG.etat(c))}">${t("con.fg.etat." + FG.etat(c))}</p>
-      ${"google_location_id" in c ? `<p class="note" id="fg-reliee" data-fiche-reliee="${/^locations\/[0-9]+$/.test(c.google_location_id || "") ? 1 : 0}">${/^locations\/[0-9]+$/.test(c.google_location_id || "")
-        ? t("con.fg.reliee", { l: `<span class="casse" translate="no">${e(c.google_location_id)}</span>` }) : t("con.fg.non.reliee")}</p>` : ""}
-      ${c.fiche_google_lien ? `<p class="note casse">${t("con.fg.lien")} <a href="${e(c.fiche_google_lien)}" target="_blank" rel="noopener" translate="no" id="fg-lien-client">${e(c.fiche_google_lien)}</a></p>` : `<p class="note">${t("con.fg.aucun.lien")}</p>`}
-      <div class="f"><label for="fg-id">${t("con.fg.id.lib")}</label><input id="fg-id" type="text" autocomplete="off" maxlength="500" value="${e(c.google_place_id || "")}" aria-describedby="fg-aide" translate="no">
+  // v49 (13/11/2026, retour de PJ : le client de « Comme Chez Fleur » a collé un lien de recherche Google, inutilisable, alors que son place_id était
+  // déjà bon) : fiche reconnue (place_id valide, rien à identifier) : « Fiche identifiée : <nom> » et « Voir sur Google Maps » (lien par place_id) pour
+  // vérifier d'un coup d'œil ; le lien du client est dit « pas utilisé : l'identifiant suffit » ; le champ de l'identifiant passe derrière
+  // « Corriger l'identifiant ». Sans place_id : ce qu'il faut faire, champ ouvert.
+  const mapsPlace = id => "https://www.google.com/maps/place/?q=place_id:" + encodeURIComponent(id);
+  const ligneFiche = c => { if (!FG.sql(c)) return ""; const et = FG.etat(c), ok_ = et === "reconnue" && FG.ID.test(c.google_place_id || "");
+    const lienClient = c.fiche_google_lien ? `<p class="note casse">${t("con.fg.lien")} <a href="${e(c.fiche_google_lien)}" target="_blank" rel="noopener" translate="no" id="fg-lien-client">${e(c.fiche_google_lien)}</a></p>` : "";
+    const champ = `<div class="f"><label for="fg-id">${t("con.fg.id.lib")}</label><input id="fg-id" type="text" autocomplete="off" maxlength="500" value="${e(c.google_place_id || "")}" aria-describedby="fg-aide" translate="no">
         <p class="aide" id="fg-aide">${t("con.fg.aide")}${c.google_place_id && c.google_place_id_source ? " " + t("con.fg.source." + c.google_place_id_source) : ""}</p></div>
-      <button type="button" class="bouton second petit" data-a="fiche-lieu">${t("con.fg.enregistrer")}</button></div>`;
+      <button type="button" class="bouton second petit" data-a="fiche-lieu">${t("con.fg.enregistrer")}</button>`;
+    const reliee = "google_location_id" in c ? `<p class="note" id="fg-reliee" data-fiche-reliee="${/^locations\/[0-9]+$/.test(c.google_location_id || "") ? 1 : 0}">${/^locations\/[0-9]+$/.test(c.google_location_id || "")
+        ? t("con.fg.reliee", { l: `<span class="casse" translate="no">${e(c.google_location_id)}</span>` }) : t("con.fg.non.reliee")}</p>` : "";
+    return `<div class="pile serre" id="client-fiche-google"><h3>${t("con.fg.titre")}</h3>${aide("fiche", nowFiche(c))}
+      ${ok_ ? `<p class="fort" data-fiche-identifiee>${t("con.fg.identifiee", { n: e(c.nom) })}</p><p><a class="bouton second petit" href="${e(mapsPlace(c.google_place_id))}" target="_blank" rel="noopener" id="fg-maps">${t("con.fg.maps")}</a></p>` : ""}
+      <p class="note" data-etat-fiche="${e(et)}">${t("con.fg.etat." + et)}</p>${reliee}
+      ${ok_ ? `${c.fiche_google_lien ? `<p class="note" data-lien-inutile>${t("con.fg.lien.inutile")}</p>` : ""}<details class="repliable sous" id="fg-corriger"><summary>${t("con.fg.corriger")}</summary>${lienClient}${champ}</details>`
+        : `<p class="note fort" data-fiche-a-faire>${t(c.fiche_google_lien ? "con.fg.afaire.lien" : "con.fg.afaire")}</p>${lienClient || `<p class="note">${t("con.fg.aucun.lien")}</p>`}${champ}`}</div>`; };
   // 26/10/2026 : « Avis à traiter » (la file des avis de CE client, mêmes cartes et mêmes actions que dans « À faire ») ; #/client/<id>/avis y descend.
   // Votre contact (31/10/2026) : un formulaire pour tous les commerces, un pour ce commerce (prioritaire). Prénom vide : réglage retiré.
   const formContact = (id, x, titre) => `<form id="${id}" class="pile serre" novalidate><h3>${e(titre)}</h3><div class="champs deux"><div class="f"><label for="${id}-prenom">${t("con.contact.prenom")}</label><input id="${id}-prenom" type="text" maxlength="40" autocomplete="off" value="${e((x || {}).prenom || "")}"></div>
@@ -810,7 +975,7 @@
     if (gg && gg.etat === "declare") attentes.push({ qui: "robot", k: "google", d: (gg.maj ? Date.parse(gg.maj) : maintenant) + H24 });
     else if (gg && gg.etat === "a_faire") attentes.push({ qui: "client", k: "google", d: appel });
     if (rr && rr.etat === "a_faire" && rr.lien_envoye_le) attentes.push({ qui: "client", k: "reseaux", d: Date.parse(rr.lien_envoye_le) + H72, v: { d: I.date(rr.lien_envoye_le) } });
-    if (pts.demarrage && pts.demarrage.etat !== "fait") attentes.push({ qui: "client", k: "questions", d: appel, v: { n: nbReponses(c) } });
+    if (pts.demarrage && pts.demarrage.etat !== "fait") attentes.push({ qui: "client", k: "questions", d: appel, v: { n: nbReponses5(c) } });   // les 5 questions (la 6e, réseaux, est facultative)
     if (!c.demarrage_fini && !waActif(c)) attentes.push({ qui: "client", k: "whatsapp", d: appel });   // numéro obligatoire, demandé à la fin du démarrage
     if (!(g && g.photos_recues_le)) attentes.push({ qui: "client", k: "photos", d: appel });
     const PRIORITE = [
@@ -829,7 +994,7 @@
       ["google_sans_id", () => gg && gg.etat === "declare" && sansIdGoogle(c) && { texte: t("con.pa.google.sans.id"), bouton: aller("fg-id", "fg") }],
       ["google_24h", () => gg && gg.etat === "declare" && gg.maj && maintenant - Date.parse(gg.maj) > H24 && { texte: t("con.pa.google.vieux", { d: dh(gg.maj) }), bouton: "" }],
       ["reseaux_declares", () => rr && rr.etat === "declare" && { texte: t("con.pa.reseaux.declare"), bouton: aller("mer-etapes", "mer") }],
-      ["lien_metricool", () => rr && rr.etat === "a_faire" && "lien_envoye_le" in rr && !rr.lien_envoye_le && { texte: t("con.pa.lien"), bouton: `<button type="button" class="bouton petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button>` }],
+      ["lien_metricool", () => rr && rr.etat === "a_faire" && "lien_envoye_le" in rr && !rr.lien_envoye_le && { texte: t("con.pa.lien"), bouton: `<button type="button" class="bouton second petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button>` }],
       ["blogid", () => o.reseaux_sociaux && !c.metricool_blog_id && { texte: t("con.pa.blog"), bouton: aller("mc-" + c.id, "blog") }],
       ["appeler", () => { const l = attentes.filter(a => a.qui === "client" && maintenant >= a.d);
         return l.length > 0 && { texte: t("con.pa.appeler", { l: I.liste(l.map(a => t("con.pa.a." + a.k, a.v))), d: I.date(Math.min(...l.map(a => a.d))) }), bouton: "" }; }],
@@ -878,13 +1043,15 @@
     if (gPt && gPt.etat !== "fait") { const [pr, al] = await Promise.all([D.adminPassagesRobots ? sur(D.adminPassagesRobots()) : null, D.adminAlertesClient ? sur(D.adminAlertesClient(cid)) : null]);
       robotsFiche = { passage: pr ? pr.liens_google || null : undefined, alertes: al || [] }; }
     else robotsFiche = { passage: undefined, alertes: [] };
+    // v49 : photos du client pour le dossier de démarrage (x sur 5 utilisables) ; illisibles : null, la ligne dit « nombre inconnu ».
+    const phs = D.adminPhotosClient ? await sur(D.adminPhotosClient(cid)) : null;
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
-      ${banniere(c, prochaineAction(c, g, journalClient, mesAvis))}${blocHistorique(journalClient)}
+      ${banniere(c, prochaineAction(c, g, journalClient, mesAvis))}${blocDossier(c, phs, contacts)}${blocHistorique(journalClient)}
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
@@ -959,6 +1126,22 @@
     clic(vue, "[data-mc-enregistrer]", () => D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value), t("con.mc.ok"));
     envoi("f-delais-client", () => D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }));
     envoi("f-gar-client", () => D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }));
+    // Réponses du démarrage remplies par l'équipe (v49) : « Remplir pour le client », « Modifier » (ouvre le formulaire sur la bonne question),
+    // « Enregistrer les réponses » (seulement les champs changés ; aucun : « rien à changer », sans appel à la base).
+    const ouvrirReponses = k => { const d = $("mer-reponses"), f = $("f-reponses"); if (!d || !f) return; d.open = true; f.hidden = false;
+      const z = k ? f.querySelector(`[data-f-q="${k}"]`) : null, champ = z ? z.querySelector("textarea, select, input") : f.querySelector("textarea");
+      (z || f).scrollIntoView({ block: "center" }); if (champ) champ.focus({ preventScroll: true }); };
+    vue.querySelectorAll("[data-rep-remplir]").forEach(b => b.onclick = () => ouvrirReponses(null));
+    vue.querySelectorAll("[data-rep-modifier]").forEach(b => b.onclick = () => ouvrirReponses(b.dataset.repModifier));
+    if ($("rq-fermer")) $("rq-fermer").onclick = () => { $("f-reponses").hidden = true; };
+    envoi("f-reponses", async () => { const ch = lireReponses(c); if (!Object.keys(ch).length) return { etat: "rien" }; return D.adminReponsesDemarrage(cid, ch); },
+      r => r && r.etat === "rien" ? t("con.rep.ok.rien") : t(r && r.fini && !c.demarrage_fini ? "con.rep.ok.fini" : "con.rep.ok", { n: nbReponses({ demarrage: r && r.demarrage }), t: NB_Q }));
+    // Dossier de démarrage (v49) : « Copier le message au client » ; trame de l'appel de démarrage, ouverte et fermée sur place.
+    const dc = vue.querySelector("[data-dossier-copier]"); if (dc) dc.onclick = async () => { const m = $("dossier-message"), rep = repereBouton(dc);
+      try { await navigator.clipboard.writeText(m.value); msg(t("con.dos.copie")); msgPres(rep, t("con.dos.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); msgPres(rep, t("con.selectionnee")); } };
+    const trame = (ouvrir) => { const z = $("trame-appel"), b = $("trame-ouvrir"); if (!z) return; z.hidden = !ouvrir; b.setAttribute("aria-expanded", String(ouvrir)); if (ouvrir) z.scrollIntoView({ block: "start" }); else b.focus(); };
+    if ($("trame-ouvrir")) $("trame-ouvrir").onclick = () => trame($("trame-appel").hidden);
+    if ($("trame-fermer")) $("trame-fermer").onclick = () => trame(false);
     // « Voir les 5 réponses » (v48) : ouvre le volet des réponses et y descend. « Voir tout l'historique » : affiche ou masque le reste du journal.
     vue.querySelectorAll("[data-voir-reponses]").forEach(b => b.onclick = () => { const d = $("mer-reponses"); if (!d) return; d.open = true; d.scrollIntoView({ block: "start" }); });
     const vt = $("historique-voir-tout"); if (vt) vt.onclick = () => { const o = $("historique-tout"), ouvrir = o.hidden; o.hidden = !ouvrir; vt.setAttribute("aria-expanded", String(ouvrir));
