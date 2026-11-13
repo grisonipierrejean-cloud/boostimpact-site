@@ -132,6 +132,10 @@
   const QUESTIONS = ["phrase", "distinctions", "ton", "interdits", "action", "reseaux"], NB_Q = QUESTIONS.length;
   const demarrageDe = c => c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null;
   const texteRep = v => Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : "";
+  // v50 (retour du gérant : « Venir sur place : https://… » pas cliquable) : adresses http(s) des réponses rendues cliquables. Le texte est d'abord
+  // échappé, puis seules les suites « http:// » ou « https:// » de ce texte échappé deviennent des liens (rien d'autre : ni javascript:, ni balise) ;
+  // une entité (&quot; &#39; &lt; &gt;) ou une ponctuation finale arrête l'adresse. Nouvel onglet, rel=noopener noreferrer.
+  const lierUrls = s => e(s).replace(/https?:\/\/(?:(?!&(?:quot|#39|lt|gt);)[^\s<>"'])+/gi, m => { const u = m.replace(/(?:[.,;:!?)\]]|&amp;)+$/, ""), reste = m.slice(u.length); return (/^https?:\/\/[^/?#&]/i.test(u) ? `<a class="casse" href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>` : u) + reste; });
   const OUI_NON = r => r === "oui" ? t("con.oui") : r === "non" ? t("con.non") : r === "nsp" ? t("con.nsp") : "";
   const resumeReseaux = r => { if (!r || typeof r !== "object" || !Object.keys(r).length) return "";
     return [r.instagram ? `Instagram${t("deux.points")}${OUI_NON(r.instagram)}${r.instagram === "oui" && r.instagram_pro ? ", " + t("con.rs.pro." + r.instagram_pro) : ""}` : "",
@@ -165,9 +169,9 @@
   const reponsesDemarrage = c => { const r = demarrageDe(c), vide = `<span class="mer-rep-vide" data-rep-vide>${t("con.mer.rep.vide")}</span>`, modif = !!D.adminReponsesDemarrage;
     const val = k => { const v = r ? r[k] : null;
       if (k === "ton") return TONS[v === "enjoué" ? "enjoue" : v] || (v ? e(v) : vide);
-      if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? e(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
+      if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? lierUrls(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
       if (k === "reseaux") { const x = resumeReseaux(v); return x ? `<span class="mer-rep-texte">${e(x)}</span>${RSC.repondu(v) ? "" : " " + vide}` : vide; }
-      const s_ = texteRep(v); return s_.trim() ? `<span class="mer-rep-texte">${e(s_.trim())}</span>` : vide; };
+      const s_ = texteRep(v); return s_.trim() ? `<span class="mer-rep-texte">${lierUrls(s_.trim())}</span>` : vide; };
     return `<details class="repliable mer-reponses" id="mer-reponses"${nbReponses(c) < NB_Q ? " open" : ""}><summary><h3>${t("con.mer.rep.titre")}, <span data-reponses-n>${t("con.mer.rep.n", { n: nbReponses(c), t: NB_Q })}</span></h3></summary>
       ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}${modif ? `<div class="actions"><button type="button" class="bouton second petit" data-rep-remplir>${t(r ? "con.rep.corriger" : "con.rep.remplir")}</button></div>` : ""}
       <dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${titreQ(k)}</dt><dd>${val(k)}${modif ? ` <button type="button" class="lien" data-rep-modifier="${k}">${t("con.rep.modifier")}</button>` : ""}</dd></div>`).join("")}</dl>
@@ -945,20 +949,23 @@
     return t("con.ai.contact.voit", { p: k ? e(k.prenom) + (k.telephone ? ", " + e(W ? W.lisible(k.telephone) : k.telephone) : "") : "PJ, +33 6 99 08 05 39" }); };
   // Métier (11/11/2026, fonction SQL admin_metier) : un client venu du paiement en ligne est créé en « Autre commerce ». Sans la fonction (adaptateur
   // sans adminMetier), le choix n'est pas montré.
-  const choixMetier = c => !D.adminMetier ? "" : `<div class="pile serre" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
+  const choixMetier = c => !D.adminMetier ? "" : `<div class="etat-col" id="metier-zone"><label for="metier-client">${t("con.metier.lib")}</label><select id="metier-client">${Object.entries(METIERS).map(([k2, x]) => `<option value="${k2}"${c.metier === k2 ? " selected" : ""}>${e(x)}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="metier">${t("con.metier.enregistrer")}</button></div>`;
   // Numéro WhatsApp du client (v47) : lisible, avec la date de l'accord ; sinon « WhatsApp manquant ».
   // v48 (12/11/2026, demande de PJ : « je veux pouvoir saisir moi-même le numéro quand je l'ai ») : présenté comme Offre, Pays et Métier : libellé,
   // champ prérempli, case d'accord de l'équipe dessous (obligatoire, jamais précochée : l'accord est celui du client, recueilli par l'équipe), bouton
   // « Enregistrer le WhatsApp » (admin_regler_whatsapp : mêmes règles que la case du client, journal WHATSAPP_SAISI_PAR_EQUIPE). « Effacer le
   // numéro » : discret, avec confirmation. Sans adminReglerWhatsapp (adaptateur ancien) : l'affichage de la v47 seul.
+  // v50 (13/11/2026, retour du gérant : la case décochée faisait croire que l'accord manquait) : numéro déjà enregistré avec accord, « Numéro
+  // enregistré · Accord donné le … » et la case cachée ; elle n'apparaît (obligatoire) que si le champ désigne un autre numéro (waChange). Même numéro :
+  // « Enregistrer » n'appelle pas la base et dit « déjà enregistré ».
   const blocWhatsapp = c => { const W = window.RENOM_WHATSAPP, lis = n => W ? W.lisible(n) : n, actif = waActif(c), ex = W ? W.exemple(c.pays) : "+33 6 12 34 56 78";
-    const etat = actif ? `<p class="note"><a class="casse" href="https://wa.me/${e(String(c.whatsapp_numero).replace(/^\+/, ""))}" target="_blank" rel="noopener" translate="no">${t("con.wa.ouvrir")}</a> · ${t("con.wa.accord", { d: I.date(c.whatsapp_accord_le) })}</p>`
-      : `<p class="fort" data-wa-manquant>${t("con.wa.manquant")}</p>`;
-    if (!D.adminReglerWhatsapp) return `<div class="pile serre" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><p class="note">${t("con.wa.lib")}</p>${actif ? `<p class="casse fort" translate="no">${e(lis(c.whatsapp_numero))}</p>` : ""}${etat}</div>`;
-    return `<div class="pile serre" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><label for="wa-client-num">${t("con.wa.lib")}</label>
+    const ouvrir = actif ? `<a class="casse" href="https://wa.me/${e(String(c.whatsapp_numero).replace(/^\+/, ""))}" target="_blank" rel="noopener" translate="no">${t("con.wa.ouvrir")}</a>` : "";
+    const etat = actif ? `<p class="note">${ouvrir} · ${t("con.wa.accord", { d: I.date(c.whatsapp_accord_le) })}</p>` : `<p class="fort" data-wa-manquant>${t("con.wa.manquant")}</p>`;
+    if (!D.adminReglerWhatsapp) return `<div class="etat-col" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><p class="note">${t("con.wa.lib")}</p>${actif ? `<p class="casse fort" translate="no">${e(lis(c.whatsapp_numero))}</p>` : ""}${etat}</div>`;
+    return `<div class="etat-col" id="client-wa" data-wa="${actif ? "actif" : "manquant"}"><label for="wa-client-num">${t("con.wa.lib")}</label>
       <input id="wa-client-num" type="tel" inputmode="tel" autocomplete="off" maxlength="30" value="${e(c.whatsapp_numero ? lis(c.whatsapp_numero) : "")}" placeholder="${e(ex)}" aria-describedby="wa-client-aide" translate="no">
-      <p class="aide" id="wa-client-aide">${t("con.wa.aide", { ex: e(ex) })}</p>${etat}
-      <label class="option"><input type="checkbox" id="wa-client-accord"><span>${t("con.wa.accord.equipe")}</span></label>
+      <p class="aide" id="wa-client-aide">${t("con.wa.aide", { ex: e(ex) })}</p>${actif ? `<p class="fort" data-wa-enregistre>${t("con.wa.enregistre", { d: I.date(c.whatsapp_accord_le) })}</p><p class="note">${ouvrir.replace('class="casse"', 'class="casse lien-wa"')}</p>` : etat}
+      <label class="option" id="wa-accord-zone"${actif ? " hidden" : ""}><input type="checkbox" id="wa-client-accord"><span>${t("con.wa.accord.equipe")}</span></label>
       <button type="button" class="bouton second petit" data-a="whatsapp">${t("con.wa.enregistrer")}</button>${actif ? `<button type="button" class="lien recours" data-a="wa-effacer">${t("con.wa.effacer")}</button>` : ""}</div>`; };
   // ---------------- Prochaine action (v46, 11/11/2026 ; relecture « exploitation » : « aucune prochaine action unique ») : UNE phrase tout en haut de la
   // fiche, le responsable d'abord (VOUS, CLIENT, ROBOT), au plus un bouton. Les règles de l'équipe passent dans l'ordre de PRIORITE ci-dessous (la
@@ -1053,9 +1060,9 @@
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
       ${banniere(c, prochaineAction(c, g, journalClient, mesAvis))}${blocDossier(c, phs, contacts)}${blocHistorique(journalClient)}
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
-        <div class="champs deux"><div class="pile serre"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
-        <div class="pile serre"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
-        <div class="pile serre"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}${blocWhatsapp(c)}</div>
+        <div class="etat-offre" id="etat-offre"><div class="etat-col" id="etat-zone"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
+        <div class="etat-col" id="offre-zone"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
+        <div class="etat-col" id="pays-zone"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}${blocWhatsapp(c)}</div>
         <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", "")}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
@@ -1116,8 +1123,11 @@
       return { v, stripe: al ? al.some(a => a.type === "STRIPE_A_METTRE_A_JOUR") : null }; },
       r => r.meme ? t("con.offre.meme", { o: I.offre(r.v) }) : t(r.stripe ? "con.offre.changee.stripe" : r.stripe === false ? "con.offre.changee.sans" : "con.offre.changee", { o: I.offre(r.v) }));
     // WhatsApp saisi par l'équipe (v48) : la case d'accord d'abord, puis le numéro (mêmes règles que le client, phrases de la base).
+    // v50 : numéro enregistré avec accord, la case n'apparaît que si le champ change de numéro ; même numéro : rien n'est appelé.
+    const waChange = () => { const W = window.RENOM_WHATSAPP, v = ($("wa-client-num") || {}).value || ""; return !waActif(c) || (W ? W.numero(v, c.pays || "FR") : v.trim()) !== c.whatsapp_numero; };
+    if ($("wa-client-num") && $("wa-accord-zone")) $("wa-client-num").oninput = () => { const z = $("wa-accord-zone"), ch = waChange(); z.hidden = !ch; if (!ch) $("wa-client-accord").checked = false; };
     clic(zc, "[data-a=whatsapp]", async () => { const n = $("wa-client-num").value.trim(), ok_ = $("wa-client-accord").checked;
-      if (!n) throw new Error(t("con.wa.vide")); if (!ok_) throw new Error(t("con.wa.accord.requis"));
+      if (!n) throw new Error(t("con.wa.vide")); if (!waChange()) return { etat: "deja", numero: c.whatsapp_numero }; if (!ok_) throw new Error(t("con.wa.accord.requis"));
       return D.adminReglerWhatsapp(cid, n, true); }, r => t(r && r.etat === "deja" ? "con.wa.ok.deja" : "con.wa.ok", { n: window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(r && r.numero) : (r && r.numero) }));
     clic(zc, "[data-a=wa-effacer]", async () => { if (!window.confirm(t("con.wa.effacer.confirmer"))) return ANNULE; return D.adminReglerWhatsapp(cid, null, false); }, t("con.wa.ok.efface"));
     clic(vue, "[data-a=fiche-lieu]", () => D.adminFicheGoogleLieu(cid, $("fg-id").value), t("con.fg.ok"));

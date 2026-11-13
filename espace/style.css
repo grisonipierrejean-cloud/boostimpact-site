@@ -169,6 +169,19 @@ h2 .etat{font-size:inherit;font-weight:var(--graisse-forte)}
 /* Console v48 (12/11/2026) : confirmation juste sous le bouton cliqué (role=status), qui reste jusqu'au geste suivant ; erreur au même endroit. */
 .msg-local{display:block;flex:1 1 100%;margin:8px 0 0;padding:10px 12px;border:1px solid var(--bord);border-radius:var(--r);background:var(--releve);color:var(--encre);font-size:15px;font-weight:var(--graisse-forte);overflow-wrap:anywhere}
 .msg-local.erreur{border-color:var(--danger);color:var(--danger);background:var(--surface)}
+/* Console v50 (13/11/2026, retour du gérant : « du texte mange un autre texte ») : bloc « État et offre » en grille, colonnes d'au moins 200 px
+   (une seule sous 200 px de large), chacune en pile libellé, champ, aide, bouton, message. Grille alignée en haut : aucune colonne n'a de hauteur
+   imposée, rien ne rétrécit, le message (.msg-local) reste dans le flux à sa hauteur naturelle. Mots longs coupés. */
+.etat-offre{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:24px;align-items:start}
+.etat-col{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;overflow-wrap:anywhere}
+.etat-col>*{flex:none;min-width:0;margin:0}
+.etat-col>.bouton,.etat-col>.lien,.etat-col>.etat{align-self:flex-start;max-width:100%}
+.etat-col>.bouton{white-space:normal;text-align:left}
+.etat-col .option{align-items:flex-start;min-height:44px}
+.etat-col .option>span{min-width:0;padding-top:1px}
+.etat-col>.msg-local{width:100%}
+.etat-col .note a.lien-wa{display:inline-flex;align-items:center;min-height:44px;padding:0;margin:0}
+.mer-rep a{color:var(--bleu-texte)}
 /* Recours discret (« J'ai vérifié moi-même dans team@ », « Effacer le numéro ») et état automatique de l'étape Google. */
 .lien.recours{font-size:14px;font-weight:400;padding-left:0;text-align:left;align-self:flex-start}
 .mer-google{display:grid;gap:4px;margin:6px 0 0}
