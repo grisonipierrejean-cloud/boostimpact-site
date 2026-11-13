@@ -201,6 +201,16 @@
     if (c.type === "video") return c.fichier.slice(0, c.fichier.lastIndexOf("/")) + "/visuel-4x5.jpg";
     return c.fichier + (formatDe(c) === "story" ? "/visuel-story.jpg" : reseau === "tiktok" ? "/visuel-9x16.jpg" : "/visuel-4x5.jpg");
   };
+  // Blocs « Photos » et « Contenus » de la fiche client de la console (v52, 13/11/2026) : mêmes champs dans les deux adaptateurs.
+  // Photo : id, statut, refus_motif, cree_le, chemin, nom_fichier, source (« equipe » ou client : « espace », « email »), controle_force, url
+  // (adresse de la vignette, seulement pour les PHOTOS_VUES plus récentes), controle ({motif, categorie, detail} du journal PHOTO_HORS_SUJET).
+  // Contenu : id, type, format, statut, legende, fichier, cree_le, photo_id, url (visuel), prevu_le.
+  const PHOTOS_VUES = 20, CONTENUS_VUS = 12, TYPES_PHOTO_JOURNAL = ["PHOTO_HORS_SUJET"];
+  const PHRASE_LOGO_ILLISIBLE = "Fichier illisible dans ce navigateur : ouvrez « Style du commerce » et déposez le logo à la main.";
+  const photoConsole = x => ({ id: x.id, statut: x.statut, refus_motif: x.refus_motif || null, cree_le: x.cree_le, chemin: x.chemin || null, nom_fichier: x.nom_fichier || null,
+    source: x.source || "espace", controle_force: x.controle_force === true, url: null, controle: null });
+  const controleDe = (j, pid) => { const x = (j || []).find(y => y.type === "PHOTO_HORS_SUJET" && y.detail && String(y.detail.photo) === String(pid));
+    return x ? { motif: x.detail.motif || null, categorie: x.detail.categorie || null, detail: x.detail.detail || null, le: x.cree_le } : null; };
   // Légende propre au réseau, avec repli sur la légende unique (contenus créés avant la mise à jour).
   const legendeDe = (c, r) => { const l = c && c.legendes && c.legendes[r]; return typeof l === "string" && l.trim() ? l : (c && c.legende) || ""; };
   const longueur = t => Array.from(String(t || "")).length;
@@ -1255,7 +1265,7 @@
       // de l'exploitant (« Traité » : admin_alerte_vue, fonction du bloc « Automatisations de service ») ; une alerte traitée (vue_le) n'est plus lue.
       async adminAlertes() {
         const cs = ok(await sb.from("commerces").select("id,nom")), n = id => (cs.find(c => c.id === id) || {}).nom;
-        const av = ok(await sb.from("avis").select("*").eq("sensible", true).eq("statut", "humain")), j = ok(await sb.from("journal").select("*").in("type", ["REFUS", "LEGENDE_REFUSEE", "PHOTO_HORS_SUJET", "ECHEC_PUBLICATION", "SCHEMA_INCOMPLET"]).order("cree_le", { ascending: false }).limit(50)), p = ok(await sb.from("publications").select("*").eq("statut", "echec"));
+        const av = ok(await sb.from("avis").select("*").eq("sensible", true).eq("statut", "humain")), j = ok(await sb.from("journal").select("*").in("type", ["REFUS", "LEGENDE_REFUSEE", "PHOTO_HORS_SUJET", "LOGO_RECU_DANS_PHOTOS", "PHOTO_CONTROLE_PANNE", "ECHEC_PUBLICATION", "SCHEMA_INCOMPLET"]).order("cree_le", { ascending: false }).limit(50)), p = ok(await sb.from("publications").select("*").eq("statut", "echec"));
         const ae = ok(await sb.from("alertes_exploitant").select("*").is("vue_le", null).order("cree_le", { ascending: false }).limit(50));
         // Recherche de fiche bloquée (28/10/2026) : colonne absente tant que le bloc SQL n'est pas appliqué -> rien (jamais d'erreur à l'écran).
         const fb = await sb.from("commerces").select("id,fiche_google_lien,fiche_google_a_resoudre_le").lt("fiche_google_a_resoudre_le", new Date(Date.now() - FG.ATTENTE_HEURES * 3600000).toISOString())
@@ -1273,7 +1283,51 @@
       // phrases que la base), puis la fonction (est_admin, journal).
       async adminReponsesDemarrage(cid, rep) { fusionnerDemarrage({}, rep); return ok(await sb.rpc("admin_reponses_demarrage", { p_commerce: cid, p_reponses: rep })); },
       async adminIgnorerFicheGoogle(id) { return ok(await sb.rpc("admin_ignorer_fiche_google", { p_id: id })); },
-      async adminPhotosClient(cid) { return ok(await sb.from("photos").select("id,statut,refus_motif,cree_le").eq("commerce_id", cid).limit(200)) || []; },
+      // Photos d'un client (v52, 13/11/2026, blocs « Photos » et « Contenus » de la fiche client) : plus récentes d'abord, 200 au plus (compteurs du
+      // dossier de démarrage). « * » : controle_force n'existe qu'avec le bloc SQL « Console : photos et contenus d'un client » (sans lui : faux).
+      // Les PHOTOS_VUES plus récentes reçoivent une adresse signée d'une heure, créée à l'affichage (seau « photos », règle photos_seau_admin_lecture),
+      // en 200 px si la transformation d'image est disponible (RENOM_CONFIG.vignettes200), sinon le fichier d'origine (chargé à la demande par la
+      // console, loading="lazy"). controle : dernière ligne PHOTO_HORS_SUJET du journal rattachée par detail.photo (motif, catégorie, phrase exacte).
+      async adminPhotosClient(cid) {
+        const l = (ok(await sb.from("photos").select("*").eq("commerce_id", cid).order("cree_le", { ascending: false }).limit(200)) || []).map(photoConsole);
+        const j = await sb.from("journal").select("type,detail,cree_le").eq("commerce_id", cid).in("type", TYPES_PHOTO_JOURNAL).order("cree_le", { ascending: false }).limit(300).then(r => r.error ? [] : r.data || [], () => []);
+        await Promise.all(l.slice(0, PHOTOS_VUES).map(async p => { p.controle = controleDe(j, p.id);
+          try { const r = await sb.storage.from("photos").createSignedUrl(p.chemin, 3600, cfg.vignettes200 === true ? { transform: { width: 400, height: 400, resize: "cover", quality: 70 } } : undefined); p.url = (r.data && r.data.signedUrl) || null; } catch (e) { p.url = null; } }));
+        return l;
+      },
+      // Contenus d'un client (v52) : les CONTENUS_VUS derniers, visuel du seau « contenus » (règle contenus_seau_lecture, administrateur compris) par
+      // adresse signée d'une heure : même fichier que la publication (cheminVisuel : story -> visuel-story.jpg, publication -> visuel-4x5.jpg, vidéo ->
+      // son affiche visuel-4x5.jpg du dossier, jamais le MP4). prevu_le : programmation en cours ou passée (publications « programme », « envoye », « publie »).
+      async adminContenusClient(cid) {
+        const l = ok(await sb.from("contenus").select("id,type,format,statut,legende,fichier,cree_le,photo_id").eq("commerce_id", cid).order("cree_le", { ascending: false }).limit(CONTENUS_VUS)) || [];
+        const pubs = l.length ? await sb.from("publications").select("contenu_id,prevu_le,statut").in("contenu_id", l.map(x => x.id)).in("statut", ["programme", "envoye", "publie"]).then(r => r.error ? [] : r.data || [], () => []) : [];
+        await Promise.all(l.map(async x => { const p = pubs.find(y => y.contenu_id === x.id); x.prevu_le = p ? p.prevu_le : null; x.url = null; const ch = cheminVisuel(x);
+          if (ch) try { const r = await sb.storage.from("contenus").createSignedUrl(ch, 3600); x.url = (r.data && r.data.signedUrl) || null; } catch (e) {} }));
+        return l;
+      },
+      // « C'est le logo » (v52) : photo refusée « doute » ou « hors_sujet ». Kit verrouillé ou réglé à la main : rien n'est copié, la base garde le kit
+      // et note le geste. Sinon : fichier lu dans le seau « photos », copié en <commerce>/marque/logo-photo-<id>.<ext> (même nom que le moteur,
+      // rendu_cloud.logo_recu ; règle photos_seau_admin_logo ; PNG, JPEG ou WebP gardés tels quels, autre format converti en PNG), couleurs proposées
+      // depuis le logo (marque.js proposer, même calcul que moteur/marque.py), puis admin_logo_depuis_photo (kit NON verrouillé, motif « logo », journal).
+      async adminLogoDepuisPhoto(pid) {
+        const p = ok(await sb.from("photos").select("id,commerce_id,chemin,statut,refus_motif").eq("id", pid).single());
+        if (p.statut === "refusee" && p.refus_motif === "logo") return { etat: "deja" };
+        const c = ok(await sb.from("commerces").select("id,metier,ton,marque").eq("id", p.commerce_id).single()), m = c.marque;
+        if (m && (m.verrouille || m.auto === false)) return ok(await sb.rpc("admin_logo_depuis_photo", { p_photo: pid, p_logo: null, p_kit: null }));
+        const MQ = window.RENOM_MARQUE, cat = await MQ.charger(), blob = ok(await sb.storage.from("photos").download(p.chemin)), url = URL.createObjectURL(blob);
+        try {
+          const img = await MQ.chargerImage(url).catch(() => { throw new Error(PHRASE_LOGO_ILLISIBLE); });
+          let type = ({ "image/png": "image/png", "image/jpeg": "image/jpeg", "image/jpg": "image/jpeg", "image/webp": "image/webp" })[blob.type] || ({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" })[(p.chemin.split(".").pop() || "").toLowerCase()], corps = blob;
+          if (!type) { corps = await MQ.enPng(blob, 1024); type = "image/png"; }
+          const chemin = c.id + "/marque/logo-photo-" + (String(pid).replace(/[^A-Za-z0-9]/g, "").slice(0, 40) || "x") + "." + { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[type];
+          const u = await sb.storage.from("photos").upload(chemin, corps, { contentType: type, upsert: false });
+          if (u.error && !/exist|duplicate|409/i.test(String(u.error.message || "") + " " + String(u.error.statusCode || ""))) throw new Error(u.error.message);   // déjà copié (geste repris) : on continue
+          const k = MQ.proposer({ logo: MQ.pixels(img), metier: c.metier, ton: c.ton || "", logoChemin: chemin, cat });
+          return ok(await sb.rpc("admin_logo_depuis_photo", { p_photo: pid, p_logo: chemin, p_kit: k }));
+        } finally { URL.revokeObjectURL(url); }
+      },
+      // « Accepter quand même » (v52) : admin_accepter_photo (photo « a_traiter », controle_force vrai ; webhook hook_photo_forcee -> n8n -> rendu sans contrôle).
+      async adminAccepterPhoto(pid) { return ok(await sb.rpc("admin_accepter_photo", { p_photo: pid })); },
       // Prises en charge (« Je prends ») et nouveau client complet : bloc « Console : garantie des 24 h tenue à deux » de schema.sql. Tant que ce bloc
       // n'est pas collé, adminPrises rend null (la console masque « Je prends ») et adminCreerClient crée le commerce par admin_creer_commerce, sans
       // ville, langue ni fiche (rend { id, partiel: true } : la console le dit).
@@ -1348,7 +1402,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -1366,9 +1420,12 @@
           // ou desactivee). Seul état lisible depuis le navigateur : la clé Higgsfield est un secret GitHub, le solde ne se lit pas d'ici. Lecture
           // à part : un échec donne « inconnu » sur ce seul contrôle, jamais une alerte « données illisibles ».
           sb.from("journal").select("commerce_id,detail,cree_le").eq("type", "PRODUIT").not("detail->video_ia", "is", null).order("cree_le", { ascending: false }).limit(1).then(r => r.error ? null : r.data || [], () => null),
+          // Photos (v51, 13/11/2026) : statut et motif de refus seulement, pour dire dans « Délais pas encore démarrés » qu'un fichier est arrivé mais a
+          // été refusé, au lieu de « pas encore reçues ». Lecture à part : un échec donne null (phrase d'avant), jamais une alerte « données illisibles ».
+          sb.from("photos").select("commerce_id,statut,refus_motif").order("cree_le", { ascending: false }).limit(5000).then(r => r.error ? null : r.data || [], () => null),
         ]);
         const vi = videoIa && videoIa[0];
-        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null,
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
           video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },

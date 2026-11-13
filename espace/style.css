@@ -830,6 +830,23 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .sty-historique{display:grid;gap:4px}
 .retour-liste{margin:-4px 0 12px}
 .style-ligne{margin-top:8px}
+/* Fiche client, blocs « Photos » et « Contenus » (v52) : grille de cartes à filet, deux colonnes à 390 px, plus au-delà ; aucune largeur fixe. */
+.galerie{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,148px),1fr));gap:12px;margin-top:12px;align-items:start}
+.galerie>article{display:flex;flex-direction:column;gap:8px;min-width:0;padding:8px;border:1px solid var(--filet);border-radius:var(--r-carte);background:var(--surface)}
+.galerie .cadre{position:relative;aspect-ratio:1/1;border-radius:var(--r-image);background:var(--releve);overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--discret)}
+.galerie .cadre.c45{aspect-ratio:4/5}
+.galerie .cadre.c916{aspect-ratio:9/16}
+.galerie .cadre>a{display:block;width:100%;height:100%}
+.galerie .cadre img{display:block;width:100%;height:100%;object-fit:cover}
+.galerie .cadre .note{padding:8px;font-size:13px}
+.galerie p{overflow-wrap:anywhere}
+.galerie .etat-dos{white-space:normal}
+.galerie .controle{font-size:13px;line-height:1.45;color:var(--discret);overflow-wrap:anywhere}
+.galerie .legende-courte{font-size:14px;line-height:1.45;color:var(--texte2)}
+.galerie .actions-photo{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.galerie .actions-photo .bouton{width:100%;white-space:normal;padding:8px 10px;font-size:14px}
+.galerie>article>.msg-local{margin:0}
+@media (min-width:900px){.galerie{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
 @media (min-width:900px){
   .colonnes.sty{grid-template-columns:minmax(0,1fr) 340px}
   .sty-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}

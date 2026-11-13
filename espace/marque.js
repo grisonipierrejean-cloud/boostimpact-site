@@ -444,7 +444,7 @@
     // ---- Commerçant : « Vos publications » (31/10/2026). Il ne règle ni couleurs, ni polices, ni modèles : il voit ses publications et valide.
     // Ordre : a. sa grille Instagram (9 visuels dessinés ici avec SES photos, selon le réglage) ; b. « Du texte sur vos photos ? » (3 choix, un
     // exemple chacun sur sa photo) ; c. ses annonces (cadre Instagram et actualité de la fiche Google, visuel entier) ; d. ses vidéos (Premium) ;
-    // e. couleurs et logo sur une ligne, changement par une demande à champs fixes. Sans photo : l'envoi de 3 photos, rien d'autre à regarder.
+    // e. couleurs et logo sur une ligne, changement par une demande à champs fixes. Sans photo : l'envoi des photos (5 recommandées, 1 suffit ; 13/11/2026), rien d'autre à regarder.
     // Textes des visuels : tirés de SES données (spécialités, horaires, nom, dernière légende), jamais un texte d'exemple.
     const TUILE_W = 360, TUILE_H = 450;
     const majuscule = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;

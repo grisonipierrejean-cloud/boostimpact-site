@@ -85,13 +85,20 @@
     danger.sort((a, b) => (a.etat === "depasse" ? 0 : 1) - (b.etat === "depasse" ? 0 : 1) || a.echeance - b.echeance);
     // Délais pas encore démarrés : un client paie, mais l'horloge de la garantie ne tourne pas (accès Google ou photos pas remis, fiche à faire
     // vérifier par Google). Pas un manquement, mais un client qui attend : c'est là que naît la frustration.
+    // v51 (13/11/2026) : l'horloge ne part qu'à la première photo UTILISABLE (bloc SQL « Garantie des délais : horloge des premières photos… »).
+    // brut.photos (commerce_id, statut, refus_motif ; null si illisible) dit pourquoi elle ne tourne pas : fichier reçu mais refusé (hors sujet,
+    // doute, légende impossible), ou photos reçues pas encore contrôlées (« a_traiter », gardées pour le mois suivant). Sans lecture : « pas encore reçues ».
+    const photosDe = {}; (brut.photos || []).forEach(p => { if (!p || !p.commerce_id) return; const x = photosDe[p.commerce_id] || (photosDe[p.commerce_id] = { utilisables: 0, refusees: 0 });
+      if (p.statut === "refusee" && p.refus_motif !== "plafond") x.refusees++; else x.utilisables++; });
     actifs.forEach(c => { const g = delaisDe[c.id]; if (g && g.depart) return; const o = OFFRES[c.offre_id] || {};
-      const raisons = [];
+      const raisons = []; let refuses = 0;
       if (c.fiche_google_demande_le && !c.fiche_google_verifiee_le) raisons.push("fiche_a_verifier");
       else if (!g || !g.acces_remis_le) raisons.push("acces");
-      if (o.reseaux_sociaux !== false && !(g && g.photos_recues_le)) raisons.push("photos");
+      if (o.reseaux_sociaux !== false && !(g && g.photos_recues_le)) { const ph = photosDe[c.id];
+        if (ph && !ph.utilisables && ph.refusees) { raisons.push("photos_refusees"); refuses = ph.refusees; }
+        else raisons.push(ph && ph.utilisables ? "photos_controle" : "photos"); }
       const depuis = ms(c.cree_le), jours = depuis == null ? null : Math.floor((maintenant - depuis) / J);
-      attente.push({ cid: c.id, nom: c.nom, offre: c.offre_id, raisons, depuis, jours, long: jours != null && jours >= ATTENTE_LONGUE_JOURS }); });
+      attente.push({ cid: c.id, nom: c.nom, offre: c.offre_id, raisons, refuses, depuis, jours, long: jours != null && jours >= ATTENTE_LONGUE_JOURS }); });
     attente.sort((a, b) => (b.jours ?? -1) - (a.jours ?? -1));
 
     // ------------------------------------------------------------ Indicateurs

@@ -570,18 +570,22 @@
   const AU = window.RENOM_AUTO;
   const ETATS_MR = I.carte("mer.etat", ["a_faire", "declare", "fait"]);
   // v49 (13/11/2026, dossier de démarrage) : la carte de mise en route reprend aussi les points du dossier que la console suit (autorisation photos,
-  // photos x sur 5 utilisables, WhatsApp), chacun avec son état et un lien vers le bon écran ; elle passe en tête de l'accueil. Les réponses (x sur 6)
+  // photos x prêtes sur 5 recommandées, 1 suffit, WhatsApp), chacun avec son état et un lien vers le bon écran ; elle passe en tête de l'accueil. Les réponses (x sur 6)
   // restent dans la ligne des questions, les réseaux dans la ligne « metricool ».
-  const PHOTOS_MIN = 5;
+  // 13/11/2026 (décision de PJ) : 5 photos recommandées, jamais obligatoires ; une seule photo utilisable suffit pour démarrer. Même chiffre partout
+  // (étape photos de la mise en route, carte de l'accueil, console). Utilisable : pas refusée (une photo gardée pour le mois suivant, « plafond »,
+  // compte : elle servira). Refusée : hors sujet, doute, ou légende impossible ; dite en une phrase, sans le détail (il est dans l'écran Photos).
+  const PHOTOS_RECO = 5, PHOTOS_DEMARRAGE = 1;
   const photosUtilisables = l => (l || []).filter(x => x.statut !== "refusee" || x.refus_motif === "plafond").length;
+  const photosRefusees = l => (l || []).filter(x => x.statut === "refusee" && x.refus_motif !== "plafond" && x.refus_motif !== "logo").length;   // un logo reconnu (motif « logo ») n'est pas un refus : il sert de logo
   const nbReponsesClient = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
     return ["phrase", "distinctions", "ton", "interdits", "action"].filter(k => (k === "action" && String(r.action_detail || "").trim()) || String(Array.isArray(r[k]) ? r[k].join("") : r[k] || "").trim()).length
       + (window.RENOM_RESEAUX_CLIENT.repondu(r.reseaux) ? 1 : 0); };
-  const lignesDossierClient = (c, p) => { const n = photosUtilisables(p), wa = whatsappActif(c);
+  const lignesDossierClient = (c, p) => { const n = photosUtilisables(p), r = photosRefusees(p), wa = whatsappActif(c);
     return [{ k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
-      { k: "photos", fait: n >= PHOTOS_MIN, href: "#/photos", v: { n, m: PHOTOS_MIN } },
+      { k: "photos", fait: n >= PHOTOS_DEMARRAGE, href: "#/photos", v: { n, m: PHOTOS_RECO }, court: r ? t("photos.refusee.etape", { n: r }) : "" },
       { k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/demarrage" }].map(x =>
-      `<li data-dossier="${x.k}"><div><p class="fort">${t("acc.dos." + x.k, x.v)}</p>${x.fait ? "" : `<p class="note">${t("acc.dos." + x.k + ".court", x.v)}</p>`}</div>
+      `<li data-dossier="${x.k}"><div><p class="fort">${t("acc.dos." + x.k, x.v)}</p>${x.fait ? "" : `<p class="note">${x.court || t("acc.dos." + x.k + ".court", x.v)}</p>`}</div>
         <div class="pile serre etape-etat"><span class="etat${x.fait ? " actif" : ""}">${x.fait ? ETATS_MR.fait : ETATS_MR.a_faire}</span>${x.fait ? "" : `<a class="bouton second petit" href="${x.href}">${t("acc.dos.voir")}</a>`}</div></li>`).join(""); };
   function blocMiseEnRoute(mr, c, photosL) {
     if (!mr || !mr.points || mr.faits >= mr.total) return "";
@@ -1076,7 +1080,7 @@
           <p class="note" id="ph-quota" aria-live="polite" hidden></p><button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
           <div class="confirmer-refus" id="ph-doublon" role="alert" hidden><p class="fort" id="ph-doublon-texte"></p><div class="actions"><button type="button" class="bouton" id="ph-doublon-envoyer">${t("photos.doublon.envoyer")}</button><button type="button" class="bouton second" id="ph-doublon-retirer"></button></div></div><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deja")}</h2>${l.length ? `<span class="note">${t("photos.n", { n: l.length })}</span>` : ""}</div>
-          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div>${titrePhoto(x)}<p class="etat"${enAttente(x) ? ' data-refus="plafond"' : ""}>${enAttente(x) ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t("photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
+          ${refusGroupe()}${l.length ? `<ul class="liste">${l.map(x => `<li class="avec-vignette">${vignette(x.url && !/^data:/.test(x.url) ? x.url : null)}<div>${titrePhoto(x)}<p class="etat"${enAttente(x) ? ' data-refus="plafond"' : ""}>${enAttente(x) ? t("photo.attente.mois", { mois: moisSuivant }) : ST_PHOTO[x.statut] || e(x.statut)}</p>${x.statut === "refusee" && x.refus_motif && x.refus_motif !== "plafond" ? `<p class="note" data-refus="${e(x.refus_motif)}">${t(x.refus_motif === "logo" ? "photo.refus.court.logo" : "photo.refus.court.sujet")}</p>` : ""}</div></li>`).join("")}</ul>` : `<p class="texte2">${t("photos.vide")}</p>`}</section>
       </div>
       ${pleinG && incitationCroissance(c) ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
       ${sansVideo && !g ? `<p class="note" id="videos-premium">${t("photos.video.premium")} <a href="#/offre?dessus=premium">${t("photos.video.premium.lien")}</a></p>` : ""}
@@ -2687,7 +2691,9 @@
     const [mr, ph_] = await Promise.all([D.miseEnRoute().catch(() => null), D.photos().catch(() => [])]), pts = Object.fromEntries(((mr && mr.points) || []).map(x => [x.point, x.etat]));
     // Étape réseaux (bloc SQL « Emails au commerçant », 27/10/2026) : tant que l'équipe n'a pas envoyé le lien (lien_envoye_le vide), rien à faire.
     const ptRes = ((mr && mr.points) || []).find(x => x.point === "metricool"), attenteLien = !!ptRes && ptRes.etat === "a_faire" && "lien_envoye_le" in ptRes && !ptRes.lien_envoye_le;
-    const g = sansReseaux(c), avecReseaux = "metricool" in pts, eg = ficheDemandee(c) ? "demande" : pts.google || "a_faire", eph = ph_.length ? "fait" : "a_faire";
+    const g = sansReseaux(c), avecReseaux = "metricool" in pts, eg = ficheDemandee(c) ? "demande" : pts.google || "a_faire";
+    // Étape photos (13/11/2026) : seules les photos utilisables comptent ; faite dès la première (PHOTOS_DEMARRAGE), 5 recommandées (PHOTOS_RECO).
+    const nph = photosUtilisables(ph_), nref = photosRefusees(ph_), eph = nph >= PHOTOS_DEMARRAGE ? "fait" : "a_faire";
     const tel = c.whatsapp_numero ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : window.RENOM_WHATSAPP.numero(c.contact, c.pays) ? c.contact : "";
     const google = eg === "fait" ? `<p class="texte2">${t("mer2.google.fait")}</p>`
       : eg === "demande" ? `<div class="pile serre" id="fiche-demandee"><p class="texte2">${t("mer2.fiche.demandee", { d: date(c.fiche_google_demande_le) })}</p>
@@ -2708,7 +2714,9 @@
       <ol class="etapes-mer" id="pour-demarrer">
         <li class="carte etape-mer" id="mer-google" data-etat="${e(eg)}">${etapeTete(1, t("mer2.google.titre"), eg, "mer-google-titre")}${google}</li>
         <li class="carte etape-mer" id="mer-photos" data-etat="${eph}">${etapeTete(2, t(g ? "mer2.photos.titre.google" : "mer2.photos.titre"), eph === "fait" ? "fait" : "facultatif", "mer-photos-titre")}
-          <p class="texte2">${ph_.length ? t("mer2.photos.fait", { n: ph_.length }) : t(g ? "mer2.photos.google" : "mer2.photos.texte", { n: pubGoogle(c) })}</p>
+          <p class="texte2" data-photos-compteur>${nph ? t("mer2.photos.fait", { n: nph, m: PHOTOS_RECO }) : t(g ? "mer2.photos.google" : "mer2.photos.texte")}</p>
+          ${nref ? `<p class="note" data-photos-refusees>${t("photos.refusee.etape", { n: nref })}</p>` : ""}
+          ${g && pubGoogle(c) < PHOTOS_RECO ? `<p class="note" data-photos-essentiel>${t("mer2.photos.essentiel", { n: pubGoogle(c) })}</p>` : ""}
           <div class="actions"><a class="bouton second" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div></li>
         ${reseaux}
       </ol>

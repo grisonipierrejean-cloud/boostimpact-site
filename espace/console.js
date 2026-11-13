@@ -252,13 +252,16 @@
     const mt = new Set([...motsDe((d || {}).titre), ...motsDe((d || {}).adresse)]); return motsDe(c.nom).some(m => mt.has(m)); };
   // ---------------- Dossier de démarrage (v49, 13/11/2026, retours de PJ sur « Comme Chez Fleur » : « on ne sait pas dire s'il faut cliquer », « on ne
   // sait pas dire si ça a été géré »). Sous « Prochaine action », un tableau d'UNE ligne par point : Accès Google, Autorisation photos, Photos (x sur 5
-  // utilisables : 1 façade, 1 salle, 3 plats), WhatsApp, Réponses (x sur 6), Réseaux sociaux (offres avec réseaux). Pour chaque ligne : l'état en clair
+  // recommandées, 1 suffit depuis la v51), WhatsApp, Réponses (x sur 6), Réseaux sociaux (offres avec réseaux). Pour chaque ligne : l'état en clair
   // (Fait, En attente du client, À faire par vous, Vérification automatique), une phrase qui dit quoi faire, et « Voir » qui descend au bon bloc.
   // Décisions (expert onboarding, validées par PJ) : appel de démarrage obligatoire sous 48 h, où le gérant remplit tout pour le client ; relances
   // J+2 et J+5, appel à J+7. Les relances ne partent PAS seules (canal WhatsApp non vérifié) : la ligne « Relances » les donne comme tâches VOUS.
   // « Copier le message au client » : message court, dans la langue du client, qui ne liste que ce qui lui manque, avec l'adresse de son espace.
-  const PHOTOS_MIN = 5, H48 = 48 * 3600000;
+  // v51 (13/11/2026, décision de PJ) : 5 photos recommandées, 1 suffit pour démarrer. La ligne « Photos » n'est « En attente du client » qu'à 0 photo
+  // utilisable ; dès 1, « Fait » avec la note « 5 recommandées ». Fichier reçu mais refusé : la ligne le dit (« 1 fichier reçu, refusé »).
+  const PHOTOS_RECO = 5, PHOTOS_DEMARRAGE = 1, H48 = 48 * 3600000;
   const photosUtilisables = l => Array.isArray(l) ? l.filter(p => p.statut !== "refusee" || p.refus_motif === "plafond").length : null;
+  const photosRefusees = l => Array.isArray(l) ? l.filter(p => p.statut === "refusee" && p.refus_motif !== "plafond" && p.refus_motif !== "logo").length : 0;   // v52 : un logo reconnu n'est pas un refus (comme app.js)
   function lignesDossier(c, phs) {
     const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {}, l = [];
     const gg = pts.google, r = robotGoogle();
@@ -266,10 +269,10 @@
       l.push({ k: "google", st, x: t("con.dos.google." + st), cible: "mer-pt-google", manque: st !== "fait" && st !== "robot" ? "google" : null }); }
     l.push(c.photos_autorisees_le ? { k: "autorisation", st: "fait", x: t("con.dos.autorisation.fait", { d: I.date(c.photos_autorisees_le) }), cible: "client-photos-ligne" }
       : { k: "autorisation", st: "client", x: t("con.dos.autorisation.client"), cible: "client-photos-ligne", manque: "autorisation" });
-    const n = photosUtilisables(phs);
-    l.push(n == null ? { k: "photos", st: "client", x: t("con.dos.photos.inconnu"), n: "?", cible: "client-photos-ligne" }
-      : n >= PHOTOS_MIN ? { k: "photos", st: "fait", x: t("con.dos.photos.fait", { n }), n, cible: "client-photos-ligne" }
-      : { k: "photos", st: "client", x: t("con.dos.photos.client", { n, r: PHOTOS_MIN - n }), n, cible: "client-photos-ligne", manque: "photos", reste: PHOTOS_MIN - n });
+    const n = photosUtilisables(phs), nref = photosRefusees(phs);
+    l.push(n == null ? { k: "photos", st: "client", x: t("con.dos.photos.inconnu"), n: "?", cible: "client-photos-ligne" }   // v52 : « Voir » mène au bloc Photos
+      : n >= PHOTOS_DEMARRAGE ? { k: "photos", st: "fait", x: t("con.dos.photos.fait", { n }), n, cible: "client-photos" }
+      : { k: "photos", st: "client", x: nref ? t("con.dos.photos.refusees", { f: nref }) : t("con.dos.photos.client"), n, cible: phs.length ? "client-photos" : "client-photos-ligne", manque: "photos", refuses: nref });
     l.push(waActif(c) ? { k: "whatsapp", st: "fait", x: t("con.dos.wa.fait", { n: e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero) }), cible: "wa-client-num" }
       : { k: "whatsapp", st: "vous", x: t("con.dos.wa.vous"), cible: "wa-client-num", manque: "whatsapp" });
     const nr = nbReponses(c);
@@ -293,7 +296,7 @@
   function messageDossier(c, l) {
     const lg = ["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr", T_ = (k, v) => t(k, v, lg), manques = l.filter(x => x.manque);
     if (!manques.length) return "";
-    const ligne = x => x.manque === "photos" ? T_("con.msg.photos", { r: x.reste }) : x.manque === "reponses" ? T_("con.msg.reponses", { r: NB_Q - x.n })
+    const ligne = x => x.manque === "photos" ? T_("con.msg.photos", { f: x.refuses || 0 }) : x.manque === "reponses" ? T_("con.msg.reponses", { r: NB_Q - x.n })
       : x.manque === "reseaux" ? T_("con.msg.reseaux", { d: I.date(x.fin, lg) }) : T_("con.msg." + x.manque);
     const u = lienEspace();
     return [T_("con.msg.bonjour"), T_("con.msg.manque"), ...manques.map((x, i) => `${i + 1}. ${ligne(x)}`), u ? T_("con.msg.espace", { u }) : T_("con.msg.espace.sans"), T_("con.msg.fin")].join("\n");
@@ -306,7 +309,7 @@
     return `<section class="carte dossier" id="dossier-demarrage" aria-labelledby="dossier-titre"><div class="carte-tete"><h2 id="dossier-titre">${t("con.dos.titre")}</h2><span class="note" data-dossier-n>${t("con.dos.n", { a: faits, b: l.length })}</span></div>
       ${appel ? `<p class="note${Date.now() > lim ? " fort" : ""}" data-appel-demarrage>${t(Date.now() > lim ? "con.dos.appel.passe" : "con.dos.appel", { d: dh(lim) })}</p>` : ""}
       <table class="dossier-tab"><thead><tr><th>${t("con.dos.col.point")}</th><th>${t("con.dos.col.etat")}</th><th>${t("con.dos.col.quoi")}</th><th><span class="vh">${t("con.dos.voir")}</span></th></tr></thead><tbody>
-        ${l.map(x => `<tr data-dossier="${x.k}" data-st="${x.st}"><td data-l="${t("con.dos.col.point")}" class="fort">${t("con.dos.k." + x.k, { n: x.n, t: NB_Q, m: PHOTOS_MIN })}</td>
+        ${l.map(x => `<tr data-dossier="${x.k}" data-st="${x.st}"><td data-l="${t("con.dos.col.point")}" class="fort">${t("con.dos.k." + x.k, { n: x.n, t: NB_Q, m: PHOTOS_RECO })}</td>
           <td data-l="${t("con.dos.col.etat")}"><span class="etat-dos etat-dos-${x.st}">${t(ETATS_DOS[x.st])}</span></td><td data-l="${t("con.dos.col.quoi")}" class="note">${x.x}</td>
           <td data-l=""><button type="button" class="lien" data-aller="${x.cible}">${t("con.dos.voir")}</button></td></tr>`).join("")}</tbody></table>
       ${rel ? `<p class="note${rel.vous ? " fort" : ""}" data-relance="${rel.k}">${rel.vous ? `<span class="pastille">${t("con.pa.qui.vous")}</span> ` : ""}${rel.x}</p>` : ""}
@@ -938,8 +941,10 @@
   const nowFiche = c => { const et = FG.etat(c), reliee = /^locations\/[0-9]+$/.test(c.google_location_id || "");
     return t("con.ai.fiche." + (et === "reconnue" ? (reliee || !("google_location_id" in c) ? "reliee" : "reconnue") : et)); };
   const nowStyle = c => { const m = c.marque; return +c.demandes_style ? t("con.ai.style.demande") : !(m && m.verrouille) ? t("con.ai.style.valider") : t(c.photos_autorisees_le ? "con.ai.style.ok" : "con.ai.style.sans.photos"); };
-  const nowDelais = (g, o) => { if (!g) return t("con.ai.delais.aucun");
-    if (!g.depart) { const l = [!g.acces_remis_le ? t("con.ai.delais.manque.acces") : "", o.reseaux_sociaux !== false && !g.photos_recues_le ? t("con.ai.delais.manque.photos") : ""].filter(Boolean);
+  // v51 : sans photo utilisable mais avec un fichier refusé, « une photo utilisable (le fichier reçu a été refusé) » au lieu de « les premières photos ».
+  const nowDelais = (g, o, phs) => { if (!g) return t("con.ai.delais.aucun");
+    const manquePhotos = photosUtilisables(phs) === 0 && photosRefusees(phs) ? t("con.ai.delais.manque.photos_refusees") : t("con.ai.delais.manque.photos");
+    if (!g.depart) { const l = [!g.acces_remis_le ? t("con.ai.delais.manque.acces") : "", o.reseaux_sociaux !== false && !g.photos_recues_le ? manquePhotos : ""].filter(Boolean);
       return l.length ? t("con.ai.delais.attente", { l: I.liste(l) }) : t("con.ai.delais.ok"); }
     return g.fiche && !g.fiche.fait_le && g.fiche.echeance ? t("con.ai.delais.fiche", { d: dh(g.fiche.echeance) }) : t("con.ai.delais.ok"); };
   const nowRet = (c, o) => !o.reseaux_sociaux ? t("con.ai.ret.google") : t("con.ai.ret.now") + (o.delegation && !c.delegation_signee_le ? " " + t("con.ai.ret.accord") : "");
@@ -973,7 +978,7 @@
   // date d'appel, création + J_APPEL jours (même seuil que la carte « Mise en route » de À faire et que l'alerte MISE_EN_ROUTE_BLOQUEE), ou lien
   // Metricool + 72 h (il expire à 71 h) ; pour le robot des fiches Google, accès déclaré + 24 h. Date passée : la tâche du client devient « appelez-le ».
   const J_APPEL = 5, H72 = 72 * 3600000;
-  function prochaineAction(c, g, jl, avis = []) {
+  function prochaineAction(c, g, jl, avis = [], phs = null) {
     const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {};
     const maintenant = Date.now(), appel = c.cree_le ? Date.parse(c.cree_le) + J_APPEL * 864e5 : maintenant, gg = pts.google, rr = pts.metricool;
     const aller = (id, cle) => `<button type="button" class="bouton second petit" data-aller="${e(id)}">${t("con.pa.b." + cle)}</button>`;
@@ -984,7 +989,9 @@
     if (rr && rr.etat === "a_faire" && rr.lien_envoye_le) attentes.push({ qui: "client", k: "reseaux", d: Date.parse(rr.lien_envoye_le) + H72, v: { d: I.date(rr.lien_envoye_le) } });
     if (pts.demarrage && pts.demarrage.etat !== "fait") attentes.push({ qui: "client", k: "questions", d: appel, v: { n: nbReponses5(c) } });   // les 5 questions (la 6e, réseaux, est facultative)
     if (!c.demarrage_fini && !waActif(c)) attentes.push({ qui: "client", k: "whatsapp", d: appel });   // numéro obligatoire, demandé à la fin du démarrage
-    if (!(g && g.photos_recues_le)) attentes.push({ qui: "client", k: "photos", d: appel });
+    // v51 : horloge vide alors qu'un fichier est arrivé et a été refusé : « renvoyer une photo utilisable (1 fichier refusé) ».
+    if (!(g && g.photos_recues_le)) { const nr = photosUtilisables(phs) === 0 ? photosRefusees(phs) : 0;
+      attentes.push(nr ? { qui: "client", k: "photos_refusees", d: appel, v: { f: nr } } : { qui: "client", k: "photos", d: appel }); }
     const PRIORITE = [
       // Avis à traiter par l'équipe (garantie des 24 h) : avant tout le reste, sinon la bannière dirait « Rien à faire » avec un avis sensible ouvert.
       ["avis", () => avis.length > 0 && { texte: t(avis.some(a => a.sensible || a.retenue_le) ? "con.pa.avis.sensible" : "con.pa.avis", { n: avis.length, d: dh(avis.map(a => a.echeance).filter(Boolean).sort()[0] || Date.now()) }), bouton: aller("client-avis", "avis") }],
@@ -1038,6 +1045,40 @@
       ${l.length ? `<ol class="historique" id="historique-liste">${l.slice(0, 5).map(ligneHist).join("")}</ol>${l.length > 5 ? `<button type="button" class="lien" id="historique-voir-tout" aria-expanded="false" aria-controls="historique-tout">${t("con.hist.voir.tout", { n: l.length })}</button>
       <ol class="historique" id="historique-tout" hidden>${l.slice(5).map(ligneHist).join("")}</ol>` : ""}` : `<p class="note" id="historique-vide">${t("con.hist.vide")}</p>`}
       <details class="repliable sous" id="journal-client"><summary><h3>${t("con.hist.tout", { n: l.length })}</h3></summary>${tableJournal("jc")}</details></section>`;
+  // ---------------- Photos et contenus du client (v52, 13/11/2026, constat de PJ sur « Comme Chez Fleur » : « je ne vois qu'un compteur »). Bloc
+  // « Photos » : les 20 dernières (adminPhotosClient), vignette par adresse signée créée à l'affichage, date d'envoi, qui l'a envoyée, état en clair ;
+  // photo refusée : motif en mots simples et phrase exacte du contrôle de Claude (journal PHOTO_HORS_SUJET, detail.photo). Refus « doute » ou
+  // « hors_sujet » : « C'est le logo » (admin_logo_depuis_photo : kit non verrouillé, jamais par-dessus un kit validé ou réglé à la main) et
+  // « Accepter quand même » (admin_accepter_photo : rendu relancé sans le contrôle, par le webhook hook_photo_forcee et n8n). Bloc « Contenus » :
+  // les 12 derniers visuels (adminContenusClient), état (st.contenu.*), date de publication prévue ; aucun : la vérité et l'étape suivante.
+  const etatPhoto = p => p.statut === "refusee" ? (p.refus_motif === "plafond" ? "garde" : p.refus_motif === "logo" ? "logo" : ["doute", "hors_sujet"].includes(p.refus_motif) ? "refusee" : "refusee_legende")
+    : p.statut === "traitee" ? "contenu" : p.statut === "en_cours" ? "acceptee" : p.controle_force ? "acceptee_equipe" : "a_controler";
+  const CLASSE_ETAT_PHOTO = { contenu: "fait", logo: "fait", refusee: "vous", refusee_legende: "vous" };
+  const refusControle = p => p.statut === "refusee" && ["doute", "hors_sujet"].includes(p.refus_motif);
+  const cartePhoto = p => { const et = etatPhoto(p), lib = t("con.phc.st." + et), ctl = p.controle && p.controle.detail;
+    return `<article data-photo="${e(p.id)}" id="ph-${e(p.id)}" data-etat="${et}"><div class="cadre">${p.url ? `<a href="${e(p.url)}" target="_blank" rel="noopener"><img src="${e(p.url)}" alt="${e(t("con.phc.alt", { d: dh(p.cree_le) }))}" loading="lazy" decoding="async"></a>` : `<span class="note">${t("con.phc.sans.apercu")}</span>`}</div>
+      <div class="pile serre"><p><span class="etat-dos${CLASSE_ETAT_PHOTO[et] ? " etat-dos-" + CLASSE_ETAT_PHOTO[et] : ""}">${lib}</span></p>
+        <p class="note">${dh(p.cree_le)} · ${t(p.source === "equipe" ? "con.phc.src.equipe" : "con.phc.src.client")}</p>${p.nom_fichier ? `<p class="note casse" translate="no">${e(p.nom_fichier)}</p>` : ""}
+        ${et === "refusee" ? `<p class="note">${t("con.phc.motif." + p.refus_motif)}</p>` : et === "refusee_legende" ? `<p class="note">${t("con.phc.motif.legende")}</p>` : ""}
+        ${et === "refusee" && ctl ? `<p class="controle" data-controle>${t("con.phc.controle", { x: e(ctl) })}</p>` : ""}
+        ${refusControle(p) ? `<div class="actions-photo">${D.adminLogoDepuisPhoto ? `<button type="button" class="bouton second petit" data-a="photo-logo">${t("con.phc.logo")}</button>` : ""}${D.adminAccepterPhoto ? `<button type="button" class="bouton second petit" data-a="photo-accepter">${t("con.phc.accepter")}</button>` : ""}</div>` : ""}</div></article>`; };
+  const nowPhotos = phs => !Array.isArray(phs) ? "" : phs.some(refusControle) ? t("con.ai.phc.refus") : !phs.length ? t("con.ai.phc.aucune") : t("con.ai.phc.ok");
+  const blocPhotos = phs => `<section class="carte" id="client-photos"><h2>${t("con.phc.titre")}</h2>${aide("phc", nowPhotos(phs))}
+      ${!Array.isArray(phs) ? `<p class="note">${t("con.phc.illisible")}</p>` : !phs.length ? `<p class="texte2" id="photos-vide">${t("con.phc.vide")}</p>`
+      : `<p class="note" data-photos-n>${t("con.phc.n", { n: phs.length, u: photosUtilisables(phs) })}${phs.length > 20 ? " " + t("con.phc.plus", { n: phs.length }) : ""}</p><div class="galerie">${phs.slice(0, 20).map(cartePhoto).join("")}</div>`}</section>`;
+  const ICONE_VIDEO = '<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg>';
+  const carteContenu = x => { const fmt = x.type === "video" ? "video" : x.format === "story" ? "story" : "publication", leg = String(x.legende || "").replace(/\s+/g, " ").trim();
+    const date = x.prevu_le ? t(x.statut === "publie" ? "con.ctc.publie" : "con.ctc.prevu", { d: dh(x.prevu_le) }) : t("con.ctc.sans.date");
+    return `<article data-contenu="${e(x.id)}" data-format="${fmt}"><div class="cadre ${fmt === "story" ? "c916" : "c45"}">${x.url ? `<a href="${e(x.url)}" target="_blank" rel="noopener"><img src="${e(x.url)}" alt="${e(t("con.ctc.alt." + fmt))}" loading="lazy" decoding="async" data-visuel></a>` : ""}<span class="icone-visuel"${x.url ? " hidden" : ""}>${fmt === "video" ? ICONE_VIDEO : `<span class="note">${t("con.phc.sans.apercu")}</span>`}</span></div>
+      <div class="pile serre"><p><span class="etat-dos${["approuve", "programme", "publie"].includes(x.statut) ? " etat-dos-fait" : ""}">${I.a("st.contenu." + x.statut) ? t("st.contenu." + x.statut) : e(x.statut)}</span></p>
+        <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${leg ? `<p class="legende-courte">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
+  const videContenus = phs => { const l = Array.isArray(phs) ? phs : [];
+    return t(l.some(p => ["a_traiter", "en_cours"].includes(p.statut) && (p.controle_force || p.statut === "en_cours")) ? "con.ctc.vide.cours" : l.some(p => p.statut === "a_traiter") ? "con.ctc.vide.controle"
+      : l.some(p => p.statut === "refusee" && p.refus_motif === "plafond") ? "con.ctc.vide.plafond" : "con.ctc.vide.photo"); };
+  const nowContenus = (cts, phs) => !Array.isArray(cts) ? "" : !cts.length ? videContenus(phs) : cts.some(x => x.statut === "a_valider") ? t("con.ai.ctc.valider", { n: cts.filter(x => x.statut === "a_valider").length }) : t("con.ai.ctc.ok");
+  const blocContenus = (cts, phs) => `<section class="carte" id="client-contenus"><h2>${t("con.ctc.titre")}</h2>${aide("ctc", nowContenus(cts, phs))}
+      ${!Array.isArray(cts) ? `<p class="note">${t("con.ctc.illisible")}</p>` : !cts.length ? `<p class="texte2" id="contenus-vide">${videContenus(phs)}</p>`
+      : `<p class="note">${t("con.ctc.n", { n: cts.length })}</p><div class="galerie">${cts.map(carteContenu).join("")}</div>`}</section>`;
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
     // Journal de CE client lu à part (v46) : adminJournal s'arrête aux 300 lignes les plus récentes de tous les clients.
@@ -1051,14 +1092,15 @@
       robotsFiche = { passage: pr ? pr.liens_google || null : undefined, alertes: al || [] }; }
     else robotsFiche = { passage: undefined, alertes: [] };
     // v49 : photos du client pour le dossier de démarrage (x sur 5 utilisables) ; illisibles : null, la ligne dit « nombre inconnu ».
-    const phs = D.adminPhotosClient ? await sur(D.adminPhotosClient(cid)) : null;
+    // v52 : contenus du client (bloc « Contenus ») lus en même temps ; illisibles : null, le bloc le dit.
+    const [phs, cts] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null]);
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
-      ${banniere(c, prochaineAction(c, g, journalClient, mesAvis))}${blocDossier(c, phs, contacts)}${blocHistorique(journalClient)}
+      ${banniere(c, prochaineAction(c, g, journalClient, mesAvis, phs))}${blocDossier(c, phs, contacts)}${blocHistorique(journalClient)}
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="etat-offre" id="etat-offre"><div class="etat-col" id="etat-zone"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="etat-col" id="offre-zone"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
@@ -1068,8 +1110,9 @@
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
+      ${blocPhotos(phs)}${blocContenus(cts, phs)}
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>${aide("gar", "")}
-        <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
+        <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o, phs))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
           : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="datetime-local" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
         ${mq.length ? `<h3>${t("con.mq.titre")}</h3>${aide("mq", t("con.ai.mq.now"))}<div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
@@ -1134,6 +1177,13 @@
     clic(vue, "#ph-autoriser-ok-fiche", async () => { if (!$("ph-accord-fiche").checked) throw new Error(t("con.ph.accord.requis")); return D.adminAutoriserPhotos(cid, true); },
       r => t(r && r.etat === "deja" ? "con.ph.autorisee.deja" : "con.ph.autorisee.ok"));
     clic(vue, "[data-mc-enregistrer]", () => D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value), t("con.mc.ok"));
+    // Blocs « Photos » et « Contenus » (v52) : « C'est le logo », « Accepter quand même » (confirmation : la photo part sans contrôle) ; message sous
+    // la photo (convention v48 : faire() redessine la fiche puis écrit près du bouton). Visuel absent ou illisible : l'icône à la place de l'image.
+    vue.querySelectorAll("[data-a=photo-logo]").forEach(b => b.onclick = () => faire(b, () => D.adminLogoDepuisPhoto(b.closest("[data-photo]").dataset.photo),
+      r => r && r.etat === "deja" ? t("con.phc.logo.deja") : r && r.etat === "garde" ? t("con.phc.logo.garde." + (r.raison === "main" ? "main" : "verrouille")) : t("con.phc.logo.pose", { v: r && r.marque_version })));
+    vue.querySelectorAll("[data-a=photo-accepter]").forEach(b => b.onclick = () => faire(b, async () => { if (!window.confirm(t("con.phc.accepter.confirmer"))) return ANNULE; return D.adminAccepterPhoto(b.closest("[data-photo]").dataset.photo); },
+      r => t(r && r.etat === "deja" ? "con.phc.accepter.deja" : r && r.webhook === false ? "con.phc.accepter.sans" : "con.phc.accepter.ok")));
+    vue.querySelectorAll("#client-contenus img[data-visuel]").forEach(im => im.addEventListener("error", () => { const a = im.closest("a"), ic = im.closest(".cadre").querySelector(".icone-visuel"); if (a) a.hidden = true; if (ic) ic.hidden = false; }));
     envoi("f-delais-client", () => D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }));
     envoi("f-gar-client", () => D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }));
     // Réponses du démarrage remplies par l'équipe (v49) : « Remplir pour le client », « Modifier » (ouvre le formulaire sur la bonne question),
@@ -1275,7 +1325,7 @@
         <p><a href="#/afaire/garanties">${t("con.ck.g.appliquer.ouvrir")}</a></p></li>`).join("")}</ul>` : "";
     const att = g.attente.length ? `<h3>${t("con.ck.g.attente.titre")}</h3><ul class="ck-liste" id="delais-attente">${g.attente.map(a => `<li class="ck-g ck-attente${a.long ? " ck-long" : ""}" data-client="${e(a.cid)}">
         <div class="ck-g-tete"><p class="fort">${lienClient(a.cid, a.nom)}</p>${a.jours != null ? `<p class="ck-g-etat">${t("con.ck.g.attente.depuis", { n: a.jours })}</p>` : ""}</div>
-        <p class="note">${I.liste(a.raisons.map(x => t("con.ck.g.raison." + x)))}${a.long ? ". " + t("con.ck.g.attente.long") : "."}</p></li>`).join("")}</ul>` : "";
+        <p class="note">${I.liste(a.raisons.map(x => t("con.ck.g.raison." + x, { f: a.refuses || 0 })))}${a.long ? ". " + t("con.ck.g.attente.long") : "."}</p></li>`).join("")}</ul>` : "";
     return `<section class="carte ck-bloc" id="garanties"><h2>${t("con.ck.g.titre")}</h2><p class="note ck-chapo">${t("con.ck.g.chapo")}</p>
       ${g.danger.length ? `<ul class="ck-liste" id="garanties-danger">${g.danger.map(ligne).join("")}</ul>` : vide}${appl}${att}</section>`; }
 
