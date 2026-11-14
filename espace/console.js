@@ -1070,7 +1070,7 @@
   const carteContenu = x => { const fmt = x.type === "video" ? "video" : x.format === "story" ? "story" : "publication", leg = String(x.legende || "").replace(/\s+/g, " ").trim();
     const date = x.prevu_le ? t(x.statut === "publie" ? "con.ctc.publie" : "con.ctc.prevu", { d: dh(x.prevu_le) }) : t("con.ctc.sans.date");
     return `<article data-contenu="${e(x.id)}" data-format="${fmt}"><div class="cadre ${fmt === "story" ? "c916" : "c45"}">${x.url ? `<a href="${e(x.url)}" target="_blank" rel="noopener"><img src="${e(x.url)}" alt="${e(t("con.ctc.alt." + fmt))}" loading="lazy" decoding="async" data-visuel></a>` : ""}<span class="icone-visuel"${x.url ? " hidden" : ""}>${fmt === "video" ? ICONE_VIDEO : `<span class="note">${t("con.phc.sans.apercu")}</span>`}</span></div>
-      <div class="pile serre"><p><span class="etat-dos${["approuve", "programme", "publie"].includes(x.statut) ? " etat-dos-fait" : ""}">${I.a("st.contenu." + x.statut) ? t("st.contenu." + x.statut) : e(x.statut)}</span></p>
+      <div class="pile serre"><p class="etats-contenu"><span class="etat-dos${["approuve", "programme", "publie"].includes(x.statut) ? " etat-dos-fait" : ""}">${I.a("st.contenu." + x.statut) ? t("st.contenu." + x.statut) : e(x.statut)}</span>${x.ia ? ` <span class="etat-dos" data-badge-ia>${t("con.vic.badge")}</span>` : ""}</p>
         <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${leg ? `<p class="legende-courte">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
   const videContenus = phs => { const l = Array.isArray(phs) ? phs : [];
     return t(l.some(p => ["a_traiter", "en_cours"].includes(p.statut) && (p.controle_force || p.statut === "en_cours")) ? "con.ctc.vide.cours" : l.some(p => p.statut === "a_traiter") ? "con.ctc.vide.controle"
@@ -1079,6 +1079,17 @@
   const blocContenus = (cts, phs) => `<section class="carte" id="client-contenus"><h2>${t("con.ctc.titre")}</h2>${aide("ctc", nowContenus(cts, phs))}
       ${!Array.isArray(cts) ? `<p class="note">${t("con.ctc.illisible")}</p>` : !cts.length ? `<p class="texte2" id="contenus-vide">${videContenus(phs)}</p>`
       : `<p class="note">${t("con.ctc.n", { n: cts.length })}</p><div class="galerie">${cts.map(carteContenu).join("")}</div>`}</section>`;
+  // Vidéos IA de ce client (v53, 14/11/2026) : chaque tentative du moteur (journal PRODUIT, clé video_ia, moteur/rendu_cloud.py), lue dans le journal
+  // de ce client déjà chargé : date, état (faite, plan B et son motif, coupée), coût estimé et s'il est facturé (« facture » : oui, possible, non).
+  // Montré pour une offre avec vidéo IA (moteur/video_ia.json : Premium) ou dès qu'une tentative existe.
+  const videosIaDe = jl => (jl || []).filter(j => j.type === "PRODUIT" && j.detail && j.detail.video_ia && typeof j.detail.video_ia === "object")
+    .sort((a, b) => String(b.cree_le).localeCompare(String(a.cree_le)));
+  const coutIa = y => { const n = y.usd_estime == null || y.usd_estime === "" ? null : Number(y.usd_estime), fact = y.etat === "faite" || y.facture === "oui";
+    return y.etat === "desactivee" ? "" : fact ? (n == null ? t("con.vic.cout.inconnu") : t("con.vic.cout", { x: usd(n) })) : y.facture === "possible" && n != null ? t("con.vic.cout.possible", { x: usd(n) }) : t("con.vic.cout.non"); };
+  const blocVideosIa = (c, jl) => { const l = videosIaDe(jl); if (!l.length && c.offre_id !== "premium") return "";
+    return `<section class="carte" id="client-videos-ia"><h2>${t("con.vic.titre")}</h2><p class="note">${t("con.vic.chapo")}</p>${!l.length ? `<p class="texte2" id="videos-ia-vide">${t("con.vic.vide")}</p>`
+      : `<ul class="liste-ia">${l.slice(0, 12).map(j => { const y = j.detail.video_ia, et = ["faite", "plan_b", "desactivee"].includes(y.etat) ? y.etat : "plan_b", cout = coutIa(y);
+        return `<li data-video-ia-client="${e(et)}"><span class="note">${dh(j.cree_le)}</span><span class="etat-dos${et === "faite" ? " etat-dos-fait" : ""}">${t("con.vic." + et, { m: motifIa(y.motif) || "?" })}</span>${cout ? `<span>${cout}</span>` : ""}</li>`; }).join("")}</ul>`}</section>`; };
   async function client(cid, ancre) {
     const sur = p => p.catch(() => null);
     // Journal de CE client lu à part (v46) : adminJournal s'arrête aux 300 lignes les plus récentes de tous les clients.
@@ -1096,7 +1107,11 @@
     const [phs, cts] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null]);
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
-    const journalClient = (jl || []).filter(x => x.commerce_id === cid), mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
+    const journalClient = (jl || []).filter(x => x.commerce_id === cid);
+    // v53 : badge « Vidéo IA » sur la vidéo d'une photo dont le moteur a fait la vidéo IA (journal PRODUIT, video_ia.etat = « faite »).
+    const photosIa = new Set(videosIaDe(journalClient).filter(j => j.detail.video_ia.etat === "faite").map(j => String(j.detail.photo)));
+    if (Array.isArray(cts)) cts.forEach(x => { if (x.type === "video" && photosIa.has(String(x.photo_id))) x.ia = true; });
+    const mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
@@ -1110,7 +1125,7 @@
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
       <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
-      ${blocPhotos(phs)}${blocContenus(cts, phs)}
+      ${blocPhotos(phs)}${blocContenus(cts, phs)}${blocVideosIa(c, journalClient)}
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>${aide("gar", "")}
         <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o, phs))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
@@ -1332,11 +1347,38 @@
   const ligneControle = (c, x) => { const qui = x.nom ? lienClient(x.cid, x.nom) : "", q = x.quand ? dh(x.quand) : "";
     const k = I.a("con.ck.c.i." + c.k + "." + x.cle) ? "con.ck.c.i." + c.k + "." + x.cle : "con.ck.c.i." + c.k + ".defaut";
     return `<li>${t(k, { qui, d: q, texte: x.texte ? `<span class="casse" translate="no">${e(String(x.texte).slice(0, 160))}</span>` : "" })}</li>`; };
-  // Vidéo IA (11/11/2026) : seulement ce que la base sait (dernière ligne PRODUIT du journal, cockpit.js) ; la clé et le solde ne se lisent pas d'ici.
+  // Vidéo IA (11/11/2026 ; 14/11/2026, v53 : compte API Higgsfield de BoostImpact). Le dernier essai vient du journal PRODUIT (cockpit.js) ; le compte,
+  // les vidéos et la dépense du mois viennent de admin_video_ia_mois() (table higgsfield_verifications, écrite chaque jour par le workflow GitHub
+  // « Vérifier la clé Higgsfield », moteur/verifier_higgsfield.py). Le solde n'est pas lisible : l'API Higgsfield n'en publie aucun (docs.higgsfield.ai,
+  // 14/11/2026). Relancer : un lien vers GitHub et les clics à faire, jamais un bouton (il faudrait une clé GitHub dans le navigateur).
+  const usd = x => { const n = Number(x) || 0; return I.nombre(n, Math.abs(n - Math.round(n)) < 1e-9 ? 0 : Math.abs(n * 100 - Math.round(n * 100)) < 1e-6 ? 2 : 3); };
+  const motifIa = m => m ? (I.a("con.ck.c.ia.motif." + m) ? t("con.ck.c.ia.motif." + m) : t("con.ck.c.ia.motif.defaut", { x: `<span translate="no">${e(m)}</span>` })) : "";
+  const DEPOT_SUR = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, RUN_SUR = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/;
   const ligneVideoIa = c => { const x = c.details[0] || {}, qui = x.nom ? " · " + lienClient(x.cid, x.nom) : "", d = x.quand ? dh(x.quand) : "";
-    const motif = x.motif ? (I.a("con.ck.c.ia.motif." + x.motif) ? t("con.ck.c.ia.motif." + x.motif) : t("con.ck.c.ia.motif.defaut", { x: `<span translate="no">${e(x.motif)}</span>` })) : "";
     const k = x.cle === "faite" ? "faite" : x.cle === "plan_b" ? (c.etat === "ok" ? "normal" : c.etat === "alerte" ? "grave" : "planb") : x.cle === "desactivee" ? "coupee" : x.cle === "illisible" ? "illisible" : x.cle === "jamais" ? "jamais" : "planb";
-    return `<p class="note" data-video-ia="${e(x.cle || "")}">${t("con.ck.c.ia." + k, { d, qui, motif, m: x.modele ? ` (<span translate="no">${e(x.modele)}</span>)` : "" })}</p><p class="note">${t("con.ck.c.ia.fixe")}</p>`; };
+    const dernier = `<p class="note" data-video-ia="${e(x.cle || "")}">${t("con.ck.c.ia." + k, { d, qui, motif: motifIa(x.motif), m: x.modele ? ` (<span translate="no">${e(x.modele)}</span>)` : "" })}</p>`;
+    if (x.verif === undefined && x.mois === undefined) return dernier + `<p class="note">${t("con.ck.c.ia.fixe")}</p>`;      // ancien adaptateur
+    const v = x.verif, m = x.mois, nm = m && m.mois ? nomMois(m.mois) : "";
+    const lig = (lib, val, attr) => `<div${attr ? ` ${attr}` : ""}><dt class="note">${lib}</dt><dd>${val}</dd></div>`;
+    const q = v ? t("con.ck.c.ia.q." + (I.a("con.ck.c.ia.q." + v.declenchement) ? v.declenchement : "local")) : "";
+    const cle = m === null ? t("con.ck.c.ia.cle.illisible") : !v ? t("con.ck.c.ia.cle.jamais")
+      : t("con.ck.c.ia.cle." + (I.a("con.ck.c.ia.cle." + v.cle_etat) ? v.cle_etat : "inattendue"), { d: dh(v.verifie_le), q, h: v.http == null ? "?" : v.http }) + (x.vieille ? " " + t("con.ck.c.ia.cle.vieille") : "");
+    const inter = !v ? t("con.ck.c.ia.inter.inconnu") : v.video_ia_active ? t("con.ck.c.ia.inter.oui")
+      : t("con.ck.c.ia.inter.non", { v: v.interrupteur ? `« <span translate="no">${e(v.interrupteur)}</span> »` : t("con.ck.c.ia.inter.vide") });
+    const solde = (v && v.solde_lisible && v.solde_usd != null ? t("con.ck.c.ia.solde.oui", { x: usd(v.solde_usd), d: dh(v.verifie_le) }) : t("con.ck.c.ia.solde.non"))
+      + (v && v.estimation_usd != null ? `<br><span class="note">${t("con.ck.c.ia.solde.prix", { x: usd(v.estimation_usd), p: usd(v.plafond_usd) })}</span>` : "");
+    const depense = !m ? t("con.ck.c.ia.mois.illisible") : t("con.ck.c.ia.depense", { x: usd(m.depense_usd || 0), n: Number(m.facturees ?? m.faites) || 0 })
+      + (Number(m.depense_possible_usd) > 0 ? " " + t("con.ck.c.ia.depense.possible", { x: usd(m.depense_possible_usd) }) : "")
+      + `<br><span class="note">${t("con.ck.c.ia.depense.total", { x: usd(m.depense_totale_usd || 0) })}</span>`;
+    const motifs = m ? Object.entries(m.motifs || {}).sort((a, b) => b[1] - a[1]).map(([mo, n]) => `${motifIa(mo)} ${I.nombre(n)}`).join(", ") : "";
+    const videos = !m ? t("con.ck.c.ia.mois.illisible") : t("con.ck.c.ia.videos", { f: Number(m.faites) || 0, b: Number(m.plan_b) || 0, m: motifs, c: Number(m.desactivees) || 0 });
+    const depot = v && DEPOT_SUR.test(v.depot || "") ? v.depot : null, run = v && RUN_SUR.test(v.run_url || "") ? v.run_url : null;
+    const relancer = `<details class="ck-ia-relancer"><summary>${t("con.ck.c.ia.relancer")}</summary><ol class="ck-c-det">${depot ? `<li><a href="https://github.com/${e(depot)}/actions/workflows/verifier-higgsfield.yml" target="_blank" rel="noopener" data-ia-relancer>${t("con.ck.c.ia.relancer.lien")}</a></li>` : `<li>${t("con.ck.c.ia.relancer.e1")}</li>`}
+        <li>${t("con.ck.c.ia.relancer.e2")}</li><li>${t("con.ck.c.ia.relancer.e3")}</li></ol><p class="note">${t("con.ck.c.ia.relancer.pourquoi")}</p>${run ? `<p class="note"><a href="${e(run)}" target="_blank" rel="noopener">${t("con.ck.c.ia.relancer.dernier")}</a></p>` : ""}</details>`;
+    return `<div class="ck-ia" data-compte-ia="${e(v ? v.cle_etat : m === null ? "illisible" : "jamais")}"><p class="fort ck-ia-compte">${t("con.ck.c.ia.compte")}</p>
+      <p class="note">${t("con.ck.c.ia.compte.det", { a: `<span translate="no">${e((v && v.compte) || "team@boostimpact.agency")}</span>`, f: v && v.cle_fin ? `<span translate="no">…${e(v.cle_fin)}</span>` : "" })}</p>
+      <dl class="ck-ia-liste">${lig(t("con.ck.c.ia.l.cle"), cle, 'data-ia="cle"')}${lig(t("con.ck.c.ia.l.inter"), inter, 'data-ia="interrupteur"')}${lig(t("con.ck.c.ia.l.solde"), solde, 'data-ia="solde"')}
+        ${lig(t("con.ck.c.ia.l.depense", { m: nm || "…" }), depense, 'data-ia="depense"')}${lig(t("con.ck.c.ia.l.videos", { m: nm || "…" }), videos, 'data-ia="videos"')}${lig(t("con.ck.c.ia.l.dernier"), dernier, 'data-ia="dernier"')}</dl>${relancer}</div>`; };
   function blocControles(r) {
     return `<section class="carte ck-bloc" id="controles"><h2>${t("con.ck.c.titre")}</h2><p class="note ck-chapo">${t("con.ck.c.chapo")}</p>
       <ul class="ck-controles">${r.controles.map(c => `<li class="ck-c ck-c-${c.etat}" data-controle="${c.k}" data-etat="${c.etat}">${glyphe(c.etat)}<div>

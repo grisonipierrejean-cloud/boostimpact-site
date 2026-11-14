@@ -35,6 +35,8 @@
   // par établissement ; au-delà, elles continuent et PJ peut proposer une offre adaptée, rien n'est facturé sans accord écrit. Même seuil que
   // admin_avis_du_mois() de schema.sql (bloc « Essentiel à 4 publications et CGV du 2 novembre 2026 »), qui compte les avis du mois de Paris.
   const AVIS_USAGE_RAISONNABLE = 100;
+  // Vérification du compte API Higgsfield (workflow planifié chaque jour) : au-delà de 36 h sans passage, le contrôle passe « à vérifier ».
+  const VERIF_MAX_H = 36;
 
   function calculer(x) {
     const maintenant = x.maintenant || Date.now(), periode = periodeValide(x.periode), debut = debutPeriode(periode, maintenant);
@@ -231,9 +233,19 @@
     // différente de « oui » au dernier montage = à vérifier. Rien lu : inconnu (jamais une alerte).
     const vIa = brut.video_ia === undefined ? null : brut.video_ia, dIa = vIa && vIa.derniere;
     const MOTIFS_NORMAUX = ["personne", "controle_personne", "moderation"], MOTIFS_GRAVES = ["cle", "credits"];
-    const etatIa = !vIa || !dIa ? "inconnu" : dIa.etat === "faite" ? "ok" : dIa.etat === "plan_b" ? (MOTIFS_GRAVES.includes(dIa.motif) ? "alerte" : MOTIFS_NORMAUX.includes(dIa.motif) ? "ok" : "a_verifier") : "a_verifier";
+    let etatIa = !vIa || !dIa ? "inconnu" : dIa.etat === "faite" ? "ok" : dIa.etat === "plan_b" ? (MOTIFS_GRAVES.includes(dIa.motif) ? "alerte" : MOTIFS_NORMAUX.includes(dIa.motif) ? "ok" : "a_verifier") : "a_verifier";
+    // Compte API Higgsfield de BoostImpact (14/11/2026) : vIa.mois = admin_video_ia_mois() (vidéos et dépense du mois, dernière vérification du
+    // workflow GitHub « Vérifier la clé Higgsfield », table higgsfield_verifications). undefined : pas lu (ancien adaptateur) ; null : illisible
+    // (bloc SQL « Compte API Higgsfield visible » pas encore collé). Vérification : clé refusée, absente ou solde insuffisant = alerte ; jamais
+    // faite, plus vieille que VERIF_MAX_H, clé injoignable, réponse inattendue ou interrupteur éteint = à vérifier. Rien de pire : l'état du journal.
+    const mIa = vIa && vIa.mois !== undefined ? vIa.mois : undefined, vf = mIa ? mIa.verification : undefined;
+    const RANG = { inconnu: 0, ok: 1, a_verifier: 2, alerte: 3 }, auMoins = e2 => { if (RANG[e2] > RANG[etatIa] || (etatIa === "inconnu" && e2 === "ok")) etatIa = e2; };
+    const vieille = vf && (ms(vf.verifie_le) == null || maintenant - ms(vf.verifie_le) > VERIF_MAX_H * H);
+    if (mIa === null || vf === null) auMoins("a_verifier");
+    else if (vf) auMoins(["refusee", "absente", "solde_insuffisant"].includes(vf.cle_etat) ? "alerte" : vieille || vf.cle_etat !== "acceptee" || !vf.video_ia_active ? "a_verifier" : "ok");
+    const compteIa = { verif: vf === undefined ? undefined : vf, vieille: !!vieille, mois: mIa };
     ctl("video_ia", etatIa, dIa ? [{ cid: dIa.commerce_id || null, nom: nom(dIa.commerce_id), cle: dIa.etat === "plan_b" ? "plan_b" : dIa.etat || "inconnu", motif: dIa.motif || null, modele: dIa.modele || null,
-      texte: dIa.message || "", quand: ms(dIa.quand) }] : [{ cle: vIa ? "jamais" : "illisible" }]);
+      texte: dIa.message || "", quand: ms(dIa.quand), ...compteIa }] : [{ cle: vIa ? "jamais" : "illisible", ...compteIa }]);
     // Clients de test encore présents.
     const restes = commerces.filter(c => tests.has(c.id)).map(c => ({ cid: c.id, nom: c.nom }));
     if (restes.length) ctl("tests_restants", "a_verifier", restes);
@@ -267,6 +279,6 @@
     };
   }
 
-  const api = { calculer, moisOffert, periodeValide, PERIODES, jourParis, AVIS_USAGE_RAISONNABLE };
+  const api = { calculer, moisOffert, periodeValide, PERIODES, jourParis, AVIS_USAGE_RAISONNABLE, VERIF_MAX_H };
   if (typeof module === "object" && module.exports) module.exports = api; else racine.RENOM_COCKPIT = api;
 })(typeof window !== "undefined" ? window : globalThis);

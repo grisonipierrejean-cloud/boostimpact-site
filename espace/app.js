@@ -132,7 +132,8 @@
   const exNum = c => window.RENOM_WHATSAPP.exemple((c || {}).pays);
   const numParams = c => ({ ex: exNum(c), ind: M.paysDe((c || {}).pays) === "BE" ? "+32" : "+33" });
   // Vidéo animée par IA (24/10/2026) : étiquette sobre sur la carte (texte seul, ni trait de couleur, ni majuscules d'étiquette).
-  const etiquetteIA = x => M.estIA(x) ? `<p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p>` : "";
+  // Vidéo IA (v53, 14/11/2026) : étiquette (outil nommé, Higgsfield) et, dessous, ce que l'IA a pour consigne de faire, en clair.
+  const etiquetteIA = x => M.estIA(x) ? `<div class="bloc-ia"><p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p><p class="note" data-ia-det>${t("ia.etiquette.det")}</p></div>` : "";
   const nombre = I.nombre;
   const moisDe = m => new Date(m.slice(0, 7) + "-15T12:00:00");
   const hm = I.hm;

@@ -1402,7 +1402,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk, videoIaMois] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -1423,10 +1423,13 @@
           // Photos (v51, 13/11/2026) : statut et motif de refus seulement, pour dire dans « Délais pas encore démarrés » qu'un fichier est arrivé mais a
           // été refusé, au lieu de « pas encore reçues ». Lecture à part : un échec donne null (phrase d'avant), jamais une alerte « données illisibles ».
           sb.from("photos").select("commerce_id,statut,refus_motif").order("cree_le", { ascending: false }).limit(5000).then(r => r.error ? null : r.data || [], () => null),
+          // Compte API Higgsfield (14/11/2026) : vidéos IA et dépense du mois de Paris, dernière vérification du workflow GitHub (admin_video_ia_mois,
+          // bloc SQL « Compte API Higgsfield visible »). Lecture à part : fonction absente ou panne = null, le cockpit dit « bloc SQL à coller ».
+          sb.rpc("admin_video_ia_mois", {}).then(r => r.error ? null : r.data || null, () => null),
         ]);
         const vi = videoIa && videoIa[0];
         return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
-          video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
+          video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null, mois: videoIaMois }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },
     };

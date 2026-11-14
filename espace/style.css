@@ -155,6 +155,7 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .note{font-size:14px;color:var(--discret)}
 /* Vidéo animée par IA (24/10/2026) : étiquette sobre, texte seul en casse normale ; ni trait ni barre de couleur, aucun orange. */
 .etiquette-ia{display:inline-block;margin:8px 0;padding:5px 10px;font-size:14px;font-weight:var(--graisse-forte);line-height:1.35;color:var(--texte2);background:var(--releve);border:1px solid var(--filet);border-radius:6px;text-transform:none;letter-spacing:normal;max-width:100%}
+.bloc-ia{margin:8px 0}.bloc-ia .etiquette-ia{margin:0 0 4px}.bloc-ia .note{margin:0;max-width:60ch}
 .meta{font-size:13px;font-weight:var(--graisse-forte);color:var(--discret)}
 .etat{font-size:13px;font-weight:var(--graisse-forte);color:var(--discret)}
 .etat.actif{color:var(--citron)}
@@ -841,6 +842,19 @@ details.dernieres summary{cursor:pointer;font-weight:var(--graisse-forte);min-he
 .galerie .cadre .note{padding:8px;font-size:13px}
 .galerie p{overflow-wrap:anywhere}
 .galerie .etat-dos{white-space:normal}
+.etats-contenu{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+.liste-ia{list-style:none;margin:0;padding:0}
+.liste-ia li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:9px 0;border-top:1px solid var(--filet);overflow-wrap:anywhere}
+.liste-ia li:first-child{border-top:0}
+.ck-ia{min-width:0}
+.ck-ia-compte{margin:2px 0 2px}
+.ck-ia-liste{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px 24px;margin:10px 0 6px}
+.ck-ia-liste>div{min-width:0}
+.ck-ia-liste dd{margin:2px 0 0;overflow-wrap:anywhere}
+.ck-ia-liste dd .note{display:inline}
+.ck-ia-relancer{margin-top:4px}
+.ck-ia-relancer summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--encre)}
+.ck-ia-relancer ol.ck-c-det{padding-left:22px}
 .galerie .controle{font-size:13px;line-height:1.45;color:var(--discret);overflow-wrap:anywhere}
 .galerie .legende-courte{font-size:14px;line-height:1.45;color:var(--texte2)}
 .galerie .actions-photo{display:flex;flex-direction:column;gap:6px;margin-top:2px}

@@ -1,7 +1,7 @@
 // Kit de marque dans l'espace (écran « Votre style ») : proposition de couleurs à partir d'un logo, contrôle du kit, aperçus des 3 gabarits.
 // Même calcul que moteur/marque.py (regroupement de couleurs en entiers, contraste WCAG 2, couple de polices selon le métier et le ton) :
 // sur les mêmes pixels, même kit (test de parité moteur/tests/test_marque_parite.js). Même contrôle que la fonction SQL marque_fautes.
-// Les aperçus sont dessinés ici (canvas) avec les règles de moteur/gabarits.py et les mêmes fichiers de polices : ils servent à choisir.
+// Les aperçus sont dessinés ici (canvas) avec les règles de moteur/gabarits.py (modèles 2026 du 14/11/2026) et les mêmes fichiers de polices : ils servent à choisir.
 // Le visuel publié est rendu par le moteur ; de petits écarts de rendu du texte (moteur de polices du navigateur) restent possibles.
 // Aucune bibliothèque, aucun service externe. Utilisable dans le navigateur (window.RENOM_MARQUE) et dans Node (require).
 (function (racine) {
@@ -285,80 +285,179 @@
       for (let i = 0; i < d.length; i += 64) { s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; n++; } if (n) fond = s.map(v => Math.floor(v / n)); } catch (er) {}
     poserLogo(x, logo, k, droite, bas - Math.floor(hauteur / 2) - 10, hauteur, fond, 220);
   }
-  // textes : {texte_visuel, accroche, annonce: [..]} ; photo : image ou null ; logo : preparerLogo(...) ou null.
-  function dessiner(canvas, gabarit, { kit, nom, photo, logo, textes }) {
-    canvas.width = W; canvas.height = H; const x = canvas.getContext("2d"), k = kit;
-    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale, secondaire: k.couleurs.secondaire };
-    const titre = t => policeTitre(k, t), corps = (t, g = 500) => policeTexte(k, t, g), fond = rgb(c.fond), accent = rgb(c.accent);
-    x.clearRect(0, 0, W, H);
-    if (gabarit === "photo") { photoRect(x, photo, 0, 0, W, H); logoDiscret(x, logo, k, W - 48, H - 120, 52); return; }
-    if (gabarit === "plein") {
-      photoRect(x, photo, 0, 0, W, H);
-      const marge = 56, pad = 40, [pt, tt, lignes] = ajuste(x, textes.texte_visuel, titre, W - 2 * marge - 2 * pad, 84, 52, 3), pn = corps(26, 700);
-      const ht = lignes.length * Math.floor(tt * 1.12), ch = pad + 30 + 18 + ht + pad, y0 = H - 140 - ch - 1;
-      x.fillStyle = css(fond, 242 / 255); x.fillRect(marge, y0, W - 2 * marge + 1, ch + 1);
-      const ink = css(encreSur(fond, c)), gauche = poserLogo(x, logo, k, W - marge - pad, y0 + pad + 7, 46, fond, 240);
-      if (gauche === null || marge + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, marge + pad, y0 + pad - 6, pn, css(couleurLibelle(fond, c)));
-      let y = y0 + pad + 40; for (const l of lignes) { ecrire(x, l, marge + pad, y, pt, ink); y += Math.floor(tt * 1.12); }
-    } else if (gabarit === "editorial") {
-      const m = 56; x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
-      const ink = css(encreSur(fond, c)), pn = corps(24, 700), [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, W - 2 * m, 80, 48, 3), pp = corps(32, 500);
-      const petit = coupe(x, textes.accroche, pp, W - 2 * m).slice(0, 3), hT = lt.length * Math.floor(tt * 1.1), hP = petit.length * Math.floor(32 * 1.4);
-      const ph = H - 2 * m - (28 + 20 + hT + 24 + 2 + 22 + hP) - 32;
-      photoRect(x, photo, m, m, W - 2 * m, ph);
-      let y = m + ph + 32; const pl = couleurLibelle(fond, c), gauche = poserLogo(x, logo, k, W - m, y + 12, 44, fond, 240);
-      if (gauche === null || m + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, m, y, pn, css(pl));
-      y += 48; for (const l of lt) { ecrire(x, l, m, y, pt, ink); y += Math.floor(tt * 1.1); }
-      y += 48;
-      for (const l of petit) { ecrire(x, l, m, y, pp, ink); y += Math.floor(32 * 1.4); }
-    } else {
-      const m = 64, barre = 120; x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
-      const ink = css(encreSur(fond, c)), inkAcc = css(encreSur(accent, c)); x.fillStyle = css(accent); x.fillRect(0, 0, W, barre + 1);
-      const pn = corps(30, 700), gauche = poserLogo(x, logo, k, W - m, barre / 2, 64, accent, 300);
-      if (gauche === null || m + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, m, barre / 2 - 18, pn, inkAcc);
-      const [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, W - 2 * m, 120, 64, 4), pp = corps(36, 600);
-      const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche]).slice(0, 4).flatMap(t => coupe(x, t, pp, W - 2 * m));
-      const hT = lt.length * Math.floor(tt * 1.08), hI = info.length * Math.floor(36 * 1.5), photoH = H - barre - (56 + hT + 36 + hI + 40);
-      let y = barre + 56; for (const l of lt) { ecrire(x, l, m, y, pt, ink); y += Math.floor(tt * 1.08); }
-      y += 36; for (const l of info) { ecrire(x, l, m, y, pp, ink); y += Math.floor(36 * 1.5); }
-      photoRect(x, photo, 0, H - photoH, W, photoH);
+  // ---- Modèles 2026 (14/11/2026) : mêmes règles et mêmes nombres que moteur/gabarits.py (bloc_titre, voile, pastille_logo, vertical,
+  // gabarit_editorial, gabarit_annonce, gabarit_photo). Texte posé sur la photo avec un voile calculé, logo en pastille lisible, couleur
+  // principale en accent (anneau, pastille de texte, nom de l'éditorial), à plein champ dans l'annonce seulement.
+  // Pas encore ici : le recadrage « symbole » du logo (charte["logo_symbole"] côté moteur, pas encore une clé du kit).
+  const M4 = 72, DIAM = { plein: 150, photo: 100, editorial: 116, annonce: 176, story: 150 };
+  const encreClaire = k => { const f = rgb(k.couleurs.fond); return lum(f) >= 0.75 ? f : [255, 255, 255]; };
+  const teinteVoile = k => { const t = rgb(k.couleurs.texte); return lum(t) < 0.2 ? melange(t, [0, 0, 0], 600) : [14, 12, 12]; };
+  function clairDe(x, x0, y0, x1, y1) {
+    try {
+      x0 = Math.max(0, Math.round(x0)); y0 = Math.max(0, Math.round(y0)); x1 = Math.min(x.canvas.width, Math.round(x1)); y1 = Math.min(x.canvas.height, Math.round(y1));
+      if (x1 - x0 < 1 || y1 - y0 < 1) return [128, 128, 128];
+      const d = x.getImageData(x0, y0, x1 - x0, y1 - y0).data, w = x1 - x0, px = [];
+      for (let y = 4; y < y1 - y0; y += 8) for (let i = 4; i < w; i += 8) { const j = (y * w + i) * 4; px.push([d[j], d[j + 1], d[j + 2]]); }
+      if (!px.length) return [128, 128, 128];
+      px.sort((a, b) => lum(a) - lum(b)); return px[Math.min(px.length - 1, Math.floor(px.length * 9 / 10))];
+    } catch (er) { return [128, 128, 128]; }
+  }
+  function forceVoile(k, clair, cible = 3) {
+    const t = encreClaire(k), v = teinteVoile(k);
+    for (let i = 26; i < 83; i += 4) { const a = i / 100, m = clair.map((c, j) => Math.round(c * (1 - a) + v[j] * a)); if (contraste(t, m) >= cible) return a; }
+    return 0.82;
+  }
+  function voile(x, yDebut, yPlein, yFin, a, couleur) {
+    const lo = Math.max(0, Math.floor(Math.min(yDebut, yFin))), hi = Math.min(x.canvas.height - 1, Math.floor(Math.max(yDebut, yFin)));
+    for (let y = lo; y <= hi; y++) {
+      const t = yPlein !== yDebut ? (y - yDebut) / (yPlein - yDebut) : 1, al = a * Math.pow(Math.min(1, Math.max(0, t)), 1.6);
+      if (al > 0.003) { x.fillStyle = css(couleur, Math.round(al * 255) / 255); x.fillRect(0, y, x.canvas.width, 1); }
     }
   }
+  function ecrireOmbre(x, t, px, py, police, couleur, align = "left") {
+    x.save(); x.font = police; x.textAlign = align; x.textBaseline = "alphabetic";
+    x.shadowColor = "rgba(0,0,0,0.42)"; x.shadowBlur = 20; x.shadowOffsetY = 2; x.fillStyle = css(couleur); x.fillText(t, px, py); x.restore();
+  }
+  function texte(x, t, px, py, police, couleur, align = "left", base = "alphabetic") { x.save(); x.font = police; x.textAlign = align; x.textBaseline = base; x.fillStyle = css(couleur); x.fillText(t, px, py); x.restore(); }
+  function uneLigne(x, t, fab, largeur, tmax, tmin) {
+    t = String(t || "").trim(); if (!t) return [null, null, 0];
+    for (let s = tmax; s >= tmin; s -= 2) { x.font = fab(s); if (x.measureText(t).width <= largeur) return [fab(s), t, s]; }
+    x.font = fab(tmin);
+    for (let i = t.length - 1; i > 0; i--) if (",:;".includes(t[i]) && x.measureText(t.slice(0, i)).width <= largeur) return [fab(tmin), t.slice(0, i).trim(), tmin];
+    return [null, null, 0];
+  }
+  function ajusteTitre(x, t, fab, largeur, tmax, tmin, lmax) {
+    let [p, s, L] = ajuste(x, t, fab, largeur, tmax, tmin, lmax);
+    if (L.length === lmax && lmax > 2) { const [p2, s2, L2] = ajuste(x, t, fab, largeur, tmax, Math.round(tmax * 0.72), lmax - 1); x.font = p2; if (L2.length < lmax && L2.every(l => x.measureText(l).width <= largeur)) { p = p2; s = s2; L = L2; } }
+    if (L.length > 1) {
+      let bas = Math.floor(largeur * 0.4), haut = Math.floor(largeur); x.font = p;
+      const mots = t.split(/\s+/).filter(Boolean);
+      while (bas < haut) { const mi = Math.floor((bas + haut) / 2); if (coupe(x, t, p, mi).length <= L.length && mots.every(w => { x.font = p; return x.measureText(w).width <= mi; })) haut = mi; else bas = mi + 1; }
+      L = coupe(x, t, p, haut);
+    }
+    return [p, s, L];
+  }
+  // Logo prêt pour la pastille (comme gabarits.logo_pret) : un logo à fond plein perd les marges de son fond ; fond de pastille = son fond.
+  function logoPret(logo) {
+    if (!logo || typeof document === "undefined") return null;
+    if (logo._pret) return logo._pret;
+    const c = logo.canvas, w = c.width, h = c.height; let src = c, fond = null;
+    if (logo.opaque) {
+      const d = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data, px = (i, j) => { const k = (j * w + i) * 4; return [d[k], d[k + 1], d[k + 2]]; };
+      const coins = [px(1, 1), px(w - 2, 1), px(1, h - 2), px(w - 2, h - 2)]; fond = [0, 1, 2].map(i => Math.floor(coins.reduce((s, q) => s + q[i], 0) / 4));
+      const c0 = px(1, 1); let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const k = (j * w + i) * 4, e = Math.round(0.299 * Math.abs(d[k] - c0[0]) + 0.587 * Math.abs(d[k + 1] - c0[1]) + 0.114 * Math.abs(d[k + 2] - c0[2])); if (e > 24) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; } }
+      if (x1 >= 0) { const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.04); x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+        src = document.createElement("canvas"); src.width = x1 - x0 + 1; src.height = y1 - y0 + 1; src.getContext("2d").drawImage(c, x0, y0, src.width, src.height, 0, 0, src.width, src.height); }
+    }
+    logo._pret = { canvas: src, fond }; return logo._pret;
+  }
+  function formePastille(lg, diam) {
+    const r = lg.width / lg.height; if (r <= 1.6) return [diam, diam, true];
+    const h = Math.round(diam * 0.72), pad = Math.round(h * 0.2); return [Math.min(Math.round((h - 2 * pad) * r) + 2 * pad, Math.round(h * 3.4)), h, false];
+  }
+  function pastilleLogo(x, logo, k, cx, cy, diam, anneau) {
+    const p = logoPret(logo); if (!p) return null;
+    const lg = p.canvas, [w, h, rond] = formePastille(lg, diam), ep = anneau ? Math.max(3, Math.round(diam * 0.04)) : 0;
+    let fond = p.fond;
+    if (!fond) fond = [k.logo_fond, k.couleurs.fond, k.couleurs.texte].filter(estHexa).map(rgb).reduce((a, b) => contraste(b, logo.couleur) > contraste(a, logo.couleur) ? b : a);
+    const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h / 2);
+    const forme = (e) => { x.beginPath(); if (rond) x.arc(x0 + w / 2, y0 + h / 2, w / 2 - e, 0, 2 * Math.PI); else x.roundRect(x0 + e, y0 + e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2); };
+    x.save();
+    if (anneau) { forme(0); x.fillStyle = css(anneau); x.fill(); }
+    forme(ep); x.fillStyle = css(fond); x.fill(); x.clip();
+    const iw = w - 2 * ep, ih = h - 2 * ep; let r;
+    if (rond) r = iw * 0.92 / Math.hypot(lg.width, lg.height); else { const pad = Math.round(ih * 0.2); r = Math.min((ih - 2 * pad) / lg.height, (iw - 2 * pad) / lg.width); }
+    const lw = Math.max(1, Math.round(lg.width * r)), lh = Math.max(1, Math.round(lg.height * r));
+    x.drawImage(lg, x0 + Math.floor((w - lw) / 2), y0 + Math.floor((h - lh) / 2), lw, lh); x.restore();
+    return [x0, y0, x0 + w, y0 + h];
+  }
+  function pastilleTexte(x, k, px, yBas, t, taille = 30) {
+    const acc = rgb(k.couleurs.principale), c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, p = policeTexte(k, taille, 700); x.font = p;
+    const h = Math.round(taille * 1.75), w = Math.round(x.measureText(t).width) + 2 * Math.round(taille * 0.8);
+    x.fillStyle = css(acc); x.beginPath(); x.roundRect(px, yBas - h, w, h, h / 2); x.fill();
+    texte(x, t, px + w / 2, yBas - h / 2, p, encreSur(acc, c), "center", "middle");
+  }
+  function signature(x, logo, k, nom, px, py, diam, coin = "hg", anneau = true) {
+    const p = logoPret(logo);
+    if (p) { const [w, h] = formePastille(p.canvas, diam); const [cx, cy] = coin === "hg" ? [px + w / 2, py + h / 2] : [px - w / 2, py - h / 2]; return pastilleLogo(x, logo, k, cx, cy, diam, anneau ? rgb(k.couleurs.principale) : null); }
+    const s = Math.round(diam * 0.32), pol = policeTitre(k, s);
+    if (coin === "hg") ecrireOmbre(x, nom, px, py + s, pol, encreClaire(k)); else ecrireOmbre(x, nom, px, py, pol, encreClaire(k), "right");
+    return null;
+  }
+  // Titre (et sous-titre d'une ligne) posé sur la photo, voile calculé compris (comme gabarits.bloc_titre).
+  function blocTitre(x, k, textes, x0, x1, ancre, y, tmax, tmin, lmax = 3) {
+    const titre = t => policeTitre(k, t), corps = t => policeTexte(k, t, 600);
+    const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, titre, x1 - x0, tmax, tmin, lmax), lh = tt;
+    const [ps, st, ts] = uneLigne(x, textes.accroche, corps, x1 - x0, 36, 28);
+    const cap = Math.round(tt * 0.74), hT = cap + (lt.length - 1) * lh, hS = st ? ts + 26 : 0, past = textes.pastille, hP = past ? Math.round(30 * 1.75) + 26 : 0;
+    const haut = ancre === "bas" ? y - hS - hT - hP : y, bas = haut + hP + hT + hS;
+    const clair = clairDe(x, x0 - 20, haut - 20, x1 + 20, bas + 20), a = forceVoile(k, clair), v = teinteVoile(k);
+    if (ancre === "bas") voile(x, Math.max(0, haut - 320), haut, x.canvas.height, a, v); else voile(x, Math.min(x.canvas.height, bas + 320), bas, 0, a, v);
+    let yy = haut;
+    if (past) { pastilleTexte(x, k, x0, yy + Math.round(30 * 1.75), past); yy += hP; }
+    const ink = encreClaire(k); let yb = yy + cap;
+    for (const l of lt) { ecrireOmbre(x, l, x0, yb, pt, ink); yb += lh; }
+    if (st) { const sec = rgb(k.couleurs.secondaire), mix = clair.map((c, j) => Math.round(c * (1 - a) + v[j] * a)); ecrireOmbre(x, st, x0, yb - lh + hS, ps, contraste(sec, mix) >= 3 && chroma(sec) >= 40 ? sec : ink); }
+    return [haut, bas];
+  }
+  function vertical(x, k, nom, logo, textes, zone) {
+    const [x0, y0, x1] = zone, p = logoPret(logo), sh = p ? formePastille(p.canvas, DIAM.story)[1] : Math.round(DIAM.story * 0.32 * 1.2);
+    blocTitre(x, k, textes, x0, x1, "haut", y0 + 28 + sh + 30, 136, 64, 3);
+    signature(x, logo, k, nom, x0, y0 + 28, DIAM.story);
+  }
+  function annonce(x, k, nom, photo, logo, textes, W_, H_, x0, x1, haut, mini, plafond) {
+    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, acc = rgb(k.couleurs.principale), ink = encreSur(acc, c), diam = DIAM.annonce;
+    x.fillStyle = css(acc); x.fillRect(0, 0, W_, H_);
+    const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, t => policeTitre(k, t), x1 - x0, H_ === H ? 132 : 112, 64, 3), lh = Math.round(tt * 0.98);
+    const ts = H_ === H ? 36 : 34, pp = policeTexte(k, ts, 600), lhi = Math.round(ts * 1.4);
+    const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche || ""]).slice(0, 3).flatMap(t => coupe(x, t, pp, x1 - x0 - diam - 24)).filter(Boolean).slice(0, 4);
+    const cap = Math.round(tt * 0.74);
+    let basBloc = Math.max(mini, haut + cap + (lt.length - 1) * lh + (info.length ? 30 + info.length * lhi : 0) + 64 + Math.floor(diam / 3));
+    if (plafond) basBloc = Math.min(basBloc, plafond - Math.floor(diam / 2));
+    photoRect(x, photo, 0, basBloc, W_, H_ - basBloc);
+    let y = haut + cap; for (const l of lt) { texte(x, l, x0, y, pt, ink); y += lh; }
+    y += 30 - lh + lhi; for (const l of info) { texte(x, l, x0, y, pp, ink); y += lhi; }
+    const p = logoPret(logo);
+    if (p) { const [bw] = formePastille(p.canvas, diam); pastilleLogo(x, logo, k, x1 - bw / 2, basBloc, diam, rgb(k.couleurs.fond)); }
+    else texte(x, nom, x1, basBloc - 40, policeTitre(k, 44), ink, "right");
+  }
+  // textes : {texte_visuel, accroche, annonce: [..], pastille facultative} ; photo : image ou null ; logo : preparerLogo(...) ou null.
+  function dessiner(canvas, gabarit, { kit, nom, photo, logo, textes }) {
+    canvas.width = W; canvas.height = H; const x = canvas.getContext("2d", { willReadFrequently: true }), k = kit;
+    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, fond = rgb(c.fond), acc = rgb(k.couleurs.principale);
+    x.clearRect(0, 0, W, H);
+    if (gabarit === "photo") { photoRect(x, photo, 0, 0, W, H); if (logo) signature(x, logo, k, nom, W - 44, H - 44, DIAM.photo, "bd", false); return; }
+    if (gabarit === "plein") {
+      photoRect(x, photo, 0, 0, W, H);
+      blocTitre(x, k, textes, M4, W - M4, "bas", H - 84, 124, 64, 3);
+      if (!logo) voile(x, 230, 0, 0, 0.30, teinteVoile(k));
+      signature(x, logo, k, nom, M4 - 8, 56, DIAM.plein);
+    } else if (gabarit === "editorial") {
+      const m = 56, tete = 172, diam = DIAM.editorial, ink = encreSur(fond, c);
+      x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
+      const b = logo ? pastilleLogo(x, logo, k, W - m - diam / 2, tete / 2 + 4, diam, acc) : null, droite = b ? b[0] - 32 : W - m;
+      const [pn, , ln] = ajuste(x, nom, t => policeTitre(k, t), droite - m, 68, 36, 1);
+      texte(x, ln[0] || nom, m, tete / 2 + 4, pn, contraste(acc, fond) >= 3 ? acc : ink, "left", "middle");
+      const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, t => policeTitre(k, t), W - 2 * m, 84, 52, 2), lh = Math.round(tt * 1.02);
+      const [ps, st, ts] = uneLigne(x, textes.accroche, t => policeTexte(k, t, 500), W - 2 * m, 32, 26), cap = Math.round(tt * 0.74);
+      const basH = 40 + cap + (lt.length - 1) * lh + (st ? 24 + ts : 0) + 52, ph = H - tete - basH;
+      photoRect(x, photo, 0, tete, W, ph);
+      let y = tete + ph + 40 + cap; for (const l of lt) { texte(x, l, m, y, pt, ink); y += lh; }
+      if (st) texte(x, st, m, y - lh + 24 + ts, ps, ink.map((v, i) => Math.round(v * 0.78 + fond[i] * 0.22)));
+    } else annonce(x, k, nom, photo, logo, textes, W, H, M4, W - M4, 84, Math.round(H * 0.40), 0);
+  }
 
-  // ---- Visuel photo 9x16 (1080 x 1920, Reels et TikTok) : règles de moteur/gabarits.py (gabarit_plein, editorial_tiktok, annonce_tiktok) :
-  // photo pleine page, texte dans la zone lisible sous l'interface des réseaux (zone_tiktok : x 60 à 940, y 250 à 1440).
+  // ---- Visuel photo 9x16 (1080 x 1920, Reels et TikTok) : comme moteur/gabarits.py (vertical, gabarit_annonce, gabarit_photo en 9x16) :
+  // photo pleine page, texte, nom et logo dans la zone lisible sous l'interface des réseaux (zone_tiktok : x 60 à 940, y 250 à 1440).
   const H9 = 1920, ZONE9 = [60, 250, 940, 1440];
   function dessiner916(canvas, gabarit, { kit, nom, photo, logo, textes }) {
-    canvas.width = W; canvas.height = H9; const x = canvas.getContext("2d"), k = kit, [x0, yh, x1, yb] = ZONE9;
-    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale, secondaire: k.couleurs.secondaire };
-    const titre = t => policeTitre(k, t), corps = (t, g = 500) => policeTexte(k, t, g), fond = rgb(c.fond), accent = rgb(c.accent), ink = css(encreSur(fond, c));
-    x.clearRect(0, 0, W, H9); photoRect(x, photo, 0, 0, W, H9);
-    if (gabarit === "photo") { logoDiscret(x, logo, k, x1, yb, 56); return; }
-    if (gabarit === "plein") {
-      const pad = 40, [pt, tt, lignes] = ajuste(x, textes.texte_visuel, titre, x1 - x0 - 2 * pad, 92, 52, 3), pn = corps(26, 700);
-      const ch = pad + 30 + 18 + lignes.length * Math.floor(tt * 1.12) + pad, y0 = yb - ch - 1;
-      x.fillStyle = css(fond, 242 / 255); x.fillRect(x0, y0, x1 - x0, ch + 1);
-      const gauche = poserLogo(x, logo, k, x1 - pad, y0 + pad + 7, 46, fond, 240);
-      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, y0 + pad - 6, pn, css(couleurLibelle(fond, c)));
-      let y = y0 + pad + 40; for (const l of lignes) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.12); }
-    } else if (gabarit === "editorial") {
-      const pad = 44, larg = x1 - x0 - 2 * pad, pn = corps(24, 700), [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, larg, 80, 48, 3), pp = corps(32, 500);
-      const petit = coupe(x, textes.accroche, pp, larg).slice(0, 3), ch = pad + 28 + 20 + lt.length * Math.floor(tt * 1.1) + 24 + 2 + 22 + petit.length * Math.floor(32 * 1.4) + pad - 10, y0 = yb - ch - 1;
-      x.fillStyle = css(fond); x.fillRect(x0, y0, x1 - x0, yb - y0);
-      let y = y0 + pad; const gauche = poserLogo(x, logo, k, x1 - pad, y + 12, 44, fond, 220);
-      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, y, pn, css(couleurLibelle(fond, c)));
-      y += 48; for (const l of lt) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.1); }
-      y += 48; for (const l of petit) { ecrire(x, l, x0 + pad, y, pp, ink); y += Math.floor(32 * 1.4); }
-    } else {
-      const pad = 48, larg = x1 - x0 - 2 * pad, barre = 104, pn = corps(28, 700), [pt, tt, lt] = ajuste(x, textes.texte_visuel, titre, larg, 100, 60, 3), pp = corps(34, 600);
-      const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche]).slice(0, 4).flatMap(t => coupe(x, t, pp, larg)).slice(0, 5);
-      const corpsH = 40 + lt.length * Math.floor(tt * 1.08) + 28 + info.length * Math.floor(34 * 1.5) + 30;
-      x.fillStyle = css(accent); x.fillRect(x0, yh, x1 - x0, barre); x.fillStyle = css(fond); x.fillRect(x0, yh + barre, x1 - x0, corpsH);
-      const gauche = poserLogo(x, logo, k, x1 - pad, yh + barre / 2, 60, accent, 260);
-      if (gauche === null || x0 + pad + largeurNom(x, nom, pn) + 24 <= gauche) nomCommerce(x, nom, x0 + pad, yh + barre / 2 - 17, pn, css(encreSur(accent, c)));
-      let y = yh + barre + 40; for (const l of lt) { ecrire(x, l, x0 + pad, y, pt, ink); y += Math.floor(tt * 1.08); }
-      y += 28; for (const l of info) { ecrire(x, l, x0 + pad, y, pp, ink); y += Math.floor(34 * 1.5); }
-    }
+    canvas.width = W; canvas.height = H9; const x = canvas.getContext("2d", { willReadFrequently: true }), k = kit, [x0, yh, x1, yb] = ZONE9;
+    x.clearRect(0, 0, W, H9);
+    if (gabarit === "annonce") { annonce(x, k, nom, photo, logo, textes, W, H9, x0 + 12, x1, yh + 40, 0, yb); return; }
+    photoRect(x, photo, 0, 0, W, H9);
+    if (gabarit === "photo") { if (logo) signature(x, logo, k, nom, x1, yb, DIAM.photo, "bd", false); return; }
+    vertical(x, k, nom, logo, textes, ZONE9);
   }
 
   // ---------------------------------------------------------------- Écran du kit

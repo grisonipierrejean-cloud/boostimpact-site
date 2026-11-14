@@ -62,7 +62,7 @@
     const bloc = M.photoPublication(o) && o.visuel_url && avecTiktok ? `<section class="carte formats" aria-labelledby="formats-titre"><h2 id="formats-titre">${t("fmt.titre")}</h2>
         <div class="formats-rangee">${fig(o.visuel_url, t("fmt.alt.45"), t("fmt.res.45"), t("fmt.45"), "f45", "")}${fig(o.visuel_9x16_url, t("fmt.alt.916"), t("fmt.res.916"), t("fmt.916"), "f916", t("val.apercu.indispo"))}</div>
         <p class="note">${t("fmt.note")}</p></section>`
-      : `<section class="carte"><h2>${t("val.visuel")}</h2>${M.estIA(o) ? `<p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p>` : ""}${visuel}</section>`;
+      : `<section class="carte"><h2>${t("val.visuel")}</h2>${M.estIA(o) ? `<div class="bloc-ia"><p class="etiquette-ia" data-ia>${t("ia.etiquette")}</p><p class="note" data-ia-det>${t("ia.etiquette.det")}</p></div>` : ""}${visuel}</section>`;
     $("objet").innerHTML = `${bloc}
       <section class="carte"><h2>${t(seulGoogle ? "val.legende.google" : "val.legende.reseau")}</h2><ul class="legendes">${res.map(r => { const x = M.legendeDe(o, r); return `<li data-reseau="${r}"><span class="reseau">${R[r]}</span><p class="texte"${lc}>${e(x)}</p>${r === "google" && M.longueur(x) > M.LIMITE_GOOGLE ? `<p class="note">${t("val.trop.google")}</p>` : ""}</li>`; }).join("")}</ul>
         ${absents.map(r => `<p class="note" data-absent="${r}">${t("res.absent", { res: R[r] })}${r === "tiktok" ? (o.tiktok_demande_le ? ` <span data-tiktok-demande>${t("acc.act.tiktok.demande", { d: I.date(o.tiktok_demande_le) })}</span>` : ` <a href="${e(I.lien("index.html") + "#/comptes?tiktok")}" id="val-tiktok">${t("acc.act.tiktok")}</a>`) : ""}</p>`).join("")}
