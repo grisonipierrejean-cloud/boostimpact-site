@@ -1086,8 +1086,14 @@
     .sort((a, b) => String(b.cree_le).localeCompare(String(a.cree_le)));
   const coutIa = y => { const n = y.usd_estime == null || y.usd_estime === "" ? null : Number(y.usd_estime), fact = y.etat === "faite" || y.facture === "oui";
     return y.etat === "desactivee" ? "" : fact ? (n == null ? t("con.vic.cout.inconnu") : t("con.vic.cout", { x: usd(n) })) : y.facture === "possible" && n != null ? t("con.vic.cout.possible", { x: usd(n) }) : t("con.vic.cout.non"); };
+  // Accord vidéo IA du client (14/11/2026, CGV art. 11) : « Vidéo IA : accord donné le … » ou « pas d'accord », comme l'autorisation photos :
+  // case de l'équipe jamais précochée, admin_regler_accord_video_ia ; accord donné : « Retirer l'accord (demande du client) », avec confirmation.
+  // Sans accord, le moteur fait la vidéo sans IA (commerces.video_ia_accord_le, lue par moteur/video_ia.py).
+  const ligneAccordIa = c => !D.adminReglerAccordVideoIa ? "" : `<div class="pile serre via-ligne" id="client-via-ligne" data-via="${c.video_ia_accord_le ? "oui" : "non"}"><p class="fort">${c.video_ia_accord_le ? t("con.via.oui", { d: I.date(c.video_ia_accord_le) }) : t("con.via.non")}</p>
+    ${c.video_ia_accord_le ? `<p><button type="button" class="lien" id="via-retirer">${t("con.via.retirer")}</button></p>`
+    : `<label class="option"><input type="checkbox" id="via-accord"><span>${t("con.via.accord.equipe")}</span></label><div class="actions"><button type="button" class="bouton second petit" id="via-ok">${t("con.via.enregistrer")}</button></div>`}</div>`;
   const blocVideosIa = (c, jl) => { const l = videosIaDe(jl); if (!l.length && c.offre_id !== "premium") return "";
-    return `<section class="carte" id="client-videos-ia"><h2>${t("con.vic.titre")}</h2><p class="note">${t("con.vic.chapo")}</p>${!l.length ? `<p class="texte2" id="videos-ia-vide">${t("con.vic.vide")}</p>`
+    return `<section class="carte" id="client-videos-ia"><h2>${t("con.vic.titre")}</h2>${ligneAccordIa(c)}<p class="note">${t("con.vic.chapo")}</p>${!l.length ? `<p class="texte2" id="videos-ia-vide">${t("con.vic.vide")}</p>`
       : `<ul class="liste-ia">${l.slice(0, 12).map(j => { const y = j.detail.video_ia, et = ["faite", "plan_b", "desactivee"].includes(y.etat) ? y.etat : "plan_b", cout = coutIa(y);
         return `<li data-video-ia-client="${e(et)}"><span class="note">${dh(j.cree_le)}</span><span class="etat-dos${et === "faite" ? " etat-dos-fait" : ""}">${t("con.vic." + et, { m: motifIa(y.motif) || "?" })}</span>${cout ? `<span>${cout}</span>` : ""}</li>`; }).join("")}</ul>`}</section>`; };
   async function client(cid, ancre) {
@@ -1191,6 +1197,9 @@
     clic(vue, "[data-a=fiche-lieu]", () => D.adminFicheGoogleLieu(cid, $("fg-id").value), t("con.fg.ok"));
     clic(vue, "#ph-autoriser-ok-fiche", async () => { if (!$("ph-accord-fiche").checked) throw new Error(t("con.ph.accord.requis")); return D.adminAutoriserPhotos(cid, true); },
       r => t(r && r.etat === "deja" ? "con.ph.autorisee.deja" : "con.ph.autorisee.ok"));
+    clic(vue, "#via-ok", async () => { if (!$("via-accord").checked) throw new Error(t("con.via.requis")); return D.adminReglerAccordVideoIa(cid, true, true); },
+      r => t(r && r.etat === "deja" ? "con.via.ok.deja" : "con.via.ok"));
+    clic(vue, "#via-retirer", async () => { if (!window.confirm(t("con.via.retirer.confirmer"))) return ANNULE; return D.adminReglerAccordVideoIa(cid, false, false); }, t("con.via.ok.retire"));
     clic(vue, "[data-mc-enregistrer]", () => D.adminMetricoolMarque(cid, vue.querySelector("[data-mc]").value), t("con.mc.ok"));
     // Blocs « Photos » et « Contenus » (v52) : « C'est le logo », « Accepter quand même » (confirmation : la photo part sans contrôle) ; message sous
     // la photo (convention v48 : faire() redessine la fiche puis écrit près du bouton). Visuel absent ou illisible : l'icône à la place de l'image.

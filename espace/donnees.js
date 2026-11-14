@@ -16,7 +16,7 @@
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
   // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "2 novembre 2026, version 2";
+  const VERSION_CGV = "14 novembre 2026";   // 14/11/2026 : bloc « Accord vidéo IA et CGV du 14 novembre 2026 » (regler_delegation, même version)
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -72,6 +72,8 @@
   // Case de l'équipe (12/11/2026, admin_regler_whatsapp) : même phrase que la base.
   const PHRASE_WA_ACCORD_EQUIPE = "Cochez la case : le client doit avoir donné son accord pour recevoir ses alertes par WhatsApp.";
   const PHRASE_PHOTOS_ACCORD_EQUIPE = "Cochez la case : le client doit avoir donné son accord pour que BoostImpact utilise ses photos.";
+  // Accord vidéo IA noté par l'équipe (14/11/2026) : même phrase que admin_regler_accord_video_ia (schema.sql).
+  const PHRASE_VIA_ACCORD_EQUIPE = "Cochez la case : le client doit avoir donné son accord pour que ses photos soient animées par IA chez Higgsfield.";
   const whatsappActifDe = c => !!(c && c.whatsapp_numero && c.whatsapp_accord_le && (c.notifications || {}).whatsapp);
   // ---- Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : mêmes règles et mêmes phrases que la base.
   const MER = { SUJETS: ["mise_en_route", "google", "reseaux", "avis_sensible", "changement_offre"], CAS_FICHE: ["pas_de_fiche", "pas_a_mon_nom"],
@@ -646,7 +648,7 @@
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
       { point: "google", titre: "Donner à BoostImpact l'accès administrateur à votre fiche Google", aide: "Sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire.", declarable: true },
-      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Nous créons votre espace dans notre outil de programmation et vous envoyons un lien de connexion par email. Ouvrez-le dans les 3 jours et connectez vos réseaux ; s'il a expiré, répondez à notre email pour en recevoir un nouveau.", declarable: true },
+      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Nous créons votre espace dans notre outil de programmation. Pendant l'appel de démarrage, l'équipe vous envoie le lien de connexion par WhatsApp. Il est valable 71 heures (un peu moins de 3 jours) : ouvrez-le et connectez vos réseaux. S'il a expiré, demandez-en un nouveau à l'équipe sur WhatsApp.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
     ETATS: { a_faire: "À faire", declare: "Fait selon vous, BoostImpact vérifie", fait: "Fait" },
@@ -1034,6 +1036,10 @@
       },
       async adminAutoriserPhotos(cid, accord) { if (!accord) throw new Error(PHRASE_PHOTOS_ACCORD_EQUIPE); return ok(await sb.rpc("admin_autoriser_photos", { p_commerce: cid, p_accord: true })); },
       async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
+      // ---- Accord vidéo IA (14/11/2026) : interrupteur du commerçant (regler_accord_video_ia) et accord noté par l'équipe (admin_regler_accord_video_ia).
+      async reglerAccordVideoIa(oui) { const c = await self.commerce(), r = await sb.rpc("regler_accord_video_ia", { p_commerce: c.id, p_accord: !!oui }); if (r.error) throw new Error(r.error.message); cache = null; return r.data; },
+      async adminReglerAccordVideoIa(cid, donner, accordClient) { if (donner && !accordClient) throw new Error(PHRASE_VIA_ACCORD_EQUIPE);
+        return ok(await sb.rpc("admin_regler_accord_video_ia", { p_commerce: cid, p_donner: !!donner, p_accord_client: !!accordClient })); },
       async adminEnvoyerPhoto(cid, f, o = {}) {
         const k = await window.RENOM_ENVOI.controler(f); if (k.genre !== "photo") throw new Error(PHOTOS.PHRASES.format); if (k.raison) throw new Error(PHOTOS.PHRASES.lourde);
         const chemin = cid + "/" + (o.nom || window.RENOM_ENVOI.nomPhoto(f));

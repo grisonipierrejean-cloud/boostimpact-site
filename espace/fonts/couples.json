@@ -1,5 +1,5 @@
 {
- "_lisez_moi": "Liste FERMÉE des polices du kit de marque (moteur/marque.py, espace/web/marque.js, fonction SQL polices_marque()). Fichiers d'origine, non modifiés, tous sous SIL Open Font License 1.1 (relevé dans LICENCES.md). Copie exacte dans espace/web/fonts/couples.json (égalité testée). Ajouter une police : fichier ici ET dans espace/web/fonts/, licence relue et notée dans LICENCES.md, identifiant ajouté à polices_marque() dans schema.sql.",
+ "_lisez_moi": "Liste FERMÉE des polices du kit de marque (moteur/marque.py, espace/web/marque.js, fonction SQL polices_marque()). Fichiers d'origine, non modifiés, tous sous SIL Open Font License 1.1 (relevé dans LICENCES.md). Copie exacte dans espace/web/fonts/couples.json (égalité testée). Ajouter une police : fichier ici ET dans espace/web/fonts/, licence relue et notée dans LICENCES.md, identifiant ajouté à polices_marque() dans schema.sql. Clés facultatives d'une famille (14/11/2026, polices d'affiche) : titre_affiche (titres en grand, réglage « affiche » de moteur/gabarits.py, mêmes nombres dans espace/web/marque.js), majuscules (titre du visuel en capitales), capitale (hauteur de capitale en fraction du corps, 0.74 par défaut), interligne (multiplie l'interligne du titre, 1 par défaut). Sans ces clés, rendu inchangé.",
  "familles": {
   "bricolage": {"nom": "Bricolage Grotesque", "fichier": "bricolage.ttf", "axes": {"opsz": 48, "wdth": 100}, "graisse_titre": 800},
   "figtree": {"nom": "Figtree", "fichier": "figtree.ttf", "axes": {}, "graisse_titre": 800},
@@ -12,7 +12,11 @@
   "dmserif": {"nom": "DM Serif Display", "fichier": "dmserif.ttf", "axes": {}, "graisse_titre": 400},
   "manrope": {"nom": "Manrope", "fichier": "manrope.ttf", "axes": {}, "graisse_titre": 800},
   "fredoka": {"nom": "Fredoka", "fichier": "fredoka.ttf", "axes": {"wdth": 100}, "graisse_titre": 600},
-  "zillaslab": {"nom": "Zilla Slab", "fichier": "zillaslab.ttf", "axes": {}, "graisse_titre": 700}
+  "zillaslab": {"nom": "Zilla Slab", "fichier": "zillaslab.ttf", "axes": {}, "graisse_titre": 700},
+  "anton": {"nom": "Anton", "fichier": "anton.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "majuscules": true, "capitale": 0.86, "interligne": 1.02},
+  "shrikhand": {"nom": "Shrikhand", "fichier": "shrikhand.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.67, "interligne": 1.06},
+  "alfaslab": {"nom": "Alfa Slab One", "fichier": "alfaslab.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.78, "interligne": 1.06},
+  "caveatbrush": {"nom": "Caveat Brush", "fichier": "caveatbrush.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.66, "interligne": 0.96}
  },
  "textes": ["figtree", "dmsans", "nunito", "karla", "manrope"],
  "couples": [
@@ -23,10 +27,14 @@
   {"id": "raffine", "titres": "dmserif", "texte": "dmsans", "nom": "Raffiné", "en": "Refined", "nl": "Verfijnd"},
   {"id": "epure", "titres": "manrope", "texte": "manrope", "nom": "Épuré", "en": "Clean", "nl": "Strak"},
   {"id": "enjoue", "titres": "fredoka", "texte": "nunito", "nom": "Enjoué", "en": "Playful", "nl": "Speels"},
-  {"id": "bistrot", "titres": "zillaslab", "texte": "karla", "nom": "Bistrot", "en": "Bistro", "nl": "Bistro"}
+  {"id": "bistrot", "titres": "zillaslab", "texte": "karla", "nom": "Bistrot", "en": "Bistro", "nl": "Bistro"},
+  {"id": "affiche", "titres": "anton", "texte": "dmsans", "nom": "Affiche", "en": "Poster", "nl": "Affiche"},
+  {"id": "cantine", "titres": "shrikhand", "texte": "nunito", "nom": "Cantine", "en": "Canteen", "nl": "Kantine"},
+  {"id": "enseigne", "titres": "alfaslab", "texte": "karla", "nom": "Enseigne", "en": "Signage", "nl": "Uithangbord"},
+  {"id": "ardoise", "titres": "caveatbrush", "texte": "figtree", "nom": "Ardoise", "en": "Chalkboard", "nl": "Krijtbord"}
  ],
  "propositions": {
-  "restaurant": {"chaleureux": "chaleureux", "sobre": "elegant", "enjoue": "bistrot", "_": "franc"},
+  "restaurant": {"chaleureux": "chaleureux", "sobre": "elegant", "enjoue": "cantine", "_": "affiche"},
   "beaute": {"chaleureux": "elegant", "sobre": "raffine", "enjoue": "enjoue", "_": "raffine"},
   "sport": {"chaleureux": "energique", "sobre": "epure", "enjoue": "energique", "_": "energique"},
   "autre": {"chaleureux": "chaleureux", "sobre": "epure", "enjoue": "enjoue", "_": "franc"}

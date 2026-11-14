@@ -1337,3 +1337,17 @@ details.repliable.mer-reponses>summary h3{margin:0}
 .mer-rep dd{margin:2px 0 0;max-width:72ch}
 .mer-rep-texte{white-space:pre-line;overflow-wrap:anywhere}
 .guide-mer{display:flex;flex-direction:column;gap:4px}
+/* Vidéos animées par IA (14/11/2026) : interrupteur de l'accord, éteint par défaut. Case native gardée (role=switch, clavier, lecteur d'écran),
+   dessinée en piste : gris éteint, vert foncé allumé ; zone de toucher d'au moins 44 px ; aucun trait de couleur décoratif. */
+.video-ia-accord .texte2{max-width:62ch}
+.interrupteur{display:flex;align-items:center;gap:12px;min-height:48px;margin-top:4px;font-size:17px;font-weight:var(--graisse-moyenne);color:var(--encre);cursor:pointer}
+.interrupteur input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.interrupteur-piste{position:relative;flex:0 0 auto;width:52px;height:30px;border-radius:15px;background:var(--releve);border:1px solid var(--bord);transition:background-color .15s ease,border-color .15s ease}
+.interrupteur-piste::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1px solid var(--bord);transition:transform .15s ease}
+.interrupteur input:checked+.interrupteur-piste{background:var(--vert);border-color:var(--vert)}
+.interrupteur input:checked+.interrupteur-piste::after{transform:translateX(22px);border-color:var(--vert)}
+.interrupteur input:focus-visible+.interrupteur-piste{outline:2px solid var(--focus);outline-offset:2px}
+.interrupteur input:disabled+.interrupteur-piste{opacity:.6}
+.interrupteur-texte{min-width:0}
+@media (prefers-reduced-motion:reduce){.interrupteur-piste,.interrupteur-piste::after{transition:none}}
+.via-ligne .option{align-items:flex-start}

@@ -19,7 +19,8 @@
   // BoostImpact). Une direction = un modèle préféré (gabarit_prefere, varié 1 fois sur 3 par moteur/marque.choisir_gabarit) + un couple de polices
   // de couples.json. Seules ces clés changent ; la base contrôle le couple (fonction SQL couple_marque_valide, regler_ma_marque).
   const DIRECTIONS = ["photo", "magazine", "affiche"], GAB_DIRECTION = { photo: "plein", magazine: "editorial", affiche: "annonce" };
-  const COUPLES_DIRECTION = { restaurant: { magazine: "elegant", affiche: "bistrot" }, beaute: { magazine: "raffine", affiche: "epure" },
+  // 14/11/2026 : direction « affiche » d'un restaurant = couple « Affiche » (Anton en capitales, titres d'affiche) au lieu de « Bistrot ».
+  const COUPLES_DIRECTION = { restaurant: { magazine: "elegant", affiche: "affiche" }, beaute: { magazine: "raffine", affiche: "epure" },
     sport: { magazine: "epure", affiche: "franc" }, autre: { magazine: "elegant", affiche: "franc" } };
 
   // ---------------------------------------------------------------- Couleurs
@@ -195,7 +196,7 @@
     const r = await fetch(base + "fonts/couples.json", { cache: "no-cache" }); catalogue = await r.json();
     if (typeof FontFace === "function" && typeof document !== "undefined") {
       for (const [id, f] of Object.entries(catalogue.familles)) {
-        const variable = !["dmserif", "zillaslab"].includes(id);
+        const variable = !["dmserif", "zillaslab", "anton", "shrikhand", "alfaslab", "caveatbrush"].includes(id);   // fichiers statiques
         const ff = new FontFace("RM-" + id, `url(${base}fonts/${f.fichier})`, { weight: variable ? "100 1000" : String(f.graisse_titre), display: "swap" });
         document.fonts.add(ff);
       }
@@ -290,6 +291,32 @@
   // principale en accent (anneau, pastille de texte, nom de l'éditorial), à plein champ dans l'annonce seulement.
   // Pas encore ici : le recadrage « symbole » du logo (charte["logo_symbole"] côté moteur, pas encore une clé du kit).
   const M4 = 72, DIAM = { plein: 150, photo: 100, editorial: 116, annonce: 176, story: 150 };
+  // Taille des titres (14/11/2026) : mêmes nombres que moteur/gabarits.py (TAILLES, BLOC_AFFICHE). « affiche » pour une famille marquée
+  // titre_affiche dans couples.json (Anton, Shrikhand, Alfa Slab One, Caveat Brush) : corps borné par la hauteur du bloc (55 % de la largeur).
+  const TAILLES = {
+    normal: { plein: [124, 64, 3], vertical: [136, 64, 3], annonce: [132, 64, 3], annonce916: [112, 64, 3], editorial: [84, 52, 2] },
+    affiche: { plein: [240, 84, 4], vertical: [240, 84, 4], annonce: [240, 84, 4], annonce916: [220, 80, 4], editorial: [120, 60, 2] } };
+  const BLOC_AFFICHE = 0.55, PONCTUATION_HAUTE = ["?", "!", ":", ";", "»"];
+  const familleTitres = k => (catalogue && catalogue.familles[k.police_titres]) || {};
+  const echelle = k => familleTitres(k).titre_affiche ? "affiche" : "normal";
+  const tailles = (k, m) => TAILLES[echelle(k)][m];
+  const texteTitre = (k, t) => familleTitres(k).majuscules ? String(t || "").toUpperCase() : String(t || "");
+  const capitale = k => familleTitres(k).capitale ?? 0.74, interligne = k => familleTitres(k).interligne ?? 1;
+  const bornes = (k, largeurImage = W) => ({ hmax: echelle(k) === "affiche" ? Math.round(BLOC_AFFICHE * largeurImage) : 0, cap: capitale(k), il: interligne(k) });
+  // Unités insécables du titre (comme gabarits.groupes) : mot d'une ou deux lettres soudé au suivant, ponctuation isolée soudée au précédent.
+  function groupes(t) {
+    const g = [];
+    for (const m of String(t || "").split(/\s+/).filter(Boolean)) {
+      const der = g.length ? g[g.length - 1].split(" ").pop() : "";
+      if (g.length && (PONCTUATION_HAUTE.includes(m) || (der.length <= 2 && /^\p{L}+$/u.test(der)))) g[g.length - 1] += " " + m; else g.push(m);
+    }
+    return g;
+  }
+  function coupeGroupes(x, G, police, largeur) {
+    x.font = police; const l = []; let cur = "";
+    for (const mot of G) { const t = (cur + " " + mot).trim(); if (x.measureText(t).width <= largeur) cur = t; else { if (cur) l.push(cur); cur = mot; } }
+    if (cur) l.push(cur); return l;
+  }
   const encreClaire = k => { const f = rgb(k.couleurs.fond); return lum(f) >= 0.75 ? f : [255, 255, 255]; };
   const teinteVoile = k => { const t = rgb(k.couleurs.texte); return lum(t) < 0.2 ? melange(t, [0, 0, 0], 600) : [14, 12, 12]; };
   function clairDe(x, x0, y0, x1, y1) {
@@ -326,14 +353,21 @@
     for (let i = t.length - 1; i > 0; i--) if (",:;".includes(t[i]) && x.measureText(t.slice(0, i)).width <= largeur) return [fab(tmin), t.slice(0, i).trim(), tmin];
     return [null, null, 0];
   }
-  function ajusteTitre(x, t, fab, largeur, tmax, tmin, lmax) {
-    let [p, s, L] = ajuste(x, t, fab, largeur, tmax, tmin, lmax);
-    if (L.length === lmax && lmax > 2) { const [p2, s2, L2] = ajuste(x, t, fab, largeur, tmax, Math.round(tmax * 0.72), lmax - 1); x.font = p2; if (L2.length < lmax && L2.every(l => x.measureText(l).width <= largeur)) { p = p2; s = s2; L = L2; } }
+  // Comme gabarits.ajuste_titre : unités insécables, plus grand corps qui tient ; « normal » : une ligne de moins à 72 % ; « affiche » (o.hmax) :
+  // bloc (cap x corps + (lignes - 1) x il x corps) dans hmax ; puis lignes équilibrées.
+  function ajusteTitre(x, t, fab, largeur, tmax, tmin, lmax, o = {}) {
+    const G = groupes(t), cap = o.cap ?? 0.74, il = o.il ?? 1;
+    const essai = (a, b, n, borne) => {
+      for (let s = a; s >= b; s -= 2) { const q = fab(s), M = coupeGroupes(x, G, q, largeur); x.font = q;
+        if (M.length <= n && M.every(l => x.measureText(l).width <= largeur) && (!borne || Math.round(s * cap) + (M.length - 1) * Math.round(s * il) <= borne)) return [q, s, M]; }
+      const q = fab(b); return [q, b, coupeGroupes(x, G, q, largeur)];
+    };
+    let [p, s, L] = essai(tmax, tmin, lmax, o.hmax);
+    if (!o.hmax && L.length === lmax && lmax > 2) { const [p2, s2, L2] = essai(tmax, Math.round(tmax * 0.72), lmax - 1, 0); x.font = p2; if (L2.length < lmax && L2.every(l => x.measureText(l).width <= largeur)) { p = p2; s = s2; L = L2; } }
     if (L.length > 1) {
       let bas = Math.floor(largeur * 0.4), haut = Math.floor(largeur); x.font = p;
-      const mots = t.split(/\s+/).filter(Boolean);
-      while (bas < haut) { const mi = Math.floor((bas + haut) / 2); if (coupe(x, t, p, mi).length <= L.length && mots.every(w => { x.font = p; return x.measureText(w).width <= mi; })) haut = mi; else bas = mi + 1; }
-      L = coupe(x, t, p, haut);
+      while (bas < haut) { const mi = Math.floor((bas + haut) / 2); if (coupeGroupes(x, G, p, mi).length <= L.length && G.every(w => { x.font = p; return x.measureText(w).width <= mi; })) haut = mi; else bas = mi + 1; }
+      L = coupeGroupes(x, G, p, haut);
     }
     return [p, s, L];
   }
@@ -388,9 +422,9 @@
   // Titre (et sous-titre d'une ligne) posé sur la photo, voile calculé compris (comme gabarits.bloc_titre).
   function blocTitre(x, k, textes, x0, x1, ancre, y, tmax, tmin, lmax = 3) {
     const titre = t => policeTitre(k, t), corps = t => policeTexte(k, t, 600);
-    const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, titre, x1 - x0, tmax, tmin, lmax), lh = tt;
+    const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), titre, x1 - x0, tmax, tmin, lmax, bornes(k, x.canvas.width)), lh = Math.round(tt * interligne(k));
     const [ps, st, ts] = uneLigne(x, textes.accroche, corps, x1 - x0, 36, 28);
-    const cap = Math.round(tt * 0.74), hT = cap + (lt.length - 1) * lh, hS = st ? ts + 26 : 0, past = textes.pastille, hP = past ? Math.round(30 * 1.75) + 26 : 0;
+    const cap = Math.round(tt * capitale(k)), hT = cap + (lt.length - 1) * lh, hS = st ? ts + (echelle(k) === "affiche" ? Math.round(tt * 0.32) : 26) : 0, past = textes.pastille, hP = past ? Math.round(30 * 1.75) + 26 : 0;
     const haut = ancre === "bas" ? y - hS - hT - hP : y, bas = haut + hP + hT + hS;
     const clair = clairDe(x, x0 - 20, haut - 20, x1 + 20, bas + 20), a = forceVoile(k, clair), v = teinteVoile(k);
     if (ancre === "bas") voile(x, Math.max(0, haut - 320), haut, x.canvas.height, a, v); else voile(x, Math.min(x.canvas.height, bas + 320), bas, 0, a, v);
@@ -403,16 +437,16 @@
   }
   function vertical(x, k, nom, logo, textes, zone) {
     const [x0, y0, x1] = zone, p = logoPret(logo), sh = p ? formePastille(p.canvas, DIAM.story)[1] : Math.round(DIAM.story * 0.32 * 1.2);
-    blocTitre(x, k, textes, x0, x1, "haut", y0 + 28 + sh + 30, 136, 64, 3);
+    blocTitre(x, k, textes, x0, x1, "haut", y0 + 28 + sh + 30, ...tailles(k, "vertical"));
     signature(x, logo, k, nom, x0, y0 + 28, DIAM.story);
   }
   function annonce(x, k, nom, photo, logo, textes, W_, H_, x0, x1, haut, mini, plafond) {
     const c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, acc = rgb(k.couleurs.principale), ink = encreSur(acc, c), diam = DIAM.annonce;
     x.fillStyle = css(acc); x.fillRect(0, 0, W_, H_);
-    const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, t => policeTitre(k, t), x1 - x0, H_ === H ? 132 : 112, 64, 3), lh = Math.round(tt * 0.98);
+    const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), t => policeTitre(k, t), x1 - x0, ...tailles(k, H_ === H ? "annonce" : "annonce916"), bornes(k, W_)), lh = Math.round(tt * 0.98 * interligne(k));
     const ts = H_ === H ? 36 : 34, pp = policeTexte(k, ts, 600), lhi = Math.round(ts * 1.4);
     const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche || ""]).slice(0, 3).flatMap(t => coupe(x, t, pp, x1 - x0 - diam - 24)).filter(Boolean).slice(0, 4);
-    const cap = Math.round(tt * 0.74);
+    const cap = Math.round(tt * capitale(k));
     let basBloc = Math.max(mini, haut + cap + (lt.length - 1) * lh + (info.length ? 30 + info.length * lhi : 0) + 64 + Math.floor(diam / 3));
     if (plafond) basBloc = Math.min(basBloc, plafond - Math.floor(diam / 2));
     photoRect(x, photo, 0, basBloc, W_, H_ - basBloc);
@@ -430,7 +464,7 @@
     if (gabarit === "photo") { photoRect(x, photo, 0, 0, W, H); if (logo) signature(x, logo, k, nom, W - 44, H - 44, DIAM.photo, "bd", false); return; }
     if (gabarit === "plein") {
       photoRect(x, photo, 0, 0, W, H);
-      blocTitre(x, k, textes, M4, W - M4, "bas", H - 84, 124, 64, 3);
+      blocTitre(x, k, textes, M4, W - M4, "bas", H - 84, ...tailles(k, "plein"));
       if (!logo) voile(x, 230, 0, 0, 0.30, teinteVoile(k));
       signature(x, logo, k, nom, M4 - 8, 56, DIAM.plein);
     } else if (gabarit === "editorial") {
@@ -439,8 +473,8 @@
       const b = logo ? pastilleLogo(x, logo, k, W - m - diam / 2, tete / 2 + 4, diam, acc) : null, droite = b ? b[0] - 32 : W - m;
       const [pn, , ln] = ajuste(x, nom, t => policeTitre(k, t), droite - m, 68, 36, 1);
       texte(x, ln[0] || nom, m, tete / 2 + 4, pn, contraste(acc, fond) >= 3 ? acc : ink, "left", "middle");
-      const [pt, tt, lt] = ajusteTitre(x, textes.texte_visuel, t => policeTitre(k, t), W - 2 * m, 84, 52, 2), lh = Math.round(tt * 1.02);
-      const [ps, st, ts] = uneLigne(x, textes.accroche, t => policeTexte(k, t, 500), W - 2 * m, 32, 26), cap = Math.round(tt * 0.74);
+      const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), t => policeTitre(k, t), W - 2 * m, ...tailles(k, "editorial"), { ...bornes(k), hmax: 0 }), lh = Math.round(tt * 1.02 * interligne(k));
+      const [ps, st, ts] = uneLigne(x, textes.accroche, t => policeTexte(k, t, 500), W - 2 * m, 32, 26), cap = Math.round(tt * capitale(k));
       const basH = 40 + cap + (lt.length - 1) * lh + (st ? 24 + ts : 0) + 52, ph = H - tete - basH;
       photoRect(x, photo, 0, tete, W, ph);
       let y = tete + ph + 40 + cap; for (const l of lt) { texte(x, l, m, y, pt, ink); y += lh; }

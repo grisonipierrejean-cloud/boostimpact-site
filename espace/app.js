@@ -125,7 +125,9 @@
     // Fiche Google du client venu du site et photos hors sujet (28/10/2026, bloc SQL du même nom)
     "FICHE_GOOGLE_LIEN", "FICHE_GOOGLE_IDENTIFIEE", "FICHE_GOOGLE_A_IDENTIFIER", "PHOTO_HORS_SUJET",
     // Fiches Google reliées automatiquement (02/11/2026, relier_fiche_google)
-    "FICHE_RELIEE"]);
+    "FICHE_RELIEE",
+    // Accord vidéo IA (14/11/2026, bloc SQL « Accord vidéo IA et CGV du 14 novembre 2026 »)
+    "VIDEO_IA_ACCORDEE", "VIDEO_IA_RETIREE", "VIDEO_IA_ACCORD_PAR_EQUIPE"]);
   const ST_ABO = I.carte("abo.st", ["en_attente", "actif", "impaye", "resilie"]);
   const M = window.RENOM_MAJ;
   // Exemple de numéro selon le pays du commerce (31/10/2026, test client Premium belge) : +32 470 12 34 56 en Belgique, +33 6 12 34 56 78 sinon.
@@ -1085,11 +1087,12 @@
       </div>
       ${pleinG && incitationCroissance(c) ? `<section class="carte plafond-essentiel" id="plafond-essentiel"><p class="texte2">${t("photos.plafond.croissance")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="plafond-offre">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>` : ""}
       ${sansVideo && !g ? `<p class="note" id="videos-premium">${t("photos.video.premium")} <a href="#/offre?dessus=premium">${t("photos.video.premium.lien")}</a></p>` : ""}
-      ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p></div>
+      ${autorisationAJour(c) ? `<p class="note" id="autorisation-donnee">${t(autorisationGoogle(c) ? "aut.donnee.google" : "aut.donnee", { d: date(c.photos_autorisees_le) })}</p>` : carteAutorisation(c)}<p class="msg" id="msg-aut" role="status"></p>${carteVideoIa(c)}</div>
       ${aVideo ? `<div class="pile" id="vue-video"${enVideo ? "" : " hidden"}>${htmlDv}${htmlVa}</div>` : ""}`;
     const chapo = vue.querySelector(".entete .chapo"); if (chapo) chapo.hidden = enVideo;   // vue Vidéo : la carte vidéo a son propre chapeau, elle vient tout de suite
     if (phVueVideo !== null && phVueVideo !== enVideo) window.scrollTo(0, 0); phVueVideo = enVideo;
     brancherAutorisation(photos);
+    brancherVideoIa(photos);
     // Deux façons de choisir (appareil photo, galerie ou fichiers de l'ordinateur) ; l'envoi reste le même pour les deux.
     // 31/10/2026 (test client) : les photos choisies se voient (miniature 48 px, date de prise), se retirent une à une, et une photo déjà envoyée
     // (même fichier, voir NOM_GENERIQUE) est signalée avant l'envoi.
@@ -1710,6 +1713,23 @@
       <h2 id="aut-titre">${t("aut.titre")}</h2><p class="texte2">${t("aut.chapo")}</p>
       <form id="aut-f" novalidate><label class="option consentement"><input id="aut-case" type="checkbox"><span>${t(sansReseaux(c) ? "aut.case.google" : "aut.case", { comptes: I.liste(ORDRE_RES.filter(x => x !== "google" && window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => RES[x])) })}</span></label>
       <div class="actions"><button type="submit" class="bouton second" id="aut-ok">${t("aut.enregistrer")}</button></div><p class="msg" id="aut-msg" role="status"></p></form></section>`;
+  // Vidéos animées par IA (décision de PJ du 14/11/2026, CGV art. 11, version du 14 novembre 2026) : Premium seulement. La vidéo IA passe par
+  // Higgsfield, dont les conditions (23/10/2026, art. 4.4) permettent d'entraîner ses modèles sur les photos reçues ; d'où un accord à part,
+  // interrupteur éteint par défaut (commerces.video_ia_accord_le null), donné ou retiré ici à tout moment (D.reglerAccordVideoIa, fonction
+  // regler_accord_video_ia : date et journal VIDEO_IA_ACCORDEE / VIDEO_IA_RETIREE). Sans accord, le moteur monte la vidéo sans IA.
+  const avecVideoIa = c => !!c && c.offre_id === "premium" && !!D.reglerAccordVideoIa;
+  const carteVideoIa = c => !avecVideoIa(c) ? "" : `<section class="carte video-ia-accord" id="video-ia-accord" aria-labelledby="via-titre">
+      <h2 id="via-titre">${t("via.titre")}</h2>
+      ${["via.p1", "via.p2", "via.p3"].map(k => `<p class="texte2">${t(k)}</p>`).join("")}
+      <label class="interrupteur" for="via-case"><input id="via-case" type="checkbox" role="switch" aria-describedby="via-etat"${c.video_ia_accord_le ? " checked" : ""}><span class="interrupteur-piste" aria-hidden="true"></span><span class="interrupteur-texte">${t("via.case")}</span></label>
+      <p class="note" id="via-etat" data-via-etat="${c.video_ia_accord_le ? "oui" : "non"}">${c.video_ia_accord_le ? t("via.oui", { d: date(c.video_ia_accord_le) }) : t("via.non")}</p>
+      <p class="note">${t("via.cgv")}</p><p class="msg" id="via-msg" role="status"></p></section>`;
+  function brancherVideoIa(apres) {
+    const k = $("via-case"); if (!k) return;
+    k.onchange = async () => { const oui = k.checked; k.disabled = true;
+      try { const r = await D.reglerAccordVideoIa(oui); await apres(); const m = $("via-msg"); if (m) m.textContent = t(oui ? (r && r.etat === "deja" ? "via.merci.deja" : "via.merci") : "via.retire"); const k2 = $("via-case"); if (k2) k2.focus(); }
+      catch (er) { k.checked = !oui; k.disabled = false; $("via-msg").textContent = ph(er.message); } };
+  }
   function brancherAutorisation(apres) {
     const f = $("aut-f"); if (!f) return;
     f.onsubmit = async ev => { ev.preventDefault();
