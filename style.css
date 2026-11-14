@@ -807,3 +807,37 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
   .wa-lien{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;color:#fff;font-size:var(--t-corps);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
   .wa-lien svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
 }
+/* 14/11/2026 : Visibilité IA mise en avant. Une phrase sous les boutons du premier écran, et la carte de l'option en tête des options, sur fond encre. */
+#haut .haut-ia{display:flex;flex-direction:column;gap:6px;width:100%;max-width:40ch;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.22);color:var(--blanc);text-decoration:none;font-size:var(--t-corps);line-height:1.45}
+#haut .haut-ia-q{color:rgba(255,255,255,.86)}
+#haut .haut-ia-lien{font-weight:var(--graisse-moyenne);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+#haut .haut-ia:hover .haut-ia-lien{text-decoration-thickness:2px}
+@media (min-width:1040px){#haut .haut-ia{max-width:46ch;margin-top:28px;font-size:var(--t-1)}}
+.option-vedette{background:var(--encre);color:var(--blanc);border-color:var(--encre);--trait:rgba(255,255,255,.22);scroll-margin-top:96px}
+.option-vedette .option-tete h4{color:var(--blanc);font-size:var(--t-4);line-height:1.1}
+.option-vedette .vedette-accroche{margin:8px 0 4px;font-size:var(--t-1);line-height:1.4;color:var(--blanc)}
+.option-vedette .option-prix,.option-vedette .option-seo{color:var(--blanc)}
+.option-vedette .option-seo{color:rgba(255,255,255,.78);font-weight:var(--graisse-texte)}
+.option-vedette .inclus li{color:rgba(255,255,255,.9)}
+.option-preuve{display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.22)}
+.option-preuve-titre{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-size:var(--t-3);line-height:1.15;letter-spacing:var(--a-titre);color:var(--blanc)}
+.option-preuve p:not(.option-preuve-titre){font-size:var(--t-corps);line-height:1.55;color:rgba(255,255,255,.86)}
+.option-actions{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.option-actions .btn{width:100%}
+.option-audit{display:inline-flex;align-items:center;min-height:44px;color:var(--blanc);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.option-audit:hover{text-decoration-thickness:2px}
+@media (min-width:760px){
+  .options-liste{grid-template-columns:minmax(0,1fr)}
+  .option{display:grid;grid-template-rows:none;grid-row:auto;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:48px;row-gap:20px;align-items:start}
+  .option>.option-tete{grid-column:1;grid-row:1}
+  .option>.inclus{grid-column:2;grid-row:1 / span 3}
+  .option>.btn{grid-column:1;grid-row:2;align-self:start;width:auto;justify-self:start}
+  .option-vedette{padding:40px 36px}
+  .option-vedette>.option-preuve{grid-column:1;grid-row:2}
+  .option-vedette>.option-actions{grid-column:1;grid-row:3;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 24px}
+  .option-vedette>.option-actions .btn{width:auto}
+}
+@media (min-width:1040px){
+  .option-vedette{padding:48px 48px}
+  .option-vedette .option-tete h4{font-size:var(--t-5)}
+}
