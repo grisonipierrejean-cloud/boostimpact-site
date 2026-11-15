@@ -599,11 +599,26 @@
   // Après l'entrée (mot de passe, lien de démonstration) : la console pour l'administrateur, l'accueil pour le commerçant. Une session encore sans
   // mot de passe revient ici et rendre() montre le choix du mot de passe.
   const apresEntree = async () => { if (await D.estAdmin()) location.href = I.lien("console.html"); else aller("accueil"); };
+  // Lot 5 B (revue Karim et Sophie : on arrivait sur un formulaire, « La Table d'exemple » deux fois, aucune offre nommée) : en démonstration, les
+  // boutons de visite d'abord, UN par commerce, nommés par offre (« Essentiel », « Croissance », « Premium ») ou « Nouveau client » (démarrage pas
+  // fini) ; le formulaire de connexion replié dessous. Deux comptes du même commerce (restaurant@ et premium@) : un seul bouton, celui nommé par l'offre.
+  const PAR_OFFRE = /^(essentiel|croissance|premium|nouveau)@/, ORDRE_VISITE = ["essentiel", "standard", "premium"];
+  const visitesDemo = l => { const vus = new Map();
+    l.filter(x => x.role !== "administrateur").forEach(x => { const k = x.commerce_id || x.email, d = vus.get(k); if (!d || (PAR_OFFRE.test(x.email) && !PAR_OFFRE.test(d.email))) vus.set(k, x); });
+    const rang = x => x.nouveau ? 10 : ORDRE_VISITE.includes(x.offre) ? ORDRE_VISITE.indexOf(x.offre) : 5;
+    return [...vus.values()].sort((a, b) => rang(a) - rang(b)).concat(l.filter(x => x.role === "administrateur")); };
+  const libVisite = x => x.role === "administrateur" ? t("cx.console.exploitant") : x.nouveau ? t("cx.visite.nouveau") : x.offre ? e(I.offre(x.offre)) : e(x.commerce || x.email);
   async function connexion() {
     const comptesDemo = D.mode === "demo" && D.comptesDemo ? await D.comptesDemo() : [];
-    ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t("cx.chapo"), apres: apresEntree,
-      extra: comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
-      <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "",
+    // Démonstration publique (/demo/, config.js : window.RENOM_DEMO_ENTREE = "visite", écrit par outils/demo_espace.py) : visites d'abord, une par
+    // offre, formulaire replié. Démonstration locale (tests, recette) : l'écran d'avant, formulaire ouvert et un bouton par compte dessous.
+    const visite = comptesDemo.length > 0 && window.RENOM_DEMO_ENTREE === "visite";
+    const boutonsDemo = l => `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t(visite ? "cx.visite" : "cx.visite.directe")}</p>${l.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}"${c.offre && !c.nouveau ? ` data-offre="${e(c.offre)}"` : ""}>${visite ? libVisite(c) : c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>`;
+    const noteDemo = comptesDemo.length ? `<p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "";
+    ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t(visite ? "cx.chapo.demo" : "cx.chapo"), apres: apresEntree,
+      avant: visite ? boutonsDemo(visitesDemo(comptesDemo)) : "",
+      replier: visite ? t("cx.avec.compte") : "",
+      extra: visite ? noteDemo : comptesDemo.length ? boutonsDemo(comptesDemo) + noteDemo : "",
       // Lot 1 (15/11/2026) : retour au site dans la langue de l'espace (/en/, /nl/), le site français sinon.
       pied: `<p class="retour"><a href="${{ en: "../en/", nl: "../nl/" }[I.langue] || "../"}">${t("cx.retour.site")}</a></p>` });
   }
@@ -629,13 +644,20 @@
   const photosRefusees = l => (l || []).filter(x => x.statut === "refusee" && x.refus_motif !== "plafond" && x.refus_motif !== "logo").length;   // un logo reconnu (motif « logo ») n'est pas un refus : il sert de logo
   // Lot 3 (15/11/2026) : réponses aux 5 questions, comptées comme dans la console (window.RENOM_ETAPES, donnees.js) ; la 6e, facultative, n'y entre pas.
   const nbReponsesClient = c => window.RENOM_ETAPES.nbReponses(c.demarrage);
-  const lignesDossierClient = (c, p) => { const n = photosUtilisables(p), r = photosRefusees(p), wa = whatsappActif(c);
+  const dossierClient = (c, p) => { const n = photosUtilisables(p), r = photosRefusees(p), wa = whatsappActif(c);
     return [{ k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
       { k: "photos", fait: n >= PHOTOS_DEMARRAGE, href: "#/photos", v: { n, m: PHOTOS_RECO }, court: r ? t("photos.refusee.etape", { n: r }) : "" },
-      { k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/demarrage" }].map(x =>
+      { k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/demarrage" }]; };
+  // Lot 5 B (revue design : « 3 choses à faire maintenant » au-dessus de 5 lignes « À faire », puis un 2e bloc « À faire maintenant ») : nombre de
+  // lignes « À faire » de la carte de mise en route (points de la base, sauf la fiche Google demandée, et lignes du dossier).
+  const nAFaireMer = (mr, c, p) => ((mr && mr.points) || []).filter(x => x.etat === "a_faire" && !(x.point === "google" && ficheDemandee(c))).length
+    + ((mr && mr.points) || []).some(x => x.point === "google") * dossierClient(c, p).filter(x => !x.fait).length;
+  const lignesDossierClient = (c, p) => dossierClient(c, p).map(x =>
       `<li data-dossier="${x.k}"><div><p class="fort">${t("acc.dos." + x.k, x.v)}</p>${x.fait ? "" : `<p class="note">${x.court || t("acc.dos." + x.k + ".court", x.v)}</p>`}</div>
-        <div class="pile serre etape-etat"><span class="etat${x.fait ? " actif" : ""}">${x.fait ? ETATS_MR.fait : ETATS_MR.a_faire}</span>${x.fait ? "" : `<a class="bouton second petit" href="${x.href}">${t("acc.dos.voir")}</a>`}</div></li>`).join(""); };
-  function blocMiseEnRoute(mr, c, photosL) {
+        <div class="pile serre etape-etat"><span class="etat${x.fait ? " actif" : ""}">${x.fait ? ETATS_MR.fait : ETATS_MR.a_faire}</span>${x.fait ? "" : `<a class="bouton second petit" href="${x.href}">${t("acc.dos.voir")}</a>`}</div></li>`).join("");
+  // o.afaire (lot 5 B, accueil) : la carte est LE bloc « À faire maintenant » (titre), sa ligne « Votre mise en route, a sur b » en dessous, et
+  // o.extra (les autres actions de l'accueil) sous ses lignes.
+  function blocMiseEnRoute(mr, c, photosL, o = {}) {
     if (!mr || !mr.points || mr.faits >= mr.total) return "";
     // Plus rien à faire par le commerçant (points déclarés, en vérification par l'équipe) : la phrase de l'accueil suffit.
     if (mr.points.every(x => x.etat !== "a_faire" || (x.point === "google" && ficheDemandee(c)))) return "";
@@ -643,7 +665,8 @@
     const lib = Object.fromEntries(AU.AUTO.POINTS.map(x => [x.point, { ...x, titre: I.a("mer.titre." + x.point) ? t("mer.titre." + x.point) : x.titre }]));
     // Lot 3 : le titre compte les lignes de la liste (points de la base + autorisation, photos, WhatsApp), comme la console (window.RENOM_ETAPES).
     const EM = window.RENOM_ETAPES.etapes(c, mr.points, photosL);
-    return `<section class="carte mise-en-route" id="mise-en-route" aria-labelledby="mer-titre"><div class="carte-tete"><h2 id="mer-titre">${t("mer.titre", { a: EM.faits, b: EM.total })}</h2></div>
+    return `<section class="carte mise-en-route" id="mise-en-route" aria-labelledby="mer-titre">${o.afaire ? `<div class="carte-tete"><h2 id="mer-titre" data-afaire>${t("acc.afaire.titre")}</h2></div><p class="fort" id="mer-sous-titre">${t("mer.titre", { a: EM.faits, b: EM.total })}</p>`
+      : `<div class="carte-tete"><h2 id="mer-titre">${t("mer.titre", { a: EM.faits, b: EM.total })}</h2></div>`}
       ${jauge(EM.faits, EM.total)}
       <ol class="liste etapes">${mr.points.map(x => { const p = lib[x.point] || { titre: x.point, aide: "" };
         // 27/10/2026 (constat 3) : plus de marche à suivre en une phrase ici ; les étapes numérotées sont dans l'écran de la mise en route.
@@ -651,7 +674,7 @@
         const action = x.etat !== "a_faire" || demande ? "" : p.declarable ? `<a class="bouton second petit" href="#/miseenroute">${t("mer.voir.etapes")}</a>`
           : x.point === "demarrage" ? `<a class="bouton second petit" href="#/demarrage?questions">${t("mer.repondre")}</a>` : "";
         return `<li data-point="${e(x.point)}"><div><p class="fort">${e(p.titre)}${x.point === "demarrage" ? ` <span class="note" data-reponses>${t("acc.dos.reponses", { n: nbReponsesClient(c), t: window.RENOM_ETAPES.QUESTIONS.length })}</span>` : ""}</p>${x.etat === "fait" ? "" : `<p class="note">${t("mer.court." + x.point)}</p>`}</div>
-          <div class="pile serre etape-etat"><span class="etat${x.etat === "fait" ? " actif" : ""}">${demande ? t("mer2.demande.etat") : ETATS_MR[x.etat] || e(x.etat)}</span>${action}</div></li>${x.point === "google" ? lignesDossierClient(c, photosL) : ""}`; }).join("")}</ol></section>`;
+          <div class="pile serre etape-etat"><span class="etat${x.etat === "fait" ? " actif" : ""}">${demande ? t("mer2.demande.etat") : ETATS_MR[x.etat] || e(x.etat)}</span>${action}</div></li>${x.point === "google" ? lignesDossierClient(c, photosL) : ""}`; }).join("")}</ol>${o.extra || ""}</section>`;
   }
   const ORIGINES = I.carte("idee.origine", ["calendrier", "meteo", "saison"]);
   // Idée d'un jour férié (moteur/temps_forts, idee_ferie : « Vos horaires du jour férié ») : on y répond par ses horaires, pas par une photo.
@@ -721,7 +744,7 @@
     const m = moisDe(b.mois || k0()), notes = b.note_debut != null && b.note_fin != null, n = x => +x || 0;
     const morceaux = [t("bilan.publie", { r: n(b.reponses_publiees), p: n(b.publications) }),
       t(b.avis_obtenus_source === "avis_recus" ? "bilan.recu" : "bilan.obtenu", { n: n(b.avis_obtenus) }) + (notes ? (b.note_fin === b.note_debut ? t("bilan.note.reste", { n: nombre(b.note_fin, 1) }) : t("bilan.note.passe", { a: nombre(b.note_debut, 1), b: nombre(b.note_fin, 1) })) : ".")];
-    if (N && (N.decisions || N.aProgrammer)) morceaux.push(t("bilan.afaire", { x: t("compte.phrase", { n: N.decisions, p: N.aProgrammer, k: 0 }) }));   // compteur unique (compteDe)
+    if (N && (N.decisions || N.aProgrammer)) morceaux.push(t("bilan.afaire", { x: t("compte.phrase", { n: N.decisions, pub: N.decisions === N.contenus, p: N.aProgrammer, k: 0 }) }));   // compteur unique (compteDe)
     const chiffre = (lib, val) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre">${val}</dd></div>`;
     const corps = `${D.mode === "demo" ? `<p class="note bilan-demo"><span class="fort">${t("demo.chiffres.point")}</span> ${t("bilan.demo")}</p>` : ""}
       <p class="texte2">${morceaux.join(" ")}</p>
@@ -860,7 +883,7 @@
     // Compteur (31/10/2026) : exactement ce que liste « À faire maintenant », dans la même phrase (validations, puis messages à lire).
     // Compteur unique (01/11/2026) : les décisions (même chiffre que le badge et Résultats), « à programmer » à part, puis les retours à lire.
     const nv = N.decisions + N.aProgrammer, na = nonLus ? 1 : 0;
-    let phrase = nv ? t("compte.phrase", { n: N.decisions, p: N.aProgrammer, k: na })
+    let phrase = nv ? t("compte.phrase", { n: N.decisions, pub: N.decisions === N.contenus, p: N.aProgrammer, k: na })
       : na ? t("acc.messages", { n: na }) : merEnCours ? t("acc.reste.mer") : merAttente ? merAttenteTexte : t("acc.a.jour");
     const raisons = [...new Set(humains.flatMap(x => x.raisons || []))];
     const photosDuMois = p.filter(x => Date.parse(x.cree_le) >= debutDuMois()).length;
@@ -875,6 +898,9 @@
         && new Date(x.prevu_le).getMonth() === dm_.getMonth() && new Date(x.prevu_le).getFullYear() === dm_.getFullYear()).map(x => x.contenu_id),
       ...sansDate.filter(estPub).map(x => x.id), ...ct.filter(x => x.statut === "a_valider" && estPub(x) && !horsOffreContenu(x, c)).map(x => x.id)]).size;
     const moisPrevu = !!(k && +k.publications_plafond > 0 && prevuesMois >= +k.publications_plafond);
+    // Lot 5 B : la carte de mise en route visible EST le bloc « À faire maintenant » ; les actions qu'elle liste déjà (mise en route, 5 questions,
+    // photos) ne sont pas redites, les autres s'ajoutent sous ses lignes ; l'en-tête compte exactement les lignes « À faire » et ces actions.
+    const merVisible = blocMiseEnRoute(mr, c, p) !== "", DANS_MER = ["mise-en-route", "demarrage", "photos"], nMer = merVisible ? nAFaireMer(mr, c, p) : 0;
     // Un bouton par action en attente, dans l'ordre des gestes : valider, puis mettre en route, puis envoyer les photos.
     const actions = [
       aValider.length ? { id: "contenus", href: "#/contenus", texte: t("acc.act.contenus", { n: aValider.length }) } : null,
@@ -890,21 +916,21 @@
       !c.en_pause && !photosDuMois && !moisPlein && !moisPrevu ? { id: "photos", facultatif: true, href: "#/photos", texte: sansReseaux(c) ? t("acc.act.photos.google", { n: pubGoogle(c) }) : t("acc.act.photos") } : null,
       // Retour privé d'un client non lu (constat 33) : une action ici, plus une pastille sur Résultats.
       nonLus ? { id: "retours", href: "#/collecte?retours", texte: t("acc.act.retours", { n: nonLus }) } : null,
-    ].filter(Boolean);
+    ].filter(Boolean).filter(a => !(merVisible && DANS_MER.includes(a.id)));
     // Seul reste un geste facultatif (envoyer des photos, 31/10/2026) ou la mise en route en attente de BoostImpact (déjà dite dans le chapô, test
     // client Essentiel) : pas de section « À faire maintenant ». Le grand bouton « Envoyer une photo » reste secondaire (tour 12 : jamais vert, il est
     // facultatif). Un seul bouton vert au plus : la première action requise.
     // Rien du tout à faire (audit Essentiel du 31/10/2026) : pas de carte vide non plus, « Tout est à jour. » n'est dit qu'une fois, dans le chapô.
-    const requises = actions.filter(a => !a.facultatif), sansAFaire = !requises.length && !humains.length;
+    const requises = actions.filter(a => !a.facultatif), sansAFaire = !merVisible && !requises.length && !humains.length;
     // Tour 12 (v38) : jamais une action facultative en bouton principal vert. Le vert va à la première action requise ; s'il ne reste que du
     // facultatif (envoyer une photo, créer une vidéo), aucun bouton vert sur l'accueil.
-    const principale = waManquant(c) ? null : requises[0] || null;   // numéro WhatsApp manquant : le seul bouton vert est celui de sa carte
+    const principale = waManquant(c) || merVisible ? null : requises[0] || null;   // numéro WhatsApp manquant : le seul bouton vert est celui de sa carte
     // Tour 16 (02/11/2026, audit UX Premium) : l'en-tête redit la liste « À faire maintenant », mêmes mots et même compte (TikTok compris) ;
     // avant, « 2 décisions, 4 à programmer, 1 message à lire. » au-dessus d'une liste de 5 actions.
     // Lot 2 (15/11/2026, retour testeur : « 2 choses à faire » au-dessus d'un badge « 1 ») : l'en-tête compte d'abord les choses à VALIDER, le même
     // nombre que le badge de l'onglet « À valider » (N.decisions, compteDe), puis les autres actions de la liste à part.
     const autresActions = actions.filter(a => !["contenus", "avis", "avis-sensible", "commentaires"].includes(a.id)).length;
-    if (!sansAFaire && actions.length) phrase = N.decisions ? t("acc.chapo.valider", { n: N.decisions, a: autresActions }) : t("acc.chapo.actions", { n: autresActions });
+    if (!sansAFaire && (actions.length || nMer)) phrase = N.decisions ? t("acc.chapo.valider", { n: N.decisions, a: autresActions + nMer }) : t("acc.chapo.actions", { n: autresActions + nMer });
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
     // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
@@ -913,6 +939,10 @@
     // appeler avant de publier. »
     // Lot 3 (15/11/2026, revue design : paragraphe de 90 mots sur l'accueil) : l'avis sensible en une ligne (titre et lien), l'explication repliée
     // sous « Pourquoi ? ».
+    const ulActions = () => !actions.length ? "" : `<ul class="actions-attente">${actions.map((a, i) => { const sec = a === principale ? "" : " second";
+          return `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${sec}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${sec}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
+          : `<a class="bouton${sec}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`; }).join("")}</ul>
+          ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}`;
     const ligneSensible = () => `<div class="note" id="alerte-avis-sensibles"><p>${t("acc.humains.titre", { n: humains.length })}. <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>
       <details class="pourquoi" id="sensible-pourquoi"><summary>${t("acc.pourquoi")}</summary><p>${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></details></div>`;
     vue.innerHTML = `${pauseBandeau(c)}
@@ -924,15 +954,12 @@
       ${/* Lot 4 B (revue design : « carte de 350 px dans une page vide » au bureau) : deux colonnes à partir de 1100 px, ce qui attend le
          commerçant à gauche, ce qui va sortir et le détail du mois à droite ; une seule colonne au téléphone, même ordre. */ ""}
       <div class="accueil-grille"><div class="pile accueil-col">
-      ${blocMiseEnRoute(mr, c, p)}
+      ${merVisible ? blocMiseEnRoute(mr, c, p, { afaire: true, extra: (actions.length ? ulActions() : "") + (humains.length && !sensibleEnTete ? ligneSensible() : "") }) : ""}
       ${/* Tour 9 (01/11/2026) : « À faire maintenant » disparaît quand il n'y a rien à faire (avant : la carte restait, avec seulement « notre équipe
          s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
-      ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? ligneSensible() : ""}
-      ${sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
-        ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => { const sec = a === principale ? "" : " second";
-          return `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${sec}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${sec}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
-          : `<a class="bouton${sec}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`; }).join("")}</ul>
-          ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}` : ""}
+      ${!merVisible && (sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? ligneSensible() : ""}
+      ${merVisible || sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
+        ${ulActions()}
         ${humains.length && !sensibleEnTete ? ligneSensible() : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
@@ -1150,7 +1177,7 @@
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 && !pleinG ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
           <form id="f"><div class="f"><div class="depot">
-            <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
+            <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
             <span class="note" id="choisies" aria-live="polite">${t("photos.aucune.choisie")}</span></div>
           <ul class="miniatures" id="ph-miniatures" aria-label="${e(t("photos.choisies.liste"))}"></ul>
@@ -1842,7 +1869,7 @@
   // réponse publiée : « Notre équipe s'en est chargée. »
   // 31/10/2026 (décision) : l'équipe propose la réponse, le commerçant la relit ici et peut donner sa version ; sans action, publiée à l'échéance des 24 h.
   const texteSensible = (x, c) => x.statut === "publie" ? t("avis.sensible.fait") : x.statut !== "humain" ? ""
-    : equipeRepond(c) ? (x.propose_le && String(x.reponse_proposee || "").trim() ? "" : t("avis.sensible.attente.equipe"))
+    : equipeRepond(c) ? (x.retenue_le || (x.propose_le && String(x.reponse_proposee || "").trim()) ? "" : t("avis.sensible.attente.equipe"))
     : x.propose_le && !equipeRepond(c) ? (merSql(c) ? "" : t("avis.sensible.propose", { d: date(x.propose_le) })) : t(equipeRepond(c) ? "avis.sensible.texte.equipe" : merSql(c) ? "avis.sensible.texte.espace" : "avis.sensible.texte");
   // Essentiel, bloc SQL appliqué (27/10/2026, constat 14) : la réponse proposée par l'équipe, « J'approuve cette réponse » et « Je veux en parler ».
   const decisionSensible = (x, c) => !(merSql(c) && !equipeRepond(c) && x.sensible && x.statut === "humain" && x.propose_le && String(x.reponse_proposee || "").trim()) ? ""
@@ -1864,6 +1891,10 @@
   // « Attendez mon appel » (décision de PJ du 01/11/2026) : sous une réponse proposée pas encore publiée, le commerçant retient la publication
   // (D.retenirReponseAvis, fonction retenir_reponse_avis) ; ensuite « Nous ne publions rien avant votre appel. » et son contact.
   const proposee = x => !!x.propose_le && !!String(x.reponse_proposee || "").trim();
+  // Lot 5 B (15/11/2026, revue tour 4) : l'alerte WhatsApp et l'email disent « touchez Attendez mon appel » dès la réception de l'avis sensible ; le
+  // bouton est donc là dès que l'avis est entre les mains de l'équipe (sensible « humain », ou 1 à 3 étoiles « escalade »), réponse proposée ou non,
+  // tant que rien n'est publié. Même règle que retenir_reponse_avis en base (aucune réponse proposée exigée). CGV art. 9 : c'est nous qui appelons.
+  const peutRetenir = x => !x.retenue_le && ((x.sensible && x.statut === "humain") || (!x.sensible && x.statut === "escalade" && x.note <= 3));
   // Numéro et jour du rappel (01/11/2026, tour 6 Premium ; comme la demande TikTok) : l'appui ouvre un petit formulaire, numéro prérempli (WhatsApp,
   // sinon contact du commerce, au format du pays) et jour (aujourd'hui, ou demain ; après 17 h, demain seulement), appel entre 9 h et 18 h.
   // Ensuite : « Nous vous appelons au +32 …, demain entre 9 h et 18 h. » (retenue_telephone, retenue_jour), et « Modifier ».
@@ -1901,7 +1932,7 @@
   const blocRetenue = (x, contact, c) => !D.retenirReponseAvis ? "" : retenueOuverte === x.id ? formRetenue(x, c) : x.retenue_le
     ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p><p class="note" data-retenue-delai>${t("avis.retenue.delai")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t(x.retenue_creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
         <p><button type="button" class="lien" data-retenir="${e(x.id)}">${t("avis.rappel.modifier")}</button></p>` : ""}${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
-    : proposee(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
+    : peutRetenir(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
         ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${(echeanceAvisEspace(x) || 0) > Date.now() ? t("avis.sensible.publication", { d: I.dateHeureDans(new Date(echeanceAvisEspace(x)).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
@@ -2255,7 +2286,9 @@
     const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : optPayee ? "offre.dessus.frais.option" : parDemande ? "offre.dessus.frais.demande" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
     // 15/11/2026 (décision de PJ, CGV art. 3 bis) : la Visibilité IA comprise dans Croissance et Premium payés à l'année seulement (12 h 29), au
     // rythme de la montée (window.RENOM_OPTION_INCLUSE, donnees.js).
-    const ia = window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, rythme, "visibilite_ia") ? [suiv === "standard" ? "offre.dessus.std.ia" : "offre.dessus.prem.ia"] : [];
+    // Lot 5 B (revue copywriter : l'argument principal du site manquait) : au mois, la ligne dit que la Visibilité IA est offerte à l'année.
+    const ia = window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, rythme, "visibilite_ia") ? [suiv === "standard" ? "offre.dessus.std.ia" : "offre.dessus.prem.ia"]
+      : window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? ["offre.dessus.ia.annuel"] : [];
     const lignes = (suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"]).concat(ia);
     const P = window.RENOM_PRIX_MONTEE(o, s_, ab), ecartPrix = P.ecart, mensuelP = P.rythme === "mensuel";
     // Tour 9 (01/11/2026) : plus de « aujourd'hui ou demain » écrit en dur. Le numéro est demandé comme pour « Attendez mon appel » (prérempli,
@@ -2264,7 +2297,7 @@
     const blocDemande = demandeChgOffre ? `<p class="texte2 lecture" id="offre-demande-envoyee" role="status">${t("offre.dessus.demande.envoyee", Object.assign({ d: date(demandeChgOffre) }, quandChgOffre(c, demandeChgOffre)))}</p>`
       : formChgOffre(c, suiv, nom);
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
-      <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
+      <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h, prix: euros((window.RENOM_OPTIONS || {}).visibilite_ia ? window.RENOM_OPTIONS.visibilite_ia.prix_ht : 490) })}</p></li>`).join("")}</ul>
       ${P.enCours && P.actuel ? `<p class="texte2" id="dessus-vous">${t(mensuelP ? "offre.dessus.vous.mensuel" : "offre.dessus.vous.annuel", { prix: euros(P.actuel) })}</p>` : ""}
       <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>
       <p class="texte2" id="dessus-mensuel">${t(mensuelP ? "offre.dessus.annuel.ou" : "offre.dessus.mensuel", { prix: euros(P.autre) })}</p>
@@ -2359,7 +2392,7 @@
       ${repli("offre-processus", t("offre.processus.titre"), `<ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol>`)}
       ${/* Renvoi au bouton « Passer à … » seulement si ce bouton existe (lien Stripe configuré, 01/11/2026, tour 6 Essentiel). */ ""}
       ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c), undefined, cmds) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
-      ${repli("offre-historique", t("offre.historique"), j.filter(x => x.type !== "EMAIL_VALIDATION").length ? `<ul class="liste">${j.filter(x => x.type !== "EMAIL_VALIDATION").slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
+      ${repli("offre-historique", t("offre.historique"), histoClient(j).length ? `<ul class="liste">${histoClient(j).slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type])}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
     // Paiement en euros (02/11/2026) : « Payer au mois / à l'année » sans abonnement en cours et « Passer à <offre> » sans abonnement demandent une
     // session Checkout en euros (D.sessionPaiement : jeton de la base puis webhook n8n renom-checkout), puis y vont. REPLI, comme site/app.js : pas de
@@ -2461,6 +2494,10 @@
   // Point de départ (27/10/2026, constat 8) : tant que l'accès à la fiche Google n'est pas en place, un seul écran avec ce qui est connu (note, nombre d'avis,
   // score de l'audit) et ce qui manque pour avoir les premiers chiffres ; jamais une page de zéros.
   const ETAPES_DEPART = ["google", "metricool", "demarrage"];
+  // Lot 5 B (revue copywriter : « Autre étape du service » et « Son du réseau à ajouter par l'équipe » dans l'historique du client) : l'historique de
+  // l'écran Offre ne montre que les étapes nommées pour le client ; les étapes internes de l'équipe restent dans la console.
+  const ETAPES_INTERNES = new Set(["EMAIL_VALIDATION", "MUSIQUE_PLATEFORME_NON_POSEE"]);
+  const histoClient = j => (j || []).filter(x => !ETAPES_INTERNES.has(x.type) && !!ETAPES[x.type]);
   function pointDeDepart(c, R, mr) {
     const mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), dern = avecNote[avecNote.length - 1], audit = ((R && R.audit) || []).filter(a => a && a.score != null), aud = audit[0];
     const chiffre = (lib, val, id) => `<div class="bilan-chiffre"><dt>${lib}</dt><dd class="chiffre" id="${id}">${val}</dd></div>`;
@@ -2596,7 +2633,7 @@
     const suiv = sansReseaux(c) ? offreCible(c) : null, s_ = suiv && (window.RENOM_OFFRES || {})[suiv]; if (!s_) return "";
     const nom = e(I.offre(suiv));
     return `<section class="carte" id="resultats-dessus" aria-labelledby="r-dessus"><h2 id="r-dessus">${t("offre.dessus.titre", { nom })}</h2>
-      <ul class="liste-engagements">${["offre.dessus.std.1", "offre.dessus.std.2"].map(k => `<li><p>${t(k, { n: s_.contenus })}</p></li>`).join("")}</ul>
+      <ul class="liste-engagements">${["offre.dessus.std.1", "offre.dessus.std.2"].concat(window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? ["offre.dessus.ia.annuel"] : []).map(k => `<li><p>${t(k, { n: s_.contenus, prix: euros((window.RENOM_OPTIONS || {}).visibilite_ia ? window.RENOM_OPTIONS.visibilite_ia.prix_ht : 490) })}</p></li>`).join("")}</ul>
       <p class="pied"><a class="bouton second" href="#/offre?dessus" id="resultats-passer">${t("offre.passer.lien", { nom })}</a></p></section>`;
   }
 
@@ -3119,7 +3156,15 @@
   }
   async function commentaires() {
     const [c, k, l0] = await Promise.all([D.commerce(), D.compteur(), D.commentaires().catch(() => [])]);
-    const titre = entete(t("cm.sur"), t("ecran.commentaires"), t("cm.chapo"));
+    // Lot 5 B (revue Sophie : l'Essentiel lisait « comprises dans Croissance et Premium » avec « Passer à Croissance », pour une fonction qui
+    // n'existe pas encore) : tant que les réponses aux commentaires ne sont disponibles dans aucune offre, en-tête au futur, « prévues en Croissance
+    // et Premium, disponibles prochainement », et aucun bouton de montée d'offre sur cet écran.
+    const nulPart = !(window.RENOM_OFFRES || {}).standard || !window.RENOM_OFFRES.standard.commentaires_disponible;
+    const titre = entete(t("cm.sur"), t("ecran.commentaires"), t(cmBientot(c) || (!k.commentaires_inclus && nulPart) ? "cm.chapo.bientot" : "cm.chapo"));
+    if (!k.commentaires_inclus && nulPart) {
+      vue.innerHTML = `${titre}<section class="carte" data-cm-prevues><h2>${t("cm.prevues.titre")}</h2><p class="texte2 lecture">${t("cm.prevues.texte")}</p></section>`;
+      return;
+    }
     if (k.commentaires_inclus && cmBientot(c)) {
       vue.innerHTML = `${titre}<section class="carte" data-cm-bientot><h2>${t("cm.bientot.titre")}</h2><p class="texte2 lecture">${t("cm.bientot.texte")}</p></section>`;
       return;

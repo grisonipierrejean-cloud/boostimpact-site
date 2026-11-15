@@ -43,13 +43,16 @@
   // Mode d'emploi (11/11/2026, demande de PJ : « un tuto explicatif ») : hors des quatre onglets. Barre latérale : groupe « Aide » sous le menu ;
   // téléphone : lien dans l'en-tête, comme « Réglages » dans l'espace (jamais un 5e onglet en bas).
   const GUIDE = ["guide", t("con.entree.guide"), trait('<path d="M5 4.5h9a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"></path><path d="M17 7.5h2V20"></path><path d="M8.5 9h5M8.5 12.5h5"></path>')];
+  // Lot 5 B (revue design : « Clients » en surbrillance sur la page Journal) : le journal a son entrée dans la barre latérale, au-dessus du mode
+  // d'emploi ; au téléphone, aucun onglet du bas n'est marqué sur cette page (le lien « Clients » ramène à la liste).
+  const JOURNAL = ["journal", t("con.journal.titre"), ""];
   const large = window.matchMedia("(min-width: 900px)"); let route = "cockpit", connecte = false;
   function dessinerNav() {
     document.body.classList.toggle("hors-session", !connecte);
     const lat = $("lat"), haut = $("haut"), onglets = $("onglets"); lat.innerHTML = haut.innerHTML = onglets.innerHTML = "";
     if (!connecte) return;
     const lien = ([r, nom, icone], avecIcone) => `<a href="#/${r}" data-r="${r}"${r === route ? ' aria-current="page"' : ""}>${avecIcone ? `<span class="onglet-icone">${icone}</span>` : ""}<span>${nom}</span></a>`;
-    if (large.matches) lat.innerHTML = `<div class="lat-in"><a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("con.titre")}"><div class="groupe"><p class="groupe-lib">${t("con.titre")}</p>${ENTREES.map(x => lien(x, false)).join("")}</div></nav><nav id="nav-aide" class="menu" aria-label="${t("con.entree.guide")}"><div class="groupe">${lien(GUIDE, false)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
+    if (large.matches) lat.innerHTML = `<div class="lat-in"><a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><nav id="nav" class="menu" aria-label="${t("con.titre")}"><div class="groupe"><p class="groupe-lib">${t("con.titre")}</p>${ENTREES.map(x => lien(x, false)).join("")}</div></nav><nav id="nav-aide" class="menu" aria-label="${t("con.entree.guide")}"><div class="groupe">${lien(JOURNAL, false)}${lien(GUIDE, false)}</div></nav><div class="lat-pied">${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button></div></div>`;
     else { haut.innerHTML = `<a class="logo" href="${I.lien("console.html")}" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></a><span class="haut-note">${t("con.titre")}</span><a class="haut-guide" href="#/guide" data-r="guide"${route === "guide" ? ' aria-current="page"' : ""}>${t("con.entree.guide")}</a>${I.selecteur()}<button type="button" id="sortir" class="quitter">${t("quitter")}</button>`;
       onglets.innerHTML = ENTREES.map(x => lien(x, true)).join(""); }
   }
@@ -609,9 +612,18 @@
   // « Attendez mon appel » (01/11/2026, retenir_reponse_avis) : avis en tête, « Le commerçant attend votre appel », publication grisée avec la raison
   // (la base la refuse aussi : admin_avis_publie) ; « Appel fait » (admin_liberer_avis) lève la retenue. Aucune publication automatique de ces avis.
   const retenueAvis = a => !a.retenue_le ? "" : `<div class="encart" data-retenue role="alert"><p class="fort">${t("con.file.retenue", { d: dh(a.retenue_le) })}</p>${a.telephone_client ? `<p class="note">${t("con.file.retenue.tel", { tel: `<a class="casse" href="tel:${e(a.telephone_client)}" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(a.telephone_client) : a.telephone_client)}</a>` })}</p>` : ""}${a.rappel_jour ? `<p class="note" data-rappel-jour>${t(a.rappel_creneau === "15-17" ? "con.file.retenue.jour.1517" : "con.file.retenue.jour", { d: I.jourEtDate(a.rappel_jour + "T12:00:00") })}</p>` : ""}</div>`;
-  const carteAvisFile = (a, o = {}) => { const r = retardAvis(a), sens = !!a.sensible;
+  // Appel promis (lot 5 B, 15/11/2026, revue exploitant) : un avis retenu est dû au commerçant le jour du rappel qu'il a choisi, avant 18 h (17 h pour
+  // « 15-17 »), heure de Paris (RENOM_ECHEANCE_APPEL, donnees.js). Tâche à part de la garantie des 24 h, qui reste suspendue : « Appel en retard »
+  // passé l'heure, jamais un manquement ni un mois offert. Un avis déjà en retard AVANT la retenue (échéance gardée par echeance_avis) reste « En retard ».
+  const echAppel = a => a.retenue_le && window.RENOM_ECHEANCE_APPEL ? window.RENOM_ECHEANCE_APPEL(a.rappel_jour, a.rappel_creneau) : null;
+  const appelEnRetard = a => (x => x != null && Date.now() > x)(echAppel(a));
+  const garantieDejaPassee = a => !!a.retenue_le && a.echeance != null && Date.now() > Date.parse(a.echeance);
+  const retardRetenue = a => !!a.retenue_le && (appelEnRetard(a) || garantieDejaPassee(a));
+  const etatRetenue = a => { const x = echAppel(a), d = x == null ? "" : I.heure(x) + (jourParis(x) === jourParis(Date.now()) ? "" : " " + I.jourEtDate(new Date(x)).toLowerCase());
+    return appelEnRetard(a) ? t("con.file.appel.retard", { d }) : garantieDejaPassee(a) ? t(x == null ? "con.file.appel.garantie" : "con.file.appel.garantie.avant", { d }) : x == null ? t("con.file.attente.appel") : t("con.file.appel.avant", { d }); };
+  const carteAvisFile = (a, o = {}) => { const r = a.retenue_le ? retardRetenue(a) : retardAvis(a), sens = !!a.sensible;
     // Version restée 48 h sans reprise (01/11/2026, tour 6 Premium) : « En retard », relance (admin_file_avis : relance_version).
-    const etat = a.retenue_le ? t("con.file.attente.appel") : a.relance_version ? t("con.file.version.relance", { d: dh(a.version_client_le) }) : a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
+    const etat = a.retenue_le ? etatRetenue(a) : a.relance_version ? t("con.file.version.relance", { d: dh(a.version_client_le) }) : a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
     const ouvrir = !o.surClient && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>` : "";
     const google = a.lien ? `<a class="bouton second petit" href="${e(a.lien)}" target="_blank" rel="noopener" data-avis-google>${t("con.al.google")}</a>` : "";
     return `<article class="carte${r ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"${sens ? " data-sensible" : ""}><div class="carte-tete"><h2>${sens ? t("con.al.avis.sensible") : e(a.commerce || "")}</h2><span class="etat${r ? (sens ? " retard" : "") : " actif"}">${etat}</span></div>
@@ -720,7 +732,10 @@
     if (o.reseaux_sociaux && r && r.etat !== "fait" && instagramProAFaire(c)) l.push("instagram_pro");   // v49 : 6e question, Instagram pas professionnel
     return l; };
   const carteMiseEnRoute = (c, taches) => { const bloque = merBloquee(c), lien = taches.includes("lien") && !bloque;
-    return `<article class="carte${bloque ? " attention" : ""}" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
+    // Lot 5 B (revue exploitant : la ligne repliée « Mises en route » n'avait ni état ni date) : état (bloquée, ou la première tâche) et date.
+    const retardMer = (bloque && (ageJours(c) ?? 0) >= 5) || taches.includes("whatsapp");
+    const etatMer = [retardMer ? t("con.ck.j.retard") : "", bloque ? t("con.mer.ligne.bloquee") : taches.length ? t("con.af.tache." + taches[0]) : "", c.cree_le ? t("con.mer.ligne.depuis", { d: I.date(c.cree_le) }) : ""].filter(Boolean).join(" · ");
+    return `<article class="carte${bloque ? " attention" : ""}" data-mer-commerce="${e(c.id)}"><div class="carte-tete"><h2>${e(c.nom)}</h2><span class="etat" data-mer-etat hidden>${e(etatMer)}</span><a href="#/client/${encodeURIComponent(c.id)}">${t("con.client.ouvrir")}</a></div>
           <p class="note">${t("con.col.mer")}</p>${taches.length ? `<ul class="taches-admin">${taches.map(k => `<li data-tache="${k}">${t("con.af.tache." + k)}</li>`).join("")}</ul>` : ""}
           ${lien ? `<div class="actions"><button type="button" class="bouton second petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button></div>` : ""}${bloque ? miseEnRoute(c) : ""}</article>`; };
 
@@ -794,17 +809,20 @@
     // À relire (14/11/2026) : une carte par contenu ; l'échéance de la garantie des 72 h (si elle court encore) fait l'urgence ; ordre de la base gardé
     // pour le filtre « À relire » (par client, le plus ancien d'abord).
     (relire || []).forEach((x, i) => ajout("arelire", carteRelire(x), x.en_retard, T_(x.echeance), T_(x.cree_le), { prio: !!(x.urgent || x.en_retard), cle: "relire:" + x.id, cid: x.commerce_id, ordre: i }));
-    // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête.
-    const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id));
-    (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id))).forEach(a => { const ech = echeanceAlerte(a);
+    // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête. Lot 5 B (revue exploitant : un avis retenu comptait 2 tâches,
+    // « Avis sensible » et l'alerte « le commerçant attend votre appel ») : l'alerte AVIS_RETENU d'un avis retenu de la file n'est plus une 2e tâche.
+    const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id)), retenus = new Set((file || []).filter(a => a.retenue_le).map(a => String(a.id)));
+    (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id)) && !(a.code === "AVIS_RETENU" && retenus.has(String((a.detail_alerte || {}).avis || "")))).forEach(a => { const ech = echeanceAlerte(a);
       const cle = a.id != null ? "alerte:" + a.id : a.avis_id ? "avis:" + a.avis_id : a.commentaire_id ? "commentaire:" + a.commentaire_id : a.publication_id ? "publication:" + a.publication_id : null;
       ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle, cid: a.commerce_id }); });
     (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le), NaN, { cle: "publication:" + x.id + ":" + x.reseau, cid: x.commerce_id }));
     (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id, cid: x.commerce_id }));
     (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
     (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id, cid: x.commerce_id }));
-    (file || []).forEach(a => ajout(a.sensible || a.retenue_le ? "alertes" : "avis", carteAvisFile(a), retardAvis(a), a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
-      { cle: "avis:" + a.id, prio: !!a.sensible || !!a.retenue_le, tete: !!a.retenue_le, types: a.sensible || a.retenue_le ? ["alertes", "avis"] : ["avis"], cid: a.commerce_id }));
+    // Avis retenu : l'échéance est celle de l'appel promis (pas l'heure passée de la garantie), son titre « Appel promis » ou « Appel en retard ».
+    (file || []).forEach(a => ajout(a.sensible || a.retenue_le ? "alertes" : "avis", carteAvisFile(a), a.retenue_le ? retardRetenue(a) : retardAvis(a), a.retenue_le ? (echAppel(a) ?? NaN) : a.sensible || a.mode === "equipe" || !a.traite_le ? T_(a.echeance) : NaN, T_(a.recu_le),
+      { cle: "avis:" + a.id, prio: !!a.sensible || !!a.retenue_le, tete: !!a.retenue_le, types: a.sensible || a.retenue_le ? ["alertes", "avis"] : ["avis"], cid: a.commerce_id,
+        titre: a.retenue_le ? t(appelEnRetard(a) ? "con.file.appel.titre.retard" : "con.file.appel.titre") : undefined }));
     (cmEq || []).forEach(x => ajout("avis", carteCommentaireEquipe(x), false, NaN, T_(x.recu_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
     (depots || []).filter(relancable).forEach(d => ajout("videos", carteDepot(d), false, NaN, T_(d.cree_le), { cle: "depot:" + d.id, cid: d.commerce_id }));
     (dl || []).forEach(g => { const r = delaisAFaire(g); if (r.length) ajout("garanties", carteDelais(g, r), r.some(x => x.retard), Math.min(...r.map(x => x.ech)), NaN, { cle: "delais:" + g.commerce_id, cid: g.commerce_id }); });
@@ -1182,7 +1200,7 @@
   const blocHistorique = l => `<section class="carte" id="historique-client"><h2>${t("con.hist.titre")}</h2>
       ${l.length ? `<ol class="historique" id="historique-liste">${l.slice(0, 5).map(ligneHist).join("")}</ol>${l.length > 5 ? `<button type="button" class="lien" id="historique-voir-tout" aria-expanded="false" aria-controls="historique-tout">${t("con.hist.voir.tout", { n: l.length })}</button>
       <ol class="historique" id="historique-tout" hidden>${l.slice(5).map(ligneHist).join("")}</ol>` : ""}` : `<p class="note" id="historique-vide">${t("con.hist.vide")}</p>`}
-      <details class="repliable sous" id="journal-client"><summary><h3>${t("con.hist.tout", { n: l.length })}</h3></summary>${tableJournal("jc")}</details></section>`;
+      <details class="repliable sous" id="journal-client"><summary><h3>${t("con.hist.tout", { n: l.length })}</h3></summary>${tableJournal("jc", { csv: true })}</details></section>`;
   // ---------------- Photos et contenus du client (v52, 13/11/2026, constat de PJ sur « Comme Chez Fleur » : « je ne vois qu'un compteur »). Bloc
   // « Photos » : les 20 dernières (adminPhotosClient), vignette par adresse signée créée à l'affichage, date d'envoi, qui l'a envoyée, état en clair ;
   // photo refusée : motif en mots simples et phrase exacte du contrôle de Claude (journal PHOTO_HORS_SUJET, detail.photo). Refus « doute » ou
@@ -1446,10 +1464,13 @@
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, DATE_ISO = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
   const CLES_TECH = ["usage_claude", "simule", "id", "commande", "dossier", "contenu", "avis", "photo", "publication", "manquement", "jeton", "session", "objet", "depot", "commentaire", "alerte", "prospect", "user_id", "abonnement"];
   // Lot 4 B : les engagements garantis (réponse d'avis, option, Visibilité IA, délai manqué) ont leurs colonnes Reçu, Échéance, Fait, Tenu.
+  // Lot 5 B (revue design : colonnes vides, échéance de la Visibilité IA restée dans « Détail ») : toute ligne qui porte une échéance la montre
+  // dans sa colonne (tenu inconnu : cellule vide) ; les 4 colonnes sont cachées quand aucune ligne affichée n'en a.
   const garantieJournal = x => { const d = x && x.detail && typeof x.detail === "object" ? x.detail : null; if (!d) return null;
     if (x.type === "AVIS_PUBLIE" && "dans_les_24h" in d) return { recu: d.recu_le || null, echeance: d.echeance || null, fait: x.cree_le, tenu: !!d.dans_les_24h, cles: ["recu_le", "echeance", "dans_les_24h"] };
     if (["OPTION_LIVREE", "VISIBILITE_IA_LIVREE"].includes(x.type) && "livraison_prevue_le" in d) return { recu: d.elements_recus_le || null, echeance: d.livraison_prevue_le, fait: x.cree_le, tenu: d.en_retard === false, cles: ["livraison_prevue_le", "en_retard", "elements_recus_le"] };
-    if (x.type === "GARANTIE_MANQUEMENT") return { recu: null, echeance: d.echeance || null, fait: null, tenu: false, cles: ["echeance"] };
+    if (x.type === "GARANTIE_MANQUEMENT") return { recu: d.recu_le || null, echeance: d.echeance || null, fait: null, tenu: false, cles: ["echeance", "recu_le"] };
+    if (d.echeance || d.livraison_prevue_le) return { recu: d.recu_le || d.elements_recus_le || null, echeance: d.echeance || d.livraison_prevue_le, fait: null, tenu: null, cles: ["echeance", "livraison_prevue_le", "recu_le", "elements_recus_le"] };
     return null; };
   const celluleDate = v => !v ? "" : String(v).length === 10 ? I.date(v + "T12:00:00") : dh(v);
   const cleJournal = k => I.a("con.jk." + k) ? t("con.jk." + k) : (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
@@ -1462,10 +1483,23 @@
     if ("en_retard" in o && typeof o.en_retard === "boolean") { parts.push(t(o.en_retard ? "con.jk.tenu.non" : "con.jk.tenu.oui") + (x && x.cree_le ? ` (${t("con.jk.fait.le", { d: dh(x.cree_le) })})` : "")); delete o.en_retard; }
     Object.entries(o).forEach(([k, v]) => { if (v == null || v === "" || CLES_TECH.includes(k) || (typeof v === "string" && UUID.test(v))) return; parts.push(`${cleJournal(k)}${t("deux.points")}${valeurJournal(k, v)}`); });
     return parts.join(" · "); };
-  const tableJournal = id => `<div class="f etroit"><label for="filtre-${id}">${t("con.filtrer")}</label><input id="filtre-${id}" type="text"></div>
-      <table class="tab journal"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("etape")}</th><th>${t("con.jc.recu")}</th><th>${t("con.jc.echeance")}</th><th>${t("con.jc.fait")}</th><th>${t("con.jc.tenu")}</th><th>${C_("detail")}</th></tr></thead><tbody id="corps-${id}"></tbody></table>`;
-  function remplirJournal(id, l) {
-    const dessiner = () => { const f = $("filtre-" + id).value.toLowerCase(); $("corps-" + id).innerHTML = l.filter(x => !f || (x.commerce + " " + x.type + " " + libelleEtape(x.type)).toLowerCase().includes(f)).map(x => `<tr><td data-l="${C_("date")}">${dh(x.cree_le)}</td><td data-l="${C_("commerce")}">${e(x.commerce || "")}</td><td data-l="${C_("etape")}"><span class="fort">${e(libelleEtape(x.type))}</span></td>${(g => !g ? `<td class="jv" colspan="4"></td>` : `<td data-l="${t("con.jc.recu")}">${celluleDate(g.recu)}</td><td data-l="${t("con.jc.echeance")}">${celluleDate(g.echeance)}</td><td data-l="${t("con.jc.fait")}">${celluleDate(g.fait)}</td><td data-l="${t("con.jc.tenu")}" class="fort">${t(g.tenu ? "con.jk.tenu.oui" : "con.jk.tenu.non")}</td>`)(garantieJournal(x))}<td data-l="${C_("detail")}" class="note">${e(detailJournal(x.detail, x))}</td></tr>`).join(""); };
+  const tableJournal = (id, o = {}) => `<div class="journal-outils"><div class="f etroit"><label for="filtre-${id}">${t("con.filtrer")}</label><input id="filtre-${id}" type="text"></div>
+      ${o.csv ? `<button type="button" class="bouton second petit" id="csv-${id}" data-csv-journal>${t("con.journal.csv")}</button>` : ""}</div>
+      <table class="tab journal" id="table-${id}"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("etape")}</th><th class="jg">${t("con.jc.recu")}</th><th class="jg">${t("con.jc.echeance")}</th><th class="jg">${t("con.jc.fait")}</th><th class="jg">${t("con.jc.tenu")}</th><th>${C_("detail")}</th></tr></thead><tbody id="corps-${id}"></tbody></table>`;
+  // Export CSV d'un client (lot 5 B) : date, étape, reçu, échéance, fait, tenu, détail ; séparateur « ; » et BOM (Excel en français).
+  const csvJournal = (l, nom) => { const q = v => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const lignes = [[C_("date"), C_("commerce"), C_("etape"), t("con.jc.recu"), t("con.jc.echeance"), t("con.jc.fait"), t("con.jc.tenu"), C_("detail")]].concat(l.map(x => { const g = garantieJournal(x);
+      return [x.cree_le, x.commerce || "", libelleEtape(x.type), g ? g.recu || "" : "", g ? g.echeance || "" : "", g ? g.fait || "" : "", g && g.tenu != null ? t(g.tenu ? "con.jk.tenu.oui" : "con.jk.tenu.non") : "", detailJournal(x.detail, x)]; }));
+    const b = new Blob(["\ufeff" + lignes.map(r => r.map(q).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(b); a.download = "journal-" + String(nom || "client").normalize("NFD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() + ".csv";
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0); };
+  function remplirJournal(id, l0) {
+    const l = (l0 || []).slice().sort((a, b) => String(b.cree_le || "").localeCompare(String(a.cree_le || "")));   // lot 5 B : le plus récent d'abord
+    const csv = $("csv-" + id); if (csv) csv.onclick = () => csvJournal(l, (l[0] || {}).commerce);
+    const dessiner = () => { const f = $("filtre-" + id).value.toLowerCase(), rows = l.filter(x => !f || (x.commerce + " " + x.type + " " + libelleEtape(x.type)).toLowerCase().includes(f));
+      $("table-" + id).classList.toggle("sans-garanties", !rows.some(garantieJournal));
+      $("corps-" + id).innerHTML = rows.map(x => `<tr><td data-l="${C_("date")}">${dh(x.cree_le)}</td><td data-l="${C_("commerce")}">${e(x.commerce || "")}</td><td data-l="${C_("etape")}"><span class="fort">${e(libelleEtape(x.type))}</span></td>${(g => !g ? `<td class="jv jg" colspan="4"></td>` : [[t("con.jc.recu"), celluleDate(g.recu)], [t("con.jc.echeance"), celluleDate(g.echeance)], [t("con.jc.fait"), celluleDate(g.fait)], [t("con.jc.tenu"), g.tenu == null ? "" : t(g.tenu ? "con.jk.tenu.oui" : "con.jk.tenu.non")]]
+        .map(([lib, v], i) => `<td data-l="${lib}" class="jg${i === 3 ? " fort" : ""}${v ? "" : " vide"}">${v}</td>`).join(""))(garantieJournal(x))}${(d => `<td data-l="${C_("detail")}" class="note${d ? "" : " vide"}">${e(d)}</td>`)(detailJournal(x.detail, x))}</tr>`).join(""); };
     $("filtre-" + id).oninput = dessiner; dessiner();
   }
   async function journal() {
@@ -1564,7 +1598,9 @@
       return `<li data-jour-type="${e(x.type)}"${x.retard ? ' class="ck-rouge"' : ""}><a class="ck-jour-tache" href="#/afaire/${e(x.type)}"${x.cle ? ` data-ouvrir-tache="${e(x.cle)}"` : ""}><span class="fort">${x.retard ? t("con.ck.j.retard") : x.quand !== Infinity ? I.heure(x.quand) : ""}</span> ${t("con.af." + x.type)}${titre ? " · " + e(titre) : ""}${x.nom ? " · " + e(x.nom) : ""}</a></li>`; };
     return `<section class="carte ck-jour" id="a-sortir" aria-labelledby="a-sortir-titre"><h2 id="a-sortir-titre">${t("con.ck.j.titre", { n: j.n })}</h2>
       ${j.n ? `<ul class="ck-jour-liste">${j.items.slice(0, MAX).map(ligne).join("")}</ul>${j.n > MAX ? `<p><a href="#/afaire">${t("con.ck.j.plus", { n: j.n - MAX })}</a></p>` : ""}` : `<p class="texte2">${t("con.ck.j.vide")}</p>`}
-      ${j.retards.length ? `<h3>${t("con.ck.j.retards")}</h3><ul class="ck-jour-retards" id="retards-clients">${j.retards.map(g => `<li data-retard-client="${e(g.cid || (g.prospects ? "prospects" : ""))}">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : g.prospects ? `<a href="#/afaire/prospects">${t("con.af.prospects")}</a>` : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`} : <span class="ck-rouge fort">${t("con.ck.j.n.retard", { n: g.n })}</span></li>`).join("")}</ul>` : ""}
+      ${/* Lot 5 B (revue design : la liste « En retard, par client » redisait les lignes juste au-dessus) : elle n'apparaît que si la liste du jour
+         est coupée (plus de 8 tâches), seul cas où elle apprend quelque chose. */ ""}
+      ${j.retards.length && j.n > MAX ? `<h3>${t("con.ck.j.retards")}</h3><ul class="ck-jour-retards" id="retards-clients">${j.retards.map(g => `<li data-retard-client="${e(g.cid || (g.prospects ? "prospects" : ""))}">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : g.prospects ? `<a href="#/afaire/prospects">${t("con.af.prospects")}</a>` : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`} : <span class="ck-rouge fort">${t("con.ck.j.n.retard", { n: g.n })}</span></li>`).join("")}</ul>` : ""}
       <p><a class="bouton second petit" href="#/afaire">${t("con.ck.f.ouvrir")}</a></p></section>`; }
   const ENG = { fiche: "con.ck.g.fiche", premier_contenu: "con.ck.g.contenu", avis: "con.ck.g.avis" };
   function blocGaranties(r) { const g = r.garanties, now = r.maintenant;
@@ -1716,7 +1752,7 @@
   const ROUTES = { cockpit, afaire, clients, client, nouveau, journal, prospects, style, photos: photosClient, depot: depotClient, guide };
   const ANCIENNES = { commerces: "clients", alertes: "afaire/alertes", apublier: "afaire/apublier", garanties: "afaire/garanties", videos: "afaire/videos", invitations: "nouveau", creer: "nouveau" };
   // Onglet allumé pour chaque écran.
-  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "clients", style: "clients", photos: "clients", depot: "clients", prospects: "prospects", guide: "guide" };
+  const ONGLET = { cockpit: "cockpit", afaire: "afaire", clients: "clients", client: "clients", nouveau: "clients", journal: "journal", style: "clients", photos: "clients", depot: "clients", prospects: "prospects", guide: "guide" };
   let derniere = null;
   async function rendre() {
     const s = await D.session(); if (!s) return connexion();

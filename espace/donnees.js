@@ -39,6 +39,18 @@
     }
     return e;
   }
+  // Appel promis (lot 5 B, 15/11/2026, revue exploitant : « l'appel promis au commerçant n'apparaît jamais dans À sortir aujourd'hui ») : un avis
+  // retenu porte le jour du rappel choisi par le commerçant (retenue_jour, rendu rappel_jour par admin_file_avis) et sa plage (« 9-18 », ou
+  // « 15-17 »). L'appel est dû ce jour-là avant la fin de la plage : 18 h, heure de Paris (17 h pour 15-17). C'est une tâche de l'équipe, à part de
+  // la garantie des 24 h (suspendue pendant la retenue, CGV art. 10) : un appel en retard ne crée jamais de mois offert. Rend des millisecondes ou null.
+  function echeanceAppel(jour, creneau) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(jour || ""))) return null;
+    const h = creneau === "15-17" ? 17 : 18;
+    for (const off of [1, 2]) { const ms = Date.parse(`${jour}T${String(h - off).padStart(2, "0")}:00:00Z`);
+      const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hourCycle: "h23", hour: "2-digit" }).format(new Date(ms));
+      if (+p === h) return ms; }
+    return null;
+  }
   // Retenues d'un avis de la démonstration : son historique (a.retenues), plus une retenue en cours posée avant cet historique.
   const retenuesDe = a => { const l = Array.isArray(a.retenues) ? a.retenues.slice() : []; if (a.retenue_le && !l.some(x => x.retenue_le === a.retenue_le)) l.push({ retenue_le: a.retenue_le, liberee_le: null }); return l; };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
@@ -1597,6 +1609,6 @@
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
-  window.RENOM_ECHEANCE_AVIS = echeanceAvis;
+  window.RENOM_ECHEANCE_AVIS = echeanceAvis; window.RENOM_ECHEANCE_APPEL = echeanceAppel;
   window.RENOM_SECOURS = { ALERTE_HEURES: SECOURS_ALERTE_HEURES };
 })();

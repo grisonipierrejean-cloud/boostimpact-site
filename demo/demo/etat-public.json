@@ -1,5 +1,5 @@
 {
- "_lisez_moi": "Graine de démonstration PUBLIQUE de l'espace RENOM : commerces entièrement fictifs, avis et retours fictifs, aucun client réel. Chargée quand config.js définit window.RENOM_GRAINE = \"public\". Dates relatives (il_y_a_h, dans_h, repondu_apres_h, mois courant ou precedent) : converties au chargement par donnees.js, pour que la démonstration reste à jour. Photos : Pexels, voir files/public/CREDITS.md. Automatisations de service : clients, demandes d'avis, prospects et alertes fictifs générés au chargement par donnees.js (completerAutomatisations) ; l'avis de la semaine (ct-avis-semaine) cite l'avis fictif av-1, visuel rendu par le vrai moteur (python3 moteur/tests/test_avis_semaine.py). Commentaires Instagram et Facebook : fictifs (comptes « exemple_… », liens en .invalid jamais affichés), dont un spam et un sensible déjà traité ; aucun réseau n'est appelé. Accueil aligné sur « une photo, un clic » (14/10/2026) : 3 validations (une publication, la réponse à l'avis de 2 étoiles, la réponse à un commentaire) et l'alerte de l'avis sensible. Textes sans préfixe « fictif » : le bandeau de démonstration est la mention globale. Thèmes des avis : calculés à l'ouverture de Résultats sur les avis présents, jamais rangés (la clé demo_maj.themes n'existe plus). Mobile du commerce Premium (whatsapp_numero, v36) : +33 6 39 98 12 34, tranche 06 39 98 réservée par l'ARCEP aux œuvres de fiction ; il est prérempli dans les formulaires de rappel. Numéro WhatsApp obligatoire au démarrage (v47, 11/11/2026) : alertes WhatsApp actives au même numéro (notifications.whatsapp à true, accord fictif du 26/10/2026) ; en démonstration, aucun WhatsApp ne part. Le nouveau commerce (c-nouveau) n'a pas de numéro : son démarrage le demande.",
+ "_lisez_moi": "Graine de démonstration PUBLIQUE de l'espace RENOM : commerces entièrement fictifs, avis et retours fictifs, aucun client réel. Chargée quand config.js définit window.RENOM_GRAINE = \"public\". Dates relatives (il_y_a_h, dans_h, repondu_apres_h, mois courant ou precedent) : converties au chargement par donnees.js, pour que la démonstration reste à jour. Photos : Pexels, voir files/public/CREDITS.md. Automatisations de service : clients, demandes d'avis, prospects et alertes fictifs générés au chargement par donnees.js (completerAutomatisations) ; l'avis de la semaine (ct-avis-semaine) cite l'avis fictif av-1, visuel rendu par le vrai moteur (python3 moteur/tests/test_avis_semaine.py). Commentaires Instagram et Facebook : fictifs (comptes « exemple_… », liens en .invalid jamais affichés), dont un spam et un sensible déjà traité ; aucun réseau n'est appelé. Accueil aligné sur « une photo, un clic » (14/10/2026) : 2 validations (une publication, la réponse à l'avis de 2 étoiles) et l'alerte de l'avis sensible. Lot 5 B (15/11/2026) : plus de réponse à un commentaire « à valider » (cm-1 retiré) tant que les réponses aux commentaires ne sont disponibles dans aucune offre. Textes sans préfixe « fictif » : le bandeau de démonstration est la mention globale. Thèmes des avis : calculés à l'ouverture de Résultats sur les avis présents, jamais rangés (la clé demo_maj.themes n'existe plus). Mobile du commerce Premium (whatsapp_numero, v36) : +33 6 39 98 12 34, tranche 06 39 98 réservée par l'ARCEP aux œuvres de fiction ; il est prérempli dans les formulaires de rappel. Numéro WhatsApp obligatoire au démarrage (v47, 11/11/2026) : alertes WhatsApp actives au même numéro (notifications.whatsapp à true, accord fictif du 26/10/2026) ; en démonstration, aucun WhatsApp ne part. Le nouveau commerce (c-nouveau) n'a pas de numéro : son démarrage le demande.",
  "users": {
   "restaurant@demo": {
    "role": "commerçant",
@@ -514,27 +514,28 @@
    "propose_apres_h": 3,
    "reponse_proposee": "Bonjour, nous sommes sincèrement désolés de lire cela. Votre santé compte avant tout : pouvez-vous nous appeler au restaurant pour que nous en parlions directement ? L'équipe de La Table d'exemple",
    "demo": true
+  },
+  {
+   "id": "av-8",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-8",
+   "auteur": "Marc L.",
+   "note": 3,
+   "texte": "Bon repas, mais on nous a fait attendre 40 minutes pour une table réservée.",
+   "reponse_proposee": "Bonjour Marc, merci pour votre message. Nous sommes désolés pour cette attente malgré votre réservation : ce n'est pas ce que nous voulons pour vous. Merci d'être venu, et à bientôt.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "validation_commercant",
+   "statut": "escalade",
+   "il_y_a_h": 5,
+   "retenue_il_y_a_h": 2,
+   "retenue_jour": "aujourdhui",
+   "retenue_creneau": "9-18",
+   "retenue_telephone": "+33639981234",
+   "demo": true
   }
  ],
  "commentaires": [
-  {
-   "commerce_id": "c-table",
-   "raisons": [],
-   "refus": [],
-   "demo": true,
-   "id": "cm-1",
-   "reseau": "instagram",
-   "commentaire_id": "demo-ig-1",
-   "publication_id": "demo-media-1",
-   "lien": "https://reseau.exemple.invalid/instagram/demo-media-1",
-   "auteur": "exemple_lea",
-   "il_y_a_h": 3,
-   "texte": "Vous êtes ouverts le dimanche midi ?",
-   "categorie": "question",
-   "decision": "validation_commercant",
-   "statut": "a_valider",
-   "reponse_proposee": "Non, le dimanche nous sommes fermés. Nous vous accueillons du mardi au samedi, de 12 h à 14 h et de 19 h à 22 h. Au plaisir !"
-  },
   {
    "commerce_id": "c-table",
    "raisons": [],
@@ -677,6 +678,44 @@
   }
  ],
  "journal": [
+  {
+   "id": "j-6",
+   "commerce_id": "c-table",
+   "type": "AVIS_PUBLIE",
+   "detail": {
+    "par": "renomia",
+    "depuis": "escalade",
+    "recu_le_il_y_a_h": 50,
+    "echeance_il_y_a_h": 26,
+    "dans_les_24h": true
+   },
+   "il_y_a_h": 40
+  },
+  {
+   "id": "j-7",
+   "commerce_id": "c-table",
+   "type": "AVIS_PUBLIE",
+   "detail": {
+    "par": "renomia",
+    "depuis": "humain",
+    "recu_le_il_y_a_h": 100,
+    "echeance_il_y_a_h": 76,
+    "dans_les_24h": true
+   },
+   "il_y_a_h": 81
+  },
+  {
+   "id": "j-8",
+   "commerce_id": "c-table",
+   "type": "OPTION_LIVREE",
+   "detail": {
+    "option": "site_restaurant",
+    "elements_recus_le_il_y_a_h": 300,
+    "livraison_prevue_le_il_y_a_h": 0,
+    "en_retard": false
+   },
+   "il_y_a_h": 30
+  },
   {
    "id": "j-1",
    "commerce_id": "c-table",

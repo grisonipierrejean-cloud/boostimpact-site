@@ -121,9 +121,10 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .actions-attente .bouton{width:100%;justify-content:flex-start;text-align:left}
 /* Tour 16 (02/11/2026, audit UX Premium) : sur téléphone, seule l'action principale reste un bouton plein ; les suivantes sont une liste de liens
    (même cible de 44 px, soulignés comme les autres liens de l'espace). */
-@media (max-width:899px){.actions-attente{gap:0}.actions-attente li+li{border-top:1px solid var(--filet)}
-  .actions-attente .bouton.second{background:none;border:0;border-radius:0;padding:10px 0;min-height:44px;color:var(--encre);text-decoration:underline;text-underline-offset:3px}
-  .actions-attente .bouton.second:hover{background:none;border-color:transparent;color:var(--encre);text-decoration-thickness:2px}}
+/* Lot 5 B (revue design : liens au téléphone, boutons en contour au bureau) : la même forme aux deux tailles, une ligne soulignée par action. */
+.actions-attente{gap:0}.actions-attente li+li{border-top:1px solid var(--filet)}
+.actions-attente .bouton.second{background:none;border:0;border-radius:0;padding:10px 0;min-height:44px;color:var(--encre);text-decoration:underline;text-underline-offset:3px}
+.actions-attente .bouton.second:hover{background:none;border-color:transparent;color:var(--encre);text-decoration-thickness:2px}
 .reglages .liste a{gap:12px;padding:6px 0;text-decoration:none}
 .reglages .liste a .fort{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
 @media (hover:hover){.reglages .liste a:hover .fort{text-decoration-thickness:2px}}
@@ -321,6 +322,8 @@ legend{padding:0;margin-bottom:4px}
 @media (max-width:899px){.depot .bouton{flex:1 1 100%;min-height:56px;font-size:17px}form:has(.depot)>.bouton{align-self:stretch;min-height:56px;font-size:17px}}
 .sur-ordi{display:none}
 @media (min-width:900px) and (hover:hover) and (pointer:fine){.depot-choix:has(#appareil),.depot-choix:has(#filmer),.sur-tel{display:none}.sur-ordi{display:inline}}
+/* Lot 5 B : « Prendre une photo » est l'action principale (pleine) au téléphone ; à l'ordinateur, seul reste le choix des fichiers, plein lui aussi. */
+@media (min-width:900px) and (hover:hover) and (pointer:fine){.depot label[for=fichiers]{background:var(--marque);color:var(--sur-marque);border-color:var(--marque)}}
 .depot input:focus-visible+label{outline:2px solid var(--focus);outline-offset:2px}
 .actions input[type=date],.actions input[type=time]{width:auto;min-height:44px;padding:8px 10px;font-size:15px}
 .coul{display:flex;flex-wrap:wrap;gap:12px 28px}
@@ -394,11 +397,11 @@ legend{padding:0;margin-bottom:4px}
 .filtres::-webkit-scrollbar{display:none}
 .filtres button{flex:0 0 auto;white-space:nowrap;font:inherit;font-weight:var(--graisse-forte);background:none;border:0;border-radius:8px;padding:8px 14px;min-height:44px;color:var(--discret);cursor:pointer}
 @media (hover:hover){.filtres button:hover{color:var(--encre);background:var(--releve)}}
-.filtres button[aria-pressed=true]{color:var(--sur-marque);font-weight:var(--graisse-forte);background:var(--marque)}
+.filtres button[aria-pressed=true]{color:var(--surface);font-weight:var(--graisse-forte);background:var(--encre)}   /* lot 5 B : état choisi en encre, le vert est réservé aux actions */
 /* Compteurs de la file « À faire » de la console (25/10/2026) : mêmes filtres, en liens (#/afaire/<type>). */
 .filtres a{flex:0 0 auto;display:inline-flex;align-items:center;white-space:nowrap;font-weight:var(--graisse-forte);border-radius:8px;padding:8px 14px;min-height:44px;color:var(--discret);text-decoration:none}
 @media (hover:hover){.filtres a:hover{color:var(--encre);background:var(--releve)}}
-.filtres a[aria-current]{color:var(--sur-marque);font-weight:var(--graisse-forte);background:var(--marque)}
+.filtres a[aria-current]{color:var(--surface);font-weight:var(--graisse-forte);background:var(--encre)}
 /* Sélecteur « Photos » / « Vidéo » en haut de l'écran Photos (31/10/2026) : deux moitiés égales, 48 px de haut (cible tactile au moins 44 px). */
 .filtres.bascule{display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:visible}
 .filtres.bascule a{justify-content:center;min-height:48px;padding:8px 16px}
@@ -763,6 +766,9 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .entrer-demo{display:flex;flex-direction:column;gap:10px;margin-top:4px;padding:18px;background:var(--releve);border:1px solid var(--filet);border-radius:var(--r-image)}
 .entrer-demo .fort{margin:0 0 2px;font-family:var(--sans);font-size:18px;font-weight:var(--graisse-forte)}
 .entrer-demo .bouton{width:100%;justify-content:center}
+.connexion-compte{margin-top:20px;padding-top:6px;border-top:1px solid var(--filet)}   /* lot 5 B : formulaire replié sous les visites de la démonstration */
+.connexion-compte>summary{font-weight:var(--graisse-forte)}
+.connexion-compte[open]>summary{margin-bottom:12px}
 @media (hover:hover){.entrer-demo .bouton.second:hover{background:var(--surface)}}
 
 /* ---- Automatisations de service : mise en route, score de santé (console). Aucun trait coloré devant un libellé, aucun orange :
@@ -1459,6 +1465,8 @@ details.accueil-plus[open]>summary::after{transform:rotate(-135deg)}details.accu
 @media (min-width:1100px){.accueil-grille{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}.accueil-grille .carte .actions-attente,.accueil-grille .carte p{max-width:none}}
 /* Lot 4 B (revue design) : onglets réseau sur une ligne (défilement horizontal si l'écran est trop étroit, jamais « Fiche Google » seul dessous) */
 .res-onglets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.res-onglets::-webkit-scrollbar{display:none}.res-onglets button{flex:0 0 auto;white-space:nowrap}
+/* Lot 5 B (revue design : « Fiche Googl » coupé à 390 px) : au téléphone, l'onglet dit « Google » ; les 4 onglets tiennent sans défiler. */
+@media (max-width:599px){.res-onglets{gap:0 14px}.res-onglets .lib-long{display:none}.res-onglets .lib-court{display:inline}}
 /* Bureau : un contenu à valider prend la largeur, aperçu à gauche, date et boutons à droite (plus de carte de 350 px dans une page vide) */
 @media (min-width:1100px){
   .cartes>.contenu.a-decider{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);column-gap:32px;row-gap:12px;align-items:start;grid-auto-rows:auto}
@@ -1479,3 +1487,10 @@ details.af-tache[open]>summary::after{transform:rotate(-135deg);margin-top:-2px}
 details.af-tache .af-type{font-weight:var(--graisse-forte)}details.af-tache .af-etat{color:var(--discret);font-size:15px}details.af-tache.af-retard .af-etat{color:var(--danger);font-weight:var(--graisse-forte)}
 details.af-tache>article.carte{border:0;border-top:1px solid var(--filet);border-radius:0 0 var(--r-image) var(--r-image);margin:0}
 @media (max-width:899px){.tab.journal td.jv{display:none}}
+/* Lot 5 B : colonnes des délais cachées quand aucune ligne n'en a ; au téléphone, pas d'étiquette vide ; filtre et export avec leur marge. */
+.tab.journal.sans-garanties .jg{display:none}
+@media (max-width:899px){.tab.journal td.vide{display:none}}
+.journal-outils{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-bottom:12px}
+.journal-outils .f{flex:1 1 220px;margin:0}
+/* Lot 5 B (revue design : champ de filtre du journal collé aux bords de la carte) : les outils du journal gardent la marge de la carte. */
+.tableau>.journal-outils{padding:12px 16px 0}

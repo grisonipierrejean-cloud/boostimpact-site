@@ -310,13 +310,16 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
 // tant que le premier écran est visible et dès que le formulaire d'audit est à l'écran (il ne cache jamais le formulaire).
 (function(){
   if(typeof window==='undefined'||!document.querySelector)return;
-  var liste=document.querySelector('.preuves'),compte=document.querySelector('.preuves-compte');
-  if(liste&&compte){
-    var cartes=liste.querySelectorAll('.preuve'),n=cartes.length;
+  // Lot 5a : même repère pour le carrousel des trois offres au téléphone.
+  [['.preuves','.preuves-compte','.preuve'],['.offres','.offres-compte','.offre']].forEach(function(c){
+    var liste=document.querySelector(c[0]),compte=document.querySelector(c[1]);
+    if(!liste||!compte)return;
+    var cartes=liste.querySelectorAll(c[2]),n=cartes.length;
     var maj=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;if(!l)return;
-      var pas=l+16,i=Math.round(liste.scrollLeft/pas);compte.textContent=Math.min(n,Math.max(1,i+1))+'/'+n};
+      var pas=cartes[1]?cartes[1].getBoundingClientRect().left-cartes[0].getBoundingClientRect().left:l+16,i=Math.round(liste.scrollLeft/(pas||l));
+      compte.textContent=Math.min(n,Math.max(1,i+1))+'/'+n};
     liste.addEventListener('scroll',maj,{passive:true});maj();
-  }
+  });
   var b=document.querySelector('.audit-collant'),haut=document.getElementById('haut'),audit=document.getElementById('audit');
   if(!b||!haut||!audit||!window.IntersectionObserver||!window.matchMedia)return;
   var tel=window.matchMedia('(max-width: 759px)'),hautVu=true,auditVu=false;
@@ -331,4 +334,7 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
   if(typeof window==='undefined'||!document.querySelectorAll||!window.matchMedia)return;
   if(window.matchMedia('(min-width: 760px)').matches)
     Array.prototype.forEach.call(document.querySelectorAll('details[data-ouvert-bureau]'),function(d){d.open=true});
+  // Lot 5a : la liste de l'option « Site du restaurant » ouverte d'office quand les deux cartes d'options sont côte à côte (1 040 px et plus).
+  if(window.matchMedia('(min-width: 1040px)').matches)
+    Array.prototype.forEach.call(document.querySelectorAll('details[data-ouvert-large]'),function(d){d.open=true});
 })();

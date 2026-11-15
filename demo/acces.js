@@ -150,7 +150,8 @@
     try { const u = new URL(location.href); u.hash = ""; history.replaceState(null, "", u.href); } catch (x) {}
   }
 
-  // Connexion. o : { vue, I, D, titre, chapo, extra (HTML sous le formulaire, démonstration), pied (HTML après la carte), apres() : après l'entrée }.
+  // Connexion. o : { vue, I, D, titre, chapo, extra (HTML sous le formulaire, démonstration), pied (HTML après la carte), apres() : après l'entrée,
+  // avant (HTML au-dessus du formulaire) et replier (libellé : le formulaire est alors replié sous ce libellé ; lot 5 B, entrée de la démonstration) }.
   // mode « mdp » (adresse + mot de passe) ou « lien » (recevoir un lien pour choisir son mot de passe : première connexion, oubli).
   function connexion(o, mode, email) {
     const { vue, I, D } = o, t = I.t, erreurLien = !!(A.lien && A.lien.erreur);
@@ -158,12 +159,13 @@
     const lien = mode === "lien";
     vue.innerHTML = `<div class="connexion"><div class="carte">${tete(I)}
       <div class="entete"><h1>${lien ? t("acc.lien.titre") : o.titre}</h1><p class="chapo">${lien ? t("acc.lien.chapo") : o.chapo}</p></div>
+      ${!lien && o.avant ? o.avant : ""}${!lien && o.replier ? `<details class="repliable connexion-compte" id="connexion-compte"><summary>${o.replier}</summary>` : ""}
       <form id="f" novalidate data-acces="${lien ? "lien" : "mdp"}"><div class="f"><label for="email">${t("cx.email")}</label><input id="email" name="email" type="email" autocomplete="${lien ? "email" : "username"}" required value="${e(email || "")}"></div>
       ${lien ? "" : `<div class="f"><label for="mdp">${t("acc.mdp")}</label><input id="mdp" name="mdp" type="password" autocomplete="current-password" required></div>
       <label class="option"><input type="checkbox" id="voir-mdp"><span>${t("acc.afficher")}</span></label>`}
       <button class="bouton plein" type="submit">${t(lien ? "cx.recevoir" : "acc.entrer")}</button><p class="msg" id="msg" role="status"></p></form>
       <p class="acces-bascule"><button type="button" class="lien" id="bascule">${t(lien ? "acc.retour.connexion" : "acc.oubli")}</button></p>
-      ${lien ? "" : o.extra || ""}</div>${o.pied || ""}</div>`;
+      ${lien ? "" : o.extra || ""}${!lien && o.replier ? "</details>" : ""}</div>${o.pied || ""}</div>`;
     if (erreurLien) { message(t("acc.err.lien"), true); oublierErreurLien(); }
     if (!lien) voir($("voir-mdp"), [$("mdp")]);
     $("bascule").onclick = () => { connexion(o, lien ? "mdp" : "lien", $("email").value.trim()); const c = $("email"); if (c) c.focus(); };

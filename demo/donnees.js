@@ -39,6 +39,18 @@
     }
     return e;
   }
+  // Appel promis (lot 5 B, 15/11/2026, revue exploitant : « l'appel promis au commerçant n'apparaît jamais dans À sortir aujourd'hui ») : un avis
+  // retenu porte le jour du rappel choisi par le commerçant (retenue_jour, rendu rappel_jour par admin_file_avis) et sa plage (« 9-18 », ou
+  // « 15-17 »). L'appel est dû ce jour-là avant la fin de la plage : 18 h, heure de Paris (17 h pour 15-17). C'est une tâche de l'équipe, à part de
+  // la garantie des 24 h (suspendue pendant la retenue, CGV art. 10) : un appel en retard ne crée jamais de mois offert. Rend des millisecondes ou null.
+  function echeanceAppel(jour, creneau) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(jour || ""))) return null;
+    const h = creneau === "15-17" ? 17 : 18;
+    for (const off of [1, 2]) { const ms = Date.parse(`${jour}T${String(h - off).padStart(2, "0")}:00:00Z`);
+      const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hourCycle: "h23", hour: "2-digit" }).format(new Date(ms));
+      if (+p === h) return ms; }
+    return null;
+  }
   // Retenues d'un avis de la démonstration : son historique (a.retenues), plus une retenue en cours posée avant cet historique.
   const retenuesDe = a => { const l = Array.isArray(a.retenues) ? a.retenues.slice() : []; if (a.retenue_le && !l.some(x => x.retenue_le === a.retenue_le)) l.push({ retenue_le: a.retenue_le, liberee_le: null }); return l; };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
@@ -1241,6 +1253,12 @@
         if (x.prevu_il_y_a_h != null) { const t = maintenant - x.prevu_il_y_a_h * H; x.prevu_le = iso(k === "publications" ? creneauAvant(metier, pris, t) : t); delete x.prevu_il_y_a_h; }
         if (x.repondu_apres_h != null) { x.repondu_le = iso(new Date(x.cree_le).getTime() + x.repondu_apres_h * H); delete x.repondu_apres_h; }
         if (x.decide_apres_h != null) { x.decide_le = iso(new Date(x.cree_le).getTime() + x.decide_apres_h * H); delete x.decide_apres_h; }
+        // Lot 5 B : avis retenu de la graine (« Attendez mon appel », rappel promis aujourd'hui) et dates du détail d'une ligne du journal
+        // (« recu_le_il_y_a_h » devient « recu_le », « livraison_prevue_le_dans_h » devient « livraison_prevue_le »).
+        if (x.retenue_il_y_a_h != null) { x.retenue_le = iso(maintenant - x.retenue_il_y_a_h * H); delete x.retenue_il_y_a_h; }
+        if (x.retenue_jour === "aujourdhui") x.retenue_jour = jourParisDemo(maintenant);
+        if (k === "journal" && x.detail && typeof x.detail === "object") Object.keys(x.detail).forEach(c => { const m = /^(.+)_(il_y_a_h|dans_h)$/.exec(c); if (!m || typeof x.detail[c] !== "number") return;
+          x.detail[m[1]] = iso(maintenant + (m[2] === "dans_h" ? 1 : -1) * x.detail[c] * H); delete x.detail[c]; });
         // Tour 11 (v37, 1er novembre : « 2 sur 4 vidéos utilisées » avec deux vidéos créées le 31 octobre) : « courant » = le mois de création
         // (cree_le, heure de Paris), comme la base qui date chaque contenu du mois où il est créé ; sans date de création, le mois en cours.
         if (x.mois === "courant") x.mois = x.cree_le ? (p_ => ymd(p_.a, p_.m, 1))(partiesParis(Date.parse(x.cree_le))) : mois0(); else if (x.mois === "precedent") x.mois = moisDecale(-1);
@@ -1642,13 +1660,19 @@
     // (Premium). La copie est faite à la première connexion à ce compte (rien ne change pour les autres comptes ni pour la console avant), avec de
     // nouveaux identifiants et de nouveaux jetons, puis ramenée à ce que l'offre permet : Essentiel, ni vidéo ni story, la fiche Google seule ;
     // Croissance, pas de vidéo.
+    // Lot 5 B (revue : « L'équipe de Le Bistrot d'exemple ») : « de » devant le nom copié suit l'élision du français (du, des, de l', d').
+    function elisionDe(v, nom) {
+      const m = /^(Les|Le|La)\s+(.+)$/.exec(nom), ap = /^L['’](.+)$/.exec(nom);
+      const forme = m ? { Le: "du ", Les: "des ", La: "de la " }[m[1]] + m[2] : ap ? "de l'" + ap[1] : /^[AEIOUYÉÈÊÂÎaeiouyéèêâî]/.test(nom) ? "d'" + nom : "de " + nom;
+      return v.split("de " + nom).join(forme).split("De " + nom).join(forme.charAt(0).toUpperCase() + forme.slice(1));
+    }
     function assurerCompteOffre(email) {
       const def = (((E && E.demo_maj) || {}).comptes_offres || {})[email], src = def && E.commerces[E.demo_maj.principal];
       if (!def || !src || E.commerces[def.commerce] || !OFFRES[def.offre]) return;
       const id = def.commerce, suffixe = "-" + def.offre, ids = new Map([[src.id, id]]), tables = Object.keys(E).filter(k => Array.isArray(E[k]));
       tables.forEach(k => E[k].forEach(x => { if (x && x.commerce_id === src.id && x.id != null) ids.set(String(x.id), String(x.id) + suffixe); }));
       const copie = v => Array.isArray(v) ? v.map(copie) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, y]) => [k, k === "jeton" && typeof y === "string" ? nouveauJeton() : copie(y)]))
-        : typeof v === "string" && ids.has(v) ? ids.get(v) : typeof v === "string" && def.nom && src.nom && def.nom !== src.nom && v.includes(src.nom) ? v.split(src.nom).join(def.nom) : v;   // lot 4 B : signatures au nom du commerce copié
+        : typeof v === "string" && ids.has(v) ? ids.get(v) : typeof v === "string" && def.nom && src.nom && def.nom !== src.nom && v.includes(src.nom) ? elisionDe(v.split(src.nom).join(def.nom), def.nom) : v;   // lot 4 B : signatures au nom du commerce copié
       tables.forEach(k => { E[k].push(...E[k].filter(x => x && x.commerce_id === src.id).map(copie)); });
       ["comptes", "bases"].forEach(k => { if (E[k] && E[k][src.id]) E[k][id] = copie(E[k][src.id]); });
       const c = E.commerces[id] = Object.assign(copie(src), { id, nom: def.nom || src.nom, offre_id: def.offre, delegation_signee_le: null });
@@ -2748,7 +2772,10 @@
       async codeDemo() { await init(); const f = facteurDemo(); return f ? window.RENOM_ACCES.totp(f.secret) : null; },
       // Comptes de la graine chargée, pour l'écran de connexion (aucune adresse écrite en dur dans les écrans)
       async comptesDemo() { await init(); const co = (E.demo_maj || {}).comptes_offres || {};   // compte par offre pas encore ouvert : le nom prévu par la graine
-        return Object.entries(E.users).map(([email, u]) => ({ email, role: u.role, commerce: u.commerce ? (E.commerces[u.commerce] || {}).nom || (co[email] || {}).nom || "" : "" })); },
+        // Lot 5 B (entrée de la démo : un bouton par offre) : l'offre, le commerce et « nouveau client » (démarrage pas fini) de chaque compte.
+        return Object.entries(E.users).map(([email, u]) => { const c = u.commerce ? E.commerces[u.commerce] || null : null;
+          return { email, role: u.role, commerce: u.commerce ? (c || {}).nom || (co[email] || {}).nom || "" : "", commerce_id: u.commerce || (co[email] || {}).commerce || null,
+            offre: c ? c.offre_id : (co[email] || {}).offre || null, nouveau: !!c && c.demarrage_fini === false }; }); },
       async ouvrirLien(e) { await init(); ouvrir(e, false, true); },   // visite directe de la démonstration (boutons de l'écran de connexion)
       async quitter() { session = null; aChoisir = false; aal2 = false; try { localStorage.removeItem(K + ":session"); localStorage.removeItem(K + ":choisir"); localStorage.removeItem(K + ":aal2"); } catch (x) {} },
       async estAdmin() { await init(); return !!session && !aChoisir && E.users[session].role === "administrateur"; },
@@ -3210,7 +3237,9 @@
         async emailsValidation() {
           await init(); const c = cur(); if (c.notifications && c.notifications.email === false) return [];
           const court = t => { t = String(t || ""); return t.length > 160 ? t.slice(0, t.lastIndexOf(" ", 160)) + "…" : t; };
-          return liste("jetons_validation").filter(j => j.commerce_id === c.id).map(j => lireJeton(j.jeton)).filter(r => r.etat === "a_valider").reverse().map(({ j, o }) => ({
+          // Lot 5 B (revue James : la démo montrait « Une réponse à un commentaire attend votre accord » alors que l'espace dit « disponible
+          // prochainement ») : aucun email de réponse à un commentaire tant que les réponses aux commentaires ne sont pas disponibles pour l'offre.
+          return liste("jetons_validation").filter(j => j.commerce_id === c.id && (j.objet !== "commentaire" || !!offreDe(c.id).commentaires_disponible)).map(j => lireJeton(j.jeton)).filter(r => r.etat === "a_valider").reverse().map(({ j, o }) => ({
             jeton: j.jeton, objet: j.objet, expire_le: j.expire_le, extrait: court(j.objet === "contenu" ? o.legende : o.texte),
             objet_email: j.objet === "avis" ? "Une réponse d'avis attend votre accord" : j.objet === "commentaire" ? "Une réponse à un commentaire attend votre accord"
               : ({ story: "Une story attend votre accord", video: "Une vidéo attend votre accord" })[formatDe(o)] || "Une publication attend votre accord",
@@ -3905,6 +3934,6 @@
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
-  window.RENOM_ECHEANCE_AVIS = echeanceAvis;
+  window.RENOM_ECHEANCE_AVIS = echeanceAvis; window.RENOM_ECHEANCE_APPEL = echeanceAppel;
   window.RENOM_SECOURS = { ALERTE_HEURES: SECOURS_ALERTE_HEURES };
 })();
