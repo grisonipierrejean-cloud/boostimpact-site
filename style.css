@@ -900,3 +900,126 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 .annee-sans .offre-ia,.annee-sans .offre-ia a{font-family:var(--police-texte);font-size:var(--t-corps);line-height:1.45;letter-spacing:0;font-weight:var(--graisse-moyenne)}
 @media (min-width:1040px){.annee-sans .offre-ia{font-size:var(--t-corps)}}
 #haut .insec{white-space:nowrap}
+
+/* ==========================================================================================================================
+   Lot 2 (15/11/2026) : page d'accueil deux fois plus courte. Ordre : héros, fiche avant / après, offres,
+   preuve (exemple fictif), comment ça marche, exemples repliés, qui s'occupe de vous, cinq questions, audit.
+   Rien n'est supprimé : tableau, détails des options et autres questions sont repliés (<details class="plie">).
+   ========================================================================================================================== */
+@media (max-width:759px){:root{--saut:56px}}
+/* Premier écran : une seule phrase ; voile assez dense pour 4,5:1 même sur les reflets des verres (mesuré, voir ordres/BRANCHEMENT.md). */
+#haut h1{font-size:clamp(2rem,8.4vw,2.5rem);line-height:1.08;max-width:17ch;margin-bottom:24px}
+html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch}
+#haut::after{background:linear-gradient(to top,rgba(12,15,13,.92) 0%,rgba(12,15,13,.78) 45%,rgba(12,15,13,.62) 100%)}
+#haut .haut-prix{text-transform:none;letter-spacing:0;font-size:var(--t-corps);line-height:1.5;color:var(--blanc);max-width:36ch}
+@media (min-width:1040px){
+  #haut::after{background:linear-gradient(90deg,rgba(12,15,13,.9) 0%,rgba(12,15,13,.78) 45%,rgba(12,15,13,.42) 72%,rgba(12,15,13,.12) 100%)}
+  #haut h1{font-size:3.6rem;line-height:1.04;max-width:18ch}
+  html:not([lang="fr"]) #haut h1{font-size:3.3rem;max-width:19ch}
+  #haut .haut-prix{max-width:46ch;font-size:var(--t-1)}
+}
+/* Plis : une ligne nette, « + » à droite, comme les questions. */
+.plie{border-top:1px solid var(--trait-fort);border-bottom:1px solid var(--trait-fort)}
+.plie+.plie{border-top:0}
+.plie>summary{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:56px;padding:12px 0;font-size:var(--t-1);font-weight:var(--graisse-moyenne);cursor:pointer;list-style:none;color:var(--texte)}
+.plie>summary::-webkit-details-marker{display:none}
+.plie>summary::after{content:"+";flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:var(--t-2b);font-weight:var(--graisse-texte);line-height:1.1}
+.plie[open]>summary::after{content:"\2212"}
+.plie[open]{padding-bottom:24px}
+.plie>:not(summary)+:not(summary){margin-top:12px}
+.plie-compare{margin-top:40px}
+.plie-compare .compare-cadre{margin-top:4px}
+.offres-pied .plie p{font-size:var(--t-corps);line-height:1.55;color:var(--texte-doux)}
+.option .plie{border-color:var(--trait)}
+.option-vedette .plie{border-color:rgba(255,255,255,.22)}
+.option-vedette .plie>summary{color:var(--blanc)}
+.option .plie .inclus{margin-top:4px}
+.plie-toutes{border-top:0}
+.plie-toutes>.questions{border-top:0}
+.plie-exemples .posts{margin-top:8px}
+.plie-demo .demo{margin-top:8px}
+/* Options : cartes en une colonne (le détail est replié), côte à côte sur grand écran. */
+@media (min-width:760px){
+  .option{display:flex;flex-direction:column;gap:16px;align-items:stretch}
+  .option>.btn{align-self:flex-start;width:auto}
+  .option-vedette>.option-actions{flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 24px}
+}
+@media (min-width:1040px){.options-liste{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Fiche avant / après : sur téléphone, les deux fiches côte à côte, on fait glisser pour voir « Après ». */
+@media (max-width:759px){
+  .fiches{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 8px;scroll-padding:0 var(--marge)}
+  .fiche{flex:0 0 84%;scroll-snap-align:start}
+}
+/* Preuve : trois avis d'un restaurant fictif et un extrait de l'audit. */
+.preuves{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.preuve{border:1px solid var(--trait);border-radius:var(--r-carte);padding:20px;display:flex;flex-direction:column;gap:12px;background:var(--blanc)}
+.preuve h3{margin:0;font-size:var(--t-1);line-height:1.3;font-family:var(--police-texte);font-weight:var(--graisse-forte)}
+.preuve p{margin:0;font-size:var(--t-corps);line-height:1.5}
+.preuve-avis{display:flex;flex-direction:column;gap:4px}
+.preuve-qui{font-weight:var(--graisse-moyenne)}
+.preuve-reponse{border-left:2px solid var(--texte);padding-left:12px;display:flex;flex-direction:column;gap:4px;color:var(--texte-doux)}
+.preuve-reponse .preuve-lib{color:var(--texte);font-weight:var(--graisse-moyenne)}
+.preuve-statut{color:var(--texte)}
+.preuve-sensible{border-color:var(--texte)}
+.preuve-bouton{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.preuve-btn{pointer-events:none}
+.extrait-audit{margin-top:40px;display:flex;flex-direction:column;gap:8px;max-width:640px}
+.extrait-audit h3{margin:0;font-size:var(--t-3);line-height:var(--i-titre)}
+.extrait-chapo{font-size:var(--t-corps);line-height:1.5;color:var(--texte-doux)}
+.extrait{margin-top:8px;border:1px solid var(--trait);border-radius:var(--r-carte);padding:20px;display:flex;flex-direction:column;gap:12px}
+.extrait h4{margin:8px 0 0;font-family:var(--police-texte);font-size:var(--t-corps);font-weight:var(--graisse-forte)}
+.extrait-score{margin:0;display:flex;align-items:baseline;gap:8px}
+.extrait-nombre{font-family:var(--police-titre);font-size:3rem;line-height:1.1;font-variant-numeric:lining-nums}
+.extrait-mention{margin:0;font-size:var(--t-2);color:var(--texte-doux)}
+.extrait-cadre{overflow-x:auto}
+.extrait-table{width:100%;border-collapse:collapse;font-size:var(--t-2);font-variant-numeric:lining-nums}
+.extrait-table th,.extrait-table td{padding:8px 4px;border-bottom:1px solid var(--trait);text-align:right;font-weight:var(--graisse-texte)}
+.extrait-table th:first-child{text-align:left}
+.extrait-table thead th{color:var(--texte-doux)}
+.extrait-table .vous th,.extrait-table .vous td{font-weight:var(--graisse-forte)}
+.extrait-prio{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:var(--t-corps);line-height:1.45}
+@media (min-width:1040px){.preuves{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}}
+@media (max-width:759px){:root{--saut:48px}}
+/* Exemples et étapes repliés dans la bande « Comment ça marche » (fond encre) */
+.fonct-plis{margin-top:32px}
+#fonctionnement .plie{border-color:rgba(255,255,255,.22)}
+#fonctionnement .plie>summary{color:var(--blanc)}
+#fonctionnement .plie-demo .demo{background:var(--blanc);color:var(--texte);padding:20px;border-radius:var(--r-carte)}
+.responsabilite strong{color:var(--texte);font-weight:var(--graisse-forte)}
+@media (max-width:759px){
+  /* Trois avis côte à côte : on fait glisser. Maquettes de fiche à 80 % pour garder l'avant / après sur un écran et demi. */
+  .preuves{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 8px;scroll-padding:0 var(--marge);align-items:stretch}
+  .preuve{flex:0 0 84%;scroll-snap-align:start}
+  .fiche .maq-gm{zoom:.8}
+  .fiche{flex-basis:80%}
+}
+@media (max-width:759px){
+  /* Cartes d'offres plus serrées sur téléphone (même contenu) */
+  .offre{padding:20px 16px;gap:12px}
+  .prix-bloc{padding-top:12px}
+  .prix-detail[data-rythme="annuel"]{margin-bottom:8px}
+  .annee{padding:12px 16px;gap:8px}
+  .offre-bas{gap:12px}
+  .offre .inclus{gap:8px}
+  .offre .offre-vous{padding-top:12px}
+  .etape{padding:16px 0}
+  .extrait{padding:16px;gap:8px}
+  .extrait-audit{margin-top:32px}
+  .options{margin-top:40px}
+}
+@media (max-width:759px){
+  #haut{min-height:540px}
+  .fiche .maq-gm{zoom:.74}
+  .etape{grid-template-columns:32px minmax(0,1fr);gap:12px}
+  .offres-pied{margin-top:20px}
+}
+@media (max-width:759px){
+  :root{--saut:40px}
+  .option-vedette .vedette-accroche{font-size:var(--t-corps);line-height:1.5}
+  .preuve{padding:16px}
+  .responsabilite{margin-top:4px}
+}
+@media (max-width:759px){.offre-promesse{font-size:var(--t-corps);line-height:1.45}}
+@media (max-width:759px){.plie>summary{min-height:52px}.q summary{min-height:56px;padding:12px 0}}
+@media (max-width:759px){.tete{margin-bottom:28px;gap:12px}.tete-chapo{font-size:var(--t-corps)}}
+@media (max-width:759px){.preuves{align-items:flex-start}}

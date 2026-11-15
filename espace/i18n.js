@@ -175,6 +175,9 @@
     "reg.demarrage.texte": ["Les étapes pour démarrer et vos 5 réponses pour que BoostImpact écrive comme vous.", "The steps to get started and your 5 answers so BoostImpact writes the way you do.", "De stappen om te starten en uw 5 antwoorden zodat BoostImpact schrijft zoals u."],
     "acc.afaire.titre": ["À faire maintenant", "To do now", "Nu te doen"],
     // Tour 16 (02/11/2026, audit UX Premium) : l'en-tête de l'accueil redit la liste « À faire maintenant », mêmes mots, même compte (TikTok compris).
+    "acc.chapo.valider": [v => `${v.n === 1 ? "1 chose" : v.n + " choses"} à valider${v.a ? `, et ${v.a === 1 ? "1 autre chose" : v.a + " autres choses"} à faire` : ""} maintenant.`,
+      v => `${v.n === 1 ? "1 thing" : v.n + " things"} to approve${v.a ? `, and ${v.a === 1 ? "1 other thing" : v.a + " other things"} to do` : ""} now.`,
+      v => `${v.n === 1 ? "1 ding" : v.n + " dingen"} om goed te keuren${v.a ? `, en ${v.a === 1 ? "1 ander ding" : v.a + " andere dingen"} om te doen` : ""}.`],
     "acc.chapo.actions": [v => `${v.n === 1 ? "1 chose" : v.n + " choses"} à faire maintenant.`, v => `${v.n === 1 ? "1 thing" : v.n + " things"} to do now.`, v => `${v.n === 1 ? "1 ding" : v.n + " dingen"} om nu te doen.`],
     "acc.aut.voir": ["Voir dans Photos", "See in Photos", "Bekijken in Foto's"],
     "acc.tout.voir": [v => `Tout voir, ${v.n} de plus`, v => `See all, ${v.n} more`, v => `Alles bekijken, nog ${v.n}`],   // 01/11/2026, tour 8 (petit écran)
@@ -450,6 +453,13 @@
     "auto.creneaux": ["Créneaux prévus pour votre métier : {h}, {fuseau}, au moins 2\u00a0heures après maintenant.",
       "Default slots for your type of business: {h}, {fuseau}, at least 2\u00a0hours from now.", "Standaardmomenten voor uw vak: {h}, {fuseau}, minstens 2\u00a0uur vanaf nu."],
     "fuseau.FR": ["heure de Paris", "Paris time", "Parijse tijd"], "fuseau.BE": ["heure de Bruxelles", "Brussels time", "Belgische tijd"],
+    // Lot 2 (15/11/2026) : validée, la publication est programmée toute seule ; la carte le dit avec Déplacer et Annuler la publication.
+    "prop.programme": ["Programmé {quand}, sur {res}.", "Scheduled {quand}, on {res}.", "Ingepland {quand}, op {res}."],
+    "prop.programme.texte": ["C'est le prochain créneau libre prévu pour votre métier. Vous n'avez rien d'autre à faire.", "It's the next free slot planned for your trade. There's nothing else for you to do.", "Dat is het eerstvolgende vrije moment voor uw vak. U hoeft verder niets te doen."],
+    "prop.raison": ["Elle n'a pas pu être programmée toute seule : {r}", "It couldn't be scheduled automatically: {r}", "Ze kon niet automatisch ingepland worden: {r}"],
+    "prog.raisons": ["Pas de date pour l'instant : {r}", "No date for now: {r}", "Nog geen datum: {r}"],
+    "prog.raison.annulee": ["vous avez annulé la publication.", "you cancelled the post.", "u hebt de post geannuleerd."],
+    "prog.raison.inconnue": ["aucune date n'a pu être choisie automatiquement.", "no date could be chosen automatically.", "er kon automatisch geen datum gekozen worden."],
     "prop.titre": ["Publication validée. La programmer maintenant ?", "Content approved. Schedule it now?", "Post goedgekeurd. Nu inplannen?"],
     "prop.programme.titre": ["Publication validée et programmée", "Content approved and scheduled", "Post goedgekeurd en ingepland"], "prop.texte": ["BoostImpact le place au prochain créneau libre, sur vos réseaux connectés.", "BoostImpact puts it in the next free slot, on your connected networks.", "BoostImpact zet hem op het eerstvolgende vrije moment, op uw gekoppelde netwerken."],
     // ---- Connexion
@@ -1121,6 +1131,14 @@
     "res.col.commerce": ["Commerce", "Business", "Zaak"], "res.col.avis": ["Avis", "Reviews", "Reviews"], "res.l.reponses": ["Réponses", "Replies", "Antwoorden"], "res.l.delai": ["Délai moyen", "Average time", "Gemiddelde tijd"],
     "res.aucune.reponse": ["Aucune réponse", "No replies", "Geen antwoorden"], "res.rep.titre": ["Réponses à vos avis", "Replies to your reviews", "Antwoorden op uw reviews"], "res.rep.aucun": ["Aucun avis reçu sur la période.", "No reviews received in this period.", "Geen reviews ontvangen in deze periode."],
     "res.taux": ["Taux de réponse", "Reply rate", "Antwoordpercentage"],
+    // Lot 2 (15/11/2026, décision du fondateur) : taux sur les seuls avis reçus depuis le début du service (accès à la fiche remis), anciens à part.
+    "res.rep.depuis": [v => `Sur les ${v.n} avis reçus depuis notre arrivée${v.d ? `, le ${v.d}` : ""}${v.c ? `, sans compter ${v.c} ${pl(v.c, "avis", "avis")} de moins de 24\u00a0h, encore dans le délai` : ""}. Un avis sensible compte comme non répondu tant que notre équipe n'y a pas répondu.`,
+      v => `Based on the ${v.n} ${v.n === 1 ? "review" : "reviews"} received since we started${v.d ? ` on ${v.d}` : ""}${v.c ? `, not counting ${v.c} ${v.c === 1 ? "review" : "reviews"} less than 24 hours old, still within the deadline` : ""}. A sensitive review counts as unanswered until our team has replied to it.`,
+      v => `Op basis van de ${v.n} ${v.n === 1 ? "review" : "reviews"} ontvangen sinds onze start${v.d ? ` op ${v.d}` : ""}${v.c ? `, zonder ${v.c} ${v.c === 1 ? "review" : "reviews"} van minder dan 24 uur, nog binnen de termijn` : ""}. Een gevoelige review telt als onbeantwoord zolang ons team er niet op geantwoord heeft.`],
+    "res.rep.anciens": [v => `Avis plus anciens que notre arrivée : ${v.n}, dont ${v.r} avec réponse. Ils ne comptent pas dans le taux.`,
+      v => `Reviews older than our arrival: ${v.n}, of which ${v.r} have a reply. They are not counted in the rate.`,
+      v => `Reviews van vóór onze komst: ${v.n}, waarvan ${v.r} met een antwoord. Ze tellen niet mee in het percentage.`],
+    "res.rep.aucun.depuis": ["Aucun avis reçu depuis notre arrivée.", "No reviews received since we started.", "Nog geen reviews ontvangen sinds onze start."],
     "res.rep.note": ["Sur les avis reçus ces {n} derniers mois. Un avis sensible n'a pas de réponse automatique : il compte comme non répondu tant que notre équipe n'y a pas répondu.",
       "Based on reviews received over the last {n} months. A sensitive review gets no automatic reply: it counts as unanswered until our team has replied to it.", "Op basis van de reviews ontvangen in de laatste {n} maanden. Een gevoelige review krijgt geen automatisch antwoord: hij telt als onbeantwoord zolang ons team er niet op geantwoord heeft."],
     "res.score.titre": ["Score de votre fiche Google (notre grille)", "Your Google profile score (our assessment grid)", "Score van uw Google-profiel (ons analyseraster)"], "res.score.sur": ["sur 100, calculé aujourd'hui", "out of 100, calculated today", "op 100, vandaag berekend"],
@@ -2499,7 +2517,6 @@
     "acc.chg.offre": [v => `Changement d'offre demandé le ${v.d} : nous vous appelons ${v.quand} pour confirmer.`, v => `Plan change requested on ${v.d}: we will call you on ${v.quand} to confirm.`, v => `Formulewijziging aangevraagd op ${v.d}: wij bellen u op ${v.quand} om te bevestigen.`],   // tour 9 : le jour réel
     "offre.dessus.difference": ["Différence : {prix} HT de plus par mois.", "Difference: {prix} excl. VAT more a month.", "Verschil: {prix} excl. btw meer per maand."],
     "offre.dessus.passer": ["Passer à {nom}", "Switch to {nom}", "Overstappen naar {nom}"],
-    "offre.lancement": ["Prix de lancement", "Launch price", "Introductieprijs"],
     "offre.dessus.rythme.mensuel": ["au mois", "monthly", "per maand"], "offre.dessus.rythme.annuel": ["à l'année", "yearly", "per jaar"],
     "offre.dessus.frais.offerts": ["Frais de mise en route ({prix} HT) offerts&nbsp;: vous payez à l'année.", "Set-up fee ({prix} excl. VAT) waived: you pay yearly.", "Opstartkosten ({prix} excl. btw) gratis: u betaalt per jaar."],
     "offre.dessus.frais.demande": ["Frais de mise en route : offerts en paiement annuel ; en paiement mensuel, {prix} HT une seule fois, sur la facture de la montée (conditions de vente, article 4).", "Set-up fee: waived with annual billing; with monthly billing, {prix} excl. VAT once, on the upgrade invoice (terms of sale, section 4).", "Opstartkosten: gratis bij jaarlijkse betaling; bij maandelijkse betaling, {prix} excl. btw eenmalig, op de factuur van de overstap (verkoopvoorwaarden, artikel 4)."],
@@ -2667,7 +2684,9 @@
     // Compteur de l'onglet Photos (31/10/2026, test client Premium, tour 5) : publications du mois utilisées sur la limite de l'offre.
     // 01/11/2026 (tour 6 Croissance) : « 5 publications sur 8 ce mois-ci » (on sait ce qui est compté), plus « 5 sur 8 utilisées ».
     // Tour 16 (02/11/2026, audit UX Premium) : « 2 photos sur 12 utilisées ce mois-ci, il vous en reste 10. » (même compte que l'accueil : pubReservees).
-    "photos.compteur.reste": [v => `${v.a} ${v.a > 1 ? "photos" : "photo"} sur ${v.b} ${v.a > 1 ? "utilisées" : "utilisée"} ce mois-ci${v.n > 0 ? ` (dont ${v.n} en préparation)` : ""}, il vous en reste ${v.r}.`, v => `${v.a} of ${v.b} ${v.b === 1 ? "photo" : "photos"} used this month${v.n > 0 ? ` (including ${v.n} in progress)` : ""}, ${v.r} left.`, v => `${v.a} van ${v.b} foto's gebruikt deze maand${v.n > 0 ? ` (waarvan ${v.n} in voorbereiding)` : ""}, nog ${v.r} over.`],
+    // Lot 2 (15/11/2026, retour testeur : « 4 photos sur 12 utilisées » alors que trois photos seulement étaient déposées) : ce compteur compte des PUBLICATIONS du mois
+    // (pubReservees : publications_utilisees + publications_preparation, plafond de l'offre), pas des photos ; une photo peut servir plusieurs fois.
+    "photos.compteur.reste": [v => `${v.a} ${v.a > 1 ? "publications" : "publication"} sur ${v.b} ce mois-ci${v.n > 0 ? ` (dont ${v.n} en préparation)` : ""}, il vous en reste ${v.r}.`, v => `${v.a} of ${v.b} ${v.b === 1 ? "post" : "posts"} this month${v.n > 0 ? ` (including ${v.n} in progress)` : ""}, ${v.r} left.`, v => `${v.a} van ${v.b} posts deze maand${v.n > 0 ? ` (waarvan ${v.n} in voorbereiding)` : ""}, nog ${v.r} over.`],
     "dv.compteur.reste": [v => `${v.a} sur ${v.b} ${v.a > 1 ? "utilisées" : "utilisée"}${v.n > 0 ? ` (dont ${v.n} en préparation)` : ""}. Il vous en reste ${v.r}.`, v => `${v.a} of ${v.b} used${v.n > 0 ? ` (including ${v.n} in progress)` : ""}. ${v.r} left.`, v => `${v.a} van ${v.b} gebruikt${v.n > 0 ? ` (waarvan ${v.n} in voorbereiding)` : ""}. Nog ${v.r} over.`],
     "dv.delai": ["Le montage arrive en général le jour même.", "The edit usually arrives the same day.", "De montage komt meestal dezelfde dag."],
     "dv.comptent": ["Comptent : les vidéos du mois montées ou en préparation, vidéos d'avis comprises. Une vidéo refusée ne compte pas.", "What counts: this month's videos, edited or in progress, review videos included. A rejected video doesn't count.", "Telt mee: de video's van deze maand, gemonteerd of in voorbereiding, reviewvideo's inbegrepen. Een geweigerde video telt niet."],

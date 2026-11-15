@@ -297,3 +297,11 @@ c.addEventListener('focusout',function(e){if(!c.contains(e.relatedTarget)){survo
 document.addEventListener('visibilitychange',regler);
 if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(e.matches){arret=true;regler()}});
 })();
+
+// Lot 2 (15/11/2026) : un lien vers une partie repliée (#visibilite-ia, #comparatif, #chatgpt...) ouvre les <details> qui la contiennent.
+(function(){
+  if(typeof window==='undefined'||!window.addEventListener||!document.getElementById)return;
+  function ouvrir(){var h=(window.location&&window.location.hash)||'';if(h.length<2)return;var el=null;try{el=document.getElementById(decodeURIComponent(h.slice(1)))}catch(e){return}
+    for(var d=el;d;d=d.parentElement){if(d.tagName==='DETAILS')d.open=true}}
+  window.addEventListener('hashchange',ouvrir);ouvrir();
+})();

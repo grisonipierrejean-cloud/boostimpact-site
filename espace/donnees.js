@@ -241,6 +241,17 @@
   // belge, national ou international). Google peut retirer une publication de fiche qui en contient un (support.google.com/business/answer/7213077).
   const RE_TELEPHONE = [/(?:\+33\s?|\b0)[1-9](?:[\s.-]?\d{2}){4}\b/, /(?:\+3[23]\s?(?:\(0\)\s?)?|\b0)[1-9](?:[\s./-]?\d){7,8}\b/];
   const contientTelephone = t => RE_TELEPHONE.some(r => r.test(String(t || "")));
+  // Taux de réponse depuis le début du service (lot 2, 15/11/2026) : même calcul que taux_reponse_de() de schema.sql (bloc « Taux de réponse
+  // depuis le début du service »). depuis : garantie_delais.acces_remis_le (null : tous les avis comptent). Un avis sans réponse de moins de 24 h est
+  // « en cours » (hors du taux) ; les avis plus anciens que le début du service sont comptés à part, jamais dans le taux. Avis sensibles compris.
+  function tauxReponseDe(avis, depuis, maintenant) {
+    const d = depuis ? Date.parse(depuis) : null, now = maintenant == null ? Date.now() : maintenant, cree = a => Date.parse(a.cree_le);
+    const apres = (avis || []).filter(a => d == null || cree(a) >= d), avant = d == null ? [] : (avis || []).filter(a => cree(a) < d);
+    const rep = apres.filter(a => a.repondu_le), enCours = apres.filter(a => !a.repondu_le && cree(a) > now - 24 * 3600000).length, base = apres.length - enCours;
+    const delai = rep.length ? Math.round(rep.reduce((s, a) => s + (Date.parse(a.repondu_le) - cree(a)), 0) / rep.length / 360000) / 10 : null;
+    return { depuis: depuis || null, recus: apres.length, repondus: rep.length, en_cours: enCours, taux: base > 0 ? Math.round(100 * rep.length / base) : null,
+      delai_moyen_h: delai, anciens: avant.length, anciens_repondus: avant.filter(a => a.repondu_le).length };
+  }
   const PHRASE_TEL_GOOGLE = "Sur la fiche Google, le texte ne peut pas contenir de numéro de téléphone : Google peut retirer la publication. Le bouton « Appeler » de la fiche suffit.";
   const controlerLegende = (r, t) => {
     if (!RESEAUX.includes(r)) throw new Error("Réseau inconnu.");
@@ -1244,6 +1255,9 @@
       // L'écran Résultats (n >= 2) demande donc une lecture à la demande au workflow n8n renom-resultats-google (config.js, lectureGoogleUrl),
       // avec la session du commerçant ; la base plafonne ces lectures. Rien n'est gardé dans le navigateur. Sans adresse ou en échec : les chiffres
       // de la base seuls, et la raison dans « lecture_google ». Les autres écrans (Collecte : n = 1) ne déclenchent aucune lecture de Google.
+      // Lot 2 : mon_taux_reponse() (bloc « Taux de réponse depuis le début du service ») ; null tant que le bloc n'est pas appliqué (l'écran garde
+      // alors resultats().reponses).
+      async tauxReponse() { try { return ok(await sb.rpc("mon_taux_reponse", {})); } catch (e) { return null; } },
       async resultats(n) {
         n = Math.max(1, Math.min(12, +n || 6));
         if (n >= 2 && cfg.lectureGoogleUrl) {
@@ -1543,7 +1557,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { contientTelephone, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { contientTelephone, tauxReponseDe, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)

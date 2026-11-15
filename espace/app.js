@@ -250,7 +250,9 @@
         // 27/10/2026 (constat 32) : ce qui se passe ensuite, pas seulement « Enregistré ».
         const absents = act === "approuve" ? absentsDe(id) : [];
         await apres();
-        const conf = (legende ? legende + " " : "") + (act === "approuve" ? (p ? t("dec.valide.prevu.res", { quand: I.dateHeureDans(p.prevu_le), res: I.liste(ORDRE_RES.filter(r => (p.reseaux || []).includes(r)).map(r => RES[r])) }) : t("dec.valide"))
+        // Lot 2 : programmée à l'approbation, la carte « Programmé … » (proposition) le dit à l'écran, avec Déplacer et Annuler ; la confirmation
+        // flottante reste courte (« Validée. »).
+        const conf = (legende ? legende + " " : "") + (act === "approuve" ? t("dec.valide")
           + (absents.length ? " " + t("res.absent.phrase", { res: I.liste(absents.map(r => RES[r])) }) : "") : act === "envoyer-modif" ? t("dec.modif.envoyee", { qui: quiModif }) : t("dec.refuse.msg"));
         // Un seul message (31/10/2026) : la confirmation flottante, pas en plus une ligne en haut de l'écran.
         msg(""); toast(conf); majCompteurs();
@@ -372,14 +374,41 @@
   const noteCreneaux = metier => `<p class="note" id="note-creneaux">${t("auto.creneaux", { h: creneauxTexte(metier), fuseau: t("fuseau." + M.paysDe(commerceVu && commerceVu.pays)) })}</p>`;
   const boutonsAuto = (id, metier, note) => `<div class="actions"><button type="button" class="bouton" data-auto="${e(id)}">${t("auto.bouton")}</button><a class="bouton second" href="#/calendrier?contenu=${encodeURIComponent(id)}">${t("auto.moi")}</a></div>
     ${note ? noteCreneaux(metier) : ""}`;
+  // Lot 2 (15/11/2026, décision du fondateur : publier en un clic) : juste après « Valider », la carte dit quand et où la publication part
+  // (programmée par la base à l'approbation, bloc « Programmation à l'approbation »), avec « Déplacer » (sa ligne du calendrier) et « Annuler la
+  // publication » (D.annuler, comme le calendrier : elle revient dans « Validées »). Rien de programmé (aucun réseau connecté, pas de créneau,
+  // commerce en pause…) : le bouton « Programmer au meilleur créneau » revient, avec la raison lue au journal (APPROUVE_NON_PROGRAMME).
+  const listeRes = l => I.liste(ORDRE_RES.filter(r => (l || []).includes(r)).map(r => RES[r]));
+  // Raison d'un contenu validé resté sans date : la dernière entrée du journal qui le concerne (annulée par le client, ou non programmée et pourquoi).
+  async function raisonsSansDate(ids) {
+    const [j, cl] = await Promise.all([D.journal ? D.journal().catch(() => []) : [], D.calendrier().catch(() => [])]), out = {};
+    // En service, l'annulation n'écrit rien au journal : une publication annulée de ce contenu au calendrier suffit.
+    for (const x of cl || []) if (x.statut === "annule" && ids.includes(x.contenu_id)) out[x.contenu_id] = t("prog.raison.annulee");
+    for (const x of j || []) { const id = x.detail && x.detail.contenu; if (!id || !ids.includes(id) || out[id]) continue;
+      if (x.type === "PROGRAMMATION_ANNULEE") out[id] = t("prog.raison.annulee");
+      else if (x.type === "APPROUVE_NON_PROGRAMME") out[id] = ph(String((x.detail && x.detail.raison) || "").trim()) || t("prog.raison.inconnue");
+      else if (x.type === "PROGRAMMATION_AUTO") out[id] = t("prog.raison.inconnue"); }
+    return out;
+  }
   async function proposition(c) {
     if (!approuveRecent) return "";
-    // Programmé à l'approbation : la date et les réseaux, une fois, à la place du bouton.
-    // Programmé à l'approbation : la confirmation flottante dit déjà la date et les réseaux (31/10/2026) ; pas de carte en plus.
-    if (approuveRecent.p) { approuveRecent = null; return ""; }
+    const p = approuveRecent.p;
+    if (p) { approuveRecent = null; const quand = I.dateHeureDans(p.prevu_le);
+      return `<section class="carte proposition programmee" id="proposition" data-pub="${e(p.id)}" role="status" aria-live="polite"><div><p class="fort" id="prop-programme">${t("prop.programme", { quand, res: listeRes(p.reseaux) })}</p><p class="texte2">${t("prop.programme.texte")}</p></div>
+        <div class="actions" id="prop-choix"><a class="bouton second" id="prop-deplacer" href="#/calendrier?pub=${encodeURIComponent(p.id)}">${t("cal.deplacer")}</a><button type="button" class="lien" id="prop-annuler">${t("cal.annuler")}</button></div>
+        <div class="confirmer-refus" id="prop-annuler-zone" hidden><p class="fort">${t("cal.annuler.question", { quand })}</p><div class="actions"><button type="button" class="bouton" id="prop-annuler-oui">${t("cal.annuler.oui")}</button><button type="button" class="bouton second" id="prop-annuler-garder">${t("cal.annuler.garder")}</button></div></div></section>`; }
     const x = (await D.contenus()).find(y => y.id === approuveRecent.id);
     if (!x || x.statut !== "approuve") { approuveRecent = null; return ""; }
-    return `<section class="carte proposition" id="proposition"><div><p class="fort">${t("prop.titre")}</p><p class="texte2">${t("prop.texte")}</p></div>${boutonsAuto(x.id, c.metier, true)}</section>`;
+    const r = (await raisonsSansDate([x.id]))[x.id] || (resDe(x).length ? t("prog.raison.inconnue") : ph("Aucun réseau connecté pour ce contenu."));
+    return `<section class="carte proposition" id="proposition"><div><p class="fort">${t("prop.titre")}</p><p class="texte2" id="prop-raison">${t("prop.raison", { r: e(r) })}</p><p class="texte2">${t("prop.texte")}</p></div>${boutonsAuto(x.id, c.metier, true)}</section>`;
+  }
+  // Boutons de la carte « Programmé … » (écran des contenus, juste après la validation).
+  function brancherProposition(apres) {
+    const z = $("prop-annuler-zone"), b = $("prop-annuler"); if (!z || !b) return; const pub = $("proposition").dataset.pub;
+    b.onclick = () => { z.hidden = false; $("prop-choix").hidden = true; $("prop-annuler-garder").focus({ preventScroll: true }); };
+    $("prop-annuler-garder").onclick = () => { z.hidden = true; $("prop-choix").hidden = false; b.focus({ preventScroll: true }); };
+    $("prop-annuler-oui").onclick = async () => { $("prop-annuler-oui").disabled = true;
+      try { await D.annuler(pub); await apres(); toast(t("cal.annulee")); majCompteurs(); } catch (er) { $("prop-annuler-oui").disabled = false; toast(ph(er.message)); } };
   }
   // Enregistre la légende ouverte d'un bloc de réseaux (31/10/2026, test client : modification perdue en tapant Approuver ou un autre onglet).
   // Rend la phrase de confirmation, ou "" s'il n'y avait rien à enregistrer. Légende commune : la fiche Google d'abord (sa limite refuse avant toute écriture).
@@ -794,6 +823,8 @@
     nomCommerce = c.nom; commerceVu = c; comptesVus = cpt;
     // Approuvés restés sans date (31/10/2026) : approuvés quand aucun réseau n'était connecté. Un geste les programme tous au meilleur créneau.
     const sansDate = sansDateDe(ct, cal, cpt, c), N = compteDe({ ct, av, cm: cm0, k, c, cal, cpt });
+    // Lot 2 : la programmation est automatique à la validation ; une validée sans date est un secours, dont la raison est dite (journal).
+    const raisonsSD = sansDate.length ? await raisonsSansDate(sansDate.map(x => x.id)) : {}, raisonsTxt = [...new Set(sansDate.map(x => raisonsSD[x.id] || t("prog.raison.inconnue")))];
     const aValider = ct.filter(x => x.statut === "a_valider"), reponses = av.filter(x => x.statut === "a_valider" && !x.sensible), humains = av.filter(x => x.statut === "humain");
     const prochaines = cal.filter(x => x.statut === "programme").slice(0, 3), vign = await Promise.all(prochaines.map(x => urlSure(x.contenu)));
     // Sous-titre : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires) et leur durée (environ 40 secondes chacune).
@@ -851,7 +882,10 @@
     const principale = waManquant(c) ? null : requises[0] || null;   // numéro WhatsApp manquant : le seul bouton vert est celui de sa carte
     // Tour 16 (02/11/2026, audit UX Premium) : l'en-tête redit la liste « À faire maintenant », mêmes mots et même compte (TikTok compris) ;
     // avant, « 2 décisions, 4 à programmer, 1 message à lire. » au-dessus d'une liste de 5 actions.
-    if (!sansAFaire && actions.length) phrase = t("acc.chapo.actions", { n: actions.length });
+    // Lot 2 (15/11/2026, retour testeur : « 2 choses à faire » au-dessus d'un badge « 1 ») : l'en-tête compte d'abord les choses à VALIDER, le même
+    // nombre que le badge de l'onglet « À valider » (N.decisions, compteDe), puis les autres actions de la liste à part.
+    const autresActions = actions.filter(a => !["contenus", "avis", "avis-sensible", "commentaires"].includes(a.id)).length;
+    if (!sansAFaire && actions.length) phrase = N.decisions ? t("acc.chapo.valider", { n: N.decisions, a: autresActions }) : t("acc.chapo.actions", { n: autresActions });
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
     // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
@@ -893,7 +927,7 @@
         <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
         ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}<span class="note" data-mention-mois>${mentionMois(x)}</span></p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
         : sansDate.length ? "" : `<p class="texte2" id="acc-rien-programme">${t("acc.rien.programme")}</p>`}
-        ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
+        ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><p class="note" id="acc-attendent-raison">${t("prog.raisons", { r: e(raisonsTxt.join(" ; ")) })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
       </section>
       ${blocIdeeSemaine(idee, c, tfT)}`;
@@ -1487,7 +1521,7 @@
     $("proposer-idees").onclick = async () => { ideesOuvertes = !ideesOuvertes; await contenus(); if (ideesOuvertes) $("demande").focus(); };
     if ($("fermer-idees")) $("fermer-idees").onclick = async () => { ideesOuvertes = false; await contenus(); $("proposer-idees").focus(); };
     if ($("demande")) $("demande").onclick = async () => { try { await D.demanderIdees(); await contenus(); msg(t("idees.enregistree")); majCompteurs(); } catch (er) { $("msg-idees").textContent = ph(er.message); } };
-    brancherDecisions(vue, contenus); brancherAutomatisations(vue, contenus);
+    brancherDecisions(vue, contenus); brancherAutomatisations(vue, contenus); brancherProposition(contenus);
     if (versCarte) { versCarte = false; const a = vue.querySelector('[data-contenu]'); if (a && filtre === "a_valider") a.scrollIntoView({ block: "start" }); }
   }
 
@@ -2145,9 +2179,7 @@
   // Premium : bilan commenté et point de 30 min chaque mois (CGV, tableau des offres et article 3), mode délégation activé ou désactivé ICI
   // (D.reglerDelegation, fonction regler_delegation : accord horodaté avec la version des CGV) ; base sans ce bloc : texte « écrivez-nous ».
   const ORDRE_OFFRES = ["essentiel", "standard", "premium"];
-  // « Prix de lancement » (02/11/2026, décision de PJ) : Croissance seulement, en note sous le prix, comme sur le site ; aucun prix changé, aucun prix
-  // barré ni prix futur chiffré (règle des annonces de réduction de prix : un prix de référence barré doit avoir été pratiqué).
-  const PRIX_LANCEMENT = ["standard"];
+  // Mention de prix temporaire sur Croissance retirée le 15/11/2026 (décision du fondateur) : aucun prix n'est présenté comme temporaire (CGV art. 4).
   const offreCible = (c, voulue) => { const i = ORDRE_OFFRES.indexOf(c.offre_id), j = ORDRE_OFFRES.indexOf(voulue);
     return i >= 0 && j > i ? voulue : i >= 0 && i < ORDRE_OFFRES.length - 1 ? ORDRE_OFFRES[i + 1] : null; };
   // Montée en offre sans email (01/11/2026, tour 6 Croissance) : abonnement en cours (ou aucun lien de paiement) = « Passer en <offre> » fait une
@@ -2196,7 +2228,7 @@
     return `<section class="carte" id="offre-dessus" data-offre="${e(suiv)}"><h2>${t("offre.dessus.titre", { nom })}</h2>
       <ul class="liste-engagements">${lignes.map(k => `<li><p>${t(k, { n: s_.contenus, v: s_.videos, h })}</p></li>`).join("")}</ul>
       ${P.enCours && P.actuel ? `<p class="texte2" id="dessus-vous">${t(mensuelP ? "offre.dessus.vous.mensuel" : "offre.dessus.vous.annuel", { prix: euros(P.actuel) })}</p>` : ""}
-      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>${PRIX_LANCEMENT.includes(suiv) ? `<p class="note" id="dessus-lancement">${t("offre.lancement")}</p>` : ""}
+      <p class="prix-offre" id="dessus-prix"><span class="chiffre">${euros(P.cible)}</span> ${t(mensuelP ? "offre.ht.mois.mensuel" : "offre.ht.mois.annuel")}</p>
       <p class="texte2" id="dessus-mensuel">${t(mensuelP ? "offre.dessus.annuel.ou" : "offre.dessus.mensuel", { prix: euros(P.autre) })}</p>
       ${frais ? `<p class="texte2" id="dessus-frais">${frais}</p>` : ""}
       ${ecartPrix > 0 ? `<p class="texte2" id="dessus-difference">${t("offre.dessus.difference", { prix: euros(ecartPrix) })}</p>` : ""}
@@ -2261,7 +2293,6 @@
           mensuel s'il est inconnu) ; avant, 79 € « payé à l'année » ici et 95 € par mois dans « Passer à Croissance », sur le même écran. */ ""}
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2>${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht
           ? `<p class="prix-offre" id="offre-prix-vous" data-rythme="mensuel"><span class="chiffre">${euros(o.prix_mensuel_ht)}</span> ${t("offre.ht.mois.mensuel")}</p>` : `<p class="prix-offre" id="offre-prix-vous" data-rythme="annuel"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>`}
-        ${PRIX_LANCEMENT.includes(c.offre_id) ? `<p class="note" id="offre-lancement">${t("offre.lancement")}</p>` : ""}
         ${ab && ab.statut !== "resilie" && ab.rythme ? `<p class="note" id="offre-votre-rythme">${t("offre.votre.rythme." + (ab.rythme === "mensuel" ? "mensuel" : "annuel"))}</p>` : ""}
         ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
         <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
@@ -2451,8 +2482,8 @@
       ${premium ? `<p class="pied"><a class="bouton second" id="bilan-prec-parler" href="${e(wa)}" target="_blank" rel="noopener">${t("bilan.prec.parler", { p: e(k.prenom || "") })}</a></p>` : ""}</section>`;
   }
   async function resultats() {
-    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR, cmsR, cptR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
-      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois(), D.commentaires ? D.commentaires().catch(() => []) : [], D.comptes().catch(() => null)]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
+    const [c, R, bilan, mr, calR, NR, bilanP, contactR, nonLusR, cmsR, cptR, TR] = await Promise.all([D.commerce(), D.resultats(6), D.bilanMois().catch(() => null), D.miseEnRoute().catch(() => null), D.calendrier().catch(() => []), compterAValider().catch(() => null),
+      debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null, monContact(), retoursNonLusMois(), D.commentaires ? D.commentaires().catch(() => []) : [], D.comptes().catch(() => null), D.tauxReponse ? D.tauxReponse().catch(() => null) : null]), mois = (R && R.mois) || [], avecNote = mois.filter(m => m.note != null), lg = (R && R.lecture_google) || {};
     // Tant que BoostImpact n'a pas accès à la fiche Google (étape « google » de la mise en route), aucun chiffre ne peut arriver : le point de départ.
     const etapeGoogle = ((mr && mr.points) || []).find(x => x.point === "google");
     if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR, cmsR, cptR)); return; }
@@ -2462,7 +2493,9 @@
     const pts = k => mois.map(m => ({ v: m[k] == null ? null : +m[k], lib: moisLong(m.mois), court: moisCourt(m.mois) }));
     const periode = mois.length ? t("res.periode", { a: moisLong(mois[0].mois), b: moisLong(mois[mois.length - 1].mois) }) : "";
     const ecart = (a, b, d) => { const x = Math.round((b - a) * 10 ** d) / 10 ** d; return x > 0 ? "+" + nombre(x, d) : x < 0 ? "−" + nombre(-x, d) : t("res.stable"); };
-    const taux = pctTaux(rep.taux), dernierAudit = audit[audit.length - 1];
+    // Taux de réponse (lot 2, 15/11/2026) : seulement sur les avis reçus depuis le début du service (TR, mon_taux_reponse ; démonstration : même
+    // calcul) ; les plus anciens sont comptés à part. Sans TR (bloc pas encore appliqué) : resultats().reponses, comme avant.
+    const taux = TR ? TR.taux : pctTaux(rep.taux), delaiRep = TR ? TR.delai_moyen_h : rep.delai_moyen_h, dernierAudit = audit[audit.length - 1];
     const maxTheme = Math.max(1, ...themes.map(x => (+x.positif || 0) + (+x.negatif || 0)));
     const actuelConc = x => (x.mois || [])[x.mois.length - 1] || {}, actuel = mois[mois.length - 1] || {}, enCours = dern && dern === actuel;
     const nonLu = t(lg.fiche === "non_reliee" ? "res.fiche.non.reliee" : "res.note.non.lue");
@@ -2489,8 +2522,9 @@
         ${mois.map(m => `<tr><td data-l="${t("res.col.mois")}">${cap(moisLong(m.mois))}</td><td data-l="${t("res.col.note")}">${m.note == null ? nonLue : nombre(m.note, 1)}</td><td data-l="${t("res.col.total")}">${m.nb_avis == null ? nonLuM : nombre(m.nb_avis)}</td><td data-l="${t("res.col.recus")}">${nombre(+m.avis_recus || 0)}</td><td data-l="${t("res.l.reponses")}">${nombre(+m.reponses || 0)}</td><td data-l="${t("res.l.delai")}">${m.delai_moyen_h == null ? t("res.aucune.reponse") : delaiTexte(m.delai_moyen_h)}</td><td data-l="${t("res.col.publications")}">${nombre(+m.publications || 0)}</td></tr>`).join("")}</tbody></table></details>` : ""}
       <div class="rangee">
         <section class="carte etroite" aria-labelledby="r-rep"><h2 id="r-rep">${t("res.rep.titre")}</h2>
-          ${taux == null ? `<p class="texte2">${t("res.rep.aucun")}</p>` : `<dl class="bilan-chiffres deux"><div class="bilan-chiffre"><dt>${t("res.taux")}</dt><dd class="chiffre" id="taux">${t("pourcent", { n: nombre(taux) })}</dd></div><div class="bilan-chiffre"><dt>${t("res.l.delai")}</dt><dd class="chiffre" id="delai">${delaiTexte(rep.delai_moyen_h)}</dd></div></dl>
-          <p class="note">${t("res.rep.note", { n: mois.length })}</p>`}</section>
+          ${taux == null ? `<p class="texte2" id="rep-aucun">${t(TR ? "res.rep.aucun.depuis" : "res.rep.aucun")}</p>` : `<dl class="bilan-chiffres deux"><div class="bilan-chiffre"><dt>${t("res.taux")}</dt><dd class="chiffre" id="taux">${t("pourcent", { n: nombre(taux) })}</dd></div><div class="bilan-chiffre"><dt>${t("res.l.delai")}</dt><dd class="chiffre" id="delai">${delaiTexte(delaiRep)}</dd></div></dl>
+          <p class="note" id="rep-base">${TR ? t("res.rep.depuis", { n: TR.recus - TR.en_cours, d: TR.depuis ? date(TR.depuis) : "", c: TR.en_cours }) : t("res.rep.note", { n: mois.length })}</p>`}
+          ${TR && TR.anciens ? `<p class="note" id="rep-anciens">${t("res.rep.anciens", { n: TR.anciens, r: TR.anciens_repondus })}</p>` : ""}</section>
         <section class="carte large" aria-labelledby="r-audit"><div class="carte-tete"><h2 id="r-audit">${t("res.score.titre")}</h2><span class="note">${t("etat.actuel")}</span></div>
           ${dernierAudit ? `<p><span class="chiffre grand-chiffre chiffre-or" id="score-audit">${nombre(+dernierAudit.score)}</span> <span class="note">${t("res.score.sur")}</span></p>
           <div class="audit"><div class="pile serre piliers">${piliersDe(dernierAudit.piliers).map(p => mesure(e(p.nom), p.note, p.sur)).join("")}</div></div>
