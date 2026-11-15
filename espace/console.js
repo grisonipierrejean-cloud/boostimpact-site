@@ -1182,8 +1182,11 @@
     else robotsFiche = { passage: undefined, alertes: [] };
     // v49 : photos du client pour le dossier de démarrage (x sur 5 utilisables) ; illisibles : null, la ligne dit « nombre inconnu ».
     // v52 : contenus du client (bloc « Contenus ») lus en même temps ; illisibles : null, le bloc le dit.
-    const [phs, cts, catT] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null,
-      MQ && MQ.charger ? sur(MQ.charger()) : null]);
+    // 15/11/2026 (retour de PJ : « je ne vois pas de relecture dans la fiche du client ») : les contenus « À relire » de CE client sont lus avec le reste
+    // et affichés en tête de la fiche, avec les mêmes gestes que la file de « À faire » (Envoyer au client, Corriger la légende et envoyer, Refaire).
+    const [phs, cts, catT, rlTous] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null,
+      MQ && MQ.charger ? sur(MQ.charger()) : null, D.adminContenusARelire ? sur(D.adminContenusARelire()) : null]);
+    const mesRelire = (rlTous || []).filter(x => x.commerce_id === cid);
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid);
@@ -1194,6 +1197,7 @@
     afCtx = { pubs: [], dl: dl || [], cs };
     vue.innerHTML = `<div class="entete"><p class="sur">${t("con.entree.clients")}</p><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
+      ${mesRelire.length ? `<section class="carte" id="client-a-relire" data-client-relire="${mesRelire.length}"><h2>${t("con.rl.client.titre", { n: mesRelire.length })}</h2><p class="note">${t("con.rl.client.texte")}</p></section><div class="pile" id="client-relire-file">${mesRelire.map(carteRelire).join("")}</div>` : ""}
       ${banniere(c, prochaineAction(c, g, journalClient, mesAvis, phs))}${blocDossier(c, phs, contacts)}${blocHistorique(journalClient)}
       <section class="carte" id="client-etat" data-client-id="${e(c.id)}"><h2>${t("con.client.etat")}</h2>${aide("etat", nowEtat(c))}
         <div class="etat-offre" id="etat-offre"><div class="etat-col" id="etat-zone"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
