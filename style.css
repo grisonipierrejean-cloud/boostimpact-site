@@ -888,3 +888,14 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
   .annee-titre,.annee-sans .offre-ia{font-size:var(--t-1)}
   .compare-titre{margin-top:72px;font-size:var(--t-4)}
 }
+
+/* 15/11/2026 (retour : « la promesse IA est noyée ») : héros centré sur ChatGPT et Google (essai à faire soi-même, sans promesse),
+   Visibilité IA en premier point des cartes Croissance et Premium, mention sobre en Essentiel. */
+#haut .haut-grille{padding-top:40px}
+#haut .chapo{max-width:36ch}
+@media (min-width:760px){#haut .haut-grille{padding-top:120px}#haut .chapo{max-width:42ch}}
+@media (min-width:1040px){#haut .haut-grille{padding-top:88px}#haut .chapo{max-width:46ch}}
+.offre .inclus .inclus-ia{font-weight:var(--graisse-forte);color:var(--texte)}
+.annee-sans .offre-ia,.annee-sans .offre-ia a{font-family:var(--police-texte);font-size:var(--t-corps);line-height:1.45;letter-spacing:0;font-weight:var(--graisse-moyenne)}
+@media (min-width:1040px){.annee-sans .offre-ia{font-size:var(--t-corps)}}
+#haut .insec{white-space:nowrap}
