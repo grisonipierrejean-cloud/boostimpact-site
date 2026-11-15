@@ -742,7 +742,9 @@
     TIKTOK_CARROUSEL_A_REPRENDRE: "TikTok : photos d'un carrousel à reprendre",
     // Changement d'offre (27/10/2026, bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace »)
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
-    ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée" };
+    ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée",
+    // Test IA de l'audit gratuit (15/11/2026, moteur/audit/assistants_ia.py) : moteur en erreur, réponse vide ou retiré pour plafond ; une par jour au plus
+    TEST_IA_ERREUR: "Test IA de l'audit : moteur en erreur" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
   // Titre d'une alerte (28/10/2026) : les tâches de la fiche Google portent le nom du commerce (« Identifier la fiche Google de <commerce> »,
   // « Accompagner la création de la fiche Google de <commerce> »).
@@ -784,6 +786,7 @@
     if (a.type === "ANCIEN_ABONNEMENT_A_ARRETER") { const j = d.depuis ? String(d.depuis).slice(0, 10).split("-").reverse().join("/") : "date inconnue";
       return `${nomO(d.offre)}, souscrit le ${j} : abonnement ${d.abonnement || ""}${d.client_stripe ? " (client " + d.client_stripe + ")" : ""}, remplacé par ${d.nouveau || "le nouvel abonnement"} (${nomO(d.nouvelle_offre)}). Dans Stripe : l'annuler tout de suite, au prorata, puis rembourser le crédit de l'ancien client. La tâche se ferme seule quand Stripe confirme l'arrêt.${d.test ? " (mode test)" : ""}`; }
     if (a.type === "OFFRE_INFERIEURE_PAYEE") return `Lien de l'offre ${nomO(d.offre)} payé alors que le commerce est en ${nomO(d.offre_commerce)} avec un abonnement en cours : rien n'a changé. Appeler le commerçant ; une baisse se fait par la console, à la fin de la période payée.${d.test ? " (mode test)" : ""}`;
+    if (a.type === "TEST_IA_ERREUR") return `Test IA : ${d.nom || d.moteur || "moteur"} ${({ erreur: "en erreur", vide: "réponse vide", plafond: "retiré pour plafond" })[d.cas] || "en erreur"} (${d.motif || "motif inconnu"}). Audit de ${d.commerce || "?"}${d.ville ? ", " + d.ville : ""}. Les suivants du jour (même moteur, même cas) ne sont pas répétés ; le reste de l'audit est parti normalement.`;
     if (a.type === "ERREUR_WORKFLOW") return `${d.workflow || "Workflow inconnu"}, nœud ${d.noeud || "inconnu"} : ${d.message || ""}`;
     // Libellés lisibles (26/10/2026, audit du parcours, constat 32) : « Accès Google, Réseaux » au lieu de « google, metricool ».
     if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => POINTS_MER[r.point] || r.point).join(", ")}.`;
