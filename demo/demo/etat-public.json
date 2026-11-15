@@ -860,12 +860,14 @@
    "essentiel@demo": {
     "offre": "essentiel",
     "commerce": "c-table-essentiel",
-    "nom": "Le Bistrot d'exemple"
+    "nom": "Le Bistrot d'exemple",
+    "visuels": "bistrot"
    },
    "croissance@demo": {
     "offre": "standard",
     "commerce": "c-table-croissance",
-    "nom": "Le Comptoir d'exemple"
+    "nom": "Le Comptoir d'exemple",
+    "visuels": "comptoir"
    }
   },
   "base": {

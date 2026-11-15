@@ -25,7 +25,7 @@
     avis: { collecte_minutes: 15, relances_client_heures: [4, 24] }, delegation: { publication_auto_heures: 48 }, annuel: { mois_couverts: 12, majoration_mensuel_pct: 20 },
     objectif_interne_pilotes: { nouveaux_avis: 10, jours: 60, rappel_jour: 45, en_vue_pct: 75, fermeture_prolonge_au_dela_de_jours: 7 },
     mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"], offerts_apres_option: "visibilite_ia" } };
-  // « Attendez mon appel » (15/11/2026, CGV art. 9 et 10 ; même règle que echeance_avis de schema.sql, bloc « délai de 24 h suspendu ») :
+  // « Appelez-moi avant de publier » (15/11/2026, CGV art. 9 et 10 ; même règle que echeance_avis de schema.sql, bloc « délai de 24 h suspendu ») :
   // échéance = reçu + 24 h ; chaque retenue commencée AVANT l'échéance du moment la suspend (ouverte : aucune échéance, null) ; levée par
   // l'appel, l'échéance devient « appel + 24 h ». Une retenue commencée après l'échéance n'efface pas le retard. Rend des millisecondes ou null.
   function echeanceAvis(recu, retenues, heures) {
@@ -950,7 +950,7 @@
     // Deux graines : celle du parcours (demo/etat.json, générée par demo/parcours.py) et la graine PUBLIQUE, entièrement fictive
     // (demo/etat-public.json), choisie par window.RENOM_GRAINE = "public" dans config.js. Chacune a son propre stockage.
     const PUBLIQUE = window.RENOM_GRAINE === "public";
-    const K = "renom-demo-v14" + (PUBLIQUE ? "-public" : "");   // v14 (24/10/2026) : avis 1 à 3 étoiles des offres Standard et Premium à l'équipe, créneaux du métier
+    const K = "renom-demo-v15" + (PUBLIQUE ? "-public" : "");   // v15 (15/11/2026, lot 6 B) : visuels au nom de chaque commerce, historique de démo revu.
     let E = null, session = null, aChoisir = false, pret = null, TF = null;   // aChoisir : session ouverte par un lien, mot de passe à choisir (acces.js)
     let aal2 = false;   // double authentification de l'administrateur (18/10/2026) : code vérifié dans cette session (comme aal2 de Supabase)
     // Interrupteur de la double authentification (acces.js, DOUBLE_AUTH_ADMIN ; false depuis le 22/10/2026) : sans lui, ni code, ni facteur.
@@ -1253,7 +1253,7 @@
         if (x.prevu_il_y_a_h != null) { const t = maintenant - x.prevu_il_y_a_h * H; x.prevu_le = iso(k === "publications" ? creneauAvant(metier, pris, t) : t); delete x.prevu_il_y_a_h; }
         if (x.repondu_apres_h != null) { x.repondu_le = iso(new Date(x.cree_le).getTime() + x.repondu_apres_h * H); delete x.repondu_apres_h; }
         if (x.decide_apres_h != null) { x.decide_le = iso(new Date(x.cree_le).getTime() + x.decide_apres_h * H); delete x.decide_apres_h; }
-        // Lot 5 B : avis retenu de la graine (« Attendez mon appel », rappel promis aujourd'hui) et dates du détail d'une ligne du journal
+        // Lot 5 B : avis retenu de la graine (« Appelez-moi avant de publier », rappel promis aujourd'hui) et dates du détail d'une ligne du journal
         // (« recu_le_il_y_a_h » devient « recu_le », « livraison_prevue_le_dans_h » devient « livraison_prevue_le »).
         if (x.retenue_il_y_a_h != null) { x.retenue_le = iso(maintenant - x.retenue_il_y_a_h * H); delete x.retenue_il_y_a_h; }
         if (x.retenue_jour === "aujourdhui") x.retenue_jour = jourParisDemo(maintenant);
@@ -1672,7 +1672,11 @@
       const id = def.commerce, suffixe = "-" + def.offre, ids = new Map([[src.id, id]]), tables = Object.keys(E).filter(k => Array.isArray(E[k]));
       tables.forEach(k => E[k].forEach(x => { if (x && x.commerce_id === src.id && x.id != null) ids.set(String(x.id), String(x.id) + suffixe); }));
       const copie = v => Array.isArray(v) ? v.map(copie) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, y]) => [k, k === "jeton" && typeof y === "string" ? nouveauJeton() : copie(y)]))
-        : typeof v === "string" && ids.has(v) ? ids.get(v) : typeof v === "string" && def.nom && src.nom && def.nom !== src.nom && v.includes(src.nom) ? elisionDe(v.split(src.nom).join(def.nom), def.nom) : v;   // lot 4 B : signatures au nom du commerce copié
+        : typeof v === "string" && ids.has(v) ? ids.get(v)
+        // Lot 6 B (revue design : « La Table d'exemple » imprimé sur le visuel du Comptoir) : chaque commerce copié a ses visuels, à son nom
+        // (demo/files/public/<photo>-visuel-<format>-<visuels>.jpg, rendus par le moteur ; demo_maj.comptes_offres.<compte>.visuels).
+        : typeof v === "string" && def.visuels && /^demo\/files\/public\/[a-z-]+-visuel-(4x5|9x16)\.jpg$/.test(v) ? v.replace(/\.jpg$/, "-" + def.visuels + ".jpg")
+        : typeof v === "string" && def.nom && src.nom && def.nom !== src.nom && v.includes(src.nom) ? elisionDe(v.split(src.nom).join(def.nom), def.nom) : v;   // lot 4 B : signatures au nom du commerce copié
       tables.forEach(k => { E[k].push(...E[k].filter(x => x && x.commerce_id === src.id).map(copie)); });
       ["comptes", "bases"].forEach(k => { if (E[k] && E[k][src.id]) E[k][id] = copie(E[k][src.id]); });
       const c = E.commerces[id] = Object.assign(copie(src), { id, nom: def.nom || src.nom, offre_id: def.offre, delegation_signee_le: null });
@@ -1680,7 +1684,9 @@
       const retirer = (k, f) => { if (Array.isArray(E[k])) E[k] = E[k].filter(x => !(x.commerce_id === id && f(x))); };
       const sansVideo = du("contenus").filter(x => x.type === "video" || (!o.reseaux_sociaux && formatDe(x) === "story")).map(x => x.id);
       retirer("contenus", x => sansVideo.includes(x.id)); retirer("publications", x => sansVideo.includes(x.contenu_id)); retirer("jetons_validation", x => sansVideo.includes(x.objet_id));
-      if (!(+o.videos > 0)) { retirer("videos_avis_demandes", () => true); retirer("depots_video", () => true); }
+      if (!(+o.videos > 0)) { retirer("videos_avis_demandes", () => true); retirer("depots_video", () => true);
+        // Lot 6 B (revue copywriter : « Vidéo d'avis créée » dans l'historique de l'Essentiel, qui n'a aucune vidéo) : lignes vidéo retirées aussi.
+        retirer("journal", x => /^(VIDEO_|DEPOT_VIDEO|MONTAGE_)/.test(String(x.type || ""))); }
       if (!o.commentaires) retirer("commentaires", () => true);
       // Mois écoulé refait à la mesure de l'offre (moisDemoPour) : les copies des publications du mois du commerce principal sont retirées.
       retirer("publications", x => x.demo_mois); retirer("contenus", x => String(x.id).startsWith("demo-mois-"));
@@ -1895,7 +1901,7 @@
           if (e.etat === "manque") noterManquement(g.commerce_id, "premier_contenu_72h", null, ec, l.delais.manquements);
           else if (!e.fait_le && !g.alerte_contenu_le && maintenant > ec - k.alerte_contenu_avant_heures * MS_H) { g.alerte_contenu_le = iso(maintenant); liste("alertes_exploitant").unshift({ id: uid(), type: "DELAI_CONTENU_BIENTOT", commerce_id: g.commerce_id, detail: { echeance: iso(ec) }, cree_le: iso(maintenant) }); l.delais.alertes.push("DELAI_CONTENU_BIENTOT"); } }
         E.avis.filter(a => a.commerce_id === g.commerce_id && Date.parse(a.cree_le) >= dep && !a.retenue_le).forEach(a => { const ech = echeanceAvis(a.cree_le, retenuesDe(a)), tr = a.traite_le ? Date.parse(a.traite_le) : null;
-          if (ech == null || (tr != null && tr <= ech)) return;   // 15/11/2026 : « Attendez mon appel » suspend le délai (jamais de manquement pendant la retenue)
+          if (ech == null || (tr != null && tr <= ech)) return;   // 15/11/2026 : « Appelez-moi avant de publier » suspend le délai (jamais de manquement pendant la retenue)
           if ((tr != null ? tr : maintenant) > ech) noterManquement(g.commerce_id, "avis_24h", a.id, ech, l.delais.manquements);
           else if (tr == null && !a.alerte_delai_le && maintenant > ech - k.alerte_avis_avant_heures * MS_H) { a.alerte_delai_le = iso(maintenant); liste("alertes_exploitant").unshift({ id: uid(), type: "DELAI_AVIS_BIENTOT", commerce_id: g.commerce_id, detail: { avis: a.id, note: a.note, echeance: iso(ech) }, cree_le: iso(maintenant) }); l.delais.alertes.push("DELAI_AVIS_BIENTOT"); } });
       });
@@ -2013,7 +2019,7 @@
       async maGarantieDelais() { await init(); passageServeurDemo(); const g = E.garantie_delais.find(x => x.commerce_id === cur().id); return g ? delaisEtat(g) : null; },
       async adminFileAvis() {
         await init(); admin(); passageServeurDemo(); const d = CONDITIONS.garantie_delais.avis_traite_heures * MS_H;
-        // 01/11/2026 (comme admin_file_avis) : un avis retenu (« Attendez mon appel ») passe en tête.
+        // 01/11/2026 (comme admin_file_avis) : un avis retenu (« Appelez-moi avant de publier ») passe en tête.
         return E.avis.filter(dansFile).sort((a, b) => (a.retenue_le ? 0 : 1) - (b.retenue_le ? 0 : 1) || a.cree_le.localeCompare(b.cree_le)).map(a => ({ id: a.id, commerce_id: a.commerce_id, commerce: (E.commerces[a.commerce_id] || {}).nom,
           offre: (E.commerces[a.commerce_id] || {}).offre_id, email_client: (E.commerces[a.commerce_id] || {}).email_validation || null, mode: offreDe(a.commerce_id).delegation || offreDe(a.commerce_id).avis_equipe ? "equipe" : "proposer",
           note: a.note, texte: a.texte, auteur: a.auteur || "", reponse_proposee: a.reponse_proposee || "", statut: a.statut, sensible: !!a.sensible, raisons: a.raisons || [], recu_le: a.cree_le, escalade_le: a.escalade_le || null,
@@ -2042,7 +2048,7 @@
         const depuis = a.statut, tr = a.traite_le ? Date.parse(a.traite_le) : Date.now(); a.reponse = txt; a.reponse_proposee = a.reponse_proposee || txt; a.statut = "publie"; a.repondu_le = iso(Date.now()); a.traite_le = a.traite_le || a.repondu_le;
         jour(a.commerce_id, "AVIS_PUBLIE", { avis: a.id, par: "renomia", depuis, accord_client: !!accord, recu_le: a.cree_le, echeance: (e => e == null ? null : iso(e))(echeanceAvis(a.cree_le, retenuesDe(a))), dans_les_24h: (e => e == null || tr <= e)(echeanceAvis(a.cree_le, retenuesDe(a))) }); sauver();
       },
-      // « Attendez mon appel » (01/11/2026) : mêmes règles que admin_liberer_avis (bloc « Créneaux réels »).
+      // « Appelez-moi avant de publier » (01/11/2026) : mêmes règles que admin_liberer_avis (bloc « Créneaux réels »).
       async adminLibererAvis(id) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!a) throw new Error("Avis introuvable."); if (!a.retenue_le) return { id: a.id, retenue_le: null };
         const avant = a.retenue_le, l = retenuesDe(a), ouverte = l.find(x => !x.liberee_le); a.retenue_le = null; a.liberee_le = iso(Date.now()); a.alerte_delai_le = null;
@@ -2665,7 +2671,7 @@
         a.version_client = x; a.version_client_le = iso(Date.now()); jour(c.id, "AVIS_VERSION_CLIENT", { avis: a.id }); alerteDemo("AVIS_VERSION_CLIENT", c.id, { avis: a.id, note: a.note });
         sauver(); return { le: a.version_client_le };
       },
-      // « Attendez mon appel » (01/11/2026) : mêmes règles que retenir_reponse_avis (bloc « Créneaux réels »), numéro et jour du rappel compris
+      // « Appelez-moi avant de publier » (01/11/2026) : mêmes règles que retenir_reponse_avis (bloc « Créneaux réels »), numéro et jour du rappel compris
       // (tour 6 Premium) : numéro mis au format du pays (vide : celui du commerce), jour « aujourdhui » ou « demain » (heure de Paris).
       async retenirReponseAvis(id, telephone, jourRappel) {
         await init(); const c = cur(); if (!c) throw new Error(PHOTOS.PHRASES.introuvable); const a = mine("avis").find(x => x.id === id); if (!a) throw new Error(MER.TEXTES.avis_introuvable);
@@ -2699,6 +2705,23 @@
         if (!cid) E.contact_equipe = v; else { const c = E.commerces[cid]; if (!c) throw new Error("Commerce introuvable."); c.contact_equipe = v; jour(cid, "CONTACT_REGLE", { prenom: v && v.prenom }); }
         sauver(); return v;
       },
+      // WhatsApp de l'équipe (lot 6 B, 15/11/2026) : mêmes règles que admin_equipe_whatsapp et admin_regler_equipe_whatsapp (bloc « Équipe prévenue
+      // sur WhatsApp ») : numéros avec indicatif, pas de fixe, 1 à 5 numéros ; graine : Pierre-Jean au numéro officiel.
+      async adminEquipeWhatsapp() { await init(); admin(); if (!E.equipe_whatsapp) E.equipe_whatsapp = [{ id: 1, prenom: "Pierre-Jean", numero: "+33699080539", actif: true }];
+        return E.equipe_whatsapp.filter(x => x.actif).map(x => ({ ...x })); },
+      async adminReglerEquipeWhatsapp(liste) {
+        await init(); admin(); const vus = [], l = [];
+        for (const x of Array.isArray(liste) ? liste : []) { const pr = String((x || {}).prenom || "").trim(), brut = String((x || {}).numero || "").trim(), n = numeroWhatsapp(brut, null);
+          if (!pr && !brut) continue;
+          if (!pr || pr.length > 40) throw new Error("Prénom requis pour chaque numéro (40 caractères au plus).");
+          if (!n) throw new Error(`Numéro WhatsApp de ${pr} invalide : écrivez l'indicatif du pays, par exemple +33 6 12 34 56 78 ou +32 470 12 34 56.`);
+          if (numeroFixe(n)) throw new Error(`Le numéro de ${pr} ressemble à un fixe : WhatsApp ne le recevra pas.`);
+          if (!vus.includes(n)) { vus.push(n); l.push({ prenom: pr, numero: n }); } }
+        if (!vus.length) throw new Error("Gardez au moins un numéro : sinon personne n'est prévenu quand un commerçant demande un appel.");
+        if (vus.length > 5) throw new Error("Cinq numéros au plus.");
+        const avant = E.equipe_whatsapp || []; let id = Math.max(0, ...avant.map(x => x.id || 0));
+        E.equipe_whatsapp = [...avant.filter(x => !vus.includes(x.numero)).map(x => ({ ...x, actif: false })), ...l.map(x => ({ id: (avant.find(y => y.numero === x.numero) || {}).id || ++id, ...x, actif: true }))];
+        sauver(); return E.equipe_whatsapp.filter(x => x.actif).map(x => ({ ...x })); },
       // Lien d'avis Google renseigné par BoostImpact (31/10/2026) : mêmes règles que admin_lien_avis.
       async adminLienAvis(cid, lien) {
         await init(); admin(); const c = E.commerces[cid]; if (!c) throw new Error("Commerce introuvable."); const l = String(lien || "").trim() || null;
@@ -2860,7 +2883,8 @@
       lienAbonnement, lienMonteeOffre, demandeDeLien,
       // Mode délégation par bouton (bloc SQL « Changement d'offre en libre-service et mode délégation dans l'espace ») : toujours en démonstration.
       delegationParBouton() { return true; },
-      async journal() { await init(); return journalCommercant(mine("journal")).slice(0, 100); },
+      // Lot 6 B (revue copywriter : historique de la démo « 15, 14, 12, 14, 15 nov. ») : le plus récent d'abord, comme la base (order by cree_le desc).
+      async journal() { await init(); return journalCommercant([...mine("journal")].sort((a, b) => (Date.parse(b.cree_le) || 0) - (Date.parse(a.cree_le) || 0))).slice(0, 100); },
       // ---- Collecte : page publique et retours privés (voir collecteDemo plus haut)
       ...collecteDemo,
       // ---- Mise à jour de l'espace membre (voir majDemo plus haut)
@@ -3211,7 +3235,8 @@
           invitations: (E.invitations || []).map(i => ({ id: i.id, commerce_id: i.commerce_id, statut: i.statut, erreur: i.erreur || null, cree_le: i.cree_le })),
           envois: liste("envois_service").filter(x => x.statut === "echec" && t(x.cree_le) >= d7),
           whatsapp: liste("alertes_whatsapp").filter(x => ["echec", "abandonne"].includes(x.statut) && t(x.cree_le) >= d7),
-          avis: (E.avis || []).filter(a => { const r = a.traite_le || a.repondu_le; return r && (!depuis || t(r) >= depuis); }).map(a => ({ id: a.id, commerce_id: a.commerce_id, cree_le: a.cree_le, traite_le: a.traite_le || null, repondu_le: a.repondu_le || null })),
+          avis: (E.avis || []).filter(a => { const r = a.traite_le || a.repondu_le; return r && (!depuis || t(r) >= depuis); }).map(a => ({ id: a.id, commerce_id: a.commerce_id, cree_le: a.cree_le, traite_le: a.traite_le || null, repondu_le: a.repondu_le || null, retenues: retenuesDe(a) })),
+          equipe_whatsapp: (E.equipe_whatsapp || [{ prenom: "Pierre-Jean", numero: "+33699080539", actif: true }]).filter(x => x.actif),
           creations: E.journal.filter(j => j.type === "COMMERCE_CREE").map(j => ({ commerce_id: j.commerce_id, type: j.type, detail: j.detail || {}, cree_le: j.cree_le })),
           tests: [...E.journal.filter(x => t(x.cree_le) >= d7), ...liste("alertes_exploitant").filter(x => !x.vue_le && t(x.cree_le) >= d30)].filter(estTest).map(x => ({ commerce_id: x.commerce_id || null, type: x.type, detail: x.detail || {}, cree_le: x.cree_le })),
           // Avis reçus ce mois-ci (heure de Paris) au-delà de 100 par commerce : même règle que admin_avis_du_mois() de schema.sql.
@@ -3681,6 +3706,8 @@
       async monContact() { const r = await sb.rpc("mon_contact"); return r.error ? null : r.data; },
       async adminContact(cid) { return ok(await sb.rpc("admin_contact", { p_commerce: cid || null })); },
       async adminReglerContact(cid, p) { return ok(await sb.rpc("admin_regler_contact", { p_commerce: cid || null, p: p || {} })); },
+      async adminEquipeWhatsapp() { return ok(await sb.rpc("admin_equipe_whatsapp")) || []; },
+      async adminReglerEquipeWhatsapp(liste) { return ok(await sb.rpc("admin_regler_equipe_whatsapp", { p: Array.isArray(liste) ? liste : [] })) || []; },
       async adminLienAvis(cid, lien) { return ok(await sb.rpc("admin_lien_avis", { p_commerce: cid, p_lien: lien })); },
       async adminConfirmerNom(cid, nom) { return ok(await sb.rpc("admin_confirmer_nom", { p_commerce: cid, p_nom: MER.nom(nom) })); },
       // Fiche Google (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet »)
@@ -3882,7 +3909,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk, videoIaMois] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk, videoIaMois, retenuesCk, equipeWa] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -3906,9 +3933,15 @@
           // Compte API Higgsfield (14/11/2026) : vidéos IA et dépense du mois de Paris, dernière vérification du workflow GitHub (admin_video_ia_mois,
           // bloc SQL « Compte API Higgsfield visible »). Lecture à part : fonction absente ou panne = null, le cockpit dit « bloc SQL à coller ».
           sb.rpc("admin_video_ia_mois", {}).then(r => r.error ? null : r.data || null, () => null),
+          // Lot 6 B : retenues des avis (« Appelez-moi avant de publier », table avis_retenues, lisible par l'administrateur) pour compter « en moins de
+          // 24 h » avec l'échéance suspendue, comme le journal ; numéros WhatsApp de l'équipe. Lectures à part : un échec rend null (règle d'avant).
+          sb.from("avis_retenues").select("avis_id,retenue_le,liberee_le").order("retenue_le", { ascending: false }).limit(5000).then(r => r.error ? null : r.data || [], () => null),
+          sb.rpc("admin_equipe_whatsapp").then(r => r.error ? null : r.data || [], () => null),
         ]);
+        const parAvis = {}; (retenuesCk || []).forEach(x => (parAvis[x.avis_id] || (parAvis[x.avis_id] = [])).push(x));
+        (av || []).forEach(a => { a.retenues = parAvis[a.id] || []; });
         const vi = videoIa && videoIa[0];
-        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, equipe_whatsapp: equipeWa, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
           video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null, mois: videoIaMois }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },

@@ -8,7 +8,7 @@
 <link rel="preload" href="fonts/newsreader.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="img/hero-table.webp" as="image" fetchpriority="high">
-<link rel="stylesheet" href="style.css?v=1511l5a">
+<link rel="stylesheet" href="style.css?v=1511l6a">
 <!-- legal:alternates --><link rel="alternate" hreflang="fr" href="https://boostimpact.agency/index.html"><link rel="alternate" hreflang="en" href="https://boostimpact.agency/en/index.html"><link rel="alternate" hreflang="nl-BE" href="https://boostimpact.agency/nl/index.html"><link rel="alternate" hreflang="x-default" href="https://boostimpact.agency/index.html"><!-- /legal:alternates -->
 <!-- legal:partage --><link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png"><link rel="apple-touch-icon" href="img/apple-touch-icon.png"><meta property="og:type" content="website"><meta property="og:site_name" content="BoostImpact"><meta property="og:locale" content="fr_FR"><meta property="og:title" content="BoostImpact : vos avis Google et vos réseaux sociaux, gérés pour votre commerce"><meta property="og:description" content="Avis Google et réseaux sociaux gérés pour les commerces indépendants : BoostImpact tient votre fiche Google, traite vos avis et, selon l'offre, fait vivre vos réseaux sociaux. Vous envoyez une photo, vous validez d'un clic. Dès 79 € HT par mois en paiement annuel, 95 € HT au mois sans engagement. Audit gratuit : 3 priorités et 3 concurrents comparés."><meta property="og:url" content="https://boostimpact.agency/index.html"><meta property="og:image" content="https://boostimpact.agency/img/partage.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Le logo boostimpact sur une table de restaurant"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="BoostImpact : vos avis Google et vos réseaux sociaux, gérés pour votre commerce"><meta name="twitter:description" content="Avis Google et réseaux sociaux gérés pour les commerces indépendants : BoostImpact tient votre fiche Google, traite vos avis et, selon l'offre, fait vivre vos réseaux sociaux. Vous envoyez une photo, vous validez d'un clic. Dès 79 € HT par mois en paiement annuel, 95 € HT au mois sans engagement. Audit gratuit : 3 priorités et 3 concurrents comparés."><meta name="twitter:image" content="https://boostimpact.agency/img/partage.jpg"><!-- /legal:partage -->
 </head><body>
@@ -32,7 +32,7 @@
 <picture class="haut-photo"><img src="img/hero-table.webp" width="1920" height="1280" alt="Une table de restaurant au soleil&nbsp;: une assiette de viande et de légumes, du pain, deux verres de vin (photo d'illustration)" fetchpriority="high"></picture>
 <div class="wrap haut-grille">
 <h1>Chaque avis Google a sa réponse, vos réseaux sociaux vivent, et votre restaurant est prêt pour ChatGPT et Gemini.</h1>
-<p class="haut-prix">Avis Google dès 79&nbsp;€&nbsp;HT par mois à l'année. Réseaux sociaux dès Croissance, et ChatGPT et Gemini offerts en Croissance à l'année.</p>
+<p class="haut-prix">Avis Google dès 79&nbsp;€&nbsp;HT par mois à l'année. Réseaux sociaux dès Croissance, et ChatGPT et Gemini offerts dès Croissance à l'année.</p>
 <div class="actions">
 <a class="btn btn-prim btn-grand" href="#audit">Recevoir mon audit gratuit</a>
 <a class="btn btn-contour btn-grand" href="#offres">Voir les offres</a>
@@ -58,9 +58,17 @@
 <h2 id="offres-titre">Trois offres. Plus vous montez, plus nous publions pour vous.</h2>
 <p class="tete-chapo offres-fiche"><strong>Pas encore sur Google&nbsp;? Nous créons votre fiche.</strong> C'est compris dans les trois offres.</p>
 </div>
+<div class="offres-choix">
+<p class="offres-repere" aria-hidden="true"><span class="offres-compte">2/3</span></p>
+<div class="offres-onglets" role="group" aria-label="Aller à une offre">
+<button type="button" class="offres-onglet" data-offre="essentiel" aria-controls="offre-essentiel"><span class="onglet-nom">Essentiel</span><span class="onglet-prix">95&nbsp;€<span class="onglet-unite">&nbsp;HT/mois</span></span></button>
+<button type="button" class="offres-onglet" data-offre="standard" aria-controls="offre-standard" aria-current="true"><span class="onglet-nom">Croissance</span><span class="onglet-prix">228&nbsp;€<span class="onglet-unite">&nbsp;HT/mois</span></span></button>
+<button type="button" class="offres-onglet" data-offre="premium" aria-controls="offre-premium"><span class="onglet-nom">Premium</span><span class="onglet-prix">468&nbsp;€<span class="onglet-unite">&nbsp;HT/mois</span></span></button>
+</div>
+</div>
 <div class="offres">
 
-<article class="offre">
+<article class="offre" id="offre-essentiel">
 <div class="offre-nom"><h3>Essentiel</h3></div>
 <p class="offre-promesse">Votre fiche Google et vos avis, tenus pour vous.</p>
 <div class="prix-bloc">
@@ -90,7 +98,7 @@
 </div>
 </article>
 
-<article class="offre reco">
+<article class="offre reco" id="offre-standard">
 <div class="offre-nom"><h3>Croissance</h3><p class="reco-lib">Notre conseil</p></div>
 <p class="offre-promesse">Votre fiche et vos avis, plus Instagram, Facebook et TikTok tenus pour vous.</p>
 <div class="prix-bloc">
@@ -111,7 +119,7 @@
 <ul class="inclus">
 <li class="inclus-tout">Tout l'Essentiel, plus&nbsp;:</li>
 <li class="inclus-ia"><a href="#visibilite-ia">Visibilité IA</a> à l'année&nbsp;: votre restaurant préparé pour ChatGPT, Gemini et Perplexity</li>
-<li data-cgv="Contenus originaux par mois=8|Diffusion des contenus=Fiche Google et réseaux retenus">8 publications par mois sur Instagram, Facebook ou TikTok, et sur Google</li>
+<li data-cgv="Contenus originaux par mois=8|Diffusion des contenus=Fiche Google et réseaux retenus">8 publications par mois sur Google et sur les réseaux de votre choix&nbsp;: Instagram, Facebook, TikTok, ou les trois</li>
 <li data-cgv="Premier contenu proposé sous 72 h">Votre première publication proposée sous 72&nbsp;h</li>
 <li data-cgv="Bilan du mois=Bilan complet et recommandations">Un bilan du mois, avec nos conseils</li>
 </ul>
@@ -120,7 +128,7 @@
 </div>
 </article>
 
-<article class="offre">
+<article class="offre" id="offre-premium">
 <div class="offre-nom"><h3>Premium</h3><p class="reco-lib">La plus complète</p></div>
 <p class="offre-promesse">Deux fois plus de publications, des vidéos, et presque plus rien à valider.</p>
 <div class="prix-bloc">
@@ -153,7 +161,6 @@
 
 </div>
 
-<p class="offres-repere" aria-hidden="true"><span class="offres-compte">1/3</span></p>
 <p class="offres-resiliation">Au mois, sans engagement. Résiliation par simple email.</p>
 <p class="offres-demo"><a href="/demo/">Voir l'espace client en démonstration</a></p>
 <details class="plie plie-compare" id="comparatif"><summary>Le détail, ligne par ligne</summary>
@@ -177,7 +184,7 @@
 
 <div class="offres-pied">
 <details class="plie"><summary>Frais, compris au départ, résiliation et conditions</summary>
-<p class="frais"><strong>Frais de mise en route offerts en paiement annuel.</strong> En paiement mensuel, pour Croissance et Premium&nbsp;: 190&nbsp;€ HT, une seule fois, avec le premier paiement ou à la montée depuis l'Essentiel payé au mois. Aucuns frais pour passer de Croissance à Premium. Essentiel&nbsp;: aucuns frais.</p>
+<p class="frais"><strong>Frais de mise en route offerts en paiement annuel.</strong> En paiement mensuel, pour Croissance et Premium&nbsp;: 190&nbsp;€ HT, une seule fois, avec le premier paiement ou à la montée depuis l'Essentiel payé au mois (offerts si vous avez déjà payé la Visibilité&nbsp;IA). Aucuns frais pour passer de Croissance à Premium. Essentiel&nbsp;: aucuns frais.</p>
 <p class="garantie">Au mois&nbsp;: sans engagement, résiliable chaque mois. À l'année&nbsp;: 12 mois payés d'avance.</p>
 <p class="bonus">Compris au départ, dans les trois offres&nbsp;: des cartes d'avis (QR code et NFC) que vos clients scannent avec leur téléphone pour laisser un avis, votre restaurant inscrit sur Apple Plans, l'appli de cartes de l'iPhone. En Croissance et Premium, vos profils Instagram et Facebook complétés.</p>
 <p class="contrat">Résiliable par un simple email&nbsp;: au mois, effet à la fin du mois en cours&nbsp;; à l'année, à la fin de la période annuelle payée, sans remboursement au prorata. Droit français, tribunaux français. <a href="cgv.html#a7">Conditions de vente, articles 4, 7 et 17</a></p>
@@ -187,7 +194,7 @@
 
 <div class="options" id="options">
 <h3 class="options-titre">Visibilité IA et site du restaurant</h3>
-<p class="options-chapo">Deux services à part, payés une seule fois, sauf la Visibilité&nbsp;IA, comprise dans Croissance et Premium à l'année.</p>
+<p class="options-chapo">Deux services à part. Le site se paie une fois. La Visibilité&nbsp;IA aussi, sauf en Croissance et Premium à l'année, où elle est offerte.</p>
 <div class="options-liste">
 <div class="option option-vedette" id="visibilite-ia">
 <div class="option-tete"><h4>Visibilité IA</h4><p class="vedette-accroche">Certains clients ne cherchent plus sur Google&nbsp;: ils demandent à ChatGPT, Gemini ou Perplexity où manger. Nous soignons ce que ces outils lisent sur votre restaurant.</p><p class="option-incluse">Comprise dans Croissance et Premium à l'année.</p><p class="option-prix" data-option="visibilite_ia">490&nbsp;€ HT, une fois, en Essentiel ou en paiement mensuel</p></div>
@@ -234,7 +241,7 @@
 <p class="tete-chapo">Exemple&nbsp;: restaurant fictif. Trois avis, et ce que fait notre service pour chacun.</p>
 </div>
 <ul class="preuves">
-<li class="preuve preuve-sensible"><h3>Avis sensible, 1 étoile</h3><div class="preuve-avis"><p class="preuve-qui">Sam V.</p><p>J'ai été malade après le repas, je vais porter plainte.</p></div><p class="preuve-statut">Rien ne part automatiquement. Vous êtes prévenu tout de suite, sur WhatsApp ou par email. Pierre-Jean ou une personne de son équipe prépare la réponse et la publie à la main, sous 24&nbsp;h.</p><div class="preuve-reponse"><p class="preuve-lib">Réponse proposée</p><p>Bonjour, nous sommes sincèrement désolés de lire cela. Votre santé compte avant tout&nbsp;: pouvez-vous nous appeler au restaurant pour que nous en parlions directement&nbsp;? L'équipe du restaurant</p></div><p class="preuve-bouton"><span class="btn btn-contour preuve-btn" aria-hidden="true">Attendez mon appel</span><span>Touchez ce bouton dans votre espace&nbsp;: rien n'est publié avant notre appel, et le délai de 24&nbsp;h est suspendu jusque-là.</span></p></li>
+<li class="preuve preuve-sensible"><h3>Avis sensible, 1 étoile</h3><div class="preuve-avis"><p class="preuve-qui">Sam V.</p><p>J'ai été malade après le repas, je vais porter plainte.</p></div><p class="preuve-statut">Rien ne part automatiquement. Vous êtes prévenu tout de suite, sur WhatsApp ou par email. Pierre-Jean ou une personne de son équipe prépare la réponse et la publie à la main, sous 24&nbsp;h.</p><div class="preuve-reponse"><p class="preuve-lib">Réponse proposée</p><p>Bonjour, nous sommes sincèrement désolés de lire cela. Votre santé compte avant tout&nbsp;: pouvez-vous nous appeler au restaurant pour que nous en parlions directement&nbsp;? L'équipe du restaurant</p></div><p class="preuve-bouton"><span class="btn btn-contour preuve-btn" aria-hidden="true">Appelez-moi avant de publier</span><span>Touchez ce bouton dans votre espace&nbsp;: nous vous appelons, rien n'est publié avant, et le délai de 24&nbsp;h est suspendu jusque-là. Possible aussi pour un avis de 1 à 3&nbsp;étoiles.</span></p></li>
 <li class="preuve"><h3>Avis de 5 étoiles</h3><div class="preuve-avis"><p class="preuve-qui">Léa M.</p><p>Pâtes fraîches excellentes, service attentionné.</p></div><div class="preuve-reponse"><p class="preuve-lib">Notre réponse</p><p>Merci Léa&nbsp;! Ravis que nos pâtes fraîches vous aient plu, et nous transmettons votre mot sur le service à toute l'équipe de salle. À très bientôt à table.</p></div><p class="preuve-statut">Publiée sans vous, 2&nbsp;h après l'avis.</p></li>
 <li class="preuve"><h3>Avis de 2 étoiles</h3><div class="preuve-avis"><p class="preuve-qui">Julie R.</p><p>Plat arrivé tiède, dommage. Le reste du repas était bien.</p></div><div class="preuve-reponse"><p class="preuve-lib">Notre réponse</p><p>Bonjour Julie, merci d'avoir pris le temps de nous écrire. Nous sommes désolés que votre plat soit arrivé tiède, et contents que le reste du repas vous ait plu. Pour en parler, appelez-nous au 01&nbsp;99&nbsp;00&nbsp;12&nbsp;34. Nous espérons vous revoir bientôt.</p></div><p class="preuve-statut">Notre équipe relit la réponse avant de la publier, puis vous prévient.</p></li>
 </ul>
@@ -302,7 +309,7 @@
 <p>En Essentiel, vos 4&nbsp;publications Google du mois sont faites à partir de vos photos&nbsp;: sans photo, elles ne sont pas préparées, et nous vous le rappelons par email. Si vous l'autorisez dans votre espace, nous pouvons aussi reprendre les photos que votre commerce a déjà publiées sur sa fiche Google.</p></details>
 <details class="q"><summary>Qu'est-ce qui est publié sans moi&nbsp;?</summary><p>Dans les trois offres&nbsp;: les réponses à vos avis. Elles partent sans vous, dans le ton choisi ensemble au départ. Pour un avis de 1 à 3&nbsp;étoiles, notre équipe relit la réponse avant de la publier et vous prévient. En Essentiel et en Croissance, vos publications, elles, attendent toujours votre accord.</p>
 <p>En Premium, vous pouvez en plus activer le mode délégation dans votre espace (votre accord y est enregistré). Une publication restée sans réponse 48&nbsp;h après l'envoi part alors sans vous. Vous pouvez la refuser avant, et couper ce mode quand vous voulez, dans votre espace ou par simple email.</p>
-<p>Un avis sensible (santé, accident, menace, accusation) est toujours pris en charge par notre équipe&nbsp;: elle répond, publie et vous prévient. Si vous touchez «&nbsp;Attendez mon appel&nbsp;» dans votre espace, rien n'est publié avant notre appel.</p>
+<p>Un avis sensible (santé, accident, menace, accusation) est toujours pris en charge par notre équipe&nbsp;: elle répond, publie et vous prévient. Pour un avis sensible ou un avis de 1 à 3&nbsp;étoiles, vous préférez en parler d'abord&nbsp;? Touchez «&nbsp;Appelez-moi avant de publier&nbsp;» dans votre espace&nbsp;: nous vous appelons, et rien n'est publié avant cet appel.</p>
 <p>En vous abonnant, quelle que soit l'offre, vous nous autorisez à publier ces réponses en votre nom. Vous pouvez demander à voir ou à corriger chacune d'elles.</p></details>
 <details class="q"><summary>Une IA va répondre n'importe quoi&nbsp;?</summary><p>Non. Nos contenus reposent sur les informations que vous avez validées. Aucune promesse commerciale (prix, offre, allergènes...) n'est publiée sans votre accord. Les réponses aux avis suivent le ton et les règles fixés avec vous au départ, et celles des avis de 1 à 3&nbsp;étoiles sont relues par notre équipe.</p></details>
 <details class="q" id="garantie"><summary>Vos délais sont-ils garantis&nbsp;?</summary><p>Oui, trois délais. Votre fiche Google est mise au propre sous 7&nbsp;jours. En Croissance et Premium, votre première publication vous est proposée sous 72&nbsp;h. Chaque nouvel avis a sa réponse publiée sous 24&nbsp;h après notre relevé (nous relevons vos avis plusieurs fois par jour). Si nous manquons un délai, le mois suivant vous est offert.</p>
@@ -361,5 +368,5 @@
 <!-- legal:pied-site --><footer class="pied" id="pied"><div class="wrap"><div class="pied-ligne"><span class="pied-copy">&copy; 2026 BoostImpact</span>
 <nav class="pied-liens" aria-label="Informations légales"><a href="mentions-legales.html">Mentions légales</a><a href="cgv.html">Conditions de vente</a><a href="confidentialite.html">Confidentialité</a><a href="sous-traitance.html">Sous-traitance</a></nav>
 <span class="pied-societe">Un service de Girlden LTD</span></div></div></footer><!-- /legal:pied-site -->
-<script src="app.js?v=1511l5a"></script>
+<script src="app.js?v=1511l6a"></script>
 </body></html>

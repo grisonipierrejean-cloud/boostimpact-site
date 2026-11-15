@@ -1136,13 +1136,25 @@ body.avec-collant .pied{padding-bottom:84px}
   .extrait>h4:nth-of-type(1){grid-column:2;grid-row:1;align-self:end;margin:0}
   .extrait>.extrait-cadre{grid-column:2;grid-row:2 / span 3}
 }
-/* Téléphone : les trois offres côte à côte, on fait glisser (comme les avis d'exemple) ; repère « 1/3 » dessous. */
-.offres-repere{display:none}
+/* Téléphone : les trois offres côte à côte, on fait glisser (comme les avis d'exemple).
+   Lot 6a (15/11/2026, décision de l'équipe) : au-dessus du carrousel, le repère « 2/3 » puis trois onglets (nom + prix au mois, moteur/offres.json)
+   qui font défiler jusqu'à l'offre ; l'onglet actif suit le glissement ; ouverture sur Croissance (site/app.js). Bureau inchangé : onglets cachés. */
+.offres-choix{display:none}
 @media (max-width:759px){
-  .offres{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 8px;scroll-padding:0 var(--marge);align-items:stretch}
+  .offres{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;margin:0 calc(-1 * var(--marge));padding:0 var(--marge) 8px;scroll-padding:0 var(--marge);align-items:flex-start}
+  /* Lot 6a (directeur artistique, tour 5) : chaque carte à sa hauteur dans le carrousel (plus 100 px blancs au bas de l'Essentiel). */
   .offre{flex:0 0 86%;scroll-snap-align:start}
-  .offres-repere{display:block;margin:8px 0 0;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
+  .offres-choix{display:block;margin:0 0 16px}
+  .offres-repere{display:block;margin:0 0 8px;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
+  .offres-onglets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .offres-onglet{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:8px 4px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:var(--blanc);color:var(--texte);font:inherit;line-height:1.2;text-align:center;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+  .offres-onglet .onglet-nom{font-size:var(--t-2);font-weight:var(--graisse-forte)}
+  .offres-onglet .onglet-prix{font-size:var(--t-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .offres-onglet .onglet-unite{font-size:var(--t-meta)}
+  .offres-onglet[aria-current="true"]{background:var(--encre);border-color:var(--encre);color:var(--blanc)}
+  .offres-onglet:focus-visible{outline:2px solid var(--encre);outline-offset:2px}
 }
+@media (max-width:759px) and (prefers-reduced-motion:reduce){.offres-onglet{transition:none}}
 /* Bureau : options côte à côte ; la liste du site ouverte d'office (site/app.js, data-ouvert-large), colonne un peu plus large pour elle ;
    les deux boutons alignés en bas des cartes. */
 @media (min-width:1040px){

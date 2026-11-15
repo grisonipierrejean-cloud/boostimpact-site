@@ -311,13 +311,28 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
 (function(){
   if(typeof window==='undefined'||!document.querySelector)return;
   // Lot 5a : même repère pour le carrousel des trois offres au téléphone.
-  [['.preuves','.preuves-compte','.preuve'],['.offres','.offres-compte','.offre']].forEach(function(c){
+  // Lot 6a (15/11/2026, décision de l'équipe) : au téléphone, trois onglets au-dessus des offres (nom + prix) ; toucher un onglet fait défiler
+  // jusqu'à l'offre, l'onglet actif (aria-current) et le repère suivent le glissement ; ouverture sur Croissance (« Notre conseil »). Flèches gauche
+  // et droite entre les onglets. Bureau : onglets cachés (style.css), rien ne défile.
+  [['.preuves','.preuves-compte','.preuve'],['.offres','.offres-compte','.offre','.offres-onglet']].forEach(function(c){
     var liste=document.querySelector(c[0]),compte=document.querySelector(c[1]);
     if(!liste||!compte)return;
-    var cartes=liste.querySelectorAll(c[2]),n=cartes.length;
+    var cartes=liste.querySelectorAll(c[2]),n=cartes.length,onglets=c[3]?document.querySelectorAll(c[3]):[];
+    var calme=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var pas=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;return cartes[1]?cartes[1].getBoundingClientRect().left-cartes[0].getBoundingClientRect().left:l+16};
+    var actif=function(i){for(var k=0;k<onglets.length;k++){if(k===i)onglets[k].setAttribute('aria-current','true');else onglets[k].removeAttribute('aria-current')}};
     var maj=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;if(!l)return;
-      var pas=cartes[1]?cartes[1].getBoundingClientRect().left-cartes[0].getBoundingClientRect().left:l+16,i=Math.round(liste.scrollLeft/(pas||l));
-      compte.textContent=Math.min(n,Math.max(1,i+1))+'/'+n};
+      var i=Math.min(n-1,Math.max(0,Math.round(liste.scrollLeft/(pas()||l))));
+      compte.textContent=(i+1)+'/'+n;actif(i)};
+    var aller=function(i,doux){if(!cartes[i])return;var p=pas();if(!p)return;
+      if(liste.scrollTo)liste.scrollTo({left:i*p,behavior:doux&&!calme?'smooth':'auto'});else liste.scrollLeft=i*p};
+    Array.prototype.forEach.call(onglets,function(o,i){
+      o.addEventListener('click',function(){actif(i);aller(i,true)});
+      o.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:e.key==='Home'?0:e.key==='End'?onglets.length-1:-1;
+        if(j<0||j>=onglets.length)return;e.preventDefault();onglets[j].focus();actif(j);aller(j,true)});
+    });
+    var depart=-1;for(var k=0;k<onglets.length;k++){if(onglets[k].getAttribute('aria-current')==='true')depart=k}
+    if(depart>0&&liste.scrollWidth>liste.clientWidth+1)aller(depart,false);
     liste.addEventListener('scroll',maj,{passive:true});maj();
   });
   var b=document.querySelector('.audit-collant'),haut=document.getElementById('haut'),audit=document.getElementById('audit');

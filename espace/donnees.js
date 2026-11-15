@@ -25,7 +25,7 @@
     avis: { collecte_minutes: 15, relances_client_heures: [4, 24] }, delegation: { publication_auto_heures: 48 }, annuel: { mois_couverts: 12, majoration_mensuel_pct: 20 },
     objectif_interne_pilotes: { nouveaux_avis: 10, jours: 60, rappel_jour: 45, en_vue_pct: 75, fermeture_prolonge_au_dela_de_jours: 7 },
     mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"], offerts_apres_option: "visibilite_ia" } };
-  // « Attendez mon appel » (15/11/2026, CGV art. 9 et 10 ; même règle que echeance_avis de schema.sql, bloc « délai de 24 h suspendu ») :
+  // « Appelez-moi avant de publier » (15/11/2026, CGV art. 9 et 10 ; même règle que echeance_avis de schema.sql, bloc « délai de 24 h suspendu ») :
   // échéance = reçu + 24 h ; chaque retenue commencée AVANT l'échéance du moment la suspend (ouverte : aucune échéance, null) ; levée par
   // l'appel, l'échéance devient « appel + 24 h ». Une retenue commencée après l'échéance n'efface pas le retard. Rend des millisecondes ou null.
   function echeanceAvis(recu, retenues, heures) {
@@ -1356,6 +1356,8 @@
       async monContact() { const r = await sb.rpc("mon_contact"); return r.error ? null : r.data; },
       async adminContact(cid) { return ok(await sb.rpc("admin_contact", { p_commerce: cid || null })); },
       async adminReglerContact(cid, p) { return ok(await sb.rpc("admin_regler_contact", { p_commerce: cid || null, p: p || {} })); },
+      async adminEquipeWhatsapp() { return ok(await sb.rpc("admin_equipe_whatsapp")) || []; },
+      async adminReglerEquipeWhatsapp(liste) { return ok(await sb.rpc("admin_regler_equipe_whatsapp", { p: Array.isArray(liste) ? liste : [] })) || []; },
       async adminLienAvis(cid, lien) { return ok(await sb.rpc("admin_lien_avis", { p_commerce: cid, p_lien: lien })); },
       async adminConfirmerNom(cid, nom) { return ok(await sb.rpc("admin_confirmer_nom", { p_commerce: cid, p_nom: MER.nom(nom) })); },
       // Fiche Google (28/10/2026, bloc SQL « Fiche Google du client venu du site et photos hors sujet »)
@@ -1557,7 +1559,7 @@
         const lire = (nom, q) => q.then(r => { if (r.error) { illisible.push(nom); return null; } return r.data || []; }, () => { illisible.push(nom); return null; });
         // Avis : plus récents d'abord ; Supabase plafonne une réponse (max_rows, 1000 par défaut) : une liste pleine est signalée « lue en partie ».
         const AVIS_MAX = 1000, avis = sb.from("avis").select("id,commerce_id,cree_le,traite_le,repondu_le").order("cree_le", { ascending: false }).limit(AVIS_MAX);
-        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk, videoIaMois] = await Promise.all([
+        const [abonnements, invitations, envois, whatsapp, av, creations, testsJ, testsA, avisMois, videoIa, photosCk, videoIaMois, retenuesCk, equipeWa] = await Promise.all([
           lire("abonnements", sb.from("abonnements").select("commerce_id,offre,statut,rythme,remise_lancement_fin,stripe_subscription,remplace_par,cree_le,maj_le")),
           lire("invitations", sb.from("invitations").select("id,commerce_id,statut,erreur,cree_le")),
           lire("envois_service", sb.from("envois_service").select("id,commerce_id,categorie,statut,erreur,cree_le").eq("statut", "echec").gte("cree_le", d7)),
@@ -1581,9 +1583,15 @@
           // Compte API Higgsfield (14/11/2026) : vidéos IA et dépense du mois de Paris, dernière vérification du workflow GitHub (admin_video_ia_mois,
           // bloc SQL « Compte API Higgsfield visible »). Lecture à part : fonction absente ou panne = null, le cockpit dit « bloc SQL à coller ».
           sb.rpc("admin_video_ia_mois", {}).then(r => r.error ? null : r.data || null, () => null),
+          // Lot 6 B : retenues des avis (« Appelez-moi avant de publier », table avis_retenues, lisible par l'administrateur) pour compter « en moins de
+          // 24 h » avec l'échéance suspendue, comme le journal ; numéros WhatsApp de l'équipe. Lectures à part : un échec rend null (règle d'avant).
+          sb.from("avis_retenues").select("avis_id,retenue_le,liberee_le").order("retenue_le", { ascending: false }).limit(5000).then(r => r.error ? null : r.data || [], () => null),
+          sb.rpc("admin_equipe_whatsapp").then(r => r.error ? null : r.data || [], () => null),
         ]);
+        const parAvis = {}; (retenuesCk || []).forEach(x => (parAvis[x.avis_id] || (parAvis[x.avis_id] = [])).push(x));
+        (av || []).forEach(a => { a.retenues = parAvis[a.id] || []; });
         const vi = videoIa && videoIa[0];
-        return { abonnements, invitations, envois, whatsapp, avis: av, creations, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
+        return { abonnements, invitations, envois, whatsapp, avis: av, creations, equipe_whatsapp: equipeWa, avis_mois: avisMois ? (avisMois.commerces || []) : null, photos: photosCk,
           video_ia: videoIa == null ? null : { derniere: vi ? { ...((vi.detail || {}).video_ia || {}), quand: vi.cree_le, commerce_id: vi.commerce_id || null } : null, mois: videoIaMois }, tests: testsJ || testsA ? [...(testsJ || []), ...(testsA || [])] : null, illisible: [...new Set(illisible)],
           tronques: av && av.length >= AVIS_MAX ? ["avis"] : [] };
       },

@@ -1188,7 +1188,7 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 
 /* Dix sur dix (31/10/2026) : réseau de l'offre pas encore connecté (onglet grisé, aperçu atténué), confirmations de refus et d'annulation,
    miniatures des photos déposées. Sobre : filet, gris, aucune couleur d'accent ; l'option choisie se marque à l'encre (plus de soulignement vert). */
-.res-onglets button.res-absent{color:var(--discret);font-style:italic}
+.res-onglets button.res-absent{color:var(--texte2)}
 .cadre.absent{opacity:.55}
 .res-absent-note{margin:0 0 8px}
 .confirmer-refus{border:1px solid var(--bord-fort);border-radius:var(--r);padding:12px;display:grid;gap:8px;background:var(--surface)}
@@ -1494,3 +1494,25 @@ details.af-tache>article.carte{border:0;border-top:1px solid var(--filet);border
 .journal-outils .f{flex:1 1 220px;margin:0}
 /* Lot 5 B (revue design : champ de filtre du journal collé aux bords de la carte) : les outils du journal gardent la marge de la carte. */
 .tableau>.journal-outils{padding:12px 16px 0}
+/* Lot 6 B (revue design : journal de la console au téléphone, environ 54 px entre chaque paire libellé / valeur) : lignes compactes, l'étiquette
+   n'occupe plus quatre rangées de la grille. */
+@media (max-width:899px){.tab.journal tr{padding:10px 16px}.tab.journal td{padding:2px 0;gap:2px 10px;grid-template-columns:84px minmax(0,1fr)}.tab.journal td::before{grid-row:auto}}
+/* Lot 6 B (revue design : trois boutons pleins dans la carte Photos) : un seul bouton plein à la fois. Sans photo choisie : « Prendre une photo »
+   (téléphone) ou « Choisir des photos » (ordinateur) ; « Envoyer » reste en contour. Photos choisies : « Envoyer » devient le bouton plein. */
+#ph-envoyer:not([data-choix]){background:transparent;color:var(--encre);border-color:var(--bord-fort)}
+form:has(#ph-envoyer[data-choix]) .depot label.bouton{background:transparent;color:var(--encre);border-color:var(--bord-fort)}
+@media (max-width:899px),(hover:none),(pointer:coarse){.depot label[for=fichiers].bouton.second{background:transparent;color:var(--encre)}}
+/* Lot 6 B (revue design : le vert sert d'état « sélectionné » ailleurs) : les pastilles d'heure du calendrier passent en encre. */
+.cal [data-cell]{background:var(--encre);color:var(--surface)}
+/* Lot 6 B (revue design : champ « Votre version » gris dans une carte blanche) : fond blanc, bord visible. */
+form[data-version] textarea{background:var(--surface);border-color:var(--bord-fort)}
+/* Lot 6 B (revue design : au téléphone, état « À faire » et bouton en colonne à droite, texte écrasé sur 185 px) : l'état et le bouton passent sous
+   le titre, alignés à gauche ; le texte prend toute la largeur. */
+@media (max-width:599px){.mise-en-route .liste.etapes li{flex-direction:column;align-items:stretch;gap:8px}.mise-en-route .etape-etat{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;text-align:left;gap:8px 12px}}
+/* Lot 6 B : WhatsApp de l'équipe, replié en bas du cockpit. */
+details.eqwa>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;cursor:pointer;min-height:44px;list-style:none}
+details.eqwa>summary::-webkit-details-marker{display:none}
+details.eqwa>summary h2{margin:0}
+details.eqwa[open]>summary{margin-bottom:8px}
+/* Lot 6 B (revue design : cockpit de 6,5 écrans au téléphone) : la file par client en lignes compactes, comme le journal. */
+@media (max-width:899px){.ck-bloc .tab tr{padding:10px 16px}.ck-bloc .tab td{padding:2px 0;gap:2px 10px;grid-template-columns:96px minmax(0,1fr)}.ck-bloc .tab td::before{grid-row:auto}}

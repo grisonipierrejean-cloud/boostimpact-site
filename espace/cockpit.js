@@ -74,7 +74,7 @@
         const etat = d.etat === "manque" || ech < maintenant ? "depasse" : ech - maintenant <= AVANT[k] ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: k, etat, echeance: ech, debut: debutBarre, mois_offert: moisOffert(ech), pause }); };
       engagement("fiche", g.fiche, depart); engagement("premier_contenu", g.premier_contenu, depart);
-      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null || a.retenue_le) return; suivis++;   // « Attendez mon appel » : délai suspendu (CGV art. 10)
+      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null || a.retenue_le) return; suivis++;   // « Appelez-moi avant de publier » : délai suspendu (CGV art. 10)
         const etat = a.en_retard || ech < maintenant ? "depasse" : ech - maintenant <= AVANT.avis ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: "avis", id: a.id, etat, echeance: ech, debut: ms(a.recu_le), note: a.note, mois_offert: moisOffert(ech), pause }); });
       // Mois offerts à appliquer dans Stripe : un seul par client et par mois (CGV art. 10), même si plusieurs délais sont manqués.
@@ -117,7 +117,12 @@
       mrr += p; mrrNb++; });
     const impayes = (brut.abonnements || []).filter(a => a.statut === "impaye" && !tests.has(a.commerce_id));
     const avisPeriode = (brut.avis || []).filter(a => !tests.has(a.commerce_id) && dansPeriode(a.traite_le || a.repondu_le, debut, maintenant));
-    const avis24 = avisPeriode.filter(a => { const r = ms(a.traite_le || a.repondu_le), c = ms(a.cree_le); return r != null && c != null && r - c <= (GD.avis_traite_heures ?? 24) * H; }).length;
+    // Lot 6 B (revue exploitant : « 7 sur 8 en moins de 24 h » au cockpit, « Délai tenu » au journal pour le même avis) : même règle que le journal
+    // (admin_avis_publie, « dans_les_24h ») : échéance suspendue par « Appelez-moi avant de publier » (RENOM_ECHEANCE_AVIS, retenues de l'avis ;
+    // sans retenue : reçu + 24 h). Une échéance nulle (retenue jamais levée) compte comme tenue, comme le journal.
+    const echAvis = typeof window !== "undefined" && window.RENOM_ECHEANCE_AVIS;
+    const avis24 = avisPeriode.filter(a => { const r = ms(a.traite_le || a.repondu_le), c = ms(a.cree_le); if (r == null || c == null) return false;
+      const e = echAvis ? echAvis(a.cree_le, a.retenues || [], GD.avis_traite_heures ?? 24) : c + (GD.avis_traite_heures ?? 24) * H; return e == null || r <= e; }).length;
 
     // ------------------------------------------------------------ Pipeline : où en est chaque prospect et chaque client AUJOURD'HUI ; « Perdu » sur la période
     const convertis = new Set(creations.map(j => j.detail && j.detail.prospect).filter(Boolean));
@@ -176,8 +181,9 @@
     // À sortir aujourd'hui : toute tâche de la file en retard ou dont l'échéance tombe avant minuit (heure de Paris), triée retard d'abord.
     const finJour = (() => { const d = jourParis(maintenant); for (let t = maintenant; t < maintenant + 26 * H; t += 15 * 60000) if (jourParis(t) !== d) return t; return maintenant + 24 * H; })();
     const aSortir = items.filter(i => i.retard || (i.quand !== Infinity && i.quand < finJour))
-      .map(i => ({ cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", type: i.type, titre: i.titre || "", quand: i.quand, retard: !!i.retard, cle: i.cle || null }))
-      .sort((a, b) => (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand);
+      .map(i => ({ cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", type: i.type, titre: i.titre || "", quand: i.quand, retard: !!i.retard, cle: i.cle || null, tete: !!i.tete }))
+      // Lot 6 B (revue exploitant) : un appel promis (« Appel en retard ») passe en tête : un client attend au bout du fil.
+      .sort((a, b) => (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || a.quand - b.quand);
     const retardsClient = Object.values(groupes).filter(g => g.retard).map(g => ({ cid: g.cid, prospects: !!g.prospects, nom: g.nom, n: g.retard })).sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom));
     // Garanties et file d'accord (revue du 15/11/2026 : « Aucun délai en danger » à côté de « 3 en retard » dans la file). Cause : le bloc ne lisait
     // que les engagements comptés par admin_garantie_delais (depuis le départ de la garantie), la file compte toute tâche en retard (avis reçus avant
@@ -233,7 +239,9 @@
     const env = (brut.envois || []).filter(e => e.statut === "echec" && (ms(e.cree_le) || 0) >= depuis7).map(e => ({ cid: e.commerce_id, nom: nom(e.commerce_id), cle: e.categorie, texte: e.erreur || "", quand: ms(e.cree_le) }));
     ctl("emails", brut.envois == null ? "inconnu" : env.length ? "alerte" : "ok", env);
     const wa = (brut.whatsapp || []).filter(w => ["echec", "abandonne"].includes(w.statut) && (ms(w.cree_le) || 0) >= depuis7).map(w => ({ cid: w.commerce_id, nom: nom(w.commerce_id), cle: w.type, texte: w.erreur || "", quand: ms(w.cree_le) }));
-    ctl("whatsapp", brut.whatsapp == null ? "inconnu" : wa.length ? "alerte" : "ok", wa);
+    // Lot 6 B : aucun numéro WhatsApp d'équipe actif = personne n'est prévenu quand un commerçant demande un appel (« à vérifier »).
+    const eqVide = Array.isArray(brut.equipe_whatsapp) && !brut.equipe_whatsapp.length;
+    ctl("whatsapp", brut.whatsapp == null ? "inconnu" : wa.length ? "alerte" : eqVide ? "a_verifier" : "ok", eqVide ? [...wa, { cle: "equipe_vide" }] : wa, wa.length + (eqVide ? 1 : 0));
     // Metricool : Croissance et Premium sans marque Metricool = publications à faire à la main (file « À publier »).
     const sansMc = actifs.filter(c => (OFFRES[c.offre_id] || {}).reseaux_sociaux && !c.metricool_blog_id).map(c => ({ cid: c.id, nom: c.nom }));
     ctl("metricool", sansMc.length ? "a_verifier" : "ok", sansMc);

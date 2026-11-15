@@ -21,7 +21,9 @@
   async function charger() {
     $("demo").hidden = !P || P.mode !== "demo";
     // Lot 5 B (revue Sophie : lien cassé dans /demo/, qui n'a pas de console) : en démonstration, aucun lien vers la console.
-    if (P && P.mode === "demo") document.querySelectorAll("[data-lien-console]").forEach(x => { x.hidden = true; });
+    // Lot 6 B (revue Sophie : le lien restait dans le HTML de /demo/, vu en 404 par un robot) : le lien n'est plus écrit dans la page ; il est ajouté
+    // ici, hors démonstration seulement.
+    if (!P || P.mode !== "demo") document.querySelectorAll("[data-lien-console]").forEach(x => { const a = document.createElement("a"); a.href = "console.html#/prospects"; a.textContent = x.dataset.texte || ""; x.replaceChildren(a); x.hidden = false; });
     if (!P || !P.prospectParJeton || !/^[0-9a-f]{64}$/.test(jeton)) return erreur("Ce lien n'est pas reconnu.");
     let r; try { r = await P.prospectParJeton(jeton); } catch (er) { return erreur(er.message); }
     if (!r) return erreur("Ce lien n'est pas reconnu.");
