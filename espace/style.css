@@ -1448,3 +1448,34 @@ details.fiche-sec>summary::after{content:"+";font-size:22px;line-height:1;color:
 details.fiche-sec[open]>summary::after{content:"\2212"}
 details.fiche-sec>.carte,details.fiche-sec>.pile{border:0;margin:0}
 details.fiche-sec[open]{padding-bottom:8px}
+/* Lot 4 B : écran Photos, conseils repliés sous la consigne d'une ligne */
+details.conseils{margin:4px 0 16px}details.conseils>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}details.conseils p{margin:8px 0}
+#ph-whatsapp{margin:0 0 8px}
+details.accueil-plus>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;list-style:none}details.accueil-plus>summary::-webkit-details-marker{display:none}
+details.accueil-plus>summary::after{content:"";margin-left:auto;width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s}
+details.accueil-plus[open]>summary::after{transform:rotate(-135deg)}details.accueil-plus>.pile{margin-top:12px}details.accueil-plus{padding-top:6px;padding-bottom:6px}#vue>.gestes-accueil .bouton.grand{min-height:48px}
+@media (prefers-reduced-motion:reduce){details.accueil-plus>summary::after{transition:none}}
+.accueil-grille{display:flex;flex-direction:column;gap:16px;min-width:0}.semaine{margin:0;font-size:15px}
+@media (min-width:1100px){.accueil-grille{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}.accueil-grille .carte .actions-attente,.accueil-grille .carte p{max-width:none}}
+/* Lot 4 B (revue design) : onglets réseau sur une ligne (défilement horizontal si l'écran est trop étroit, jamais « Fiche Google » seul dessous) */
+.res-onglets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.res-onglets::-webkit-scrollbar{display:none}.res-onglets button{flex:0 0 auto;white-space:nowrap}
+/* Bureau : un contenu à valider prend la largeur, aperçu à gauche, date et boutons à droite (plus de carte de 350 px dans une page vide) */
+@media (min-width:1100px){
+  .cartes>.contenu.a-decider{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);column-gap:32px;row-gap:12px;align-items:start;grid-auto-rows:auto}
+  .cartes>.contenu.a-decider>.reseaux{display:contents}
+  .cartes>.contenu.a-decider>.reseaux>.res-onglets{grid-column:1;grid-row:1}
+  .cartes>.contenu.a-decider>.reseaux>.res-panneau{grid-column:1;grid-row:2/span 12}
+  .cartes>.contenu.a-decider>:not(.reseaux),.cartes>.contenu.a-decider>.reseaux>:not(.res-onglets):not(.res-panneau){grid-column:2}
+  .cartes>.contenu.a-decider>.contenu-corps{align-self:start}
+}
+.cartes>.contenu.a-decider .leg-modifier{justify-self:start}
+/* Lot 4 B : console, « À faire » : filtres sur une ligne qui défile au téléphone ; tâches repliées en une ligne, dépliées au clic */
+@media (max-width:899px){.console #a-faire.filtres{flex-wrap:nowrap;overflow-x:auto;gap:4px;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent)}.console #a-faire.filtres a{flex:0 0 auto}}
+details.af-tache{background:var(--surface);border:1px solid var(--filet);border-radius:var(--r-image)}
+details.af-tache>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;min-height:48px;padding:10px 40px 10px 14px;cursor:pointer;list-style:none;position:relative}
+details.af-tache>summary::-webkit-details-marker{display:none}
+details.af-tache>summary::after{content:"";position:absolute;right:16px;top:50%;width:8px;height:8px;margin-top:-6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
+details.af-tache[open]>summary::after{transform:rotate(-135deg);margin-top:-2px}
+details.af-tache .af-type{font-weight:var(--graisse-forte)}details.af-tache .af-etat{color:var(--discret);font-size:15px}details.af-tache.af-retard .af-etat{color:var(--danger);font-weight:var(--graisse-forte)}
+details.af-tache>article.carte{border:0;border-top:1px solid var(--filet);border-radius:0 0 var(--r-image) var(--r-image);margin:0}
+@media (max-width:899px){.tab.journal td.jv{display:none}}

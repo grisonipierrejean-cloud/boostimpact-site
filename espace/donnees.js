@@ -25,6 +25,22 @@
     avis: { collecte_minutes: 15, relances_client_heures: [4, 24] }, delegation: { publication_auto_heures: 48 }, annuel: { mois_couverts: 12, majoration_mensuel_pct: 20 },
     objectif_interne_pilotes: { nouveaux_avis: 10, jours: 60, rappel_jour: 45, en_vue_pct: 75, fermeture_prolonge_au_dela_de_jours: 7 },
     mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"], offerts_apres_option: "visibilite_ia" } };
+  // « Attendez mon appel » (15/11/2026, CGV art. 9 et 10 ; même règle que echeance_avis de schema.sql, bloc « délai de 24 h suspendu ») :
+  // échéance = reçu + 24 h ; chaque retenue commencée AVANT l'échéance du moment la suspend (ouverte : aucune échéance, null) ; levée par
+  // l'appel, l'échéance devient « appel + 24 h ». Une retenue commencée après l'échéance n'efface pas le retard. Rend des millisecondes ou null.
+  function echeanceAvis(recu, retenues, heures) {
+    const h = (heures != null ? heures : CONDITIONS.garantie_delais.avis_traite_heures) * 3600000, r0 = Date.parse(recu);
+    if (!Number.isFinite(r0)) return null;
+    let e = r0 + h;
+    for (const r of [...(retenues || [])].filter(x => x && x.retenue_le).sort((a, b) => Date.parse(a.retenue_le) - Date.parse(b.retenue_le))) {
+      if (Date.parse(r.retenue_le) >= e) continue;
+      if (!r.liberee_le) return null;
+      e = Math.max(e, Date.parse(r.liberee_le) + h);
+    }
+    return e;
+  }
+  // Retenues d'un avis de la démonstration : son historique (a.retenues), plus une retenue en cours posée avant cet historique.
+  const retenuesDe = a => { const l = Array.isArray(a.retenues) ? a.retenues.slice() : []; if (a.retenue_le && !l.some(x => x.retenue_le === a.retenue_le)) l.push({ retenue_le: a.retenue_le, liberee_le: null }); return l; };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
   // (égalité testée par espace/test_ecrans.py et rls.test.mjs). Livraison : jours après le paiement ou la réception des éléments du client, le plus tardif.
   // Modèle hybride (décision de PJ du 15/11/2026, CGV du 15 novembre 2026, article 3 bis) : la Visibilité IA est COMPRISE dans la mise en route de
@@ -746,7 +762,7 @@
     const date = s => { const m = String(s || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : String(s || ""); };
     return l.slice(1).map(x => { const c = cellules(x); return { prenom: c[ip] || "", email: String(c[ie] || "").toLowerCase(), date_passage: date(c[id]) }; });
   }
-  const TYPES_ALERTE = { ERREUR_WORKFLOW: "Erreur de workflow", MISE_EN_ROUTE_BLOQUEE: "Mise en route bloquée", ECHEC_RELANCE_PROSPECT: "Relance de prospect en échec",
+  const TYPES_ALERTE = { ERREUR_WORKFLOW: "Automatisation arrêtée", MISE_EN_ROUTE_BLOQUEE: "Mise en route bloquée", ECHEC_RELANCE_PROSPECT: "Relance de prospect en échec",
     AVIS_SENSIBLE_A_EFFACER: "Avis sensible bientôt effacé (30 jours)", COMMENTAIRE_SENSIBLE_A_EFFACER: "Commentaire sensible bientôt effacé (30 jours)",
     // Paiement Stripe (fonction appliquer_evenement_stripe de schema.sql)
     PAIEMENT_REFUSE: "Paiement refusé", ABONNEMENT_SANS_COMMERCE: "Paiement sans commerce rattaché", REMISE_LANCEMENT_DEJA_UTILISEE: "Remise de lancement utilisée deux fois",
@@ -1497,7 +1513,7 @@
       async adminAvisProposer(id, reponse) { return ok(await sb.rpc("admin_avis_proposer", { p_id: id, p_reponse: reponse })); },
       async adminGarantieDelais() { return ok(await sb.rpc("admin_garantie_delais", {})) || []; },
       async adminDelais(cid, p) { return ok(await sb.rpc("admin_delais", { p_commerce: cid, p: p || {} })); },
-      async adminManquement(id, statut, motif) { return ok(await sb.rpc("admin_manquement", { p_id: id, p_statut: statut, p_motif: motif || null })); },
+      async adminManquement(id, statut, motif, reference) { return ok(await sb.rpc("admin_manquement", Object.assign({ p_id: id, p_statut: statut, p_motif: motif || null }, reference ? { p_reference: reference } : {}))); },
       async adminReseaux(cid, reseaux) { return ok(await sb.rpc("admin_reseaux", { p_commerce: cid, p_reseaux: reseaux })); },
       async adminPays(cid, pays) { return ok(await sb.rpc("admin_pays", { p_commerce: cid, p_pays: pays })); },
       async adminMetier(cid, metier) { return ok(await sb.rpc("admin_metier", { p_commerce: cid, p_metier: metier })); },
@@ -1581,5 +1597,6 @@
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
+  window.RENOM_ECHEANCE_AVIS = echeanceAvis;
   window.RENOM_SECOURS = { ALERTE_HEURES: SECOURS_ALERTE_HEURES };
 })();

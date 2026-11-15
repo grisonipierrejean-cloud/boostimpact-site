@@ -1,0 +1,869 @@
+// Kit de marque dans l'espace (écran « Votre style ») : proposition de couleurs à partir d'un logo, contrôle du kit, aperçus des 3 gabarits.
+// Même calcul que moteur/marque.py (regroupement de couleurs en entiers, contraste WCAG 2, couple de polices selon le métier et le ton) :
+// sur les mêmes pixels, même kit (test de parité moteur/tests/test_marque_parite.js). Même contrôle que la fonction SQL marque_fautes.
+// Les aperçus sont dessinés ici (canvas) avec les règles de moteur/gabarits.py (modèles 2026 du 14/11/2026) et les mêmes fichiers de polices : ils servent à choisir.
+// Le visuel publié est rendu par le moteur ; de petits écarts de rendu du texte (moteur de polices du navigateur) restent possibles.
+// Aucune bibliothèque, aucun service externe. Utilisable dans le navigateur (window.RENOM_MARQUE) et dans Node (require).
+(function (racine) {
+  const STYLES_PHOTO = ["lumineux", "chaleureux", "sombre_contraste", "naturel"], GABARITS = ["plein", "editorial", "annonce"];
+  const CLES = ["version", "verrouille", "verrouille_le", "auto", "source", "logo", "logo_fond", "couleurs", "palette", "couple", "police_titres", "police_texte",
+    "style_photo", "gabarit_prefere", "gabarit_impose", "mots_signature", "a_eviter", "maj", "valide_par", "texte_photos",
+    "source_typo", "typo_note", "supports_fournis", "surtitre"];
+  // Typographie du réel par client (14/11/2026, comme moteur/marque.py SOURCES_TYPO, MAX_TYPO) : d'où viennent les polices (site, client, supports,
+  // defaut), note de l'équipe, supports fournis, surtitre de la carte de fin du réel. Écrits par la console (admin_regler_typo), jamais par le commerçant.
+  const SOURCES_TYPO = ["site", "client", "supports", "defaut"], MAX_TYPO = { typo_note: 300, supports_fournis: 500, surtitre: 40 };
+  // « Texte sur vos photos » (31/10/2026, écran « Vos publications ») : jamais, annonces (défaut, recommandé), souvent. Lu par le moteur
+  // (moteur/marque.choisir_gabarit) : jamais = toujours la photo seule (gabarit « photo ») ; annonces = la photo seule, le gabarit « annonce » pour
+  // les annonces seulement ; souvent = modèle préféré et rotation comme avant.
+  const TEXTE_PHOTOS = ["jamais", "annonces", "souvent"], TEXTE_PHOTOS_DEFAUT = "annonces";
+  const AUTEURS = ["commercant", "renom"];   // marque.valide_par : qui a enregistré le kit (posé par la base, voir admin_regler_marque dans schema.sql)
+  const MAX_MOTS = 5, MAX_EVITER = 10, MAX_CAR = 60, CONTRASTE_TEXTE = 4.5, CONTRASTE_GRAPHIQUE = 3;
+  const STYLE_METIER = { restaurant: "chaleureux", beaute: "lumineux", sport: "naturel", autre: "naturel" };
+  // Directions de style proposées au commerçant (31/10/2026) : trois façons de montrer ses publications, avec SES couleurs et son logo (réglés par
+  // BoostImpact). Une direction = un modèle préféré (gabarit_prefere, varié 1 fois sur 3 par moteur/marque.choisir_gabarit) + un couple de polices
+  // de couples.json. Seules ces clés changent ; la base contrôle le couple (fonction SQL couple_marque_valide, regler_ma_marque).
+  const DIRECTIONS = ["photo", "magazine", "affiche"], GAB_DIRECTION = { photo: "plein", magazine: "editorial", affiche: "annonce" };
+  // 14/11/2026 : direction « affiche » d'un restaurant = couple « Affiche » (Anton en capitales, titres d'affiche) au lieu de « Bistrot ».
+  const COUPLES_DIRECTION = { restaurant: { magazine: "elegant", affiche: "affiche" }, beaute: { magazine: "raffine", affiche: "epure" },
+    sport: { magazine: "epure", affiche: "franc" }, autre: { magazine: "elegant", affiche: "franc" } };
+
+  // ---------------------------------------------------------------- Couleurs
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const hexa = c => "#" + c.map(x => x.toString(16).padStart(2, "0")).join("").toUpperCase();
+  const estHexa = v => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
+  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const contraste = (a, b) => { a = typeof a === "string" ? rgb(a) : a; b = typeof b === "string" ? rgb(b) : b; const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const div = (s, n) => Math.floor((2 * s + n) / (2 * n));
+  const melange = (a, b, pm) => a.map((x, i) => Math.floor((x * (1000 - pm) + b[i] * pm + 500) / 1000));
+  const chroma = c => Math.max(...c) - Math.min(...c);
+  const dist2 = (a, b) => a.reduce((s, x, i) => s + (x - b[i]) * (x - b[i]), 0);
+  const cmpTuple = (a, b) => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const x = a[i], y = b[i]; if (Array.isArray(x)) { const r = cmpTuple(x, y); if (r) return r; } else if (x !== y) return x < y ? -1 : 1; } return 0; };
+  const maxPar = (l, cle) => l.reduce((m, x) => m === null || cmpTuple(cle(x), cle(m)) > 0 ? x : m, null);
+  const minPar = (l, cle) => l.reduce((m, x) => m === null || cmpTuple(cle(x), cle(m)) < 0 ? x : m, null);
+
+  // ---------------------------------------------------------------- Regroupement de couleurs (mêmes règles que moteur/marque.py)
+  function echantillons(data, w, h) {
+    const pas = Math.max(1, Math.floor(Math.max(w, h) / 96)), out = [];
+    for (let y = 0; y < h; y += pas) for (let x = 0; x < w; x += pas) {
+      const i = (y * w + x) * 4;
+      out.push([data[i], data[i + 1], data[i + 2], data[i + 3], x === 0 || y === 0 || x + pas >= w || y + pas >= h]);
+    }
+    return out;
+  }
+  function regrouper(ech, seuil = 48, maxGroupes = 8) {
+    const seaux = new Map();
+    for (const [r, g, b, a] of ech) {
+      if (a < 128) continue;
+      const k = (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4), s = seaux.get(k) || [0, 0, 0, 0];
+      s[0]++; s[1] += r; s[2] += g; s[3] += b; seaux.set(k, s);
+    }
+    const groupes = [], centre = g => [div(g[1], g[0]), div(g[2], g[0]), div(g[3], g[0])];
+    for (const [, [n, sr, sg, sb]] of [...seaux.entries()].sort((x, y) => (y[1][0] - x[1][0]) || (x[0] - y[0]))) {
+      const c = [div(sr, n), div(sg, n), div(sb, n)];
+      let meilleur = null, md = null;
+      for (const g of groupes) { const d = dist2(c, centre(g)); if ((d <= seuil * seuil || groupes.length >= maxGroupes) && (md === null || d < md)) { meilleur = g; md = d; } }
+      if (meilleur === null) groupes.push([n, sr, sg, sb]);
+      else { meilleur[0] += n; meilleur[1] += sr; meilleur[2] += sg; meilleur[3] += sb; }
+    }
+    return groupes.map(g => [centre(g), g[0]]).sort((x, y) => (y[1] - x[1]) || cmpTuple(x[0], y[0]));
+  }
+  function fondDuLogo(ech, groupes) {
+    const bord = ech.filter(e => e[4]), opaques = bord.filter(e => e[3] >= 128);
+    if (!bord.length || opaques.length * 10 < bord.length * 6 || !groupes.length) return null;
+    const seaux = new Map();
+    for (const [r, g, b] of opaques) { const k = (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4); seaux.set(k, (seaux.get(k) || 0) + 1); }
+    const k = [...seaux.entries()].sort((x, y) => (y[1] - x[1]) || (x[0] - y[0]))[0][0];
+    const c = [(k >> 8) * 16 + 8, ((k >> 4) & 15) * 16 + 8, (k & 15) * 16 + 8];
+    return minPar(groupes, g => [dist2(g[0], c), g[0]])[0];
+  }
+
+  // ---------------------------------------------------------------- Proposition
+  const sansAccents = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const tonCle = ton => { const t = sansAccents(ton); return t.includes("sobre") ? "sobre" : (t.includes("enjou") || t.includes("ludique")) ? "enjoue" : t.includes("chaleur") ? "chaleureux" : "_"; };
+  const couplePropose = (cat, metier, ton) => { const p = cat.propositions[metier] || cat.propositions.autre; return p[tonCle(ton)] || p._; };
+  function styleDesPhotos(ech) {
+    const px = ech.filter(e => e[3] >= 128); if (!px.length) return "naturel";
+    const n = px.length; let l = 0, ch = 0;
+    for (const [r, g, b] of px) { l += 2126 * r + 7152 * g + 722 * b; if (r >= g && g > b) ch += r - b; }
+    l = Math.floor(l / n); ch = Math.floor(ch * 1000 / (n * 255));
+    if (l < 841500) return "sombre_contraste";
+    if (l > 1581000 && ch < 120) return "lumineux";
+    if (ch >= 100) return "chaleureux";
+    return "naturel";
+  }
+  function couleursLisibles(c) {
+    c = { ...c };
+    if (contraste(c.texte, c.fond) < CONTRASTE_TEXTE) c.texte = contraste("#111111", c.fond) >= contraste("#FFFFFF", c.fond) ? "#111111" : "#FFFFFF";
+    return c;
+  }
+  // logo : {data, w, h} (pixels RGBA) ou null ; photos : liste de {data, w, h}. cat : polices/couples.json.
+  function proposer({ logo = null, photos = [], metier = "autre", ton = "", logoChemin = null, sourcePhotos = [], cat }) {
+    let ech = [], groupes = [], fondLogo = null, source;
+    if (logo) { ech = echantillons(logo.data, logo.w, logo.h); groupes = regrouper(ech); fondLogo = fondDuLogo(ech, groupes); source = { type: "logo" }; }
+    else if (photos.length) { ech = photos.flatMap(p => echantillons(p.data, p.w, p.h)); groupes = regrouper(ech); source = { type: "photos", photos: [...sourcePhotos] }; }
+    else source = { type: "defaut" };
+    const pareil = (a, b) => !!a && !!b && a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    const total = groupes.filter(([c]) => !pareil(c, fondLogo)).reduce((s, [, n]) => s + n, 0);
+    const cands = groupes.filter(([c, n]) => !pareil(c, fondLogo) && n * 100 >= Math.max(1, total) * 3);
+    const score = ([c, n]) => [chroma(c) * Math.sqrt(n), -(c[0] + c[1] + c[2])];
+    const chromatiques = cands.filter(([c]) => chroma(c) >= 40);
+    let principale = chromatiques.length ? maxPar(chromatiques, score)[0] : cands.length ? minPar(cands, ([c]) => [lum(c), c])[0] : [31, 31, 31];
+    const autres = cands.filter(([c]) => dist2(c, principale) >= 3600 && lum(c) < 0.8 && (!!logo || chroma(c) >= 40));
+    const secondaire = autres.length ? maxPar(autres, ([c, n]) => [(chroma(c) + 30) * Math.sqrt(n), -(c[0] + c[1] + c[2])])[0]
+      : melange(principale, lum(principale) > 0.2 ? [0, 0, 0] : [255, 255, 255], 450);
+    const fond = fondLogo && lum(fondLogo) >= 0.8 ? fondLogo : melange(principale, [255, 255, 255], 940);
+    if (!logo && groupes.length) for (let i = 0; i < 20 && contraste(principale, fond) < CONTRASTE_GRAPHIQUE; i++) principale = melange(principale, [0, 0, 0], 100);
+    const texte = melange(principale, [0, 0, 0], 820);
+    const couple = couplePropose(cat, metier, ton), cp = cat.couples.find(x => x.id === couple);
+    return { version: 0, auto: true, verrouille: false, source, logo: logoChemin, logo_fond: fondLogo ? hexa(fondLogo) : (logo ? "transparent" : null),
+      couleurs: couleursLisibles({ principale: hexa(principale), secondaire: hexa(secondaire), fond: hexa(fond), texte: hexa(texte) }),
+      palette: groupes.slice(0, 6).map(([c]) => hexa(c)), couple, police_titres: cp.titres, police_texte: cp.texte,
+      style_photo: (!logo && groupes.length) ? styleDesPhotos(ech) : (STYLE_METIER[metier] || "naturel"),
+      gabarit_prefere: null, gabarit_impose: false, mots_signature: [], a_eviter: [] };
+  }
+  // Accent quand le commerce n'en a fixé aucun (24/10/2026, comme moteur/marque.py) : bleu nuit #0F1C3A ; le bleu #2438FF par défaut de la base
+  // n'est jamais un choix du commerce et disparaît des kits non validés.
+  const ACCENT_DEFAUT = "#0F1C3A", ACCENT_HISTORIQUE = "#2438FF";
+  const accentChoisi = x => estHexa(x) && x.toUpperCase() !== ACCENT_HISTORIQUE ? x : null;
+  function defaut(couleurs, metier, ton, cat) {
+    const c = couleurs || {}, k = proposer({ metier, ton, cat }), a = accentChoisi(c.accent) || ACCENT_DEFAUT;
+    return { ...k, couleurs: couleursLisibles({ principale: a, secondaire: a, fond: c.fond || "#FFFFFF", texte: c.texte || "#000000" }),
+      couple: "franc", police_titres: "bricolage", police_texte: "figtree", palette: [] };
+  }
+  // Kit complet et sûr (toute valeur hors liste remplacée par la valeur par défaut), comme marque.normaliser du moteur.
+  function normaliser(m, couleurs, metier, ton, cat) {
+    const base = defaut(couleurs, metier, ton, cat);
+    if (!m || typeof m !== "object") return base;
+    const k = { ...base }; CLES.forEach(x => { if (x in m && m[x] != null) k[x] = m[x]; });
+    const cc = m.couleurs && typeof m.couleurs === "object" ? m.couleurs : {};
+    k.couleurs = couleursLisibles(Object.fromEntries(["principale", "secondaire", "fond", "texte"].map(x => [x, estHexa(cc[x]) && (m.verrouille || x === "fond" || x === "texte" || cc[x].toUpperCase() !== ACCENT_HISTORIQUE) ? cc[x].toUpperCase() : base.couleurs[x]])));
+    if (!(k.police_titres in cat.familles)) k.police_titres = base.police_titres;
+    if (!cat.textes.includes(k.police_texte)) k.police_texte = base.police_texte;
+    if (!STYLES_PHOTO.includes(k.style_photo)) k.style_photo = base.style_photo;
+    if (!GABARITS.includes(k.gabarit_prefere)) k.gabarit_prefere = null;
+    k.gabarit_impose = !!k.gabarit_impose && k.gabarit_prefere !== null;
+    [["mots_signature", MAX_MOTS], ["a_eviter", MAX_EVITER]].forEach(([x, n]) => { k[x] = (Array.isArray(k[x]) ? k[x] : []).map(s => String(s).trim().slice(0, MAX_CAR)).filter(Boolean).slice(0, n); });
+    k.version = +m.version || 0; k.verrouille = !!m.verrouille;
+    k.texte_photos = TEXTE_PHOTOS.includes(m.texte_photos) ? m.texte_photos : TEXTE_PHOTOS_DEFAUT;
+    k.source_typo = SOURCES_TYPO.includes(m.source_typo) ? m.source_typo : null;
+    Object.entries(MAX_TYPO).forEach(([x, n]) => { k[x] = Array.from(String(m[x] || "").split(/\s+/).filter(Boolean).join(" ")).slice(0, n).join("") || null; });
+    return k;
+  }
+  // Fautes d'un kit : mêmes règles que la fonction SQL marque_fautes (la base a le dernier mot). Messages en clés i18n (marque.f.*).
+  function fautes(m, cid, cat) {
+    const f = [];
+    if (!m || typeof m !== "object" || Array.isArray(m)) return ["objet"];
+    Object.keys(m).forEach(k => { if (!CLES.includes(k)) f.push("cle"); });
+    const c = m.couleurs;
+    if (!c || ["principale", "secondaire", "fond", "texte"].some(x => !estHexa(c[x]))) f.push("couleurs");
+    else if (contraste(c.texte, c.fond) < CONTRASTE_TEXTE) f.push("contraste");
+    if (!(m.police_titres in cat.familles)) f.push("police_titres");
+    if (!cat.textes.includes(m.police_texte)) f.push("police_texte");
+    if (!STYLES_PHOTO.includes(m.style_photo)) f.push("style_photo");
+    if (m.gabarit_prefere != null && !GABARITS.includes(m.gabarit_prefere)) f.push("gabarit");
+    const liste = (x, n) => x == null || (Array.isArray(x) && x.length <= n && x.every(s => typeof s === "string" && s.trim().length >= 1 && s.trim().length <= MAX_CAR));
+    if (!liste(m.mots_signature, MAX_MOTS)) f.push("mots_signature");
+    if (!liste(m.a_eviter, MAX_EVITER)) f.push("a_eviter");
+    if (m.valide_par != null && !AUTEURS.includes(m.valide_par)) f.push("valide_par");
+    if (m.texte_photos != null && !TEXTE_PHOTOS.includes(m.texte_photos)) f.push("texte_photos");
+    if (m.source_typo != null && !SOURCES_TYPO.includes(m.source_typo)) f.push("source_typo");
+    Object.entries(MAX_TYPO).forEach(([x, n]) => { if (m[x] != null && (typeof m[x] !== "string" || Array.from(m[x]).length > n)) f.push(x); });
+    if (m.logo != null && !new RegExp("^" + cid + "/marque/[A-Za-z0-9._-]{1,80}\\.(png|jpg|jpeg|webp)$").test(m.logo)) f.push("logo");
+    return [...new Set(f)];
+  }
+  // Les trois directions d'un commerce : [{id, couple, police_titres, police_texte, gabarit_prefere, gabarit_impose}].
+  function directions(metier, ton, cat) {
+    const m = COUPLES_DIRECTION[metier] ? metier : "autre", photo = couplePropose(cat, m, ton);
+    return DIRECTIONS.map(id => { const cp = cat.couples.find(x => x.id === (id === "photo" ? photo : COUPLES_DIRECTION[m][id])) || cat.couples[0];
+      return { id, couple: cp.id, police_titres: cp.titres, police_texte: cp.texte, gabarit_prefere: GAB_DIRECTION[id], gabarit_impose: false }; });
+  }
+  // Direction du kit (null : un style réglé autrement par BoostImpact, ou pas encore de modèle préféré).
+  const directionDu = (k, dirs) => (k && dirs.find(d => d.gabarit_prefere === k.gabarit_prefere && d.police_titres === k.police_titres && d.police_texte === k.police_texte)) || null;
+  const avecDirection = (k, d) => d ? { ...k, couple: d.couple, police_titres: d.police_titres, police_texte: d.police_texte, gabarit_prefere: d.gabarit_prefere, gabarit_impose: false } : k;
+  const couleursCommerce = k => ({ fond: k.couleurs.fond, texte: k.couleurs.texte, accent: k.couleurs.principale });
+  // Couleurs déjà choisies par le commerçant (différentes des couleurs par défaut du schéma) : gardées par une proposition tirée des photos,
+  // comme dans le moteur (rendu_cloud.proposer_kit). Un logo déposé, lui, donne les couleurs de la marque.
+  const COULEURS_DEFAUT = { fond: "#FFFFFF", texte: "#000000", accent: "#2438FF" };
+  function garderCouleurs(kit, couleurs) {
+    const c = couleurs || {};
+    if (!c.fond || ["fond", "texte", "accent"].every(x => String(c[x] || "").toUpperCase() === COULEURS_DEFAUT[x])) return kit;
+    return { ...kit, couleurs: couleursLisibles({ principale: c.accent, secondaire: kit.couleurs.secondaire, fond: c.fond, texte: c.texte }) };
+  }
+  // Logo accepté : PNG, SVG, JPEG, WebP, 5 Mo au plus. Rend le code de refus (clé i18n sty.logo.*) ou null.
+  const TYPES_LOGO = ["image/png", "image/svg+xml", "image/jpeg", "image/webp"];
+  const controlerLogo = f => !(TYPES_LOGO.includes(f.type) || /\.(png|svg|jpe?g|webp)$/i.test(f.name || "")) ? "format" : f.size > 5 * 1024 * 1024 ? "taille" : null;
+  const estSvg = f => f.type === "image/svg+xml" || /\.svg$/i.test(f.name || "");
+  // Comparaison de deux kits sans tenir compte de l'ordre des clés ni des champs posés par la base.
+  const canon = o => JSON.stringify(o, (k, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(x => [x, v[x]])) : v);
+  const sansBase = m => { const x = { ...m }; delete x.version; delete x.maj; delete x.verrouille_le; return x; };
+
+  // ---------------------------------------------------------------- Navigateur : polices, images, aperçus
+  let catalogue = null;
+  async function charger(base = "") {
+    if (catalogue) return catalogue;
+    const r = await fetch(base + "fonts/couples.json", { cache: "no-cache" }); catalogue = await r.json();
+    if (typeof FontFace === "function" && typeof document !== "undefined") {
+      for (const [id, f] of Object.entries(catalogue.familles)) {
+        // Famille livrée en un fichier statique par graisse (clé « graisses », 14/11/2026 : Open Sans) : une police déclarée par graisse.
+        if (f.graisses) { for (const [g, fi] of Object.entries(f.graisses)) document.fonts.add(new FontFace("RM-" + id, `url(${base}fonts/${fi})`, { weight: g, display: "swap" })); continue; }
+        const variable = !["dmserif", "zillaslab", "anton", "shrikhand", "alfaslab", "caveatbrush"].includes(id);   // fichiers statiques
+        const ff = new FontFace("RM-" + id, `url(${base}fonts/${f.fichier})`, { weight: variable ? "100 1000" : String(f.graisse_titre), display: "swap" });
+        document.fonts.add(ff);
+      }
+    }
+    return catalogue;
+  }
+  const policeTitre = (k, t) => `${(catalogue.familles[k.police_titres] || {}).graisse_titre || 700} ${t}px "RM-${k.police_titres}"`;
+  const policeTexte = (k, t, g = 500) => `${g} ${t}px "RM-${k.police_texte}"`;
+  async function polices(k) { if (typeof document === "undefined") return; await Promise.all([document.fonts.load(policeTitre(k, 60)), document.fonts.load(policeTexte(k, 30, 500)), document.fonts.load(policeTexte(k, 30, 700))]).catch(() => {}); }
+  // Image d'une autre origine (adresse signée du stockage) : demandée en CORS pour que ses pixels restent lisibles (logo, extraction des couleurs).
+  const chargerImage = src => new Promise((ok, ko) => { const i = new Image(); i.decoding = "async";
+    if (/^https?:/.test(src) && typeof location !== "undefined" && !src.startsWith(location.origin)) i.crossOrigin = "anonymous";
+    i.onload = () => ok(i); i.onerror = () => ko(new Error("image")); i.src = src; });
+  function pixels(img, max = 0) {
+    let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    if (max && Math.max(w, h) > max) { const r = max / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
+    const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0, w, h);
+    return { data: x.getImageData(0, 0, w, h).data, w, h, canvas: c };
+  }
+  // Logo prêt à poser : marges transparentes retirées (comme marque.charger_logo), opacité et couleur moyenne connues.
+  function preparerLogo(img) {
+    const p = pixels(img, 1200); let x0 = p.w, y0 = p.h, x1 = -1, y1 = -1, minA = 255;
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) { const a = p.data[(y * p.w + x) * 4 + 3]; if (a >= 16) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } }
+    if (x1 < 0) { x0 = 0; y0 = 0; x1 = p.w - 1; y1 = p.h - 1; }
+    const c = document.createElement("canvas"); c.width = x1 - x0 + 1; c.height = y1 - y0 + 1; c.getContext("2d").drawImage(p.canvas, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+    const q = document.createElement("canvas"); q.width = q.height = 32; const qx = q.getContext("2d", { willReadFrequently: true }); qx.drawImage(c, 0, 0, 32, 32);
+    const d = qx.getImageData(0, 0, 32, 32).data; let n = 0, s = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < minA) minA = d[i + 3]; if (d[i + 3] >= 128) { n++; s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; } }
+    const all = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, c.width, c.height).data; let opaque = true;
+    for (let i = 3; i < all.length; i += 4) if (all[i] < 250) { opaque = false; break; }
+    return { canvas: c, opaque, couleur: n ? s.map(v => Math.floor(v / n)) : [0, 0, 0] };
+  }
+  // Un SVG est converti en PNG avant le dépôt (le moteur ne lit pas le SVG ; un SVG peut contenir du script).
+  async function enPng(fichier, cote = 1024) {
+    const url = URL.createObjectURL(fichier);
+    try {
+      const img = await chargerImage(url); let w = img.naturalWidth || cote, h = img.naturalHeight || cote; const r = cote / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r);
+      const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+      return await new Promise(ok => c.toBlob(b => ok(b), "image/png"));
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  // ---- Gabarits (4x5, 1080 x 1350) : règles de moteur/gabarits.py
+  const W = 1080, H = 1350;
+  const encreSur = (fond, c) => { for (const x of [rgb(c.texte), rgb(c.fond), [0, 0, 0], [255, 255, 255]]) if (contraste(x, fond) >= 4.5) return x; return [0, 0, 0]; };
+  const couleurLibelle = (fond, c) => { for (const x of [c.secondaire, c.accent]) if (x && contraste(rgb(x), fond) >= 4.5) return rgb(x); return encreSur(fond, c); };
+  const css = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  function coupe(x, texte, police, largeur) {
+    x.font = police; const l = []; let cur = "";
+    for (const mot of texte.split(/\s+/).filter(Boolean)) { const t = (cur + " " + mot).trim(); if (x.measureText(t).width <= largeur) cur = t; else { l.push(cur); cur = mot; } }
+    if (cur) l.push(cur); return l;
+  }
+  function ajuste(x, texte, fab, largeur, tmax, tmin, lmax) {
+    for (let t = tmax; t >= tmin; t -= 2) { const p = fab(t), L = coupe(x, texte, p, largeur); x.font = p; if (L.length <= lmax && L.every(l => x.measureText(l).width <= largeur)) return [p, t, L]; }
+    const p = fab(tmin); return [p, tmin, coupe(x, texte, p, tmin === 0 ? 1 : largeur)];
+  }
+  function ecrire(x, t, px, py, police, couleur) { x.font = police; x.fillStyle = couleur; x.textBaseline = "alphabetic"; const m = x.measureText(t); x.fillText(t, px, py + (m.fontBoundingBoxAscent || 0)); }
+  // Nom du commerce (24/10/2026, comme moteur/gabarits.py) : casse normale, sans espacement de lettres ; plus de filet ni de barre de couleur.
+  function nomCommerce(x, t, px, py, police, couleur) { ecrire(x, t, px, py, police, couleur); x.font = police; return px + x.measureText(t).width; }
+  const largeurNom = (x, t, police) => { x.font = police; return x.measureText(t).width; };
+  function photoRect(x, img, dx, dy, dw, dh) {
+    if (!img) { x.fillStyle = "#3A3C44"; x.fillRect(dx, dy, dw, dh); return; }
+    const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height, rs = sw / sh, rd = dw / dh;
+    const cw = rs > rd ? sh * rd : sw, ch = rs > rd ? sh : sw / rd;
+    x.drawImage(img, (sw - cw) * 0.5, (sh - ch) * 0.45, cw, ch, dx, dy, dw, dh);
+  }
+  function poserLogo(x, logo, k, droite, centre, hauteur, fond, largeurMax) {
+    if (!logo) return null;
+    const lw0 = logo.canvas.width, lh0 = logo.canvas.height, r = Math.min(hauteur / lh0, largeurMax / lw0);
+    const lw = Math.max(1, Math.round(lw0 * r)), lh = Math.max(1, Math.round(lh0 * r)), px = droite - lw, py = Math.round(centre - lh / 2);
+    let gauche = px;
+    if (!logo.opaque && contraste(logo.couleur, fond) < 2) {
+      const pastille = [rgb(k.couleurs.fond), rgb(k.couleurs.texte)].reduce((a, b) => contraste(b, logo.couleur) > contraste(a, logo.couleur) ? b : a);
+      const pad = Math.max(6, Math.floor(hauteur / 6)); x.fillStyle = css(pastille); x.beginPath(); x.roundRect(px - pad, py - pad, lw + 2 * pad, lh + 2 * pad, pad); x.fill(); gauche = px - pad;
+    }
+    x.save();
+    if (logo.opaque) { x.beginPath(); x.roundRect(px, py, lw, lh, Math.max(4, Math.floor(lh / 8))); x.clip(); }
+    x.drawImage(logo.canvas, px, py, lw, lh); x.restore();
+    return gauche;
+  }
+  // Gabarit « photo » (comme moteur/gabarits.gabarit_photo) : logo petit, en bas à droite (bord droit `droite`, bas `bas`), pastille aux couleurs du
+  // kit si le logo se lit mal sur la couleur moyenne de la photo à cet endroit. Sans logo : rien.
+  function logoDiscret(x, logo, k, droite, bas, hauteur) {
+    if (!logo) return;
+    let fond = [128, 128, 128];
+    try { const d = x.getImageData(Math.max(0, droite - 260), Math.max(0, bas - hauteur - 20), 260, hauteur + 20).data; let n = 0; const s = [0, 0, 0];
+      for (let i = 0; i < d.length; i += 64) { s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; n++; } if (n) fond = s.map(v => Math.floor(v / n)); } catch (er) {}
+    poserLogo(x, logo, k, droite, bas - Math.floor(hauteur / 2) - 10, hauteur, fond, 220);
+  }
+  // ---- Modèles 2026 (14/11/2026) : mêmes règles et mêmes nombres que moteur/gabarits.py (bloc_titre, voile, pastille_logo, vertical,
+  // gabarit_editorial, gabarit_annonce, gabarit_photo). Texte posé sur la photo avec un voile calculé, logo en pastille lisible, couleur
+  // principale en accent (anneau, pastille de texte, nom de l'éditorial), à plein champ dans l'annonce seulement.
+  // Pas encore ici : le recadrage « symbole » du logo (charte["logo_symbole"] côté moteur, pas encore une clé du kit).
+  const M4 = 72, DIAM = { plein: 150, photo: 100, editorial: 116, annonce: 176, story: 150 };
+  // Taille des titres (14/11/2026) : mêmes nombres que moteur/gabarits.py (TAILLES, BLOC_AFFICHE). « affiche » pour une famille marquée
+  // titre_affiche dans couples.json (Anton, Shrikhand, Alfa Slab One, Caveat Brush) : corps borné par la hauteur du bloc (55 % de la largeur).
+  const TAILLES = {
+    normal: { plein: [124, 64, 3], vertical: [136, 64, 3], annonce: [132, 64, 3], annonce916: [112, 64, 3], editorial: [84, 52, 2] },
+    affiche: { plein: [240, 84, 4], vertical: [240, 84, 4], annonce: [240, 84, 4], annonce916: [220, 80, 4], editorial: [120, 60, 2] } };
+  const BLOC_AFFICHE = 0.55, PONCTUATION_HAUTE = ["?", "!", ":", ";", "»"];
+  const familleTitres = k => (catalogue && catalogue.familles[k.police_titres]) || {};
+  const echelle = k => familleTitres(k).titre_affiche ? "affiche" : "normal";
+  const tailles = (k, m) => TAILLES[echelle(k)][m];
+  const texteTitre = (k, t) => familleTitres(k).majuscules ? String(t || "").toUpperCase() : String(t || "");
+  const capitale = k => familleTitres(k).capitale ?? 0.74, interligne = k => familleTitres(k).interligne ?? 1;
+  const bornes = (k, largeurImage = W) => ({ hmax: echelle(k) === "affiche" ? Math.round(BLOC_AFFICHE * largeurImage) : 0, cap: capitale(k), il: interligne(k) });
+  // Unités insécables du titre (comme gabarits.groupes) : mot d'une ou deux lettres soudé au suivant, ponctuation isolée soudée au précédent.
+  function groupes(t) {
+    const g = [];
+    for (const m of String(t || "").split(/\s+/).filter(Boolean)) {
+      const der = g.length ? g[g.length - 1].split(" ").pop() : "";
+      if (g.length && (PONCTUATION_HAUTE.includes(m) || (der.length <= 2 && /^\p{L}+$/u.test(der)))) g[g.length - 1] += " " + m; else g.push(m);
+    }
+    return g;
+  }
+  function coupeGroupes(x, G, police, largeur) {
+    x.font = police; const l = []; let cur = "";
+    for (const mot of G) { const t = (cur + " " + mot).trim(); if (x.measureText(t).width <= largeur) cur = t; else { if (cur) l.push(cur); cur = mot; } }
+    if (cur) l.push(cur); return l;
+  }
+  const encreClaire = k => { const f = rgb(k.couleurs.fond); return lum(f) >= 0.75 ? f : [255, 255, 255]; };
+  const teinteVoile = k => { const t = rgb(k.couleurs.texte); return lum(t) < 0.2 ? melange(t, [0, 0, 0], 600) : [14, 12, 12]; };
+  function clairDe(x, x0, y0, x1, y1) {
+    try {
+      x0 = Math.max(0, Math.round(x0)); y0 = Math.max(0, Math.round(y0)); x1 = Math.min(x.canvas.width, Math.round(x1)); y1 = Math.min(x.canvas.height, Math.round(y1));
+      if (x1 - x0 < 1 || y1 - y0 < 1) return [128, 128, 128];
+      const d = x.getImageData(x0, y0, x1 - x0, y1 - y0).data, w = x1 - x0, px = [];
+      for (let y = 4; y < y1 - y0; y += 8) for (let i = 4; i < w; i += 8) { const j = (y * w + i) * 4; px.push([d[j], d[j + 1], d[j + 2]]); }
+      if (!px.length) return [128, 128, 128];
+      px.sort((a, b) => lum(a) - lum(b)); return px[Math.min(px.length - 1, Math.floor(px.length * 9 / 10))];
+    } catch (er) { return [128, 128, 128]; }
+  }
+  function forceVoile(k, clair, cible = 3) {
+    const t = encreClaire(k), v = teinteVoile(k);
+    for (let i = 26; i < 83; i += 4) { const a = i / 100, m = clair.map((c, j) => Math.round(c * (1 - a) + v[j] * a)); if (contraste(t, m) >= cible) return a; }
+    return 0.82;
+  }
+  function voile(x, yDebut, yPlein, yFin, a, couleur) {
+    const lo = Math.max(0, Math.floor(Math.min(yDebut, yFin))), hi = Math.min(x.canvas.height - 1, Math.floor(Math.max(yDebut, yFin)));
+    for (let y = lo; y <= hi; y++) {
+      const t = yPlein !== yDebut ? (y - yDebut) / (yPlein - yDebut) : 1, al = a * Math.pow(Math.min(1, Math.max(0, t)), 1.6);
+      if (al > 0.003) { x.fillStyle = css(couleur, Math.round(al * 255) / 255); x.fillRect(0, y, x.canvas.width, 1); }
+    }
+  }
+  function ecrireOmbre(x, t, px, py, police, couleur, align = "left") {
+    x.save(); x.font = police; x.textAlign = align; x.textBaseline = "alphabetic";
+    x.shadowColor = "rgba(0,0,0,0.42)"; x.shadowBlur = 20; x.shadowOffsetY = 2; x.fillStyle = css(couleur); x.fillText(t, px, py); x.restore();
+  }
+  function texte(x, t, px, py, police, couleur, align = "left", base = "alphabetic") { x.save(); x.font = police; x.textAlign = align; x.textBaseline = base; x.fillStyle = css(couleur); x.fillText(t, px, py); x.restore(); }
+  function uneLigne(x, t, fab, largeur, tmax, tmin) {
+    t = String(t || "").trim(); if (!t) return [null, null, 0];
+    for (let s = tmax; s >= tmin; s -= 2) { x.font = fab(s); if (x.measureText(t).width <= largeur) return [fab(s), t, s]; }
+    x.font = fab(tmin);
+    for (let i = t.length - 1; i > 0; i--) if (",:;".includes(t[i]) && x.measureText(t.slice(0, i)).width <= largeur) return [fab(tmin), t.slice(0, i).trim(), tmin];
+    return [null, null, 0];
+  }
+  // Comme gabarits.ajuste_titre : unités insécables, plus grand corps qui tient ; « normal » : une ligne de moins à 72 % ; « affiche » (o.hmax) :
+  // bloc (cap x corps + (lignes - 1) x il x corps) dans hmax ; puis lignes équilibrées.
+  function ajusteTitre(x, t, fab, largeur, tmax, tmin, lmax, o = {}) {
+    const G = groupes(t), cap = o.cap ?? 0.74, il = o.il ?? 1;
+    const essai = (a, b, n, borne) => {
+      for (let s = a; s >= b; s -= 2) { const q = fab(s), M = coupeGroupes(x, G, q, largeur); x.font = q;
+        if (M.length <= n && M.every(l => x.measureText(l).width <= largeur) && (!borne || Math.round(s * cap) + (M.length - 1) * Math.round(s * il) <= borne)) return [q, s, M]; }
+      const q = fab(b); return [q, b, coupeGroupes(x, G, q, largeur)];
+    };
+    let [p, s, L] = essai(tmax, tmin, lmax, o.hmax);
+    if (!o.hmax && L.length === lmax && lmax > 2) { const [p2, s2, L2] = essai(tmax, Math.round(tmax * 0.72), lmax - 1, 0); x.font = p2; if (L2.length < lmax && L2.every(l => x.measureText(l).width <= largeur)) { p = p2; s = s2; L = L2; } }
+    if (L.length > 1) {
+      let bas = Math.floor(largeur * 0.4), haut = Math.floor(largeur); x.font = p;
+      while (bas < haut) { const mi = Math.floor((bas + haut) / 2); if (coupeGroupes(x, G, p, mi).length <= L.length && G.every(w => { x.font = p; return x.measureText(w).width <= mi; })) haut = mi; else bas = mi + 1; }
+      L = coupeGroupes(x, G, p, haut);
+    }
+    return [p, s, L];
+  }
+  // Logo prêt pour la pastille (comme gabarits.logo_pret) : un logo à fond plein perd les marges de son fond ; fond de pastille = son fond.
+  function logoPret(logo) {
+    if (!logo || typeof document === "undefined") return null;
+    if (logo._pret) return logo._pret;
+    const c = logo.canvas, w = c.width, h = c.height; let src = c, fond = null;
+    if (logo.opaque) {
+      const d = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h).data, px = (i, j) => { const k = (j * w + i) * 4; return [d[k], d[k + 1], d[k + 2]]; };
+      const coins = [px(1, 1), px(w - 2, 1), px(1, h - 2), px(w - 2, h - 2)]; fond = [0, 1, 2].map(i => Math.floor(coins.reduce((s, q) => s + q[i], 0) / 4));
+      const c0 = px(1, 1); let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const k = (j * w + i) * 4, e = Math.round(0.299 * Math.abs(d[k] - c0[0]) + 0.587 * Math.abs(d[k + 1] - c0[1]) + 0.114 * Math.abs(d[k + 2] - c0[2])); if (e > 24) { if (i < x0) x0 = i; if (j < y0) y0 = j; if (i > x1) x1 = i; if (j > y1) y1 = j; } }
+      if (x1 >= 0) { const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.04); x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+        src = document.createElement("canvas"); src.width = x1 - x0 + 1; src.height = y1 - y0 + 1; src.getContext("2d").drawImage(c, x0, y0, src.width, src.height, 0, 0, src.width, src.height); }
+    }
+    logo._pret = { canvas: src, fond }; return logo._pret;
+  }
+  function formePastille(lg, diam) {
+    const r = lg.width / lg.height; if (r <= 1.6) return [diam, diam, true];
+    const h = Math.round(diam * 0.72), pad = Math.round(h * 0.2); return [Math.min(Math.round((h - 2 * pad) * r) + 2 * pad, Math.round(h * 3.4)), h, false];
+  }
+  function pastilleLogo(x, logo, k, cx, cy, diam, anneau) {
+    const p = logoPret(logo); if (!p) return null;
+    const lg = p.canvas, [w, h, rond] = formePastille(lg, diam), ep = anneau ? Math.max(3, Math.round(diam * 0.04)) : 0;
+    let fond = p.fond;
+    if (!fond) fond = [k.logo_fond, k.couleurs.fond, k.couleurs.texte].filter(estHexa).map(rgb).reduce((a, b) => contraste(b, logo.couleur) > contraste(a, logo.couleur) ? b : a);
+    const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h / 2);
+    const forme = (e) => { x.beginPath(); if (rond) x.arc(x0 + w / 2, y0 + h / 2, w / 2 - e, 0, 2 * Math.PI); else x.roundRect(x0 + e, y0 + e, w - 2 * e, h - 2 * e, (h - 2 * e) / 2); };
+    x.save();
+    if (anneau) { forme(0); x.fillStyle = css(anneau); x.fill(); }
+    forme(ep); x.fillStyle = css(fond); x.fill(); x.clip();
+    const iw = w - 2 * ep, ih = h - 2 * ep; let r;
+    if (rond) r = iw * 0.92 / Math.hypot(lg.width, lg.height); else { const pad = Math.round(ih * 0.2); r = Math.min((ih - 2 * pad) / lg.height, (iw - 2 * pad) / lg.width); }
+    const lw = Math.max(1, Math.round(lg.width * r)), lh = Math.max(1, Math.round(lg.height * r));
+    x.drawImage(lg, x0 + Math.floor((w - lw) / 2), y0 + Math.floor((h - lh) / 2), lw, lh); x.restore();
+    return [x0, y0, x0 + w, y0 + h];
+  }
+  function pastilleTexte(x, k, px, yBas, t, taille = 30) {
+    const acc = rgb(k.couleurs.principale), c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, p = policeTexte(k, taille, 700); x.font = p;
+    const h = Math.round(taille * 1.75), w = Math.round(x.measureText(t).width) + 2 * Math.round(taille * 0.8);
+    x.fillStyle = css(acc); x.beginPath(); x.roundRect(px, yBas - h, w, h, h / 2); x.fill();
+    texte(x, t, px + w / 2, yBas - h / 2, p, encreSur(acc, c), "center", "middle");
+  }
+  function signature(x, logo, k, nom, px, py, diam, coin = "hg", anneau = true) {
+    const p = logoPret(logo);
+    if (p) { const [w, h] = formePastille(p.canvas, diam); const [cx, cy] = coin === "hg" ? [px + w / 2, py + h / 2] : [px - w / 2, py - h / 2]; return pastilleLogo(x, logo, k, cx, cy, diam, anneau ? rgb(k.couleurs.principale) : null); }
+    const s = Math.round(diam * 0.32), pol = policeTitre(k, s);
+    if (coin === "hg") ecrireOmbre(x, nom, px, py + s, pol, encreClaire(k)); else ecrireOmbre(x, nom, px, py, pol, encreClaire(k), "right");
+    return null;
+  }
+  // Titre (et sous-titre d'une ligne) posé sur la photo, voile calculé compris (comme gabarits.bloc_titre).
+  function blocTitre(x, k, textes, x0, x1, ancre, y, tmax, tmin, lmax = 3) {
+    const titre = t => policeTitre(k, t), corps = t => policeTexte(k, t, 600);
+    const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), titre, x1 - x0, tmax, tmin, lmax, bornes(k, x.canvas.width)), lh = Math.round(tt * interligne(k));
+    const [ps, st, ts] = uneLigne(x, textes.accroche, corps, x1 - x0, 36, 28);
+    const cap = Math.round(tt * capitale(k)), hT = cap + (lt.length - 1) * lh, hS = st ? ts + (echelle(k) === "affiche" ? Math.round(tt * 0.32) : 26) : 0, past = textes.pastille, hP = past ? Math.round(30 * 1.75) + 26 : 0;
+    const haut = ancre === "bas" ? y - hS - hT - hP : y, bas = haut + hP + hT + hS;
+    const clair = clairDe(x, x0 - 20, haut - 20, x1 + 20, bas + 20), a = forceVoile(k, clair), v = teinteVoile(k);
+    if (ancre === "bas") voile(x, Math.max(0, haut - 320), haut, x.canvas.height, a, v); else voile(x, Math.min(x.canvas.height, bas + 320), bas, 0, a, v);
+    let yy = haut;
+    if (past) { pastilleTexte(x, k, x0, yy + Math.round(30 * 1.75), past); yy += hP; }
+    const ink = encreClaire(k); let yb = yy + cap;
+    for (const l of lt) { ecrireOmbre(x, l, x0, yb, pt, ink); yb += lh; }
+    if (st) { const sec = rgb(k.couleurs.secondaire), mix = clair.map((c, j) => Math.round(c * (1 - a) + v[j] * a)); ecrireOmbre(x, st, x0, yb - lh + hS, ps, contraste(sec, mix) >= 3 && chroma(sec) >= 40 ? sec : ink); }
+    return [haut, bas];
+  }
+  function vertical(x, k, nom, logo, textes, zone) {
+    const [x0, y0, x1] = zone, p = logoPret(logo), sh = p ? formePastille(p.canvas, DIAM.story)[1] : Math.round(DIAM.story * 0.32 * 1.2);
+    blocTitre(x, k, textes, x0, x1, "haut", y0 + 28 + sh + 30, ...tailles(k, "vertical"));
+    signature(x, logo, k, nom, x0, y0 + 28, DIAM.story);
+  }
+  function annonce(x, k, nom, photo, logo, textes, W_, H_, x0, x1, haut, mini, plafond) {
+    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, acc = rgb(k.couleurs.principale), ink = encreSur(acc, c), diam = DIAM.annonce;
+    x.fillStyle = css(acc); x.fillRect(0, 0, W_, H_);
+    const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), t => policeTitre(k, t), x1 - x0, ...tailles(k, H_ === H ? "annonce" : "annonce916"), bornes(k, W_)), lh = Math.round(tt * 0.98 * interligne(k));
+    const ts = H_ === H ? 36 : 34, pp = policeTexte(k, ts, 600), lhi = Math.round(ts * 1.4);
+    const info = (textes.annonce && textes.annonce.length ? textes.annonce : [textes.accroche || ""]).slice(0, 3).flatMap(t => coupe(x, t, pp, x1 - x0 - diam - 24)).filter(Boolean).slice(0, 4);
+    const cap = Math.round(tt * capitale(k));
+    let basBloc = Math.max(mini, haut + cap + (lt.length - 1) * lh + (info.length ? 30 + info.length * lhi : 0) + 64 + Math.floor(diam / 3));
+    if (plafond) basBloc = Math.min(basBloc, plafond - Math.floor(diam / 2));
+    photoRect(x, photo, 0, basBloc, W_, H_ - basBloc);
+    let y = haut + cap; for (const l of lt) { texte(x, l, x0, y, pt, ink); y += lh; }
+    y += 30 - lh + lhi; for (const l of info) { texte(x, l, x0, y, pp, ink); y += lhi; }
+    const p = logoPret(logo);
+    if (p) { const [bw] = formePastille(p.canvas, diam); pastilleLogo(x, logo, k, x1 - bw / 2, basBloc, diam, rgb(k.couleurs.fond)); }
+    else texte(x, nom, x1, basBloc - 40, policeTitre(k, 44), ink, "right");
+  }
+  // textes : {texte_visuel, accroche, annonce: [..], pastille facultative} ; photo : image ou null ; logo : preparerLogo(...) ou null.
+  function dessiner(canvas, gabarit, { kit, nom, photo, logo, textes }) {
+    canvas.width = W; canvas.height = H; const x = canvas.getContext("2d", { willReadFrequently: true }), k = kit;
+    const c = { fond: k.couleurs.fond, texte: k.couleurs.texte }, fond = rgb(c.fond), acc = rgb(k.couleurs.principale);
+    x.clearRect(0, 0, W, H);
+    if (gabarit === "photo") { photoRect(x, photo, 0, 0, W, H); if (logo) signature(x, logo, k, nom, W - 44, H - 44, DIAM.photo, "bd", false); return; }
+    if (gabarit === "plein") {
+      photoRect(x, photo, 0, 0, W, H);
+      blocTitre(x, k, textes, M4, W - M4, "bas", H - 84, ...tailles(k, "plein"));
+      if (!logo) voile(x, 230, 0, 0, 0.30, teinteVoile(k));
+      signature(x, logo, k, nom, M4 - 8, 56, DIAM.plein);
+    } else if (gabarit === "editorial") {
+      const m = 56, tete = 172, diam = DIAM.editorial, ink = encreSur(fond, c);
+      x.fillStyle = css(fond); x.fillRect(0, 0, W, H);
+      const b = logo ? pastilleLogo(x, logo, k, W - m - diam / 2, tete / 2 + 4, diam, acc) : null, droite = b ? b[0] - 32 : W - m;
+      const [pn, , ln] = ajuste(x, nom, t => policeTitre(k, t), droite - m, 68, 36, 1);
+      texte(x, ln[0] || nom, m, tete / 2 + 4, pn, contraste(acc, fond) >= 3 ? acc : ink, "left", "middle");
+      const [pt, tt, lt] = ajusteTitre(x, texteTitre(k, textes.texte_visuel), t => policeTitre(k, t), W - 2 * m, ...tailles(k, "editorial"), { ...bornes(k), hmax: 0 }), lh = Math.round(tt * 1.02 * interligne(k));
+      const [ps, st, ts] = uneLigne(x, textes.accroche, t => policeTexte(k, t, 500), W - 2 * m, 32, 26), cap = Math.round(tt * capitale(k));
+      const basH = 40 + cap + (lt.length - 1) * lh + (st ? 24 + ts : 0) + 52, ph = H - tete - basH;
+      photoRect(x, photo, 0, tete, W, ph);
+      let y = tete + ph + 40 + cap; for (const l of lt) { texte(x, l, m, y, pt, ink); y += lh; }
+      if (st) texte(x, st, m, y - lh + 24 + ts, ps, ink.map((v, i) => Math.round(v * 0.78 + fond[i] * 0.22)));
+    } else annonce(x, k, nom, photo, logo, textes, W, H, M4, W - M4, 84, Math.round(H * 0.40), 0);
+  }
+
+  // ---- Visuel photo 9x16 (1080 x 1920, Reels et TikTok) : comme moteur/gabarits.py (vertical, gabarit_annonce, gabarit_photo en 9x16) :
+  // photo pleine page, texte, nom et logo dans la zone lisible sous l'interface des réseaux (zone_tiktok : x 60 à 940, y 250 à 1440).
+  const H9 = 1920, ZONE9 = [60, 250, 940, 1440];
+  function dessiner916(canvas, gabarit, { kit, nom, photo, logo, textes }) {
+    canvas.width = W; canvas.height = H9; const x = canvas.getContext("2d", { willReadFrequently: true }), k = kit, [x0, yh, x1, yb] = ZONE9;
+    x.clearRect(0, 0, W, H9);
+    if (gabarit === "annonce") { annonce(x, k, nom, photo, logo, textes, W, H9, x0 + 12, x1, yh + 40, 0, yb); return; }
+    photoRect(x, photo, 0, 0, W, H9);
+    if (gabarit === "photo") { if (logo) signature(x, logo, k, nom, x1, yb, DIAM.photo, "bd", false); return; }
+    vertical(x, k, nom, logo, textes, ZONE9);
+  }
+
+  // ---------------------------------------------------------------- Écran du kit
+  // Le style est créé par BoostImpact. Un seul écran, deux usages :
+  //  * mode « renom » (console, panneau « Style du commerce ») : tous les réglages (logo, proposition de couleurs depuis le logo ou les photos,
+  //    4 couleurs, polices, ambiance, modèle, expressions), aperçus, « Enregistrer » et « Enregistrer et valider pour le client » ;
+  //  * mode « commercant » (espace, « Votre style ») : le style créé par BoostImpact montré sur ses photos, son logo à déposer, « Ça me plaît »,
+  //    « Je voudrais un changement » (texte libre), et ses expressions en option repliée. Aucune couleur, police ni ambiance à choisir.
+  // Libellés : clés « con.sty.* » en mode renom quand elles existent, sinon « sty.* ». Mêmes contrôles et mêmes aperçus pour les deux.
+  // o = { vue, I (RENOM_I18N), mode, entete: c => html, commerce: async () => commerce,
+  //       marque: async () => ({ kit, brut, photos: [{url, nom}], logo: url, demandes: [{texte, cree_le, traitee_le}] }),
+  //       deposerLogo: async fichier => ({ chemin, url }), apres: async kit => {} (facultatif),
+  //       renom : enregistrer: async (kit, valider) => kit ; commerçant : regler: async (changements, valider) => kit, demander: async texte => {} }
+  function ecran(o) {
+    const I = o.I, t = I.t, renom = o.mode === "renom", $ = id => document.getElementById(id);
+    const tx = (cle, v, l) => t(renom && I.a("con." + cle) ? "con." + cle : cle, v, l);
+    const e = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const msg = x => { const m = $("msg"); if (m) m.textContent = x; };
+    const C4 = ["principale", "secondaire", "fond", "texte"];
+    const sty = { pour: null, c: null, kit: null, brut: null, demandes: [], images: [], photo: 0, logo: null, logoImg: null, logoUrl: null, attente: 0, ouvert: false,
+      pubs: null, reglage: null };
+    const langueDe = c => I.langueValide(c && c.langue) || "fr";
+    // Commerçant en offre sans réseaux (Essentiel, 26/10/2026) : ses textes ne parlent pas de vidéos (clé « .google » quand elle existe).
+    const gx = cle => !renom && ((window.RENOM_OFFRES || {})[(sty.c || {}).offre_id] || {}).reseaux_sociaux === false && I.a(cle + ".google") ? cle + ".google" : cle;
+    const nomCouple = c => I.langue === "en" ? c.en : I.langue === "nl" ? (c.nl || c.en) : c.nom;
+    const ratio = r => I.nombre(Math.floor(r * 10) / 10, 1);
+    const textesApercu = c => {
+      const lg = langueDe(c), h = String(c.horaires || "").split("\n")[0].trim();
+      return { texte_visuel: t("sty.exemple.titre", null, lg), accroche: t("sty.exemple.texte", null, lg), annonce: h && h.length <= 70 ? [h] : [] };
+    };
+    async function chargerLogo(url) { if (!url) return [null, null]; try { const img = await chargerImage(url); return [img, preparerLogo(img)]; } catch (er) { return [null, null]; } }
+    // État du kit : [titre, texte]. valide_par (posé par la base) : qui a validé le kit verrouillé, ou qui l'a réglé en dernier ;
+    // absent d'un ancien kit : le commerçant ; d'une proposition automatique : personne.
+    function etat(k, b) {
+      const src = (k.source && k.source.type) || (b && b.source && b.source.type) || "defaut", s = ["logo", "photos"].includes(src) ? src : "defaut";
+      const valide = !!(b && b.verrouille), par = b ? (b.valide_par || (b.auto ? "auto" : "commercant")) : null, d = b ? I.date(b.verrouille_le || b.maj || Date.now()) : "";
+      if (renom) {
+        if (valide) return [t("con.sty.etat.valide." + (par === "renom" ? "renom" : "commercant"), { d }), t("con.sty.etat.valide.texte", { v: b.version })];
+        if (b) return [t("con.sty.etat.nonvalide"), t("con.sty.etat.dernier." + par, { d: I.date(b.maj || Date.now()), v: b.version })];
+        return [t("con.sty.etat.aucun"), t("con.sty.etat.propose." + s) + " " + t("con.sty.etat.aucun.suite")];
+      }
+      if (valide && par === "renom") return [t("sty.etat.pret"), t(gx("sty.etat.pret.texte"), { d, v: b.version })];
+      if (valide) return [t("sty.etat.valide", { d }), t(gx("sty.etat.valide.texte"), { v: b.version })];
+      if (par === "renom") return [t("sty.etat.renom"), t("sty.etat.renom.texte", { d })];
+      return [t("sty.etat.preparation"), t("sty.etat.preparation.texte")];
+    }
+    async function dessinerTout() {
+      const k = sty.kit, c = sty.c; if (!k || (renom && !$("sty-grille"))) return;
+      await polices(k);
+      const photo = sty.images[sty.photo] || null, tx_ = textesApercu(c);
+      GABARITS.forEach(g => { const cv = $("sty-apercu-" + g); if (cv) dessiner(cv, g, { kit: k, nom: c.nom, photo, logo: sty.logo, textes: tx_ }); });
+      if (!renom) return;
+      const r = contraste(k.couleurs.texte, k.couleurs.fond), lisible = r >= CONTRASTE_TEXTE;
+      $("sty-contraste").innerHTML = `<span class="${lisible ? "" : "fort"}">${t(lisible ? "sty.contraste.ok" : "sty.contraste.ko", { r: ratio(r) })}</span>${lisible ? "" : ` <button type="button" class="bouton second petit" id="sty-corriger">${t("sty.contraste.corriger")}</button>`}`;
+      if ($("sty-corriger")) $("sty-corriger").onclick = () => { sty.kit.couleurs = couleursLisibles(sty.kit.couleurs); majCouleurs(); redessiner(); };
+      $("sty-valider").disabled = !lisible; $("sty-enregistrer").disabled = !lisible;
+      $("sty-illisible").hidden = lisible;
+    }
+    const redessiner = () => { cancelAnimationFrame(sty.attente); sty.attente = requestAnimationFrame(() => { dessinerTout().catch(() => {}); }); };
+    function majCouleurs() { C4.forEach(k => { const i = $("sty-c-" + k); if (i) i.value = sty.kit.couleurs[k].toLowerCase(); }); }
+    const lignes = (id, n) => $(id).value.split("\n").map(x => x.trim()).filter(Boolean).slice(0, n).map(x => x.slice(0, MAX_CAR));
+    const erreur = er => msg(er.codes ? t("sty.refus", { l: er.codes.map(x => t("sty.f." + x)).join(", ") }) : er.code ? t(er.code) : I.phrase(er.message));
+    // ---- Morceaux communs
+    const carteApercus = (k, STY_GAB, avecChoix, resume) => `<section class="carte" aria-labelledby="sty-apercus-titre"><div class="carte-tete"><h2 id="sty-apercus-titre">${tx("sty.apercus")}</h2></div>
+        ${sty.images.length > 1 ? `<div class="sty-photos" role="group" aria-label="${t("sty.photo.choix")}">${sty.images.map((im, i) => `<button type="button" data-sty-photo="${i}" aria-pressed="${i === sty.photo}"><img src="${e(im.src)}" alt="${t("sty.photo.n", { n: i + 1 })}"></button>`).join("")}</div>` : ""}
+        ${sty.images.length ? "" : `<p class="note">${tx("sty.sans.photo")}${renom ? "" : ` <a href="#/photos">${t("photos.deposer")}</a>`}</p>`}
+        ${avecChoix ? `<fieldset class="sty-gabarits"><legend class="vh">${t("sty.gab.legende")}</legend><div class="sty-grille" id="sty-grille">${grille(k, STY_GAB, true)}</div>
+          <label class="option"><input type="radio" name="sty-gab" value=""${k.gabarit_prefere ? "" : " checked"}><span>${t("sty.gab.varier")}</span></label>
+          <label class="option"><input type="checkbox" id="sty-impose"${k.gabarit_impose ? " checked" : ""}${k.gabarit_prefere ? "" : " disabled"}><span>${t("sty.gab.impose")}</span></label>
+          <p class="aide">${t("sty.gab.aide")}</p></fieldset>` : `<div class="sty-grille" id="sty-grille">${grille(k, STY_GAB, false)}</div>`}
+        ${resume || ""}<p class="note">${tx("sty.apercus.note")}</p></section>`;
+    const grille = (k, STY_GAB, avecChoix) => GABARITS.map(g => `<figure class="sty-apercu"><canvas id="sty-apercu-${g}" width="1080" height="1350" role="img" aria-label="${tx("sty.apercu.alt", { g: STY_GAB[g] })}"></canvas>
+        <figcaption>${avecChoix ? `<label class="option"><input type="radio" name="sty-gab" value="${g}"${k.gabarit_prefere === g ? " checked" : ""}><span>${t("sty.gab.prefere", { g: STY_GAB[g] })}</span></label>` : `<span class="note">${STY_GAB[g]}</span>`}</figcaption></figure>`).join("");
+    const carteLogo = k => `<section class="carte" aria-labelledby="sty-logo-titre"><h2 id="sty-logo-titre">${tx("sty.logo")}</h2>
+        <div class="sty-logo" id="sty-logo">${sty.logoUrl ? `<img src="${e(sty.logoUrl)}" alt="${tx("sty.logo.alt")}">` : `<p class="texte2">${t("sty.logo.aucun")}</p>`}</div>
+        <div class="actions"><span class="depot-choix"><input id="sty-logo-fichier" class="vh" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp"><label for="sty-logo-fichier" class="bouton second">${tx(sty.logoUrl ? "sty.logo.changer" : "sty.logo.deposer")}</label></span>
+          ${k.logo ? `<button type="button" class="lien" id="sty-logo-retirer">${t("sty.logo.retirer")}</button>` : ""}</div>
+        <p class="aide">${tx("sty.logo.aide")}</p></section>`;
+    const champsMots = (k, lc) => `<div class="f"><label for="sty-signature">${tx("sty.mots.signature")}</label><textarea id="sty-signature" rows="3"${lc}>${e((k.mots_signature || []).join("\n"))}</textarea><p class="aide">${t("sty.mots.signature.aide")}</p></div>
+        <div class="f"><label for="sty-eviter">${t("sty.mots.eviter")}</label><textarea id="sty-eviter" rows="3"${lc}>${e((k.a_eviter || []).join("\n"))}</textarea><p class="aide">${t("sty.mots.eviter.aide")}</p></div>`;
+    const listeDemandes = () => sty.demandes.length ? `<ul class="liste sty-demandes">${sty.demandes.slice(0, renom ? 10 : 3).map(x => `<li><p class="note">${t(x.traitee_le ? "sty.demande.traitee" : "sty.demande.attente", { d: I.date(x.cree_le), t: I.date(x.traitee_le || x.cree_le) })}</p><p class="casse">${e(x.texte)}</p></li>`).join("")}</ul>` : "";
+
+    // ---- Commerçant : « Vos publications » (31/10/2026). Il ne règle ni couleurs, ni polices, ni modèles : il voit ses publications et valide.
+    // Ordre : a. sa grille Instagram (9 visuels dessinés ici avec SES photos, selon le réglage) ; b. « Du texte sur vos photos ? » (3 choix, un
+    // exemple chacun sur sa photo) ; c. ses annonces (cadre Instagram et actualité de la fiche Google, visuel entier) ; d. ses vidéos (Premium) ;
+    // e. couleurs et logo sur une ligne, changement par une demande à champs fixes. Sans photo : l'envoi des photos (5 recommandées, 1 suffit ; 13/11/2026), rien d'autre à regarder.
+    // Textes des visuels : tirés de SES données (spécialités, horaires, nom, dernière légende), jamais un texte d'exemple.
+    const TUILE_W = 360, TUILE_H = 450;
+    const majuscule = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+    // Titres tirés de la fiche, vrais pour n'importe laquelle de ses photos, variés d'une vignette à l'autre (31/10/2026, test client : avec
+    // « Souvent », le nom du commerce revenait sur une vignette sur deux) : la phrase d'ensemble de ses spécialités (« Cuisine de saison préparée
+    // sur place » dans « Cuisine de saison préparée sur place : pâtes fraîches, … »), ce qui le distingue (une ligne chacune), sa phrase de
+    // présentation, ses spécialités en liste, puis ses horaires. Jamais un plat précis seul posé sur la photo d'un autre plat. Le nom du commerce
+    // n'est qu'un petit surtitre (nomCommerce dans dessiner) ; il ne devient le titre que si la fiche ne donne rien d'autre.
+    function sujets(c) {
+      const net = x => majuscule(String(x || "").trim().replace(/[.!;]+$/, "").trim()), court = x => x.length >= 3 && x.length <= 60;
+      const s_ = String(c.specialites || "").split("\n")[0].trim(), deux = s_.indexOf(":");
+      const tete = net(deux >= 0 ? s_.slice(0, deux) : s_), liste = deux >= 0 ? net(s_.slice(deux + 1)) : "";
+      const dm = c.demarrage || {}, distinctions = String(dm.distinctions || "").split("\n").map(net);
+      const l = [tete, ...distinctions, net(dm.phrase), liste, net(horairesDe(c))].filter(x => x && court(x) && x !== c.nom);
+      const vus = new Set(), uniques = l.filter(x => { const k = x.toLowerCase(); if (vus.has(k)) return false; vus.add(k); return true; });
+      return uniques.length ? uniques : [c.nom];
+    }
+    const horairesDe = c => { const h = String(c.horaires || "").split("\n")[0].trim(); return h && h.length <= 70 ? h : ""; };
+    // Textes d'une annonce n (0, 1…) et d'un visuel avec texte, en langue du commerce.
+    function textesDe(c, n) {
+      const su = sujets(c), titre = su[n % su.length], h = horairesDe(c), ou = c.nom + (c.ville ? ", " + c.ville : "");
+      // Accroche : les horaires, sauf quand le titre les reprend déjà.
+      const acc = h && !titre.toLowerCase().startsWith(h.toLowerCase().replace(/[.!;]+$/, "")) ? h : ou;
+      return { texte_visuel: titre, accroche: acc, annonce: [acc] };
+    }
+    const legendeAnnonce = c => { const tx_ = textesDe(c, 0), h = horairesDe(c);
+      // Sans spécialités, le titre de l'annonce est le nom du commerce : pas de « Crêperie Sophie, chez Crêperie Sophie » (31/10/2026).
+      const memeNom = String(tx_.texte_visuel || "").trim().toLowerCase() === String(c.nom || "").trim().toLowerCase() || !String(tx_.texte_visuel || "").trim();
+      return t(memeNom ? "pub.annonce.legende.seul" : "pub.annonce.legende", { titre: tx_.texte_visuel, nom: c.nom, h: h ? " " + h : "" }, langueDe(c)); };
+    // Grille de 9 selon le réglage : jamais = 9 photos seules ; annonces = 7 photos seules et 2 annonces ; souvent = modèle préféré et rotation.
+    function sequence(reglage, k) {
+      if (reglage === "jamais") return Array(9).fill("photo");
+      if (reglage === "annonces") return ["photo", "photo", "annonce", "photo", "photo", "photo", "annonce", "photo", "photo"];
+      const p = GABARITS.includes(k.gabarit_prefere) ? k.gabarit_prefere : "plein", autre = p === "plein" ? "editorial" : "plein";
+      return [p, p, "annonce", p, autre, p, p, "annonce", autre];
+    }
+    // Dessin d'un visuel 4:5 dans une petite toile (dessin à 1080 x 1350 dans une toile commune, puis réduit : 9 tuiles sans 9 grandes toiles).
+    let grande = null;
+    async function tuile(cv, g, photo, textes) {
+      if (!cv) return;
+      grande = grande || document.createElement("canvas");
+      await polices(sty.kit); dessiner(grande, g, { kit: sty.kit, nom: sty.c.nom, photo, logo: sty.logo, textes });
+      const x = cv.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(grande, 0, 0, cv.width, cv.height);
+    }
+    const reglageVu = () => sty.reglage || (sty.brut && TEXTE_PHOTOS.includes(sty.brut.texte_photos) ? sty.brut.texte_photos : TEXTE_PHOTOS_DEFAUT);
+    const valide = () => !!(sty.brut && sty.brut.verrouille && sty.brut.texte_photos);
+    const compte = c => String(c.nom || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 24);
+    const avatar = c => { const k = sty.kit, enc = css(encreSur(rgb(k.couleurs.principale), { texte: k.couleurs.texte, fond: k.couleurs.fond }));
+      return `<span class="post-avatar" aria-hidden="true" style="background:${e(k.couleurs.principale)};color:${enc}">${sty.logoUrl ? `<img src="${e(sty.logoUrl)}" alt="">` : e(String(c.nom || "?").trim().charAt(0).toUpperCase())}</span>`; };
+    async function dessinerGrille() {
+      const c = sty.c, seq = sequence(reglageVu(), sty.kit), n = sty.images.length; let a = 0, p = 0;
+      if (!n) return;
+      // 31/10/2026 (test client) : seulement les vraies photos, chacune une fois ; Essentiel : ses publications Google du mois.
+      for (let i = 0; i < nbTuiles(c); i++) { const g = seq[i], txt = g === "annonce" ? textesDe(c, a++) : textesDe(c, p + 1); if (g !== "annonce") p++;
+        // Photos en décalé d'une rangée à l'autre : avec 3 photos, jamais la même photo l'une au-dessus de l'autre.
+        await tuile($("pub-t-" + i), g, sty.images[i % n], txt); }
+    }
+    async function dessinerExemples() {
+      const c = sty.c, img = sty.images[0] || null; if (!img) return;
+      await tuile($("pub-ex-jamais"), "photo", img, textesDe(c, 0));
+      await tuile($("pub-ex-annonces"), "annonce", sty.images[1 % sty.images.length], textesDe(c, 0));
+      await tuile($("pub-ex-souvent"), GABARITS.includes(sty.kit.gabarit_prefere) && sty.kit.gabarit_prefere !== "annonce" ? sty.kit.gabarit_prefere : "plein", img, textesDe(c, 1));
+    }
+    async function dessinerAnnonces() {
+      const c = sty.c, img = sty.images[1 % Math.max(1, sty.images.length)] || null; if (!img) return;
+      for (const id of ["pub-an-ig", "pub-an-g"]) await tuile($(id), "annonce", img, textesDe(c, 0));
+    }
+    // Grille faite des visuels déjà rendus par le moteur (aucune photo d'origine lisible) : ceux qui correspondent au réglage.
+    const rendusDuReglage = () => { const r = reglageVu(), l = ((sty.pubs || {}).rendus || []);
+      const bons = l.filter(x => !x.gabarit || (r === "jamais" ? x.gabarit === "photo" : r === "annonces" ? ["photo", "annonce"].includes(x.gabarit) : true));
+      return (bons.length ? bons : l).slice(0, 9); };
+    const nbTuiles = c => { const of = (o.offre && o.offre(c)) || {}; return Math.min(of.reseaux_sociaux === false ? (+of.publications || 2) : 9, sty.images.length); };
+    function htmlPublications(c) {
+      const offre = (o.offre && o.offre(c)) || {}, social = offre.reseaux_sociaux !== false, premium = +offre.videos > 0 && social;
+      const lgc = langueDe(c), lc = ` lang="${lgc}"`, nom = e(c.nom), cpt = e(compte(c) || c.nom), r = reglageVu(), k = sty.kit;
+      const sansPhoto = !sty.images.length, rendus = sansPhoto ? rendusDuReglage() : [];
+      const envoi = `<section class="carte pub-envoi" aria-labelledby="pub-envoi-titre"><h2 id="pub-envoi-titre">${t(social ? "pub.vide.titre" : "pub.vide.titre.google")}</h2><p class="texte2">${t("pub.vide.texte")}</p>
+          <div class="actions"><span class="depot-choix"><input id="pub-photos" class="vh" type="file" accept="image/*" multiple><label for="pub-photos" class="bouton">${t("pub.vide.bouton")}</label></span></div>
+          <p class="msg" id="pub-envoi-msg" role="status"></p></section>`;
+      const grille = sansPhoto ? (rendus.length ? `<div class="pub-grille" role="img" aria-label="${t("pub.grille.alt")}">${rendus.map(x => `<img src="${e(x.url)}" alt="">`).join("")}</div>` : "")
+        : `<div class="pub-grille${social ? "" : " pub-grille-google"}" role="img" aria-label="${t(social ? "pub.grille.alt.n" : "pub.grille.alt.google", { n: nbTuiles(c) })}">${Array.from({ length: nbTuiles(c) }, (_, i) => `<canvas id="pub-t-${i}" width="${TUILE_W}" height="${TUILE_H}"></canvas>`).join("")}</div>
+          ${social && nbTuiles(c) < 9 && !sty.plein ? `<p class="note" id="pub-completer">${t("pub.completer", { n: 9 - nbTuiles(c) })}</p>` : ""}`;
+      const a = sansPhoto && !rendus.length ? envoi : `<section class="carte pub-insta" aria-labelledby="pub-insta-titre">
+          <h2 id="pub-insta-titre">${t(social ? "pub.insta.titre" : "pub.insta.titre.google")}</h2>
+          ${social ? `<div class="pub-profil">${avatar(c)}<span class="pile serre"><span class="fort">${cpt}</span><span class="note">${nom}</span></span></div>` : ""}
+          ${grille}
+          <div class="actions pub-decision" id="pub-decision">${valide() && !sty.reglage
+            ? `<p class="texte2 fort" id="pub-valide">${t("pub.valide." + (sty.brut.texte_photos || r))}</p><a class="lien-seul" href="#pub-texte" id="pub-changer">${t("pub.changer")}</a>`
+            : `<button type="button" class="bouton" id="pub-parfait">${t("pub.parfait")}</button><a class="lien-seul" href="#pub-texte" id="pub-changer">${t("pub.changer")}</a>`}</div>
+          <p class="msg" id="msg" role="status"></p></section>
+          ${sansPhoto ? envoi : ""}`;
+      const choix = TEXTE_PHOTOS.map(x => `<label class="pub-choix"><input type="radio" name="pub-texte" value="${x}"${r === x ? " checked" : ""}>
+            ${sansPhoto ? "" : `<canvas id="pub-ex-${x}" width="${TUILE_W}" height="${TUILE_H}" aria-hidden="true"></canvas>`}
+            <span class="pub-choix-texte"><span class="fort">${t("pub.texte." + x)}</span>${x === "annonces" ? `<span class="pub-reco">${t("pub.recommande")}</span>` : ""}
+            <span class="note">${t("pub.texte." + x + ".note")}</span></span></label>`).join("");
+      const b = `<section class="carte" id="pub-texte" aria-labelledby="pub-texte-titre" tabindex="-1"><h2 id="pub-texte-titre">${t("pub.texte.titre")}</h2>
+          <p class="texte2">${t("pub.texte.chapo")}</p>
+          <fieldset class="pub-choix-liste"><legend class="vh">${t("pub.texte.titre")}</legend>${choix}</fieldset>
+          <p class="note">${t("pub.texte.aide")}</p>
+          <div class="actions">${r === (sty.brut && sty.brut.texte_photos) && valide() ? `<p class="texte2 fort pub-actuel" id="pub-actuel">${t("pub.actuel")}</p>`
+            : `<button type="button" class="bouton second" id="pub-garder">${t("pub.garder", { c: t("pub.texte." + r) })}</button>`}</div></section>`;
+      const c_ = sansPhoto ? "" : `<section class="carte" aria-labelledby="pub-an-titre"><h2 id="pub-an-titre">${t("pub.annonces.titre")}</h2><p class="texte2">${t(social ? "pub.annonces.texte" : "pub.annonces.texte.google")}</p>
+          <div class="pub-cadres">
+            ${social ? `<figure class="post post-ig"><figcaption class="post-tete">${avatar(c)}<span><span class="fort">${cpt}</span><span class="note">${e(c.ville || "")}</span></span></figcaption>
+              <canvas class="post-media" id="pub-an-ig" width="${TUILE_W * 2}" height="${TUILE_H * 2}" role="img" aria-label="${t("pub.annonce.alt.ig")}"></canvas>
+              <p class="post-legende"${lc}><span class="fort">${cpt}</span> ${e(legendeAnnonce(c))}</p><p class="note pub-cadre-nom">${t("pub.reseau.instagram")}</p></figure>` : ""}
+            <figure class="post post-google"><figcaption class="post-tete">${avatar(c)}<span><span class="fort">${nom}</span><span class="note">${t("pub.google.quand")}</span></span></figcaption>
+              <canvas class="post-media entier" id="pub-an-g" width="${TUILE_W * 2}" height="${TUILE_H * 2}" role="img" aria-label="${t("pub.annonce.alt.google")}"></canvas>
+              <p class="post-legende"${lc}>${e(legendeAnnonce(c))}</p><p class="note pub-cadre-nom">${t("pub.reseau.google")}</p></figure>
+          </div></section>`;
+      const vid = (sty.pubs || {}).video;
+      const d = !social ? "" : premium ? `<section class="carte" aria-labelledby="pub-video-titre"><h2 id="pub-video-titre">${t("pub.videos.titre")}</h2>
+          ${vid ? `<div class="pub-reel"><video src="${e(vid.url)}"${vid.image ? ` poster="${e(vid.image)}"` : ""} controls muted playsinline preload="metadata" aria-label="${t("pub.videos.alt")}"></video></div><p class="note">${t("pub.videos.note")}</p>`
+            : `<div class="pub-reel vide"><p class="texte2">${t("pub.videos.aucune")}</p><a class="bouton" href="#/photos?video">${t("pub.videos.creer")}</a></div>`}</section>`
+        : `<section class="carte" aria-labelledby="pub-video-titre"><h2 id="pub-video-titre">${t("pub.videos.titre")}</h2>
+          <div class="pub-reel verrou"><p class="fort">${t("pub.videos.premium")}</p><a class="bouton second" href="#/offre?dessus">${t("pub.videos.offre")}</a></div></section>`;
+      const attente = sty.demandes.filter(x => !x.traitee_le);
+      // Demande en attente : ce qui a été demandé, relu dans le texte composé à l'envoi (couleur avec son aperçu, logo, commentaire).
+      const relue = x => { const tx_ = String(x.texte || ""), co = (tx_.match(/Couleur souhaitée : (#[0-9A-Fa-f]{6})/) || [])[1], mo = (tx_.match(/Commentaire : (.*)/) || [])[1];
+        return [co ? `<li><span class="pub-pastille-c" style="background:${e(co)}" aria-hidden="true"></span><span>${t("pub.demande.vu.couleur")} <span class="note">${e(co.toUpperCase())}</span></span></li>` : "",
+          /Nouveau logo : /.test(tx_) ? `<li><span>${t("pub.demande.vu.logo")}</span></li>` : "",
+          mo ? `<li><span class="casse">${t("pub.demande.vu.mot", { m: e(mo.trim()) })}</span></li>` : ""].join(""); };
+      const e_ = `<section class="carte" aria-labelledby="pub-marque-titre"><h2 id="pub-marque-titre">${t("pub.marque.titre")}</h2>
+          <div class="pub-marque">${sty.logoUrl ? `<img class="pub-logo" src="${e(sty.logoUrl)}" alt="${t("pub.marque.logo.alt")}">` : `<span class="note">${t("pub.marque.sans.logo")}</span>`}
+            <ul class="pub-pastilles" aria-label="${t("pub.marque.couleurs")}">${C4.map(x => `<li><span class="pub-pastille-c" style="background:${e(k.couleurs[x])}" aria-hidden="true"></span><span class="note">${t("sty.c." + x)}</span></li>`).join("")}</ul></div>
+          ${attente.length ? `<div class="pub-attente" id="pub-demande-attente"><p class="note">${t("pub.demande.attente", { d: I.date(attente[0].cree_le) })}</p>${relue(attente[0]) ? `<ul class="pub-attente-liste">${relue(attente[0])}</ul>` : ""}</div>` : ""}
+          <div class="actions"><button type="button" class="bouton second" id="pub-changement" aria-expanded="${sty.ouvert}" aria-controls="pub-demande">${t("pub.demande.ouvrir")}</button></div>
+          <form id="pub-demande" class="pub-demande"${sty.ouvert ? "" : " hidden"}>
+            <div class="f"><label for="pub-dem-logo">${t("pub.demande.logo")}</label><input id="pub-dem-logo" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp"><p class="aide">${t("pub.demande.logo.aide")}</p></div>
+            <div class="f pub-couleur"><input id="pub-dem-couleur" type="color" value="${e(k.couleurs.principale.toLowerCase())}"><label for="pub-dem-couleur">${t("pub.demande.couleur")}</label></div>
+            <div class="f"><label for="pub-dem-texte">${t("pub.demande.commentaire")}</label><textarea id="pub-dem-texte" rows="2" maxlength="200"></textarea></div>
+            <p class="note">${t("pub.demande.delai")}</p>
+            <div class="actions"><button type="submit" class="bouton" id="pub-dem-envoyer">${t("pub.demande.envoyer")}</button><button type="button" class="lien" id="pub-dem-annuler">${t("annuler")}</button></div>
+            <p class="msg" id="pub-dem-msg" role="status"></p></form></section>`;
+      const mots = `<details class="carte sty-mots" id="sty-mots"><summary>${t("pub.mots")}</summary><div class="sty-mots-corps">
+          <div class="f"><label for="sty-signature">${t("pub.mots.aimes")}</label><textarea id="sty-signature" rows="3"${lc}>${e((k.mots_signature || []).join("\n"))}</textarea><p class="aide">${t("pub.mots.aimes.aide")}</p></div>
+          <div class="f"><label for="sty-eviter">${t("pub.mots.eviter")}</label><textarea id="sty-eviter" rows="3"${lc}>${e((k.a_eviter || []).join("\n"))}</textarea><p class="aide">${t("pub.mots.eviter.aide")}</p></div>
+          <div class="actions"><button type="button" class="bouton second" id="sty-mots-enregistrer">${t("pub.mots.enregistrer")}</button></div></div></details>`;
+      if (sansPhoto && !rendus.length) return `${o.entete(c)}<div class="pile pub">${a}${e_}</div>`;
+      return `${o.entete(c)}<div class="pile pub">${a}${b}${c_}${d}${e_}${mots}</div>`;
+    }
+    let msgMinuteur = 0;
+    const dire = x => { const m = $("msg"); if (!m) return; m.textContent = x; clearTimeout(msgMinuteur); msgMinuteur = setTimeout(() => { if ($("msg")) $("msg").textContent = ""; }, 8000); };
+    async function publications(c) { o.vue.innerHTML = htmlPublications(c); await publications_brancher(); }
+    // Validation : le réglage vu devient celui du commerce, validé par lui ; message sans numéro de version, effacé après 8 s.
+    async function validerReglage(bt) {
+      const r = reglageVu(); bt.disabled = true;
+      try { const m = await o.regler({ texte_photos: r }, true); sty.pour = null; sty.reglage = null; await rendre(); if (o.apres) await o.apres(m);
+        dire(t("pub.valide.msg." + r)); if ($("pub-decision")) $("pub-decision").scrollIntoView({ block: "center" }); }
+      catch (er) { bt.disabled = false; erreur(er); }
+    }
+    async function publications_brancher() {
+      const c = sty.c;
+      if ($("pub-parfait")) $("pub-parfait").onclick = () => validerReglage($("pub-parfait"));
+      if ($("pub-garder")) $("pub-garder").onclick = () => validerReglage($("pub-garder"));
+      if ($("pub-changer")) $("pub-changer").onclick = ev => { ev.preventDefault(); const x = $("pub-texte"); if (x) { x.scrollIntoView({ block: "start" }); x.focus({ preventScroll: true }); } };
+      o.vue.querySelectorAll("input[name=pub-texte]").forEach(i => i.onchange = async () => {
+        sty.reglage = i.value; const y = scrollY; o.vue.innerHTML = htmlPublications(c); await publications_brancher(); scrollTo(0, y); });
+      if ($("pub-photos")) $("pub-photos").onchange = async () => { const fs = [...$("pub-photos").files]; if (!fs.length) return; const m = $("pub-envoi-msg");
+        try { const r = await o.envoyerPhotos(fs, x => { m.textContent = x; }); sty.pour = null; await rendre(); const so = ((o.offre && o.offre(c)) || {}).reseaux_sociaux !== false; dire(t(so ? "pub.vide.envoyees" : "pub.vide.envoyees.google", { n: r.deposees })); }
+        catch (er) { m.textContent = I.phrase(er.message); } };
+      $("pub-changement").onclick = () => { sty.ouvert = !sty.ouvert; $("pub-demande").hidden = !sty.ouvert; $("pub-changement").setAttribute("aria-expanded", String(sty.ouvert)); if (sty.ouvert) $("pub-dem-logo").focus(); };
+      $("pub-dem-annuler").onclick = () => { sty.ouvert = false; $("pub-demande").hidden = true; $("pub-changement").setAttribute("aria-expanded", "false"); };
+      // Demande à champs fixes : logo déposé (dossier marque du commerce), couleur du sélecteur, commentaire court. Texte composé pour BoostImpact.
+      $("pub-demande").onsubmit = async ev => { ev.preventDefault(); const m = $("pub-dem-msg"), bt = $("pub-dem-envoyer"), f = $("pub-dem-logo").files[0];
+        const couleur = $("pub-dem-couleur").value.toUpperCase(), com = $("pub-dem-texte").value.trim().slice(0, 200), avant = sty.kit.couleurs.principale.toUpperCase();
+        if (!f && couleur === avant && !com) { m.textContent = t("pub.demande.vide"); return; }
+        bt.disabled = true;
+        try {
+          let logo = null; if (f) { const er = controlerLogo(f); if (er) throw Object.assign(new Error("logo " + er), { code: "sty.logo." + er }); logo = (await o.deposerLogo(f)).chemin; }
+          const l = ["Demande depuis « Vos publications » (champs fixes)."];
+          if (logo) l.push("Nouveau logo : " + logo); if (couleur !== avant) l.push("Couleur souhaitée : " + couleur + " (actuelle : " + avant + ")"); if (com) l.push("Commentaire : " + com);
+          await o.demander(l.join("\n")); sty.ouvert = false; sty.pour = null; await rendre(); if (o.apres) await o.apres(null);
+          const x = $("pub-demande-attente"); if (x) x.scrollIntoView({ block: "center" });
+        } catch (er) { bt.disabled = false; m.textContent = er.code ? t(er.code) : I.phrase(er.message); } };
+      if ($("sty-mots-enregistrer")) $("sty-mots-enregistrer").onclick = async () => {
+        try { await o.regler({ mots_signature: lignes("sty-signature", MAX_MOTS), a_eviter: lignes("sty-eviter", MAX_EVITER) }, null); sty.pour = null; await rendre(); dire(t("pub.mots.enregistres")); } catch (er) { erreur(er); } };
+      await dessinerGrille(); await dessinerExemples(); await dessinerAnnonces();
+    }
+
+    async function rendre() {
+      const [c, cat] = await Promise.all([o.commerce(), charger()]);
+      if (sty.pour !== c.id) {
+        const m = await o.marque(); Object.assign(sty, { pour: c.id, brut: m.brut, photo: 0, logoUrl: m.logo, demandes: m.demandes || [] });
+        sty.images = (await Promise.all((m.photos || []).map(p => chargerImage(p.url).catch(() => null)))).filter(Boolean);
+        // Limite du mois atteinte (31/10/2026, test client Croissance) : pas d'invitation à « compléter la grille », une photo de plus attendrait le mois suivant.
+        try { sty.plein = o.plein ? !!(await o.plein()) : false; } catch (er) { sty.plein = false; }
+        [sty.logoImg, sty.logo] = await chargerLogo(m.logo);
+        sty.pubs = !renom && o.publications ? await o.publications().catch(() => null) : null;
+        // Pas encore de kit : proposition calculée ici depuis la première photo (même calcul que le moteur), sinon les couleurs actuelles.
+        sty.kit = m.kit || (sty.images.length ? { ...garderCouleurs(proposer({ photos: [pixels(sty.images[0])], metier: c.metier, ton: c.ton || "", cat }), c.couleurs), version: 0 }
+          : normaliser(null, c.couleurs, c.metier, c.ton || "", cat));
+      }
+      sty.c = c;
+      if (!renom) return publications(c);
+      const k = sty.kit, b = sty.brut, valide = !!(b && b.verrouille), [titreEtat, texteEtat] = etat(k, b), lgc = langueDe(c), lc = ` lang="${lgc}"`;
+      const STY_GAB = I.carte("sty.gab", GABARITS), STY_SP = I.carte("sty.sp", STYLES_PHOTO), STY_C = I.carte("sty.c", C4);
+      const attente = sty.demandes.filter(x => !x.traitee_le);
+      const enTete = `${o.entete(c)}
+        <section class="carte sty-etat${valide ? "" : " a-valider"}" id="sty-etat" aria-live="polite">
+          <p class="fort">${titreEtat}</p><p class="texte2">${texteEtat}</p>
+          ${attente.length ? `<p class="note" id="sty-demande-attente">${t(renom ? "con.sty.demandes.attente" : "sty.demande.transmise", { n: attente.length, d: I.date(attente[0].cree_le) })}</p>` : ""}</section>`;
+      if (renom) {
+        // Proposition automatique des couleurs : depuis le logo s'il y en a un, sinon depuis la photo affichée dans les aperçus.
+        const depuis = sty.logoImg ? "logo" : sty.images.length ? "photo" : null;
+        o.vue.innerHTML = `${enTete}
+          ${sty.demandes.length ? `<section class="carte" aria-labelledby="sty-demandes-titre" id="sty-demandes"><h2 id="sty-demandes-titre">${t("con.sty.demandes")}</h2>${listeDemandes()}<p class="aide">${t("con.sty.demandes.aide")}</p></section>` : ""}
+          <div class="colonnes sty">
+            <div class="pile">
+              ${carteApercus(k, STY_GAB, true)}
+              <section class="carte" aria-labelledby="sty-couleurs-titre"><h2 id="sty-couleurs-titre">${tx("sty.couleurs")}</h2>
+                <div class="coul sty-coul">${C4.map(x => `<div class="f"><input id="sty-c-${x}" type="color" value="${e(k.couleurs[x].toLowerCase())}"><label for="sty-c-${x}">${STY_C[x]}</label></div>`).join("")}</div>
+                ${(k.palette || []).length ? `<div class="sty-palette"><p class="note">${t("sty.palette")}</p><div class="sty-pastilles">${k.palette.map(x => `<button type="button" data-sty-pastille="${e(x)}" style="background:${e(x)}" aria-label="${t("sty.palette.choisir", { c: e(x) })}" title="${e(x)}"></button>`).join("")}</div></div>` : ""}
+                ${depuis ? `<div class="actions"><button type="button" class="bouton second petit" id="sty-proposer">${t("con.sty.proposer." + depuis)}</button></div>` : ""}
+                <p class="texte2" id="sty-contraste" aria-live="polite"></p></section>
+              <section class="carte" aria-labelledby="sty-polices-titre"><h2 id="sty-polices-titre">${tx("sty.polices")}</h2><p class="note">${t("sty.polices.note")}</p>
+                <fieldset class="sty-couples"><legend class="vh">${tx("sty.polices")}</legend>${cat.couples.map(cp => `<label class="sty-couple"><input class="vh" type="radio" name="sty-couple" value="${cp.id}"${k.police_titres === cp.titres && k.police_texte === cp.texte ? " checked" : ""}>
+                  <span class="sty-couple-nom" style="font-family:'RM-${cp.titres}';font-weight:${cat.familles[cp.titres].graisse_titre}">${e(nomCouple(cp))}</span>
+                  <span class="sty-couple-ex" style="font-family:'RM-${cp.texte}';font-weight:500"${lc}>${t("sty.polices.exemple", { nom: e(c.nom) }, lgc)}</span>
+                  <span class="note">${e(cat.familles[cp.titres].nom)}${cp.titres !== cp.texte ? " · " + e(cat.familles[cp.texte].nom) : ""}</span></label>`).join("")}</fieldset></section>
+            </div>
+            <div class="pile">
+              ${carteLogo(k)}
+              <section class="carte" aria-labelledby="sty-video-titre"><h2 id="sty-video-titre">${tx("sty.video")}</h2>
+                <fieldset><legend class="vh">${tx("sty.video")}</legend>${STYLES_PHOTO.map(x => `<label class="option sty-option"><input type="radio" name="sty-sp" value="${x}"${k.style_photo === x ? " checked" : ""}><span><span>${STY_SP[x]}</span><span class="note">${t("sty.sp.note." + x)}</span></span></label>`).join("")}</fieldset>
+                <p class="note">${t("sty.video.note")}</p></section>
+              <section class="carte" aria-labelledby="sty-mots-titre"><h2 id="sty-mots-titre">${tx("sty.mots")}</h2>${champsMots(k, lc)}</section>
+              <section class="carte sty-actions"><div class="actions"><button type="button" class="bouton" id="sty-valider">${t("con.sty.valider")}</button><button type="button" class="bouton second" id="sty-enregistrer">${t("con.sty.enregistrer")}</button></div>
+                <p class="note" id="sty-illisible" hidden>${t("sty.illisible")}</p><p class="aide">${t("con.sty.valider.aide")}</p><p class="msg" id="msg" role="status"></p></section>
+            </div>
+          </div>`;
+        C4.forEach(x => { $("sty-c-" + x).oninput = ev => { sty.kit.couleurs = { ...sty.kit.couleurs, [x]: ev.target.value.toUpperCase() }; redessiner(); }; });
+        o.vue.querySelectorAll("[data-sty-pastille]").forEach(bt => bt.onclick = () => { sty.kit.couleurs = { ...sty.kit.couleurs, principale: bt.dataset.styPastille }; majCouleurs(); redessiner(); });
+        o.vue.querySelectorAll("input[name=sty-couple]").forEach(i => i.onchange = () => { const cp = cat.couples.find(x => x.id === i.value); Object.assign(sty.kit, { couple: cp.id, police_titres: cp.titres, police_texte: cp.texte }); redessiner(); });
+        o.vue.querySelectorAll("input[name=sty-gab]").forEach(i => i.onchange = () => { sty.kit.gabarit_prefere = i.value || null; $("sty-impose").disabled = !i.value; if (!i.value) { $("sty-impose").checked = false; sty.kit.gabarit_impose = false; } });
+        $("sty-impose").onchange = () => { sty.kit.gabarit_impose = $("sty-impose").checked && !!sty.kit.gabarit_prefere; };
+        o.vue.querySelectorAll("input[name=sty-sp]").forEach(i => i.onchange = () => { sty.kit.style_photo = i.value; });
+        // Le texte en cours de saisie est gardé quand l'écran se redessine (logo, proposition de couleurs).
+        const garderMots = () => { sty.kit.mots_signature = lignes("sty-signature", MAX_MOTS); sty.kit.a_eviter = lignes("sty-eviter", MAX_EVITER); };
+        $("sty-logo-fichier").onchange = async () => {
+          const f = $("sty-logo-fichier").files[0]; if (!f) return;
+          try {
+            const r = await o.deposerLogo(f), img = await chargerImage(r.url);
+            const p = proposer({ logo: pixels(img), metier: c.metier, ton: c.ton || "", logoChemin: r.chemin, cat });
+            garderMots(); Object.assign(sty.kit, { logo: r.chemin, logo_fond: p.logo_fond, couleurs: p.couleurs, palette: p.palette,
+              source: { type: "logo", photos: (sty.kit.source && Array.isArray(sty.kit.source.photos) && sty.kit.source.photos) || [] } });
+            sty.logoUrl = r.url; sty.logoImg = img; sty.logo = preparerLogo(img); await rendre(); msg(tx("sty.logo.lu"));
+          } catch (er) { erreur(er); }
+        };
+        if ($("sty-proposer")) $("sty-proposer").onclick = async () => {
+          const p = depuis === "logo" ? proposer({ logo: pixels(sty.logoImg), metier: c.metier, ton: c.ton || "", logoChemin: sty.kit.logo, cat })
+            : proposer({ photos: [pixels(sty.images[sty.photo])], metier: c.metier, ton: c.ton || "", cat });
+          // Les photos d'origine déjà connues du kit restent listées (aperçus de la démonstration, trace pour le moteur).
+          const photosKit = (sty.kit.source && Array.isArray(sty.kit.source.photos) && sty.kit.source.photos) || [];
+          garderMots(); Object.assign(sty.kit, { couleurs: p.couleurs, palette: p.palette, source: { type: depuis === "logo" ? "logo" : "photos", photos: photosKit } });
+          if (depuis === "logo") sty.kit.logo_fond = p.logo_fond;
+          await rendre(); msg(t("con.sty.propose.msg"));
+        };
+        if ($("sty-logo-retirer")) $("sty-logo-retirer").onclick = async () => { garderMots(); Object.assign(sty.kit, { logo: null, logo_fond: null }); sty.logo = sty.logoImg = sty.logoUrl = null; await rendre(); msg(t("con.sty.logo.retire")); };
+        const enregistrer = async valider => {
+          garderMots();
+          try {
+            const m = await o.enregistrer(sty.kit, valider); sty.pour = null; await rendre(); window.scrollTo(0, 0);
+            msg(t(m.verrouille ? "con.sty.valide.msg" : "con.sty.enregistre.msg", { v: m.version })); if (o.apres) await o.apres(m);
+          } catch (er) { erreur(er); }
+        };
+        $("sty-valider").onclick = () => enregistrer(true); $("sty-enregistrer").onclick = () => enregistrer(false);
+      }
+      o.vue.querySelectorAll("[data-sty-photo]").forEach(bt => bt.onclick = () => { sty.photo = +bt.dataset.styPhoto; o.vue.querySelectorAll("[data-sty-photo]").forEach(x => x.setAttribute("aria-pressed", String(x === bt))); redessiner(); });
+      await dessinerTout();
+    }
+    return { rendre, oublier() { sty.pour = null; } };
+  }
+
+  const API = { STYLES_PHOTO, GABARITS, TEXTE_PHOTOS, TEXTE_PHOTOS_DEFAUT, CLES, AUTEURS, ecran, MAX_MOTS, MAX_EVITER, MAX_CAR, rgb, hexa, estHexa, lum, contraste, melange, echantillons, regrouper, fondDuLogo, tonCle, couplePropose,
+    styleDesPhotos, couleursLisibles, proposer, DIRECTIONS, directions, directionDu, avecDirection, dessiner916, defaut, normaliser, fautes, couleursCommerce, garderCouleurs, controlerLogo, estSvg, canon, sansBase, charger, polices, chargerImage, pixels, preparerLogo, enPng, dessiner,
+    catalogue: () => catalogue, policeTitre, policeTexte };
+  if (typeof module === "object" && module.exports) module.exports = API; else racine.RENOM_MARQUE = API;
+})(typeof window !== "undefined" ? window : globalThis);

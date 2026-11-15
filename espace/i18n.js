@@ -84,6 +84,8 @@
       "These figures are made up. In live use, Google's figures are read when this page opens and BoostImpact's come from your account.", "Deze cijfers zijn fictief. In de echte dienst worden de cijfers van Google gelezen wanneer deze pagina opent en komen die van BoostImpact uit uw klantenzone."],
     // ---- Page de l'espace (index.html) et bandeau de démonstration
     "titre.espace": ["BoostImpact, votre espace", "BoostImpact, your account", "BoostImpact, uw klantenzone"], "titre.console": ["BoostImpact, console", "BoostImpact, console", "BoostImpact, console"],
+    "email.langue.commerce": ["Cet email part dans la langue du commerce ({l} dans cette démonstration).", "This email is sent in the business's language ({l} in this demo).", "Deze e-mail wordt verstuurd in de taal van de zaak ({l} in deze demo)."],
+    "langue.nom.fr": ["français", "French", "Frans"], "langue.nom.en": ["anglais", "English", "Engels"], "langue.nom.nl": ["néerlandais", "Dutch", "Nederlands"],
     "demo.apercu": ["Aperçu de démonstration : aucun formulaire n'envoie de données, les chiffres et le commerce sont fictifs.", "Demo preview: no form sends any data, figures and business are fictitious.", "Demopreview: geen enkel formulier verstuurt gegevens, cijfers en zaak zijn fictief."],
     "demo.mode": ["Mode démonstration.", "Demo mode.", "Demomodus."], "demo.long": [" Rien n'est envoyé nulle part, les services sont simulés.", " Nothing is sent anywhere; services are simulated.", " Er wordt niets verstuurd, de diensten worden gesimuleerd."],
     "demo.court": [" Rien n'est envoyé nulle part.", " Nothing is sent anywhere.", " Er wordt niets verstuurd."],
@@ -113,7 +115,7 @@
     "etape.PROGRAMMATION_ANNULEE": ["Programmation annulée", "Scheduling cancelled", "Planning geannuleerd"], "etape.IDEES": ["Idées proposées", "Ideas suggested", "Ideeën voorgesteld"],
     "etape.CONTENU_APPROUVE": ["Publication validée", "Content approved", "Post goedgekeurd"], "etape.CONTENU_MODIFICATION": ["Modification demandée", "Change requested", "Wijziging gevraagd"], "etape.CONTENU_REFUSE": ["Contenu refusé", "Content rejected", "Post geweigerd"],
     "etape.REFUS": ["Photo refusée", "Photo rejected", "Foto geweigerd"], "etape.LEGENDE_REFUSEE": ["Légende refusée", "Caption rejected", "Bijschrift geweigerd"], "etape.ECHEC_PUBLICATION": ["Publication en échec", "Post failed", "Publicatie mislukt"],
-    "etape.AVIS_RECU": ["Avis reçu", "Review received", "Review ontvangen"], "etape.AVIS_A_VALIDER": ["Réponse d'avis à valider", "Review reply to approve", "Antwoord op review goed te keuren"], "etape.AVIS_VALIDE": ["Réponse d'avis validée", "Review reply approved", "Antwoord op review goedgekeurd"],
+    "etape.AVIS_RECU": ["Avis reçu", "Review received", "Review ontvangen"], "etape.AVIS_A_VALIDER": ["Réponse d'avis préparée", "Review reply prepared", "Antwoord op review voorbereid"], "etape.AVIS_VALIDE": ["Réponse d'avis validée", "Review reply approved", "Antwoord op review goedgekeurd"],
     "etape.AVIS_REFUSE": ["Réponse d'avis refusée", "Review reply rejected", "Antwoord op review geweigerd"], "etape.AVIS_PUBLIE": ["Réponse d'avis publiée", "Review reply published", "Antwoord op review gepubliceerd"], "etape.AVIS_SENSIBLE": ["Avis sensible signalé", "Sensitive review flagged", "Gevoelige review gemeld"],
     "etape.MISE_EN_PAUSE": ["Commerce mis en pause", "Business paused", "Zaak gepauzeerd"], "etape.REPRISE": ["Reprise du commerce", "Business resumed", "Zaak hervat"], "etape.OFFRE_CHANGEE": ["Offre modifiée", "Plan changed", "Formule gewijzigd"],
     "etape.COMMERCE_CREE": ["Commerce créé", "Business created", "Zaak aangemaakt"], "etape.LEGENDE_MODIFIEE": ["Légende modifiée par vous", "Caption edited by you", "Bijschrift door u aangepast"], "etape.EMAIL_VALIDATION": ["Email de validation préparé", "Approval email prepared", "Goedkeuringsmail voorbereid"],
@@ -159,7 +161,7 @@
     "contenus.chapo.google": ["Vous validez d'un clic, ou vous modifiez le texte vous-même. Pour le visuel, demandez une modification à BoostImpact. Rien n'est publié sur votre fiche Google sans votre validation.",
       "You approve in one click, or edit the text yourself. For the visual, ask BoostImpact for a change. Nothing is posted on your Google profile without your approval.",
       "U keurt goed met één klik, of u past de tekst zelf aan. Voor het beeld vraagt u BoostImpact om een aanpassing. Niets verschijnt op uw Google-profiel zonder uw goedkeuring."],
-    "offre.contenus.unite.google": ["Un contenu, c'est une publication sur votre fiche Google.", "A piece of content is one post on your Google profile.", "Een post is één publicatie op uw Google-profiel."],
+    "offre.contenus.unite.google": ["Une publication, c'est un sujet publié sur votre fiche Google.", "A piece of content is one post on your Google profile.", "Een post is één publicatie op uw Google-profiel."],
     "res.portee.google": ["Disponible quand les statistiques de votre fiche Google seront branchées.", "Available once your Google profile statistics are connected.", "Beschikbaar zodra de statistieken van uw Google-profiel gekoppeld zijn."],
     "reg.comptes": ["Réseaux connectés", "Connected accounts", "Gekoppelde accounts"],
     // Réseaux de l'offre seulement (01/11/2026, tour 7 Croissance : TikTok était cité sans être retenu) ; {res} : liste, sinon l'ancienne phrase.
@@ -182,7 +184,7 @@
     "acc.chapo.actions": [v => `${v.n === 1 ? "1 chose" : v.n + " choses"} à faire maintenant.`, v => `${v.n === 1 ? "1 thing" : v.n + " things"} to do now.`, v => `${v.n === 1 ? "1 ding" : v.n + " dingen"} om nu te doen.`],
     "acc.aut.voir": ["Voir dans Photos", "See in Photos", "Bekijken in Foto's"],
     "acc.tout.voir": [v => `Tout voir, ${v.n} de plus`, v => `See all, ${v.n} more`, v => `Alles bekijken, nog ${v.n}`],   // 01/11/2026, tour 8 (petit écran)
-    "acc.attendent": [v => v.n > 1 ? `${v.n} validées attendent une date.` : "1 validée attend une date.", v => v.n > 1 ? `${v.n} approved posts are waiting for a date.` : "1 approved post is waiting for a date.", v => v.n > 1 ? `${v.n} goedgekeurde posts wachten op een datum.` : "1 goedgekeurde post wacht op een datum."],
+    "acc.attendent": [v => v.n > 1 ? `${v.n} publications validées n'ont pas encore de date.` : "1 publication validée n'a pas encore de date.", v => v.n > 1 ? `${v.n} approved posts are waiting for a date.` : "1 approved post is waiting for a date.", v => v.n > 1 ? `${v.n} goedgekeurde posts wachten op een datum.` : "1 goedgekeurde post wacht op een datum."],
     "acc.programmer.tout": ["Programmer tout", "Schedule all", "Alles inplannen"],
     "acc.act.programmer.court": [v => v.n > 1 ? `Programmer ${v.n} validées` : "Programmer 1 validée", v => v.n > 1 ? `Schedule ${v.n} approved` : "Schedule 1 approved", v => v.n > 1 ? `${v.n} goedgekeurde inplannen` : "1 goedgekeurde inplannen"],   // v36 : sous 360 px
     "acc.act.programmer": [v => v.n > 1 ? `Programmer ${v.n} publications validées` : "Programmer 1 publication validée", v => v.n > 1 ? `Schedule ${v.n} approved posts` : "Schedule 1 approved post", v => v.n > 1 ? `${v.n} goedgekeurde posts inplannen` : "1 goedgekeurde post inplannen"],
@@ -308,7 +310,7 @@
     "con.ck.c.workflows": ["Automatisations", "Automations", "Automatiseringen"],
     "con.ck.c.ok.workflows": ["Aucune erreur signalée par n8n ni par les publications.", "No error reported by n8n or by publishing.", "Geen fout gemeld door n8n of bij het publiceren."],
     "con.ck.c.i.workflows.defaut": ["{qui} {texte}", "{qui} {texte}", "{qui} {texte}"],
-    "con.ck.c.i.workflows.ERREUR_WORKFLOW": ["Erreur de workflow, {d} : {texte}", "Workflow error, {d}: {texte}", "Workflowfout, {d}: {texte}"],
+    "con.ck.c.i.workflows.ERREUR_WORKFLOW": ["Une automatisation s'est arrêtée, {d}\u00a0: {texte}", "An automation stopped, {d}: {texte}", "Een automatisering is gestopt, {d}: {texte}"],
     "con.ck.c.i.workflows.PUBLICATION_ECHEC": ["{qui} : publication en échec. {texte}", "{qui}: post failed. {texte}", "{qui}: publicatie mislukt. {texte}"],
     "con.ck.c.i.workflows.ECHEC_PUBLICATION": ["{qui} : publication en échec, {d}.", "{qui}: post failed, {d}.", "{qui}: publicatie mislukt, {d}."],
     "con.ck.c.i.workflows.SCHEMA_INCOMPLET": ["{qui} : base incomplète pour un workflow, {d}.", "{qui}: database incomplete for a workflow, {d}.", "{qui}: databank onvolledig voor een workflow, {d}."],
@@ -589,11 +591,11 @@
     "acc.offre.inclus": [
       // Lot 3 (15/11/2026) : un seul mot côté client, « publications » (mot du site : « 16 publications par mois, dont 4 vidéos »).
       v => v.g ? `${v.n} ${pl(v.n, "publication", "publications")} par mois sur votre fiche Google, et les réponses à vos avis Google.`
-        : `${v.n} ${pl(v.n, "publication", "publications")}${v.v ? `, dont ${v.v} ${pl(v.v, "vidéo", "vidéos")},` : ""} par mois, sur vos réseaux et votre fiche Google, et les réponses à vos avis Google${v.cm ? " et à vos commentaires" : ""}.`,
+        : `${v.n} ${pl(v.n, "publication", "publications")}${v.v ? `, dont ${v.v} ${pl(v.v, "vidéo", "vidéos")},` : ""} par mois, sur vos réseaux et votre fiche Google, et les réponses à vos avis Google${v.cm ? " et à vos commentaires" : ""}.${v.bientot ? " Réponses aux commentaires Instagram et Facebook\u00a0: disponible prochainement, sans supplément." : ""}`,
       v => v.g ? `${v.n} ${en1(v.n, "post", "posts")} a month on your Google profile, plus replies to your Google reviews.`
-        : `${v.n} ${en1(v.n, "post", "posts")}${v.v ? `, including ${v.v} ${en1(v.v, "video", "videos")},` : ""} a month, on your social accounts and your Google profile, plus replies to your Google reviews${v.cm ? " and comments" : ""}.`,
+        : `${v.n} ${en1(v.n, "post", "posts")}${v.v ? `, including ${v.v} ${en1(v.v, "video", "videos")},` : ""} a month, on your social accounts and your Google profile, plus replies to your Google reviews${v.cm ? " and comments" : ""}.${v.bientot ? " Replies to Instagram and Facebook comments: coming soon, at no extra cost." : ""}`,
       v => v.g ? `${v.n} ${nl1(v.n, "post", "posts")} per maand op uw Google-profiel, en de antwoorden op uw Google-reviews.`
-        : `${v.n} ${nl1(v.n, "post", "posts")}${v.v ? `, waarvan ${v.v} ${nl1(v.v, "video", "video's")},` : ""} per maand, op uw sociale netwerken en uw Google-profiel, en de antwoorden op uw Google-reviews${v.cm ? " en reacties" : ""}.`],
+        : `${v.n} ${nl1(v.n, "post", "posts")}${v.v ? `, waarvan ${v.v} ${nl1(v.v, "video", "video's")},` : ""} per maand, op uw sociale netwerken en uw Google-profiel, en de antwoorden op uw Google-reviews${v.cm ? " en reacties" : ""}.${v.bientot ? " Antwoorden op reacties op Instagram en Facebook: binnenkort beschikbaar, zonder meerprijs." : ""}`],
     "acc.dem.titre": ["Votre démarrage n'est pas terminé", "You haven't finished getting started", "Uw opstart is niet afgerond"],
     "acc.dem.texte": ["Cinq questions pour que BoostImpact écrive comme vous. Vous pouvez passer celles que vous voulez.", "Five questions so BoostImpact writes the way you do. You can skip any of them.", "Vijf vragen zodat BoostImpact schrijft zoals u. U kunt elke vraag overslaan."],
     "acc.dem.reprendre": ["Reprendre la mise en route", "Carry on with your setup", "Verder met de opstart"],
@@ -661,7 +663,7 @@
     "fiche.lien.aide": ["Copiez-le depuis business.google.com : Lire les avis, puis Obtenir plus d'avis.", "Copy it from business.google.com: Read reviews, then Get more reviews.", "Kopieer hem op business.google.com: Reviews lezen, daarna Meer reviews krijgen."],
     "fiche.reponses": ["Réponses aux avis Google", "Replies to Google reviews", "Antwoorden op Google-reviews"],
     // 26/10/2026 : les avis sensibles ont leur bloc dans la règle (BLOCS_AVIS de app.js) ; l'aide garde seulement le renvoi à l'offre.
-    "fiche.reglage.aide": ["Cette règle dépend de votre offre (voir « Votre offre »).", "This rule depends on your plan (see “Your plan”).", "Deze regel hangt af van uw formule (zie “Uw formule”)."],
+    "fiche.reglage.aide": ["Même règle dans toutes les offres.", "Same rule in every plan.", "Dezelfde regel in elke formule."],
     "fiche.couleurs": ["Vos couleurs", "Your colours", "Uw kleuren"], "fiche.c.fond": ["Fond", "Background", "Achtergrond"], "fiche.c.texte": ["Texte", "Text", "Tekst"], "fiche.c.accent": ["Accent", "Accent", "Accent"],
     "fiche.enregistree": ["Fiche enregistrée.", "Details saved.", "Gegevens opgeslagen."], "fiche.echec": ["Échec de l'enregistrement : {m}", "Couldn't save: {m}", "Opslaan mislukt: {m}"],
     // ---- Photos
@@ -711,7 +713,7 @@
       "Approve in one click, or edit the caption yourself, network by network. For the visual, ask BoostImpact for a change. Delegation mode: if you haven't replied 48\u00a0hours after we send it, the content is published.", "U keurt goed met één klik, of u past het bijschrift zelf aan, netwerk per netwerk. Voor het beeld vraagt u BoostImpact om een wijziging. Delegatiemodus: zonder antwoord van u 48\u00a0uur na verzending wordt de post gepubliceerd."],
     // Carte « Modification demandée » (01/11/2026, tour 6 Croissance) : le délai reste écrit sur la carte, pas seulement dans le toast.
     "contenus.modif.delai": ["Nouvelle version sous 24\u00a0h : nous vous prévenons.", "New version within 24\u00a0hours: we'll let you know.", "Nieuwe versie binnen 24\u00a0uur: wij laten het u weten."],
-    "contenus.modif.delai.le": ["Demandée le {d} : nouvelle version sous 24\u00a0h, nous vous prévenons.", "Requested on {d}: new version within 24\u00a0hours, we'll let you know.", "Gevraagd op {d}: nieuwe versie binnen 24\u00a0uur, wij laten het u weten."],
+    "contenus.modif.delai.le": ["Demandée le {d}. Nous vous prévenons dès que la nouvelle version est prête.", "Requested on {d}. We'll let you know as soon as the new version is ready.", "Gevraagd op {d}. Wij laten het u weten zodra de nieuwe versie klaar is."],
     "contenus.demande": ["Votre demande : ", "Your request: ", "Uw vraag: "], "contenus.refuser": ["Refuser ce contenu", "Reject this content", "Deze post weigeren"],
     "contenus.vide.titre": ["Aucun contenu pour le moment", "No content yet", "Nog geen posts"], "contenus.vide.texte": ["Déposez vos photos : les contenus créés apparaîtront ici.", "Upload your photos: the content created will appear here.", "Laad uw foto's op: de posts die ermee gemaakt worden, verschijnen hier."],
     // ---- Calendrier
@@ -818,7 +820,7 @@
     "avis.bloc.tous": ["De 1 à 5 étoiles", "1 to 5 stars", "1 tot 5 sterren"], "avis.bloc.sensibles": ["Avis sensibles", "Sensitive reviews", "Gevoelige reviews"],
     "avis.regle.auto.45": ["Réponse publiée pour vous en moins de 24\u00a0h, selon les règles approuvées avec vous. Vous n'avez rien à faire.",
       "Reply published for you within 24\u00a0hours, following the rules agreed with you. Nothing for you to do.", "Antwoord binnen 24\u00a0uur voor u gepubliceerd, volgens de regels die met u zijn afgesproken. U hoeft niets te doen."],
-    "avis.regle.equipe.13": ["Notre équipe relit ou écrit la réponse, dans votre ton, et la publie sous 24\u00a0h. Vous êtes prévenu et vous la relisez ici, dans vos avis. Un point à préciser : donnez votre version sous l'avis, avant la publication.",
+    "avis.regle.equipe.13": ["Notre équipe relit ou écrit la réponse, dans votre ton, et la publie sous 24\u00a0h. Vous êtes prévenu et vous la relisez ici, dans vos avis. Quelque chose à ajouter\u00a0? Donnez votre version sous l'avis, avant la publication.",
       "Our team checks or writes the reply, in your tone, and publishes it within 24\u00a0hours. You are informed and can read it here, in your reviews. Something to add: give your side of the story under the review, before it is published.",
       "Ons team leest of schrijft het antwoord, in uw toon, en publiceert het binnen 24\u00a0uur. U wordt op de hoogte gebracht en leest het hier na, bij uw reviews. Iets toe te voegen: geef uw versie onder de review, vóór de publicatie."],
     "avis.regle.equipe.sensibles": ["Un avis sensible (santé, accident, menace, accusation) n'est jamais traité automatiquement. Notre équipe s'en charge comme pour 1 à 3 étoiles.",
@@ -921,13 +923,13 @@
     "offre.pub.reservees": ["Publications photo de ce mois-ci", "Photo posts this month", "Fotoposts deze maand"],
     "offre.pub.preparation": [v => `Dont ${v.n} en préparation (photo reçue, publication en cours de création).`, v => `Including ${v.n} in progress (photo received, post being created).`, v => `Waarvan ${v.n} in voorbereiding (foto ontvangen, post wordt gemaakt).`],
     "offre.sur": ["Votre offre", "Your plan", "Uw formule"], "offre.pub.utilisees": ["Publications photo créées ce mois-ci", "Photo posts created this month", "Fotoposts aangemaakt deze maand"], "offre.vid.utilisees": ["Vidéos créées ce mois-ci", "Videos created this month", "Video's aangemaakt deze maand"],
-    "offre.rep.commentaires": ["Réponses aux commentaires (bientôt)", "Comment replies (coming soon)", "Antwoorden op reacties (binnenkort)"], "offre.cm.sans.plafond": ["{n} ce mois-ci, sans limite", "{n} this month, no limit", "{n} deze maand, zonder limiet"],
+    "offre.rep.commentaires": ["Réponses aux commentaires\u00a0: disponible prochainement, sans supplément", "Comment replies: coming soon, at no extra cost", "Antwoorden op reacties: binnenkort beschikbaar, zonder meerprijs"], "offre.cm.sans.plafond": ["{n} ce mois-ci, sans limite", "{n} this month, no limit", "{n} deze maand, zonder limiet"],
     "offre.compteur.debut": ["Le compteur repart à zéro au début du mois.", "The counter resets at the start of the month.", "De teller begint opnieuw bij het begin van de maand."], "offre.inclus": ["Ce qui est inclus chaque mois", "What's included each month", "Wat elke maand inbegrepen is"],
     "offre.inc.contenus": ["Publications",
       "Posts", "Posts"],
     "offre.contenus.n": [v => v.n + " par mois", v => v.n + " a month", v => v.n + " per maand"],
-    "offre.contenus.dont.videos": [v => `${v.p} publications photo (+ ${v.v} vidéos)`, v => `${v.p} photo posts (+ ${v.v} videos)`, v => `${v.p} fotoposts (+ ${v.v} video's)`],
-    "offre.contenus.unite": ["Un contenu, c'est un sujet, publié sur chacun de vos réseaux retenus et sur votre fiche Google.",
+    "offre.contenus.dont.videos": [v => `${+v.p + +v.v} publications, dont ${v.v} vidéos`, v => `${+v.p + +v.v} posts, including ${v.v} videos`, v => `${+v.p + +v.v} posts, waarvan ${v.v} video's`],
+    "offre.contenus.unite": ["Une publication, c'est un sujet, publié sur chacun de vos réseaux retenus et sur votre fiche Google.",
       "One piece of content is one subject, published on each of your chosen networks and on your Google profile.", "Eén post is één onderwerp, gepubliceerd op elk van uw gekozen netwerken en op uw Google-profiel."],
     "offre.reseaux.google.seul": ["Fiche Google seulement",
       "Google profile only", "Alleen het Google-profiel"], "offre.inc.videos": ["Vidéos courtes", "Short videos", "Korte video's"],
@@ -958,8 +960,8 @@
     "offre.garantie.contenu": ["Premier contenu proposé sous {n} h.",
       "First content proposed within {n} hours.", "Eerste post voorgesteld binnen {n} uur."],
     // 30/10/2026 (CGV art. 8 : dans les trois offres, la réponse est publiée sans validation du client).
-    "offre.garantie.avis24": ["Chaque nouvel avis a sa réponse publiée sous {n} h.",
-      "Every new review gets its reply published within {n} hours.", "Elke nieuwe review krijgt binnen {n} uur een gepubliceerd antwoord."],
+    "offre.garantie.avis24": ["Chaque nouvel avis a sa réponse publiée sous {n}\u00a0h après notre relevé (plusieurs fois par jour). Si vous touchez «\u00a0Attendez mon appel\u00a0», ce délai attend notre appel, puis repart pour {n}\u00a0h.",
+      "Every new review gets its reply published within {n}\u00a0hours of our check (several times a day). If you tap “Wait for my call”, this deadline waits for our call, then restarts for {n}\u00a0hours.", "Elke nieuwe review krijgt binnen {n}\u00a0uur na onze controle (meermaals per dag) een gepubliceerd antwoord. Tikt u op “Wacht op mijn telefoontje”, dan wacht deze termijn op ons telefoontje en loopt daarna opnieuw {n}\u00a0uur."],
     "offre.garantie.contrepartie": ["Sinon, le mois suivant vous est offert. Délais comptés à partir de la remise des accès et de vos premières photos.",
       "Otherwise, the following month is free. Times count from when you give us access and your first photos.", "Zo niet, dan is de volgende maand gratis. De termijnen lopen vanaf het moment dat u de toegang en uw eerste foto's bezorgt."],
     // 26/10/2026 (décision de PJ, CGV article 10) : en Essentiel, les délais partent de l'accès à la fiche Google seul ; les photos y sont facultatives.
@@ -1090,7 +1092,7 @@
     "etape.NOTIFICATION_VALIDATION": ["Email envoyé : éléments à valider", "Email sent: items to approve", "E-mail verstuurd: items om goed te keuren"],
     "etape.BIENVENUE": ["Email de bienvenue envoyé", "Welcome email sent", "Welkomstmail verstuurd"], "etape.BILAN_ENVOYE": ["Bilan du mois envoyé", "Monthly report sent", "Maandoverzicht verstuurd"],
     "etape.AVIS_TRAITE": ["Avis traité", "Review handled", "Review behandeld"], "etape.AVIS_PROPOSE": ["Réponse d'avis proposée par l'équipe BoostImpact", "Review reply suggested by the BoostImpact team", "Antwoord op review voorgesteld door het team van BoostImpact"],
-    "etape.AVIS_RELANCE": ["Rappel : réponse d'avis à valider", "Reminder: review reply to approve", "Herinnering: antwoord op review om goed te keuren"],
+    "etape.AVIS_RELANCE": ["Rappel\u00a0: réponse d'avis préparée", "Reminder: review reply prepared", "Herinnering: antwoord op review voorbereid"],
     "etape.AVIS_EQUIPE": ["Avis : notre équipe s'en charge", "Review: our team is on it", "Review: ons team neemt het op zich"],
     "etape.AVIS_ESCALADE": ["Avis : notre équipe s'en charge", "Review: our team is on it", "Review: ons team neemt het op zich"],
     "etape.ACTION_FICHE_CREEE": ["Action de fiche Google demandée", "Google profile action requested", "Actie op het Google-profiel gevraagd"],
@@ -1321,7 +1323,7 @@
     "awa.manquant.texte": ["Nous en avons besoin pour vous prévenir quand un avis demande votre attention. Une minute, une seule fois.", "We need it to let you know when a review needs your attention. One minute, once.", "We hebben het nodig om u te verwittigen wanneer een review uw aandacht vraagt. Eén minuut, één keer."],
     "awa.manquant.bouton": ["Enregistrer mon numéro", "Save my number", "Mijn nummer opslaan"],
     "awa.manquant.merci": ["Numéro WhatsApp enregistré. Merci.", "WhatsApp number saved. Thank you.", "WhatsApp-nummer opgeslagen. Bedankt."],
-    "notif.lien.titre": ["Le lien de validation", "The approval link", "De goedkeuringslink"], "notif.lien.1": ["Il ouvre le contenu ou la réponse proposée, sans mot de passe.", "It opens the content or the suggested reply, with no password.", "Hij opent de post of het voorgestelde antwoord, zonder wachtwoord."],
+    "notif.lien.titre": ["Le lien de validation", "The approval link", "De goedkeuringslink"], "notif.lien.1": ["Il ouvre la publication à valider, sans mot de passe.", "It opens the post to approve, with no password.", "Hij opent de post om goed te keuren, zonder wachtwoord."],
     "notif.lien.2": ["Il sert une seule fois.", "It can be used only once.", "Hij werkt maar één keer."], "notif.lien.3": ["Il est valable 7 jours.", "It is valid for 7 days.", "Hij is 7 dagen geldig."],
     "notif.lien.4": ["Un avis sensible n'est jamais envoyé par lien : il se traite dans votre espace.", "A sensitive review is never sent by link: it is handled in your account.", "Een gevoelige review wordt nooit via een link verstuurd: die wordt in uw klantenzone behandeld."],
     "notif.adresse": ["L'adresse se change dans <a href=\"#/fiche\">votre fiche</a>, champ « Email pour vos alertes ».", "You can change the address in <a href=\"#/fiche\">your details</a>, under “Email for your alerts”.", "U wijzigt het adres in <a href=\"#/fiche\">uw gegevens</a>, veld “E-mail voor uw meldingen”."],
@@ -1344,7 +1346,7 @@
     "dem5.fini.chapo": ["Merci. Vos réponses préremplissent « Mon commerce ». Vérifiez-le quand vous voulez : BoostImpact n'écrit que ce qu'il contient.", "Thank you. Your answers pre-fill your details. Check them whenever you like: BoostImpact only writes what they contain.", "Bedankt. Uw antwoorden vullen uw gegevens alvast in. Kijk ze na wanneer u wilt: BoostImpact schrijft alleen wat erin staat."],
     "dem5.maintenant": ["Et maintenant ?", "What next?", "En nu?"],
     "dem5.maintenant.texte": ["Déposez quelques photos de votre commerce : chacune devient une publication, que vous validez.", "Upload a few photos of your business: each one becomes a piece of content, which you approve.", "Laad enkele foto's van uw zaak op: elke foto wordt een post, die u goedkeurt."],
-    "dem5.accueil": ["Aller à l'accueil", "Go to home", "Naar de startpagina"], "dem5.voir.fiche": ["Ouvrir Mon commerce", "Open My business", "Mijn zaak openen"], "dem5.titre": ["Démarrage en 5 questions", "Getting started in 5 questions", "Opstart in 5 vragen"],
+    "dem5.accueil": ["Aller à l'accueil", "Go to home", "Naar de startpagina"], "dem5.voir.fiche": ["Ouvrir la fiche de mon commerce", "Open my business details", "De gegevens van mijn zaak openen"], "dem5.titre": ["Démarrage en 5 questions", "Getting started in 5 questions", "Opstart in 5 vragen"],
     "dem5.chapo": ["Une question à la fois. Vos réponses préremplissent « Mon commerce ». Vous pouvez passer n'importe quelle question.", "One question at a time. Your answers pre-fill your details. You can skip any question.", "Eén vraag tegelijk. Uw antwoorden vullen uw gegevens alvast in. U kunt elke vraag overslaan."],
     // 6e question « Vos réseaux sociaux » (13/11/2026, facultative) et points du dossier de démarrage dans la carte de mise en route de l'accueil.
     "dem6.etape": ["Dernière question, facultative", "Last question, optional", "Laatste vraag, optioneel"],
@@ -1376,7 +1378,7 @@
     "acc.dos.voir": ["Ouvrir", "Open", "Openen"],
     "dem5.question": ["Question {n} sur 5", "Question {n} of 5", "Vraag {n} van 5"], "dem5.terminer": ["Terminer", "Finish", "Afronden"], "dem5.suivant": ["Suivant", "Next", "Volgende"], "dem5.passer": ["Passer cette question", "Skip this question", "Deze vraag overslaan"],
     "dem5.precedente": ["Question précédente", "Previous question", "Vorige vraag"], "dem5.plus.tard": ["Faire plus tard", "Do this later", "Later doen"],
-    "dem5.plus.tard.note": ["La fiche complète reste accessible dans « Mon commerce ».", "Your full details remain available under “My business”.", "Uw volledige gegevens blijven beschikbaar onder “Mijn zaak”."],
+    "dem5.plus.tard.note": ["La fiche complète reste accessible dans Réglages, «\u00a0Mon commerce\u00a0».", "Your full details remain available in Settings, under “My business”.", "Uw volledige gegevens blijven beschikbaar in Instellingen, onder “Mijn zaak”."],
     "dem5.wa.etape": ["Dernière étape", "Last step", "Laatste stap"],
     "dem5.wa.titre": ["Votre numéro WhatsApp", "Your WhatsApp number", "Uw WhatsApp-nummer"],
     "dem5.wa.chapo": ["Dernière étape avant de terminer : votre numéro WhatsApp.", "Last step before you finish: your WhatsApp number.", "Laatste stap voor u afrondt: uw WhatsApp-nummer."],
@@ -1400,6 +1402,10 @@
     "cm.validee.msg": ["Réponse validée. Elle sera publiée sous le commentaire.", "Reply approved. It will be published under the comment.", "Antwoord goedgekeurd. Het wordt onder de reactie gepubliceerd."], "cm.ignore.msg": ["Enregistré : aucune réponse ne sera publiée.", "Saved: no reply will be published.", "Opgeslagen: er wordt geen antwoord gepubliceerd."],
     "cm.sur": ["Votre réputation sur les réseaux", "Your reputation on social media", "Uw reputatie op sociale media"],
     "cm.chapo": ["Les commentaires laissés sous vos publications Instagram et Facebook arrivent ici. BoostImpact propose une réponse, vous décidez.", "Comments left under your Instagram and Facebook posts show up here. BoostImpact suggests a reply, you decide.", "De reacties onder uw posts op Instagram en Facebook komen hier terecht. BoostImpact stelt een antwoord voor, u beslist."],
+    "cm.bientot.titre": ["Réponses aux commentaires\u00a0: disponible prochainement", "Comment replies: coming soon", "Antwoorden op reacties: binnenkort beschikbaar"],
+    "cm.bientot.texte": ["Elles sont comprises dans votre offre, sans supplément. Elles démarreront dès que Meta nous aura ouvert l'accès à Instagram et Facebook\u00a0; nous vous préviendrons. D'ici là, rien n'est publié sous vos publications.",
+      "They are included in your plan at no extra cost. They will start as soon as Meta opens access to Instagram and Facebook for us; we'll let you know. Until then, nothing is posted under your posts.",
+      "Ze zijn inbegrepen in uw formule, zonder meerprijs. Ze starten zodra Meta ons toegang geeft tot Instagram en Facebook; we laten het u weten. Tot dan wordt er niets onder uw posts geplaatst."],
     "cm.offre.titre": ["Votre offre ne comprend pas les réponses aux commentaires", "Your plan doesn't include comment replies", "Uw formule omvat geen antwoorden op reacties"],
     "cm.offre.texte": ["Les réponses aux commentaires sont comprises dans les offres {offre:standard} et {offre:premium}. Vous pouvez changer d'offre vous-même, depuis l'écran Offre.",
       "Comment replies are included in the {offre:standard} and {offre:premium} plans. You can change plan yourself, from the Plan screen.", "Antwoorden op reacties zijn inbegrepen in de formules {offre:standard} en {offre:premium}. U kunt zelf van formule veranderen, via het scherm Formule."],
@@ -1410,7 +1416,7 @@
       "Off by default. When on, a simple compliment gets a thank-you without waiting for your approval. Questions and complaints always wait for your approval.", "Uitgeschakeld tot u het inschakelt. Eenmaal ingeschakeld krijgt een gewoon compliment een bedankje zonder op uw akkoord te wachten. Vragen en klachten wachten altijd op uw akkoord."],
     "cm.comment": ["Comment ça marche", "How it works", "Hoe het werkt"],
     "cm.c1": ["BoostImpact classe chaque commentaire : question, compliment, réclamation, spam ou sensible.", "BoostImpact sorts each comment: question, compliment, complaint, spam or sensitive.", "BoostImpact deelt elke reactie in: vraag, compliment, klacht, spam of gevoelig."],
-    "cm.c2": ["Un commentaire sensible (insulte, accusation, santé, question juridique) n'est jamais traité par BoostImpact : vous êtes alerté.", "A sensitive comment (insult, accusation, health, legal matter) is never handled by BoostImpact: you are alerted.", "Een gevoelige reactie (belediging, beschuldiging, gezondheid, juridische kwestie) wordt nooit door BoostImpact behandeld: u krijgt een melding."],
+    "cm.c2": ["Un commentaire sensible (insulte, accusation, santé, question juridique) ne reçoit jamais de réponse automatique\u00a0: vous êtes alerté et vous décidez.", "A sensitive comment (insult, accusation, health, legal matter) never gets an automatic reply: you are alerted and you decide.", "Een gevoelige reactie (belediging, beschuldiging, gezondheid, juridische kwestie) krijgt nooit een automatisch antwoord: u krijgt een melding en u beslist."],
     "cm.c3": ["Les réponses n'utilisent que votre fiche : aucun horaire, prix ni promesse inventés.", "Replies only use your details: no made-up opening hours, prices or promises.", "De antwoorden gebruiken alleen uw gegevens: geen verzonnen openingsuren, prijzen of beloften."],
     "cm.c4": ["Les réponses partiront par la connexion de Meta dès qu'elle sera ouverte à BoostImpact. En attendant, notre équipe publie votre réponse validée à la main, sous votre compte.",
       "Replies will go out through the Meta connection as soon as it is opened to BoostImpact. In the meantime, our team publishes your approved reply by hand, under your account.", "Antwoorden worden via de koppeling met Meta gepubliceerd zodra die voor BoostImpact opengesteld is. Intussen publiceert ons team uw goedgekeurde antwoord met de hand, onder uw account."],
@@ -1565,6 +1571,12 @@
       "Applied", "Toegepast"],
     "con.mq.st.ecarte": ["Écarté",
       "Set aside", "Opzijgelegd"],
+    "con.mq.reference": ["Référence Stripe du mois offert", "Stripe reference of the free month", "Stripe-referentie van de gratis maand"],
+    "con.mq.reference.aide": ["Coupon, avoir ou facture : par exemple promo_1Q… ou cn_1Q…. Elle est gardée comme preuve.", "Coupon, credit note or invoice: for example promo_1Q… or cn_1Q…. It is kept as proof.", "Coupon, creditnota of factuur: bijvoorbeeld promo_1Q… of cn_1Q…. Ze wordt als bewijs bewaard."],
+    "con.mq.reference.manque": ["Notez d'abord la référence Stripe du mois offert (coupon, avoir ou facture).", "First enter the Stripe reference of the free month (coupon, credit note or invoice).", "Noteer eerst de Stripe-referentie van de gratis maand (coupon, creditnota of factuur)."],
+    "con.mq.reference.lue": ["Référence Stripe\u00a0: {r}", "Stripe reference: {r}", "Stripe-referentie: {r}"],
+    "con.delais.acces.borne": ["Au plus 7 jours en arrière. Une date plus ancienne, ou une date déjà posée que vous déplacez, demande un motif écrit.", "At most 7 days back. An older date, or moving a date already set, needs a written reason.", "Hoogstens 7 dagen terug. Een oudere datum, of een al ingevulde datum verplaatsen, vraagt een geschreven reden."],
+    "con.delais.motif.lib": ["Motif (si la date a plus de 7 jours ou si vous la déplacez)", "Reason (if the date is over 7 days old or you move it)", "Reden (als de datum ouder is dan 7 dagen of u ze verplaatst)"],
     "con.mq.appliquer": ["Mois offert appliqué dans Stripe",
       "Free month applied in Stripe", "Gratis maand toegepast in Stripe"],
     // Un seul mois offert par client et par mois (CGV article 10), correctif du 29/10/2026.
@@ -2448,7 +2460,7 @@
     "rep.refusee.msg": ["Réponse écartée : rien n'est publié.", "Reply rejected: nothing is published.", "Antwoord afgewezen: er wordt niets gepubliceerd."],
     "dec.valide.prevu": ["Validée : prévue {quand}.", "Approved: scheduled for {quand}.", "Goedgekeurd: gepland op {quand}."],
     "dec.valide": ["Validée.", "Approved.", "Goedgekeurd."],
-    "dec.modif.envoyee": ["Demande envoyée à {qui} : nouvelle version sous 24\u00a0h, nous vous prévenons.", "Request sent to {qui}: new version within 24\u00a0hours, we'll let you know.", "Aanvraag verstuurd naar {qui}: nieuwe versie binnen 24\u00a0uur, wij laten het u weten."],
+    "dec.modif.envoyee": ["Demande envoyée à {qui}. Nous vous prévenons dès que la nouvelle version est prête.", "Request sent to {qui}. We'll let you know as soon as the new version is ready.", "Aanvraag verstuurd naar {qui}. Wij laten het u weten zodra de nieuwe versie klaar is."],
     "contact.equipe.min": ["l'équipe BoostImpact", "the BoostImpact team", "het BoostImpact-team"],
     "dec.refuse.msg": ["Publication refusée : elle ne sera pas publiée.", "Content rejected: it won't be published.", "Post geweigerd: hij wordt niet gepubliceerd."],
     "con.pays.lib": ["Pays du commerce", "Business country", "Land van de zaak"], "con.pays.FR": ["France", "France", "Frankrijk"], "con.pays.BE": ["Belgique", "Belgium", "België"],
@@ -2684,11 +2696,17 @@
     "photos.occasion.aide.pub": ["Devient l'accroche de la publication et le fil du texte. Aucune date, aucun prix ni horaire n'est ajouté s'il n'est pas écrit ici ou sur votre fiche.", "Becomes the post's hook and the thread of the text. No date, price or opening time is added unless written here or on your profile.", "Wordt de blikvanger van de post en de rode draad van de tekst. Er wordt geen datum, prijs of openingsuur toegevoegd als het hier of op uw vermelding niet staat."],
     "photos.occasion.aide": ["Devient l'accroche de la vidéo et le fil du texte. Aucune date, aucun prix ni horaire n'est ajouté s'il n'est pas écrit ici ou sur votre fiche.", "Becomes the video's hook and the thread of the text. No date, price or opening time is added unless written here or on your profile.", "Wordt de blikvanger van de video en de rode draad van de tekst. Er wordt geen datum, prijs of uur toegevoegd als die niet hier of op uw profiel staat."],
     "photos.occasion.tel": ["L'occasion ou le message : retirez le numéro de téléphone. Le numéro de votre fiche est déjà ajouté là où il faut.", "The occasion or the message: remove the phone number. Your profile's number is already added where needed.", "De gelegenheid of de boodschap: verwijder het telefoonnummer. Het nummer van uw profiel wordt al toegevoegd waar nodig."],
-    "photos.consigne": ["Prenez la photo avec l'appareil photo de votre téléphone et déposez-la directement ici : pas de capture d'écran, pas de photo reçue par WhatsApp (elle est compressée et devient floue en vidéo). Lumière du jour, plat bien en vue, personne sur la photo.", "Take the photo with your phone's camera and upload it straight here: no screenshots, no photo received on WhatsApp (it is compressed and turns blurry in video). Daylight, the dish clearly in view, nobody in the photo.", "Neem de foto met de camera van uw telefoon en upload ze rechtstreeks hier: geen schermafbeelding, geen foto ontvangen via WhatsApp (die is gecomprimeerd en wordt wazig in video). Daglicht, het gerecht goed in beeld, niemand op de foto."],
+    "photos.consigne": ["Prenez la photo avec l'appareil photo de votre téléphone et déposez-la directement ici : pas de capture d'écran ; une photo passée par WhatsApp est compressée et devient floue en vidéo, prenez l'originale quand vous l'avez. Lumière du jour, plat bien en vue, personne sur la photo.", "Take the photo with your phone's camera and upload it straight here: no screenshots; a photo sent through WhatsApp is compressed and turns blurry in video, use the original when you have it. Daylight, the dish clearly in view, nobody in the photo.", "Neem de foto met de camera van uw telefoon en upload ze rechtstreeks hier: geen schermafbeelding; een foto via WhatsApp is gecomprimeerd en wordt wazig in video, neem het origineel als u het hebt. Daglicht, het gerecht goed in beeld, niemand op de foto."],
     // Lot 3 (15/11/2026, décision du fondateur : les photos reçues par WhatsApp restent refusées) : la marche à suivre sur téléphone, l'espace
     // étant installable comme une application (écran Photos, bouton « Choisir dans la galerie », photos.galerie), et la règle des photos.
-    "photos.consigne.pub": ["Prenez la photo avec l'appareil photo de votre téléphone et déposez-la directement ici : pas de capture d'écran, pas de photo reçue par WhatsApp (elle est compressée et devient floue). Lumière du jour, plat bien en vue, personne sur la photo.", "Take the photo with your phone's camera and upload it straight here: no screenshots, no photo received on WhatsApp (it is compressed and turns blurry). Daylight, the dish clearly in view, nobody in the photo.", "Neem de foto met de camera van uw telefoon en upload ze rechtstreeks hier: geen schermafbeelding, geen foto ontvangen via WhatsApp (die is gecomprimeerd en wordt wazig). Daglicht, het gerecht goed in beeld, niemand op de foto."],
+    "photos.consigne.pub": ["Prenez la photo avec l'appareil photo de votre téléphone et déposez-la directement ici : pas de capture d'écran ; une photo passée par WhatsApp est compressée et devient floue, prenez l'originale quand vous l'avez. Lumière du jour, plat bien en vue, personne sur la photo.", "Take the photo with your phone's camera and upload it straight here: no screenshots; a photo sent through WhatsApp is compressed and turns blurry, use the original when you have it. Daylight, the dish clearly in view, nobody in the photo.", "Neem de foto met de camera van uw telefoon en upload ze rechtstreeks hier: geen schermafbeelding; een foto via WhatsApp is gecomprimeerd en wordt wazig, neem het origineel als u het hebt. Daglicht, het gerecht goed in beeld, niemand op de foto."],
     "photos.consigne.tel": ["Sur votre téléphone : touchez Photos, puis «\u00a0Choisir dans la galerie\u00a0».", "On your phone: tap Photos, then “Choose from gallery”.", "Op uw telefoon: tik op Foto's, dan op “Kiezen uit de galerij”."],
+    // Lot 4 B (Karim, 15/11/2026) : « Prendre une photo » d'abord, puis UNE ligne de consigne selon le métier ; le reste replié sous « Conseils ».
+    // Photo reçue sur WhatsApp (serveurs qui envoient sur le groupe) : enregistrée dans la galerie, puis « Choisir dans la galerie ».
+    "photos.ligne": ["Lumière du jour, plat bien en vue, personne sur la photo.", "Daylight, the dish clearly in view, nobody in the photo.", "Daglicht, het gerecht goed in beeld, niemand op de foto."],
+    "photos.ligne.autre": ["Lumière du jour, sujet bien en vue, personne sur la photo.", "Daylight, the subject clearly in view, nobody in the photo.", "Daglicht, het onderwerp goed in beeld, niemand op de foto."],
+    "photos.whatsapp": ["Une photo reçue sur WhatsApp\u00a0? Enregistrez-la dans votre galerie, puis «\u00a0Choisir dans la galerie\u00a0».", "A photo received on WhatsApp? Save it to your gallery, then “Choose from gallery”.", "Een foto ontvangen via WhatsApp? Bewaar ze in uw galerij, dan “Kiezen uit de galerij”."],
+    "photos.conseils": ["Conseils", "Tips", "Tips"],
     "photos.regle": ["Une photo suffit pour démarrer, l'idéal c'est cinq.", "One photo is enough to start, five is ideal.", "Eén foto volstaat om te starten, vijf is ideaal."],
     "photos.precision.aide": ["Repris tel quel dans le texte de la publication, pour les photos de cet envoi. Sans prix écrit ici, aucun prix n'est cité.", "Used word for word in the post text, for the photos in this upload. Without a price here, no price is mentioned.", "Woordelijk overgenomen in de tekst van de post, voor de foto's van deze upload. Zonder prijs hier wordt geen prijs vermeld."],
     // Quota du mois au choix des photos (01/11/2026, tour 7 Croissance).
@@ -2721,7 +2739,7 @@
     "offre.ht.mois.mensuel": ["HT par mois, paiement mensuel", "excl. VAT a month, paid monthly", "excl. btw per maand, maandelijks betaald"],
     "offre.votre.rythme.mensuel": ["C'est ce que vous payez : paiement mensuel.", "This is what you pay: monthly payment.", "Dit betaalt u: maandelijkse betaling."],
     "offre.votre.rythme.annuel": ["C'est ce que vous payez : paiement annuel.", "This is what you pay: annual payment.", "Dit betaalt u: jaarlijkse betaling."],
-    "offre.dessus.ligne": [v => `L'offre au-dessus : ${v.nom}, ${v.n} contenus par mois, ${v.prix} HT par mois`, v => `The plan above: ${v.nom}, ${v.n} posts a month, ${v.prix} excl. VAT a month`, v => `De formule erboven: ${v.nom}, ${v.n} posts per maand, ${v.prix} excl. btw per maand`],
+    "offre.dessus.ligne": [v => `L'offre au-dessus\u00a0: ${v.nom}, ${v.n} publications par mois, ${v.prix} HT par mois`, v => `The plan above: ${v.nom}, ${v.n} posts a month, ${v.prix} excl. VAT a month`, v => `De formule erboven: ${v.nom}, ${v.n} posts per maand, ${v.prix} excl. btw per maand`],
     "abo.sans.lien": ["Pour arrêter ou recevoir vos factures : info@boostimpact.agency", "To stop or get your invoices: info@boostimpact.agency", "Om te stoppen of uw facturen te ontvangen: info@boostimpact.agency"],
     "res.reseaux.titre": ["Vos réseaux ce mois-ci", "Your networks this month", "Uw netwerken deze maand"], "res.reseaux.titre.google": ["Votre fiche Google ce mois-ci", "Your Google profile this month", "Uw Google-profiel deze maand"],
     "res.reseaux.etat": ["État", "Status", "Status"], "res.reseaux.non.connecte": ["Non connecté", "Not connected", "Niet gekoppeld"], "res.reseaux.non.connectee": ["Non connectée", "Not connected", "Niet gekoppeld"],   // v36 (tour 10)
@@ -2759,6 +2777,8 @@
     "con.file.version.relance": ["En retard : version reçue {d}, sans reprise depuis 48\u00a0h", "Overdue: side received {d}, not reworked for 48\u00a0h", "Te laat: versie ontvangen op {d}, sinds 48\u00a0u niet herwerkt"],   // 01/11/2026, tour 6 Premium
     "avis.retenir": ["Attendez mon appel", "Wait for my call", "Wacht op mijn telefoontje"],
     "avis.retenir.aide": ["Vous préférez en parler d'abord ? Nous vous appelons avant de publier.", "Prefer to talk first? We'll call you before publishing.", "Liever eerst praten? Wij bellen u voordat we publiceren."],
+    "avis.st.attente.appel": ["En attente de notre appel", "Waiting for our call", "Wacht op ons telefoontje"],
+    "avis.retenue.delai": ["En attente de notre appel\u00a0: le délai de 24\u00a0h est suspendu jusqu'à l'appel, puis repart pour 24\u00a0h.", "Waiting for our call: the 24-hour deadline is paused until the call, then restarts for 24\u00a0hours.", "Wacht op ons telefoontje: de termijn van 24\u00a0uur staat stil tot het gesprek en loopt daarna opnieuw 24\u00a0uur."],
     "avis.retenue.fait": ["Nous ne publions rien avant votre appel.", "We won't publish anything before your call.", "Wij publiceren niets vóór uw telefoongesprek."],
     "avis.rappel.titre": ["Où et quand vous appeler ?", "Where and when should we call you?", "Waar en wanneer mogen we u bellen?"],   // 01/11/2026, tour 6 Premium
     "avis.rappel.tel": ["Votre numéro", "Your number", "Uw nummer"], "avis.rappel.quand": ["Quand", "When", "Wanneer"],
@@ -2783,6 +2803,9 @@
     // 02/11/2026 : le bouton ouvre la page Calendly de l'équipe (AGENDA_POINT_MOIS d'app.js) ; WhatsApp en repli, dans la note. Jours, heures et outil de
     // visio réglés dans Calendly : la note n'en dit rien (non vérifiés depuis le dépôt).
     "point.mois.reserver": ["Réserver mon point du mois (30\u00a0min)", "Book my monthly call (30\u00a0min)", "Mijn maandelijks gesprek boeken (30\u00a0min)"],
+    "point.mois.note.court": ["Choisissez un créneau de 30\u00a0min dans l'agenda de l'équipe BoostImpact, ou {wa}.", "Choose a 30-minute slot in the BoostImpact team's calendar, or {wa}.", "Kies een tijdslot van 30\u00a0min in de agenda van het BoostImpact-team, of {wa}."],
+    "point.mois.wa": ["écrivez-nous sur WhatsApp", "message us on WhatsApp", "stuur ons een bericht op WhatsApp"],
+    "acc.plus": ["Votre mois en détail", "Your month in detail", "Uw maand in detail"],
     "point.mois.note": ["Choisissez un créneau de 30\u00a0min dans l'agenda de l'équipe BoostImpact. Ou écrivez-nous sur WhatsApp : {wa}.",
       "Choose a 30-minute slot in the BoostImpact team's calendar. Or message us on WhatsApp: {wa}.",
       "Kies een tijdslot van 30\u00a0min in de agenda van het BoostImpact-team. Of stuur ons een bericht op WhatsApp: {wa}."],
@@ -2829,6 +2852,11 @@
     "con.nv.pays": ["Pays du commerce", "Business country", "Land van de zaak"], "con.nv.pays.choisir": ["Choisir", "Choose", "Kiezen"],
     "con.nv.pays.FR": ["France", "France", "Frankrijk"], "con.nv.pays.BE": ["Belgique", "Belgium", "België"],
     "con.nv.pays.alerte": ["{v} est une ville belge : vérifiez le pays (Belgique ?).", "{v} is a Belgian city: check the country (Belgium?).", "{v} is een Belgische stad: controleer het land (België?)."],
+    "con.pa.avis.appel": [v => v.n > 1 ? `${v.n} avis attendent votre appel avant toute publication (« Attendez mon appel ») : appelez, puis « Appel fait ».` : "Le commerçant attend votre appel avant toute publication («\u00a0Attendez mon appel\u00a0») : appelez-le, puis «\u00a0Appel fait\u00a0».",
+      v => v.n > 1 ? `${v.n} reviews are on hold for your call (“Wait for my call”): call, then “Call done”.` : "The business owner is waiting for your call before anything is published (“Wait for my call”): call, then “Call done”.",
+      v => v.n > 1 ? `${v.n} reviews wachten op uw telefoontje (“Wacht op mijn telefoontje”): bel, daarna “Gebeld”.` : "De ondernemer wacht op uw telefoontje voordat er iets gepubliceerd wordt (“Wacht op mijn telefoontje”): bel, daarna “Gebeld”."],
+    "con.file.attente.appel": ["En attente de l'appel", "Waiting for the call", "Wacht op het telefoontje"],
+    "con.file.liberee.le": ["Appel fait le {d} : le délai repart, réponse à publier avant le {e}.", "Call made on {d}: the deadline restarts, publish the reply by {e}.", "Gebeld op {d}: de termijn loopt opnieuw, antwoord publiceren vóór {e}."],
     "con.file.retenue": ["Le commerçant attend votre appel (demandé le {d}).", "The business owner is waiting for your call (asked on {d}).", "De ondernemer wacht op uw telefoontje (gevraagd op {d})."],
     "con.file.retenue.tel": ["Numéro : {tel}", "Number: {tel}", "Nummer: {tel}"],
     "con.file.retenue.jour": ["À rappeler {d}, entre 9 h et 18 h", "Call back {d}, between 9 am and 6 pm", "Terugbellen op {d}, tussen 9 en 18\u00a0uur"],   // 01/11/2026, tour 6 Premium
@@ -3118,6 +3146,7 @@
     "con.dos.google.fait": ["Fiche reçue et reliée.", "Profile received and linked.", "Profiel ontvangen en gekoppeld."],
     "con.dos.google.client": ["Le client doit inviter team@boostimpact.agency en Administrateur : faites-le avec lui, en direct, pendant l'appel.", "The client must invite team@boostimpact.agency as Manager: do it with them, live, during the call.", "De klant moet team@boostimpact.agency uitnodigen als beheerder: doe het samen, live, tijdens het gesprek."],
     "con.dos.google.robot": ["Le client a invité team@ : l'automatisme relie la fiche seul (toutes les 30 min).", "The client invited team@: the automation links the profile by itself (every 30 minutes).", "De klant heeft team@ uitgenodigd: de automatisering koppelt het profiel vanzelf (elke 30 minuten)."],
+    "con.dos.google.sansfiche": ["Accès noté, mais aucune fiche Google reliée : collez l'identifiant de la fiche (place_id) dans Comptes, sinon ni avis relevés ni réponses.", "Access noted, but no Google profile linked: paste the profile ID (place_id) in Accounts, otherwise no reviews are read and no replies go out.", "Toegang genoteerd, maar geen Google-profiel gekoppeld: plak de profiel-ID (place_id) in Accounts, anders worden er geen reviews gelezen en geen antwoorden geplaatst."],
     "con.dos.google.vous": ["L'automatisme ne peut pas relier la fiche seul : lisez l'étape Accès à la fiche Google.", "The automation cannot link the profile by itself: read the Access to the Google profile step.", "De automatisering kan het profiel niet zelf koppelen: lees de stap Toegang tot het Google-profiel."],
     "con.dos.autorisation.fait": ["Accord donné le {d}.", "Consent given on {d}.", "Akkoord gegeven op {d}."],
     "con.dos.autorisation.client": ["Demandez son accord écrit par WhatsApp (il répond « j'accepte »), puis enregistrez-le ici.", "Ask for their written consent by WhatsApp (they reply “I accept”), then save it here.", "Vraag zijn schriftelijk akkoord via WhatsApp (hij antwoordt “ik ga akkoord”) en sla het hier op."],
@@ -3320,6 +3349,15 @@
     "con.jk.par": ["Par", "By", "Door"], "con.jk.note": ["Note", "Note", "Notitie"], "con.jk.etape": ["Étape", "Step", "Stap"], "con.jk.fait": ["Fait", "Done", "Gedaan"],
     "con.jk.reseau": ["Réseau", "Network", "Netwerk"], "con.jk.reseaux": ["Réseaux", "Networks", "Netwerken"], "con.jk.type": ["Type", "Type", "Type"], "con.jk.format": ["Format", "Format", "Formaat"],
     "con.jk.rattachee": ["Rattachée par l'équipe", "Attached by the team", "Gekoppeld door het team"], "con.jk.nombre": ["Nombre", "Number", "Aantal"], "con.jk.validees": ["Validées", "Approved", "Goedgekeurd"],
+    "con.jc.recu": ["Reçu", "Received", "Ontvangen"], "con.jc.echeance": ["Échéance", "Due", "Termijn"], "con.jc.fait": ["Fait", "Done", "Gedaan"], "con.jc.tenu": ["Tenu", "Kept", "Gehaald"],
+    "con.jk.validee_par": ["Validée par", "Approved by", "Goedgekeurd door"], "con.jk.resume": ["Résumé", "Summary", "Samenvatting"], "con.jk.legendes_ecartees": ["Légendes écartées", "Captions set aside", "Bijschriften afgewezen"],
+    "con.jk.marque_version": ["Version du style", "Style version", "Stijlversie"], "con.jk.depuis": ["Depuis", "From", "Vanuit"], "con.jk.accord_client": ["Accord du client", "Client's approval", "Akkoord van de klant"],
+    "con.jk.accord_espace_le": ["Accord dans l'espace le", "Approved in the space on", "Akkoord in de ruimte op"], "con.jk.retenue_le": ["Retenue le", "Held on", "Vastgehouden op"], "con.jk.liberee_le": ["Appel fait le", "Call made on", "Gebeld op"],
+    "con.jk.dans_les_24h": ["Dans les 24\u00a0h", "Within 24\u00a0hours", "Binnen 24\u00a0uur"], "con.jk.sensible": ["Sensible", "Sensitive", "Gevoelig"], "con.jk.motif": ["Motif", "Reason", "Reden"], "con.jk.reference": ["Référence", "Reference", "Referentie"],
+    "con.jv.mise_en_route": ["mise en route", "set-up", "opstart"], "con.jv.renomia": ["notre équipe", "our team", "ons team"], "con.jv.console": ["la console", "the console", "de console"], "con.jv.escalade": ["file de l'équipe", "team queue", "teamwachtrij"],
+    "con.jv.humain": ["avis sensible", "sensitive review", "gevoelige review"], "con.jv.equipe": ["notre équipe", "our team", "ons team"], "con.jv.client": ["le client", "the client", "de klant"], "con.jv.espace": ["l'espace", "the space", "de ruimte"],
+    "con.jv.avis_24h": ["réponse d'avis sous 24\u00a0h", "review reply within 24\u00a0hours", "antwoord op review binnen 24\u00a0uur"], "con.jv.fiche_7j": ["fiche optimisée sous 7 jours", "profile optimised within 7 days", "profiel geoptimaliseerd binnen 7 dagen"],
+    "con.jv.premier_contenu_72h": ["premier contenu sous 72\u00a0h", "first post within 72\u00a0hours", "eerste post binnen 72\u00a0uur"],
     "con.jk.workflow": ["Automatisation", "Automation", "Automatisering"], "con.jk.noeud": ["Étape", "Step", "Stap"], "con.jk.message": ["Message", "Message", "Bericht"], "con.jk.avant": ["Avant", "Before", "Voor"],
     "con.fiche.maintenant": ["À faire maintenant", "To do now", "Nu te doen"], "con.fiche.reste": ["Tout le reste, par section", "Everything else, by section", "Al de rest, per onderdeel"],
     "con.fiche.autres": ["Autres éléments", "Other items", "Andere elementen"],
@@ -3848,7 +3886,7 @@
     "geste commercial": ["goodwill gesture", "commercieel gebaar"], "promesse": ["promise", "belofte"], "mention de rédaction automatique": ["mentions automated writing", "vermelding van automatisch schrijven"],
     // Console : santé, alertes
     "rien déposé ni validé depuis 14 jours": ["nothing uploaded or approved for 14 days", "niets opgeladen of goedgekeurd sinds 14 dagen"], "en pause": ["paused", "gepauzeerd"], "aucune photo depuis 10 jours": ["no photos for 10 days", "geen foto's sinds 10 dagen"],
-    "plafond de publications atteint ce mois-ci": ["post limit reached this month", "plafond voor posts deze maand bereikt"], "Erreur de workflow": ["Workflow error", "Workflowfout"],
+    "plafond de publications atteint ce mois-ci": ["post limit reached this month", "plafond voor posts deze maand bereikt"], "Automatisation arrêtée": ["Automation stopped", "Automatisering gestopt"], "Erreur de workflow": ["Workflow error", "Workflowfout"],
     "Mise en route bloquée": ["Setup stuck", "Opstart vastgelopen"], "Relance de prospect en échec": ["Prospect follow-up failed", "Opvolgbericht aan prospect mislukt"], "Avis sensible bientôt effacé (30 jours)": ["Sensitive review soon deleted (30 days)", "Gevoelige review binnenkort gewist (30 dagen)"],
     "Commentaire sensible bientôt effacé (30 jours)": ["Sensitive comment soon deleted (30 days)", "Gevoelige reactie binnenkort gewist (30 dagen)"], "Avis sensible": ["Sensitive review", "Gevoelige review"], "Commentaire sensible": ["Sensitive comment", "Gevoelige reactie"],
     "Publication en échec": ["Post failed", "Publicatie mislukt"], "adresse inconnue": ["unknown address", "onbekend adres"],
@@ -3888,7 +3926,7 @@
     // Total d'étapes du commerce (26/10/2026) : 3 en Essentiel, 4 sinon (sante_de, schema.sql ; santeDemo, donnees.js).
     [/^mise en route pas finie après (\d+) jours \((\d) sur (\d)\)$/, (m, j, f, n) => `setup not finished after ${j} days (${f} of ${n})`, (m, j, f, n) => `opstart niet afgerond na ${j} dagen (${f} van ${n})`],
     [/^mise en route en cours \((\d) sur (\d)\)$/, (m, f, n) => `setup in progress (${f} of ${n})`, (m, f, n) => `opstart bezig (${f} van ${n})`],
-    [/^(\d+) (?:éléments attendent|élément attend) une validation depuis plus de 48 h$/, (m, n) => `${n} ${n === "1" ? "item has" : "items have"} been waiting for approval for over 48\u00a0h`, (m, n) => `${n} ${n === "1" ? "item wacht" : "items wachten"} al meer dan 48\u00a0uur op goedkeuring`],
+    [/^(\d+) (?:éléments attendent|élément attend) une validation depuis plus de 48 h$/, (m, n) => `${n} ${n === "1" ? "post has" : "posts have"} been waiting for the client's approval for over 48\u00a0h`, (m, n) => `${n} ${n === "1" ? "item wacht" : "items wachten"} al meer dan 48\u00a0uur op goedkeuring`],
     [/^(\d+) réseaux? en erreur$/, (m, n) => `${n} ${n === "1" ? "network" : "networks"} in error`, (m, n) => `${n} ${n === "1" ? "netwerk" : "netwerken"} met een fout`],
     [/^(\d+) (?:commentaires sensibles attendent|commentaire sensible attend) le commerçant depuis plus de 48 h$/, (m, n) => `${n} sensitive ${n === "1" ? "comment has" : "comments have"} been waiting for the business for over 48\u00a0h`, (m, n) => `${n} ${n === "1" ? "gevoelige reactie wacht" : "gevoelige reacties wachten"} al meer dan 48\u00a0uur op de handelaar`],
     [/^(\d+) jours après la création, il reste : (.*)\.$/, (m, j, l) => `${j} days after creation, still to do: ${l.split(", ").map(x => phrase(x)).join(", ")}.`, (m, j, l) => `${j} dagen na de aanmaak nog te doen: ${l.split(", ").map(x => phrase(x)).join(", ")}.`],
@@ -3920,8 +3958,11 @@
     [/^Abonnement (\S*) : arrêter les publications en fin de période, retirer les accès sous 7 jours ouvrés\.( \(mode test\))?$/, (m, s, x) => `Subscription ${s}: stop posting at the end of the period, remove access within 7 business days.${x ? " (test mode)" : ""}`, (m, s, x) => `Abonnement ${s}: stop met publiceren aan het einde van de periode, trek de toegangen binnen 7 werkdagen in.${x ? " (testmodus)" : ""}`],
   ];
   // P[phrase] = [anglais, néerlandais] ; PR = [motif, fonction anglaise, fonction néerlandaise].
+  // Lot 4 B (relecture du 15/11/2026) : phrases de la base reformulées aussi en français, sans toucher la fonction SQL qui les écrit (sante_de).
+  const FR_REECRIT = [[/^(\d+) (?:éléments attendent|élément attend) une validation depuis plus de 48 h$/, (m, n) => n === "1" ? "1 publication attend l'accord du client depuis plus de 48\u00a0h" : `${n} publications attendent l'accord du client depuis plus de 48\u00a0h`]];
   function phrase(x, l) {
-    if (lg(l) === "fr" || x == null) return x;
+    if (x == null) return x;
+    if (lg(l) === "fr") { const s = String(x); for (const [r, f] of FR_REECRIT) { const m = s.match(r); if (m) return f(...m); } return x; }
     const s = String(x), i = RANG[lg(l)] - 1; if (P[s]) return P[s][i] == null ? P[s][0] : P[s][i];
     for (const e of PR) { const m = s.match(e[0]); if (m) return (e[1 + i] || e[1])(...m); }
     return s;
@@ -4029,4 +4070,10 @@
     set surChoix(f) { surChoix = typeof f === "function" ? f : null; },
   };
   appliquer();
+  // Lot 4 B (James, 15/11/2026) : le bandeau de l'aperçu public (outils/apercu_public.py, écrit en français d'après <html lang="fr">) suit la langue
+  // du visiteur sur TOUTES les pages de l'espace (valider, avis, resultat, desinscription, et l'espace lui-même) : i18n.js est chargé partout.
+  bandeauDemo();
+  function bandeauDemo() {
+    try { const b = document.body && document.body.firstElementChild; if (b && langue !== "fr" && /^Aperçu de démonstration/.test((b.textContent || "").trim())) b.textContent = t("demo.apercu"); } catch (er) {}
+  }
 })();

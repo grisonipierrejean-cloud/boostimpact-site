@@ -268,19 +268,30 @@
   const PHOTOS_RECO = 5, PHOTOS_DEMARRAGE = 1, H48 = 48 * 3600000;
   const photosUtilisables = l => Array.isArray(l) ? l.filter(p => p.statut !== "refusee" || p.refus_motif === "plafond").length : null;
   const photosRefusees = l => Array.isArray(l) ? l.filter(p => p.statut === "refusee" && p.refus_motif !== "plafond" && p.refus_motif !== "logo").length : 0;   // v52 : un logo reconnu n'est pas un refus (comme app.js)
+  // Lot 4 B (revue exploitant : « des plats » proposé à une salle de sport) : les 5 photos conseillées suivent le métier du client.
+  const SUJETS_PHOTOS = { restaurant: ["la façade, la salle, des plats", "the front, the dining room, dishes", "de gevel, de zaal, gerechten"],
+    sport: ["l'entrée, la salle, les équipements", "the entrance, the gym floor, the equipment", "de ingang, de zaal, de toestellen"],
+    beaute: ["la devanture, le salon, une réalisation", "the front, the salon, a finished look", "de gevel, het salon, een realisatie"],
+    autre: ["la devanture, l'intérieur, vos produits ou services", "the front, the inside, your products or services", "de gevel, het interieur, uw producten of diensten"] };
+  const parMetier = (x, metier) => { const r = SUJETS_PHOTOS.restaurant, m = SUJETS_PHOTOS[metier] || SUJETS_PHOTOS.autre; if (m === r) return x;
+    let y = String(x); r.forEach((a, i) => { y = y.split(a).join(m[i]); }); return y.replace("la façade, la salle et des plats", m[0].replace(/, ([^,]+)$/, " et $1")).replace("the front, the dining room and dishes", m[1].replace(/, ([^,]+)$/, " and $1")); };
   function lignesDossier(c, phs) {
     const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {}, l = [];
     const gg = pts.google, r = robotGoogle();
     // Lot 3 : mêmes lignes que la carte de l'espace (window.RENOM_ETAPES.etapes) : le compte ouvert en tête, chaque point de la base une fois.
     if (pts.compte) l.push({ k: "compte", st: pts.compte.etat === "fait" ? "fait" : "client", x: t(pts.compte.etat === "fait" ? "con.dos.compte.fait" : "con.dos.compte.client"), cible: "client-comptes", manque: null });
-    if (gg) { const st = gg.etat === "fait" ? "fait" : r.muet || alertesGoogle(c).propres.length || (gg.etat === "declare" && sansIdGoogle(c)) ? "vous" : gg.etat === "declare" ? "robot" : "client";
+    // Lot 4 B (revue design : « Accès Google : Fait » dans le dossier, « aucune fiche Google » au cockpit) : point fait mais aucun identifiant de
+    // fiche reconnu (même règle que le cockpit) : la ligne le dit, « à vous », au lieu de « Fait ».
+    const ficheReconnue = /^[A-Za-z0-9_-]{10,255}$/.test(c.google_place_id || "");
+    if (gg && gg.etat === "fait" && !ficheReconnue) l.push({ k: "google", st: "vous", x: t("con.dos.google.sansfiche"), cible: "mer-pt-google", manque: "google" });
+    else if (gg) { const st = gg.etat === "fait" ? "fait" : r.muet || alertesGoogle(c).propres.length || (gg.etat === "declare" && sansIdGoogle(c)) ? "vous" : gg.etat === "declare" ? "robot" : "client";
       l.push({ k: "google", st, x: t("con.dos.google." + st), cible: "mer-pt-google", manque: st !== "fait" && st !== "robot" ? "google" : null }); }
     l.push(c.photos_autorisees_le ? { k: "autorisation", st: "fait", x: t("con.dos.autorisation.fait", { d: I.date(c.photos_autorisees_le) }), cible: "client-photos-ligne" }
       : { k: "autorisation", st: "client", x: t("con.dos.autorisation.client"), cible: "client-photos-ligne", manque: "autorisation" });
     const n = photosUtilisables(phs), nref = photosRefusees(phs);
-    l.push(n == null ? { k: "photos", st: "client", x: t("con.dos.photos.inconnu"), n: "?", cible: "client-photos-ligne" }   // v52 : « Voir » mène au bloc Photos
-      : n >= PHOTOS_DEMARRAGE ? { k: "photos", st: "fait", x: t("con.dos.photos.fait", { n }), n, cible: "client-photos" }
-      : { k: "photos", st: "client", x: nref ? t("con.dos.photos.refusees", { f: nref }) : t("con.dos.photos.client"), n, cible: phs.length ? "client-photos" : "client-photos-ligne", manque: "photos", refuses: nref });
+    l.push(n == null ? { k: "photos", st: "client", x: parMetier(t("con.dos.photos.inconnu"), c.metier), n: "?", cible: "client-photos-ligne" }   // v52 : « Voir » mène au bloc Photos
+      : n >= PHOTOS_DEMARRAGE ? { k: "photos", st: "fait", x: parMetier(t("con.dos.photos.fait", { n }), c.metier), n, cible: "client-photos" }
+      : { k: "photos", st: "client", x: parMetier(nref ? t("con.dos.photos.refusees", { f: nref }) : t("con.dos.photos.client"), c.metier), n, cible: phs.length ? "client-photos" : "client-photos-ligne", manque: "photos", refuses: nref });
     l.push(waActif(c) ? { k: "whatsapp", st: "fait", x: t("con.dos.wa.fait", { n: e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero) }), cible: "wa-client-num" }
       : { k: "whatsapp", st: "vous", x: t("con.dos.wa.vous"), cible: "wa-client-num", manque: "whatsapp" });
     const nr = nbReponses(c), qFait = pts.demarrage ? pts.demarrage.etat === "fait" : nr >= NB_Q;
@@ -448,7 +459,7 @@
         ${x.etape === "livraison" && !x.elements_recus_le ? `<div class="f"><label for="opt-d-${i}">${t("con.opt.elements.lib")}</label><input id="opt-d-${i}" type="date" data-opt-date required max="${jourParis(Date.now())}"></div>` : ""}
         ${x.etape === "livraison" && x.option === "visibilite_ia" ? `<p class="note" data-opt-via>${t("con.opt.via.dossier")}${x.commerce_id ? ` <a href="#/client/${encodeURIComponent(x.commerce_id)}">${t("con.opt.via.ouvrir")}</a>` : ""}</p>` : ""}
         <div class="actions">${x.etape === "second_test" ? `<button type="button" class="bouton petit" data-opt-second>${t("con.opt.second")}</button>`
-          : `${!x.commerce_id ? `<button type="button" class="bouton second petit" data-opt-rattacher>${t("con.opt.rattacher")}</button>` : ""}${!x.elements_recus_le ? `<button type="button" class="bouton petit" data-opt-elements>${t("con.opt.elements.bouton")}</button>` : ""}${x.commerce_id && x.option !== "visibilite_ia" ? `<button type="button" class="bouton${x.elements_recus_le ? "" : " second"} petit" data-opt-livree>${t("con.opt.livree")}</button>` : ""}`}</div><p class="msg-local" data-opt-msg role="status" hidden></p></article>`; };
+          : `${!x.commerce_id ? `<button type="button" class="bouton second petit" data-opt-rattacher>${t("con.opt.rattacher")}</button>` : ""}${!x.elements_recus_le ? `<button type="button" class="bouton petit" data-opt-elements>${t("con.opt.elements.bouton")}</button>` : ""}${x.commerce_id && x.option !== "visibilite_ia" && x.elements_recus_le ? `<button type="button" class="bouton petit" data-opt-livree>${t("con.opt.livree")}</button>` : ""}`}</div><p class="msg-local" data-opt-msg role="status" hidden></p></article>`; };
 
   // ---------------- Prospects (audit gratuit de la page de vente) : relances J+2, J+5, J+10 envoyées par le service du jour
   const ECHEANCES = [2, 5, 10], JOUR = 86400000;
@@ -592,17 +603,19 @@
   // proposée au commerçant ne suffit pas) ; « Traité : réponse publiée » ; « Ouvrir l'avis » (fiche du client) et « Voir sur Google » (lien de
   // l'avis ou de la fiche, si connu). Mode équipe : l'avis reste dans la file jusqu'à la publication, même s'il a été « traité » plus tôt.
   // Version du commerçant reçue (01/11/2026) : échéance suspendue, « Version reçue, à reprendre », jamais en retard.
-  const retardAvis = a => a.suspendue ? false : a.sensible || a.mode === "equipe" ? Date.now() > Date.parse(a.echeance) : !!a.en_retard;
+  // « Attendez mon appel » (15/11/2026, CGV art. 9 et 10) : pendant la retenue, jamais en retard (« En attente de l'appel ») ; après l'appel,
+  // l'échéance rendue par la base est « appel + 24 h » (echeance_avis).
+  const retardAvis = a => a.retenue_le || a.suspendue ? false : a.sensible || a.mode === "equipe" ? a.echeance != null && Date.now() > Date.parse(a.echeance) : !!a.en_retard;
   // « Attendez mon appel » (01/11/2026, retenir_reponse_avis) : avis en tête, « Le commerçant attend votre appel », publication grisée avec la raison
   // (la base la refuse aussi : admin_avis_publie) ; « Appel fait » (admin_liberer_avis) lève la retenue. Aucune publication automatique de ces avis.
   const retenueAvis = a => !a.retenue_le ? "" : `<div class="encart" data-retenue role="alert"><p class="fort">${t("con.file.retenue", { d: dh(a.retenue_le) })}</p>${a.telephone_client ? `<p class="note">${t("con.file.retenue.tel", { tel: `<a class="casse" href="tel:${e(a.telephone_client)}" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(a.telephone_client) : a.telephone_client)}</a>` })}</p>` : ""}${a.rappel_jour ? `<p class="note" data-rappel-jour>${t(a.rappel_creneau === "15-17" ? "con.file.retenue.jour.1517" : "con.file.retenue.jour", { d: I.jourEtDate(a.rappel_jour + "T12:00:00") })}</p>` : ""}</div>`;
   const carteAvisFile = (a, o = {}) => { const r = retardAvis(a), sens = !!a.sensible;
     // Version restée 48 h sans reprise (01/11/2026, tour 6 Premium) : « En retard », relance (admin_file_avis : relance_version).
-    const etat = a.relance_version ? t("con.file.version.relance", { d: dh(a.version_client_le) }) : a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
+    const etat = a.retenue_le ? t("con.file.attente.appel") : a.relance_version ? t("con.file.version.relance", { d: dh(a.version_client_le) }) : a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
     const ouvrir = !o.surClient && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>` : "";
     const google = a.lien ? `<a class="bouton second petit" href="${e(a.lien)}" target="_blank" rel="noopener" data-avis-google>${t("con.al.google")}</a>` : "";
     return `<article class="carte${r ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"${sens ? " data-sensible" : ""}><div class="carte-tete"><h2>${sens ? t("con.al.avis.sensible") : e(a.commerce || "")}</h2><span class="etat${r ? (sens ? " retard" : "") : " actif"}">${etat}</span></div>
-          ${retenueAvis(a)}${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
+          ${retenueAvis(a)}${!a.retenue_le && a.liberee_le && a.echeance ? `<p class="note fort" data-liberee>${t("con.file.liberee.le", { d: dh(a.liberee_le), e: dh(a.echeance) })}</p>` : ""}${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
           <p class="fort">${etoiles(a.note)} · ${e(I.offre(a.offre || ""))}${a.sensible ? " · " + t("con.file.sensible", { r: e((a.raisons || []).join(", ")) }) : " · " + t("con.file.equipe")}</p>
           ${a.texte ? `<p class="texte2 casse" translate="no">${e(a.texte)}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}<p class="note">${t("con.file.recu", { d: dh(a.recu_le) })}</p>
           <div class="f"><label for="rep-av-${e(a.id)}">${t(a.mode === "equipe" ? "con.file.reponse" : "con.file.reponse.proposer")}</label><textarea id="rep-av-${e(a.id)}" data-rep-avis maxlength="2000" translate="no">${e(a.reponse_proposee || "")}</textarea></div>
@@ -629,7 +642,8 @@
   const dateHeureLocale = v => { if (!v) return ""; const d = new Date(v); if (isNaN(d)) return ""; const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
   const valeurDate = i => !i.value ? null : i.type === "datetime-local" && !isNaN(new Date(i.value)) ? new Date(i.value).toISOString() : i.value;
   const saisieDelais = g => `<div class="pile serre">
-            <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="datetime-local" value="${e(dateHeureLocale(g.acces_remis_le))}" data-d="acces_remis_le"></div>
+            <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="datetime-local" value="${e(dateHeureLocale(g.acces_remis_le))}" max="${e(dateHeureLocale(Date.now()))}" data-d="acces_remis_le" aria-describedby="acc-aide-${e(g.commerce_id)}"><p class="aide" id="acc-aide-${e(g.commerce_id)}">${t("con.delais.acces.borne")}</p></div>
+            <div class="f etroit"><label for="acm-${e(g.commerce_id)}">${t("con.delais.motif.lib")}</label><input id="acm-${e(g.commerce_id)}" type="text" maxlength="500" data-d="motif"></div>
             <div class="f etroit"><label for="pho-${e(g.commerce_id)}">${t("con.delais.photos.lib")}</label><input id="pho-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.photos_recues_le))}" max="${jourParis(Date.now())}" data-d="photos_recues_le"></div>
             <div class="f etroit"><label for="coh-${e(g.commerce_id)}">${t("con.coh.lib")}</label><input id="coh-${e(g.commerce_id)}" type="date" value="${e(jourDe(((g.fiche || {}).coherence || {}).verifiee_le))}" max="${jourParis(Date.now())}"${((g.fiche || {}).coherence || {}).verifiee_le ? "" : ` min="${jourParis(Date.now() - 7 * 864e5)}"`} data-d="coherence_verifiee_le"></div>
             <div class="f etroit"><label for="eca-${e(g.commerce_id)}">${t("con.coh.ecarts.lib")}</label><textarea id="eca-${e(g.commerce_id)}" rows="3" maxlength="2000" data-d="coherence_ecarts" data-coh-ecarts translate="no">${e(((g.fiche || {}).coherence || {}).ecarts || "")}</textarea><p class="aide">${t("con.coh.ecarts.aide")}</p></div>
@@ -643,7 +657,7 @@
   const delaisAFaire = g => { const maintenant = Date.now(), raisons = [];
     for (const k of ["fiche", "premier_contenu"]) { const d = g[k]; if (!d || d.fait_le || !d.echeance) continue;
       const ech = Date.parse(d.echeance); if (d.etat === "manque" || ech < maintenant) raisons.push({ k, retard: true, ech }); else if (ech - maintenant <= AVANT_H[k] * 3600000) raisons.push({ k, retard: false, ech }); }
-    for (const a of g.avis_en_cours || []) { const ech = Date.parse(a.echeance || 0); if (a.en_retard) raisons.push({ k: "avis", retard: true, ech }); else if (ech && ech - maintenant <= GD.alerte_avis_avant_heures * 3600000) raisons.push({ k: "avis", retard: false, ech }); }
+    for (const a of g.avis_en_cours || []) { if (a.retenue_le) continue; const ech = Date.parse(a.echeance || 0); if (a.en_retard) raisons.push({ k: "avis", retard: true, ech }); else if (ech && ech - maintenant <= GD.alerte_avis_avant_heures * 3600000) raisons.push({ k: "avis", retard: false, ech }); }
     return raisons; };
   const carteDelais = (g, raisons) => `<article class="carte${raisons.some(r => r.retard) ? " attention" : ""}" data-delais="${e(g.commerce_id)}"><div class="carte-tete"><h2>${e(g.commerce || "")}</h2><span class="note">${e(I.offre(g.offre || ""))}</span></div>
           <p class="note">${t("con.delais.titre")}</p>
@@ -664,9 +678,9 @@
           <p class="note">${t("con.mq.titre")}</p>
           <p class="fort">${(m.engagements || [m.engagement]).map(k => ENGAGEMENT[k] || e(k)).join(", ")}</p><p class="note">${t("con.mq.echeance", { d: dh(m.echeance) })} · ${C_("mq.mois")}${t("deux.points")}${I.date(m.mois_offert)}</p>
           ${ouvert && deja ? `<p class="note fort" data-mq-explication>${t("con.mq.deja", { m: nomMois(m.mois_offert) })}</p><div class="pile serre"><button type="button" class="bouton petit" data-mq-d="deja">${t("con.mq.clore")}</button></div>`
-          : ouvert ? `${ids.length > 1 ? `<p class="note fort" data-mq-explication>${t("con.mq.groupe", { n: ids.length, m: nomMois(m.mois_offert) })}</p>` : ""}<div class="pile serre"><button type="button" class="bouton petit" data-mq-d="applique">${t("con.mq.appliquer")}</button>
+          : ouvert ? `${ids.length > 1 ? `<p class="note fort" data-mq-explication>${t("con.mq.groupe", { n: ids.length, m: nomMois(m.mois_offert) })}</p>` : ""}<div class="pile serre"><div class="f etroit"><label for="mqr-${cle}">${t("con.mq.reference")}</label><input id="mqr-${cle}" type="text" maxlength="120" data-mq-ref autocomplete="off" translate="no" aria-describedby="mqr-aide-${cle}"><p class="aide" id="mqr-aide-${cle}">${t("con.mq.reference.aide")}</p></div><button type="button" class="bouton petit" data-mq-d="applique">${t("con.mq.appliquer")}</button>
             <div class="f etroit"><label for="mq-${cle}">${t("con.mq.motif")}</label><input id="mq-${cle}" type="text" maxlength="500" data-mq-motif></div><button type="button" class="bouton second petit" data-mq-d="ecarte">${t("con.mq.ecarter")}</button></div>`
-          : m.motif ? `<p class="note casse">${e(m.motif)}</p>` : ""}</article>`; };
+          : m.motif ? `<p class="note casse">${e(m.motif)}</p>` : ""}${m.reference_stripe ? `<p class="note">${t("con.mq.reference.lue", { r: `<span class="casse" translate="no">${e(m.reference_stripe)}</span>` })}</p>` : ""}</article>`; };
   const C_ = k => t("con.col." + k);
   // Dépôts de vidéos : statut, motif ; relance du montage (fonction SQL admin_relancer_montage, qui revérifie tout).
   const ST_DV = I.carte("dv.st", window.RENOM_DEPOT_VIDEO.STATUTS);
@@ -730,7 +744,7 @@
           ${echeanceRelire(x)}${x.precision_photo ? `<p class="note">${t("con.rl.precision")} <span class="casse" translate="no">${e(x.precision_photo)}</span></p>` : ""}
           <div class="rl-apercu">${apercuRelire(x)}</div>
           <div class="f"><label for="rl-l-${id}">${t("con.rl.legende")}</label><textarea id="rl-l-${id}" data-rl-legende translate="no" rows="${lignesTexte(x.legende)}" data-avant="${e(x.legende || "")}">${e(x.legende || "")}</textarea></div>
-          <details class="rl-reseaux"${Object.keys(ls).length ? " open" : ""}><summary>${t("con.rl.par.reseau")}</summary><p class="note">${t("con.rl.reprend")}</p>
+          <details class="rl-reseaux"${Object.keys(ls).some(r => ls[r] && String(ls[r]).trim() !== String(x.legende || "").trim()) ? " open" : ""}><summary>${t("con.rl.par.reseau")}</summary><p class="note">${t("con.rl.reprend")}</p>
             ${RES_RL(x).map(r => `<div class="f"><label for="rl-${r}-${id}">${NOM_RESEAU[r] || e(r)}</label><textarea id="rl-${r}-${id}" data-rl-res="${r}" translate="no" rows="${lignesTexte(ls[r])}" data-avant="${e(ls[r] || "")}"${ls[r] && String(ls[r]).trim() === String(x.legende || "").trim() ? " data-rl-suit" : ""}>${e(ls[r] || "")}</textarea></div>`).join("")}
             ${Object.keys(ls).length ? `<button type="button" class="lien" data-rl-reprendre>${t("con.rl.reprendre")}</button>` : ""}</details>
           <div class="actions"><button type="button" class="bouton petit" data-rl-envoyer>${t("con.rl.envoyer")}</button><button type="button" class="bouton second petit" data-rl-corriger>${t("con.rl.corriger")}</button>${x.refaire !== "non" ? `<button type="button" class="lien" data-rl-refaire="${e(x.refaire)}">${t("con.rl.refaire")}</button>` : ""}</div>
@@ -774,7 +788,9 @@
     const geos = G && D.adminDossiersGeo ? await sur(D.adminDossiersGeo()) : [];
     const prospectsL = D.adminProspects ? await sur(D.adminProspects()) : [];
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
-    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date, ordre: o.ordre ?? null });
+    // Lot 4 B : chaque tâche garde un titre court (le titre de sa carte), repris par le cockpit (« À sortir aujourd'hui » dit quelle tâche).
+    const titreCarte = html => { const m = String(html || "").match(/<h2[^>]*>([\s\S]*?)<\/h2>/); return m ? m[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : ""; };
+    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, titre: o.titre || titreCarte(html), types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date, ordre: o.ordre ?? null });
     // À relire (14/11/2026) : une carte par contenu ; l'échéance de la garantie des 72 h (si elle court encore) fait l'urgence ; ordre de la base gardé
     // pour le filtre « À relire » (par client, le plus ancien d'abord).
     (relire || []).forEach((x, i) => ajout("arelire", carteRelire(x), x.en_retard, T_(x.echeance), T_(x.cree_le), { prio: !!(x.urgent || x.en_retard), cle: "relire:" + x.id, cid: x.commerce_id, ordre: i }));
@@ -821,6 +837,20 @@
   const parClient = l => { const gs = [], par = {}; l.forEach(x => { const k = x.cid ? "c:" + x.cid : x.type === "prospects" ? "prospects" : "sans";
       (par[k] || (gs.push(par[k] = { k, cid: x.cid || null, nom: x.cid ? ((afCtx.cs || []).find(c => c.id === x.cid) || {}).nom || "" : "", l: [] }), par[k])).l.push(x); });
     return gs; };
+  // Lot 4 B (revue exploitant : « À faire » de 9,5 écrans au téléphone, nom du client répété dans chaque carte) : chaque tâche est repliée en une
+  // ligne (type, titre, échéance), dépliée d'un clic ; le nom du client n'est écrit qu'une fois, en titre du groupe. Une tâche ouverte le reste
+  // après un geste (mémoire de la page) ; une file d'une seule tâche s'ouvre d'elle-même. Les boutons de la carte ne changent pas.
+  const tachesOuvertes = new Set();
+  const replierTaches = (racine, groupes, total) => { const noms = new Set(groupes.map(g => (g.nom || "").trim()).filter(Boolean));
+    racine.querySelectorAll("#file-a-faire article").forEach(a => { const h = a.querySelector(".carte-tete h2, h2"), titre = h ? h.textContent.trim() : "";
+      const etat = a.querySelector(".carte-tete .etat, .carte-tete .note"), cle = a.dataset.cle || "";
+      if (h && noms.has(titre)) h.classList.add("vh");
+      a.querySelectorAll(":scope > p.fort").forEach(p_ => { if (noms.has(p_.textContent.trim())) p_.classList.add("vh"); });
+      const d = document.createElement("details"); d.className = "af-tache" + (a.hasAttribute("data-retard") ? " af-retard" : ""); if (cle) d.dataset.cle = cle;
+      d.open = total === 1 || (cle && tachesOuvertes.has(cle));
+      const sm = document.createElement("summary"); sm.innerHTML = `<span class="af-type">${e(t("con.af." + (a.dataset.type || "")) || "")}</span>${titre && !noms.has(titre) ? `<span class="af-titre">${e(titre)}</span>` : ""}${a.dataset.pmRes ? `<span class="af-titre">${e(NOM_RESEAU[a.dataset.pmRes] || a.dataset.pmRes)}</span>` : ""}${etat ? `<span class="af-etat">${e(etat.textContent.trim())}</span>` : ""}`;
+      d.addEventListener("toggle", () => { if (!cle) return; d.open ? tachesOuvertes.add(cle) : tachesOuvertes.delete(cle); });
+      a.replaceWith(d); d.append(sm, a); }); };
   async function afaire(filtreType) {
     const { items, pubs, dl, cs, erreurs, relire } = await collecterAFaire();
     const avecMoi = !!(prises && moi), TYPES = avecMoi ? [...TYPES_AF, "moi"] : TYPES_AF;
@@ -836,7 +866,8 @@
       <nav class="filtres compteurs" id="a-faire" aria-label="${t("con.afaire.types")}"><a href="#/afaire" data-type=""${f ? "" : ' aria-current="page"'}>${t("con.afaire.tout", { n: items.length })}</a>${TYPES.map(k => `<a href="#/afaire/${k}" data-type="${k}" data-n="${n[k]}"${f === k ? ' aria-current="page"' : ""}>${t("con.af." + k)}, ${n[k]}</a>`).join("")}</nav>
       ${erreurs ? `<p class="note">${t("con.afaire.erreur")}</p>` : ""}${alerteRelire(relire)}
       ${visibles.length ? `<div class="pile" id="file-a-faire">${parClient(visibles).map(g => `<section class="af-groupe" data-af-client="${e(g.cid || g.k)}"><h2 class="af-client">${g.cid ? `<a href="#/client/${encodeURIComponent(g.cid)}">${e(g.nom || t("con.non.nomme"))}</a>` : t(g.k === "prospects" ? "con.af.prospects" : "con.ck.f.sans.client")} <span class="note">${t("con.af.n", { n: g.l.length, r: g.l.filter(x => x.retard).length })}</span></h2>
-        <div class="pile">${g.l.map(x => x.html.replace("<article ", `<article data-type="${f && x.types.includes(f) ? f : x.type}" data-types="${x.types.join(" ")}"${x.prio ? " data-prio" : ""} `)).join("")}</div></section>`).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
+        <div class="pile">${g.l.map(x => x.html.replace("<article ", `<article data-type="${f && x.types.includes(f) ? f : x.type}" data-types="${x.types.join(" ")}"${x.prio ? " data-prio" : ""}${x.cle ? ` data-cle="${e(x.cle)}"` : ""}${x.retard ? " data-retard" : ""} `)).join("")}</div></section>`).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
+    replierTaches(vue, parClient(visibles), visibles.length);
     const fl = vue.querySelector(".compteurs"), fp = fl && fl.querySelector("[aria-current]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
     brancherMoi(change => afaire(change && filtreType === "moi" ? "" : filtreType));
@@ -922,13 +953,15 @@
     sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"), z = a.querySelector("[data-rep-avis]"); if (z && !z.value.trim()) { msg(ph("Écrivez la réponse publiée.")); z.focus(); return; } if (!window.confirm(t("con.reponse.publiee.confirmer"))) return; agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
     sur("[data-cm-d]", b => { const a = b.closest("article"); agir(() => D.adminCommentaireDecider(a.dataset.cm, b.dataset.cmD, b.dataset.cmD === "valide" ? a.querySelector("[data-cm-texte]").value : null)); });
     // Garanties : dates du commerce, message de cohérence, manquements, réseaux retenus, délégation, objectif interne
-    sur("[data-delais-enregistrer]", b => { const z = b.closest("[data-delais]"), p = {}; z.querySelectorAll("[data-d]").forEach(i => { p[i.dataset.d] = valeurDate(i); }); agir(() => D.adminDelais(z.dataset.delais, p)); });
+    sur("[data-delais-enregistrer]", b => { const z = b.closest("[data-delais]"), p = {}; z.querySelectorAll("[data-d]").forEach(i => { if (i.dataset.d === "motif") { if (i.value.trim()) p.motif = i.value.trim(); } else p[i.dataset.d] = valeurDate(i); }); agir(() => D.adminDelais(z.dataset.delais, p)); });
     sur("[data-coh-copier]", async b => { const z = b.closest("[data-delais]"), g = afCtx.dl.find(x => x.commerce_id === z.dataset.delais) || {}, m = z.querySelector("[data-coh-message]");
       m.value = messageCoherence(g, z.querySelector("[data-coh-ecarts]").value);
       try { await navigator.clipboard.writeText(m.value); msg(t("con.coh.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); } });
     // Un geste pour tout le mois : chaque manquement de la carte reçoit la même décision (« déjà offert » : écarté, avec le motif de l'article 10).
-    sur("[data-mq-d]", b => { const z = b.closest("[data-mq]"), m = z.querySelector("[data-mq-motif]"), d = b.dataset.mqD, ids = z.dataset.mq.split(",").filter(Boolean);
-      agir(async () => { for (const id of ids) await D.adminManquement(id, d === "deja" ? "ecarte" : d, d === "deja" ? t("con.mq.deja.motif", {}, "fr") : m ? m.value : null);
+    // Lot 4 B : « Mois offert appliqué dans Stripe » demande la référence Stripe (coupon, avoir), gardée par la base (admin_manquement).
+    sur("[data-mq-d]", b => { const z = b.closest("[data-mq]"), m = z.querySelector("[data-mq-motif]"), rf = z.querySelector("[data-mq-ref]"), d = b.dataset.mqD, ids = z.dataset.mq.split(",").filter(Boolean);
+      if (d === "applique" && (!rf || rf.value.trim().length < 4)) { msg(t("con.mq.reference.manque")); if (rf) rf.focus(); return; }
+      agir(async () => { for (const id of ids) await D.adminManquement(id, d === "deja" ? "ecarte" : d, d === "deja" ? t("con.mq.deja.motif", {}, "fr") : m ? m.value : null, d === "applique" && rf ? rf.value.trim() : null);
         return d === "deja" ? t("con.mq.clos") : undefined; }, null, b); });   // undefined : « Enregistré » (null voudrait dire « annulé »)
     sur("[data-ret-enregistrer]", b => { const z = b.closest("[data-ret]"); agir(() => D.adminReseaux(z.dataset.ret, [...z.querySelectorAll("[data-ret-res]:checked")].map(i => i.value))); });
     sur("[data-delegation]", i => agir(() => D.adminDelegation(i.closest("[data-ret]").dataset.ret, i.checked)));
@@ -989,7 +1022,7 @@
       const k = c.compteur || {};
       return `<tr data-id="${e(c.id)}"><td data-l="${C_("commerce")}"><p class="fort"><a href="#/client/${encodeURIComponent(c.id)}" data-client="${e(c.id)}">${e(c.nom)}</a></p><p class="note">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""}</p></td>
         <td data-l="${C_("sante")}">${sante(c.sante)}</td><td data-l="${C_("offre")}">${e(I.offre(c.offre_id))}</td>
-        <td data-l="${C_("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p><p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p></td>
+        <td data-l="${C_("mois")}"><p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}</p>${+k.videos_plafond > 0 ? `<p>${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>` : ""}</td>
         <td data-l="${C_("alertes")}"><span class="${c.alertes ? "fort" : ""}">${c.alertes}</span></td>
         <td data-l="${C_("etat")}"><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span></td></tr>`; }).join("")}</tbody></table></section>`;
   }
@@ -1098,7 +1131,8 @@
       attentes.push(nr ? { qui: "client", k: "photos_refusees", d: appel, v: { f: nr } } : { qui: "client", k: "photos", d: appel }); }
     const PRIORITE = [
       // Avis à traiter par l'équipe (garantie des 24 h) : avant tout le reste, sinon la bannière dirait « Rien à faire » avec un avis sensible ouvert.
-      ["avis", () => avis.length > 0 && { texte: t(avis.some(a => a.sensible || a.retenue_le) ? "con.pa.avis.sensible" : "con.pa.avis", { n: avis.length, d: dh(avis.map(a => a.echeance).filter(Boolean).sort()[0] || Date.now()) }), bouton: aller("client-avis", "avis") }],
+      // Lot 4 B : un avis retenu (« Attendez mon appel ») d'abord : appeler le commerçant (aucune échéance tant que l'appel n'est pas fait).
+      ["avis", () => avis.length > 0 && (avis.some(a => a.retenue_le) ? { texte: t("con.pa.avis.appel", { n: avis.filter(a => a.retenue_le).length }), bouton: aller("client-avis", "avis") } : { texte: t(avis.some(a => a.sensible) ? "con.pa.avis.sensible" : "con.pa.avis", { n: avis.length, d: dh(avis.map(a => a.echeance).filter(Boolean).sort()[0] || Date.now()) }), bouton: aller("client-avis", "avis") })],
       ["pause", () => c.en_pause && { texte: t("con.pa.pause"), bouton: aller("client-etat", "etat") }],
       ["fiche", () => "nom_confirme_le" in c && !c.nom_confirme_le && { texte: t("con.pa.fiche"), bouton: aller("nom-console", "fiche") }],
       ["metier", () => metierAVerifier(c, jl) && { texte: t("con.pa.metier"), bouton: aller("metier-client", "fiche") }],
@@ -1167,8 +1201,9 @@
         ${et === "refusee" && ctl ? `<p class="controle" data-controle>${t("con.phc.controle", { x: e(ctl) })}</p>` : ""}
         ${refusControle(p) ? `<div class="actions-photo">${D.adminLogoDepuisPhoto ? `<button type="button" class="bouton second petit" data-a="photo-logo">${t("con.phc.logo")}</button>` : ""}${D.adminAccepterPhoto ? `<button type="button" class="bouton second petit" data-a="photo-accepter">${t("con.phc.accepter")}</button>` : ""}</div>` : ""}</div></article>`; };
   const nowPhotos = phs => !Array.isArray(phs) ? "" : phs.some(refusControle) ? t("con.ai.phc.refus") : !phs.length ? t("con.ai.phc.aucune") : t("con.ai.phc.ok");
+  let metierFiche = null;   // lot 4 B : métier du client dont la fiche est ouverte (texte des photos conseillées)
   const blocPhotos = phs => `<section class="carte" id="client-photos"><h2>${t("con.phc.titre")}</h2>${aide("phc", nowPhotos(phs))}
-      ${!Array.isArray(phs) ? `<p class="note">${t("con.phc.illisible")}</p>` : !phs.length ? `<p class="texte2" id="photos-vide">${t("con.phc.vide")}</p>`
+      ${!Array.isArray(phs) ? `<p class="note">${t("con.phc.illisible")}</p>` : !phs.length ? `<p class="texte2" id="photos-vide">${parMetier(t("con.phc.vide"), metierFiche)}</p>`
       : `<p class="note" data-photos-n>${t("con.phc.n", { n: phs.length, u: photosUtilisables(phs) })}${phs.length > 20 ? " " + t("con.phc.plus", { n: phs.length }) : ""}</p><div class="galerie">${phs.slice(0, 20).map(cartePhoto).join("")}</div>`}</section>`;
   const ICONE_VIDEO = '<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg>';
   const carteContenu = x => { const fmt = x.type === "video" ? "video" : x.format === "story" ? "story" : "publication", leg = String(x.legende || "").replace(/\s+/g, " ").trim();
@@ -1256,7 +1291,7 @@
     const sur = p => p.catch(() => null);
     // Journal de CE client lu à part (v46) : adminJournal s'arrête aux 300 lignes les plus récentes de tous les clients.
     const [cs, dl, gs, opts, depots, jl, fileAvis, , contacts] = await Promise.all([D.adminCommerces(), sur(D.adminGarantieDelais()), sur(D.adminGaranties()), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], sur(D.adminDepotsVideo()), sur(D.adminJournalClient ? D.adminJournalClient(cid) : D.adminJournal()), sur(D.adminFileAvis()), lirePrises(), D.adminContact ? sur(D.adminContact(cid)) : null]);
-    const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; }
+    const c = cs.find(x => x.id === cid); if (!c) { location.hash = "#/clients"; return; } metierFiche = c.metier;
     ficheCourante = cid;
     // v48 : dernier passage du robot des fiches Google et alertes de ce client (étape « Accès à la fiche Google », bannière). Lus seulement tant que
     // l'étape n'est pas faite ; illisibles (bloc SQL du 12/11/2026 pas collé) : undefined, la fiche dit « pas encore noté ».
@@ -1287,7 +1322,7 @@
         <div class="etat-offre" id="etat-offre"><div class="etat-col" id="etat-zone"><p class="note">${C_("etat")}</p><span class="etat${c.en_pause ? "" : " actif"}">${t(c.en_pause ? "con.en.pause" : "con.actif")}</span><button type="button" class="bouton second petit" data-a="pause">${t(c.en_pause ? "con.reprendre" : "con.pause")}</button></div>
         <div class="etat-col" id="offre-zone"><label for="offre-client">${C_("offre")}</label><select id="offre-client" data-offre aria-label="${t("con.offre.de", { nom: e(c.nom) })}">${Object.entries(OFFRES).filter(([k2, x]) => !x.retiree || c.offre_id === k2).map(([k2, x]) => `<option value="${k2}"${c.offre_id === k2 ? " selected" : ""}>${e(I.offre(k2))}${x.retiree ? " " + t("con.offre.retiree") : ""}</option>`).join("")}</select><button type="button" class="bouton second petit" data-a="offre">${t("con.changer.offre")}</button></div>
         <div class="etat-col" id="pays-zone"><label for="pays-client">${t("con.pays.lib")}</label><select id="pays-client">${["FR", "BE"].map(k2 => `<option value="${k2}"${(c.pays || "FR") === k2 ? " selected" : ""}>${t("con.pays." + k2)}</option>`).join("")}</select><p class="note">${t("con.pays.note")}</p><button type="button" class="bouton second petit" data-a="pays">${t("con.pays.enregistrer")}</button></div>${choixMetier(c)}${blocWhatsapp(c)}</div>
-        <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })} · ${t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond })}</p>${merClient(c)}</section>
+        <p>${t("con.pub.sur", { a: k.publications_utilisees, b: k.publications_plafond })}${+k.videos_plafond > 0 ? " · " + t("con.vid.sur", { a: k.videos_utilisees, b: k.videos_plafond }) : ""}</p>${merClient(c)}</section>
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante, c.sante && c.sante.mise_en_route ? ETP.etapes(c, c.sante.mise_en_route.points, phs) : null)}<h3>${C_("mer")}</h3>${aide("mer", "")}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
@@ -1296,7 +1331,7 @@
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>${aide("gar", "")}
         <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o, phs))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
-          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="datetime-local" required></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
+          : `<form id="f-delais-client" class="pile serre"><div class="f etroit"><label for="dl-acces">${t("con.delais.acces.lib")}</label><input id="dl-acces" type="datetime-local" required max="${e(dateHeureLocale(Date.now()))}" aria-describedby="dl-acces-aide"><p class="aide" id="dl-acces-aide">${t("con.delais.acces.borne")}</p></div><div class="f etroit"><label for="dl-motif">${t("con.delais.motif.lib")}</label><input id="dl-motif" type="text" maxlength="500"></div><p class="note">${t(o.reseaux_sociaux === false ? "con.delais.regle.google" : "con.delais.regle")}</p><button class="bouton second petit" type="submit">${t("con.delais.demarrer.bouton")}</button></form>`}
         ${mq.length ? `<h3>${t("con.mq.titre")}</h3>${aide("mq", t("con.ai.mq.now"))}<div class="pile" id="manquements">${mq.map(carteManquement).join("")}</div>` : ""}
         <h3>${t("con.ret.titre")}</h3>${aide("ret", nowRet(c, o))}<div class="pile serre" data-ret="${e(cid)}">${o.reseaux_sociaux ? `<div class="pile serre">${RESEAUX_RET.map(r => `<label class="option"><input type="checkbox" value="${r}" data-ret-res${ret.includes(r) ? " checked" : ""}><span>${NOM_RES[r]}</span></label>`).join("")}<button type="button" class="bouton second petit" data-ret-enregistrer>${t("enregistrer")}</button></div>` : `<p class="note">${t("con.ret.google.seul")}</p>`}
           ${o.delegation ? `<label class="option"><input type="checkbox" data-delegation${c.delegation_signee_le ? " checked" : ""}><span>${t(c.delegation_signee_le ? "con.ret.delegation.le" : "con.ret.delegation.non", { d: c.delegation_signee_le ? I.date(jourDe(c.delegation_signee_le)) : "" })}</span></label>` : `<p class="note">${t("con.ret.delegation.sans")}</p>`}</div>
@@ -1308,7 +1343,7 @@
           : `<form id="f-gar-client" class="pile serre"><div class="champs deux"><div class="f"><label for="gar-date">${t("con.gar.date")}</label><input id="gar-date" type="date" required></div><div class="f"><label for="gar-avis">${t("con.gar.avis.capture")}</label><input id="gar-avis" type="number" min="0" inputmode="numeric" required></div></div>
             <div class="f etroit"><label for="gar-cartes">${t("con.gar.cartes.lib")}</label><input id="gar-cartes" type="date"></div><p class="note">${t("con.gar.regle")}</p><button class="bouton second petit" type="submit">${t("con.gar.demarrer.bouton")}</button></form>`}</section>
       ${G && geo !== undefined ? G.bloc(c, geo, { peutOuvrir: !!D.adminGeoOuvrir, optionPayee: mesOpts.some(x => x.option === "visibilite_ia") }) : ""}
-      ${mesOpts.length ? `<section class="carte" id="client-options"><h2>${t("con.opt.titre")}</h2>${aide("opt", t("con.ai.opt.now"))}</section><div class="pile">${mesOpts.map(x => carteOption(x, cs)).join("")}</div>` : ""}
+      ${/* Lot 4 B (revue exploitant : bloc « Options commandées » vide au-dessus de sa carte) : les cartes d'option seules, le titre pour les lecteurs d'écran. */ ""}${mesOpts.length ? `<section class="pile" id="client-options" aria-labelledby="client-options-titre"><h2 class="vh" id="client-options-titre">${t("con.opt.titre")}</h2>${mesOpts.map(x => carteOption(x, cs)).join("")}</section>` : ""}
       ${!mesDepots.length && +k.videos_plafond > 0 ? `<section class="carte" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.aucun.depot")}</p><p class="note">${t("con.videos.client", { b: k.videos_plafond })}</p></section>` : ""}
       ${mesDepots.length ? `<section class="carte tableau" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.videos.client", { b: k.videos_plafond || 0 })}</p><table class="tab"><thead><tr><th>${C_("depot")}</th><th>${C_("fichiers")}</th><th>${C_("statut")}</th><th>${C_("actions")}</th></tr></thead><tbody>${mesDepots.map(d =>
         `<tr data-depot="${e(d.id)}"><td data-l="${C_("depot")}"><p>${dh(d.cree_le)}</p>${d.note ? `<p class="note casse" translate="no">${e(d.note)}</p>` : ""}</td>
@@ -1370,7 +1405,7 @@
     vue.querySelectorAll("[data-a=photo-accepter]").forEach(b => b.onclick = () => faire(b, async () => { if (!window.confirm(t("con.phc.accepter.confirmer"))) return ANNULE; return D.adminAccepterPhoto(b.closest("[data-photo]").dataset.photo); },
       r => t(r && r.etat === "deja" ? "con.phc.accepter.deja" : r && r.webhook === false ? "con.phc.accepter.sans" : "con.phc.accepter.ok")));
     vue.querySelectorAll("#client-contenus img[data-visuel]").forEach(im => im.addEventListener("error", () => { const a = im.closest("a"), ic = im.closest(".cadre").querySelector(".icone-visuel"); if (a) a.hidden = true; if (ic) ic.hidden = false; }));
-    envoi("f-delais-client", () => D.adminDelais(cid, { acces_remis_le: valeurDate($("dl-acces")) }));
+    envoi("f-delais-client", () => D.adminDelais(cid, Object.assign({ acces_remis_le: valeurDate($("dl-acces")) }, $("dl-motif") && $("dl-motif").value.trim() ? { motif: $("dl-motif").value.trim() } : {})));
     envoi("f-gar-client", () => D.adminGarantie(cid, { depart_le: $("gar-date").value, avis_depart: $("gar-avis").value, cartes_en_place_le: $("gar-cartes").value || null }));
     // Réponses du démarrage remplies par l'équipe (v49) : « Remplir pour le client », « Modifier » (ouvre le formulaire sur la bonne question),
     // « Enregistrer les réponses » (seulement les champs changés ; aucun : « rien à changer », sans appel à la base).
@@ -1409,21 +1444,28 @@
   // vides sont tus ; chaque clé connue a son libellé (con.jk.*), les dates sont écrites, les options et les étapes nommées. Garanties et
   // livraisons : reçu, échéance, fait, délai tenu (en_retard inversé), avec la date de la ligne comme « fait le ».
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, DATE_ISO = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
-  const CLES_TECH = ["id", "commande", "dossier", "contenu", "avis", "photo", "publication", "manquement", "jeton", "session", "objet", "depot", "commentaire", "alerte", "prospect", "user_id", "abonnement"];
+  const CLES_TECH = ["usage_claude", "simule", "id", "commande", "dossier", "contenu", "avis", "photo", "publication", "manquement", "jeton", "session", "objet", "depot", "commentaire", "alerte", "prospect", "user_id", "abonnement"];
+  // Lot 4 B : les engagements garantis (réponse d'avis, option, Visibilité IA, délai manqué) ont leurs colonnes Reçu, Échéance, Fait, Tenu.
+  const garantieJournal = x => { const d = x && x.detail && typeof x.detail === "object" ? x.detail : null; if (!d) return null;
+    if (x.type === "AVIS_PUBLIE" && "dans_les_24h" in d) return { recu: d.recu_le || null, echeance: d.echeance || null, fait: x.cree_le, tenu: !!d.dans_les_24h, cles: ["recu_le", "echeance", "dans_les_24h"] };
+    if (["OPTION_LIVREE", "VISIBILITE_IA_LIVREE"].includes(x.type) && "livraison_prevue_le" in d) return { recu: d.elements_recus_le || null, echeance: d.livraison_prevue_le, fait: x.cree_le, tenu: d.en_retard === false, cles: ["livraison_prevue_le", "en_retard", "elements_recus_le"] };
+    if (x.type === "GARANTIE_MANQUEMENT") return { recu: null, echeance: d.echeance || null, fait: null, tenu: false, cles: ["echeance"] };
+    return null; };
+  const celluleDate = v => !v ? "" : String(v).length === 10 ? I.date(v + "T12:00:00") : dh(v);
   const cleJournal = k => I.a("con.jk." + k) ? t("con.jk." + k) : (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ");
   const valeurJournal = (k, v) => v === true ? t("con.journal.oui") : v === false ? t("con.journal.non") : Array.isArray(v) ? v.map(x => valeurJournal(k, x)).join(", ")
     : v && typeof v === "object" ? Object.entries(v).filter(([, y]) => y != null && y !== "").map(([a, y]) => `${cleJournal(a)} ${valeurJournal(a, y)}`).join(", ")
     : k === "raison" ? ph(String(v)) : k === "option" ? nomOption(v) : typeof v === "string" && DATE_ISO.test(v) ? (v.length === 10 ? I.date(v + "T12:00:00") : dh(v))
-    : typeof v === "string" && /^[A-Z][A-Z0-9_]{3,}$/.test(v) ? libelleEtape(v) : String(v);
+    : typeof v === "string" && /^[A-Z][A-Z0-9_]{3,}$/.test(v) ? libelleEtape(v) : typeof v === "string" && /^[a-z][a-z0-9_]+$/.test(v) && I.a("con.jv." + v) ? t("con.jv." + v) : String(v);
   const detailJournal = (d, x) => { if (d == null) return ""; if (typeof d !== "object" || Array.isArray(d)) return valeurJournal("", d);
-    const parts = [], o = { ...d };
+    const parts = [], o = { ...d }, gj = garantieJournal(x); if (gj) gj.cles.forEach(k => delete o[k]);
     if ("en_retard" in o && typeof o.en_retard === "boolean") { parts.push(t(o.en_retard ? "con.jk.tenu.non" : "con.jk.tenu.oui") + (x && x.cree_le ? ` (${t("con.jk.fait.le", { d: dh(x.cree_le) })})` : "")); delete o.en_retard; }
     Object.entries(o).forEach(([k, v]) => { if (v == null || v === "" || CLES_TECH.includes(k) || (typeof v === "string" && UUID.test(v))) return; parts.push(`${cleJournal(k)}${t("deux.points")}${valeurJournal(k, v)}`); });
     return parts.join(" · "); };
   const tableJournal = id => `<div class="f etroit"><label for="filtre-${id}">${t("con.filtrer")}</label><input id="filtre-${id}" type="text"></div>
-      <table class="tab"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("etape")}</th><th>${C_("detail")}</th></tr></thead><tbody id="corps-${id}"></tbody></table>`;
+      <table class="tab journal"><thead><tr><th>${C_("date")}</th><th>${C_("commerce")}</th><th>${C_("etape")}</th><th>${t("con.jc.recu")}</th><th>${t("con.jc.echeance")}</th><th>${t("con.jc.fait")}</th><th>${t("con.jc.tenu")}</th><th>${C_("detail")}</th></tr></thead><tbody id="corps-${id}"></tbody></table>`;
   function remplirJournal(id, l) {
-    const dessiner = () => { const f = $("filtre-" + id).value.toLowerCase(); $("corps-" + id).innerHTML = l.filter(x => !f || (x.commerce + " " + x.type + " " + libelleEtape(x.type)).toLowerCase().includes(f)).map(x => `<tr><td data-l="${C_("date")}">${dh(x.cree_le)}</td><td data-l="${C_("commerce")}">${e(x.commerce || "")}</td><td data-l="${C_("etape")}"><span class="fort">${e(libelleEtape(x.type))}</span></td><td data-l="${C_("detail")}" class="note">${e(detailJournal(x.detail, x))}</td></tr>`).join(""); };
+    const dessiner = () => { const f = $("filtre-" + id).value.toLowerCase(); $("corps-" + id).innerHTML = l.filter(x => !f || (x.commerce + " " + x.type + " " + libelleEtape(x.type)).toLowerCase().includes(f)).map(x => `<tr><td data-l="${C_("date")}">${dh(x.cree_le)}</td><td data-l="${C_("commerce")}">${e(x.commerce || "")}</td><td data-l="${C_("etape")}"><span class="fort">${e(libelleEtape(x.type))}</span></td>${(g => !g ? `<td class="jv" colspan="4"></td>` : `<td data-l="${t("con.jc.recu")}">${celluleDate(g.recu)}</td><td data-l="${t("con.jc.echeance")}">${celluleDate(g.echeance)}</td><td data-l="${t("con.jc.fait")}">${celluleDate(g.fait)}</td><td data-l="${t("con.jc.tenu")}" class="fort">${t(g.tenu ? "con.jk.tenu.oui" : "con.jk.tenu.non")}</td>`)(garantieJournal(x))}<td data-l="${C_("detail")}" class="note">${e(detailJournal(x.detail, x))}</td></tr>`).join(""); };
     $("filtre-" + id).oninput = dessiner; dessiner();
   }
   async function journal() {
@@ -1516,10 +1558,13 @@
   // Lot 3 (15/11/2026, revue exploitant : « qui est en retard » à 4,4 écrans sous la phrase, aucun « à sortir aujourd'hui ») : juste sous la
   // phrase en tête, le nombre de tâches à sortir avant minuit (retards compris) et leur liste (8 au plus), puis les retards par client.
   function blocJour(r) { const j = r.aujourdhui || { n: 0, items: [], retards: [] }, MAX = 8;
-    const ligne = x => `<li data-jour-type="${e(x.type)}"${x.retard ? ' class="ck-rouge"' : ""}><span class="fort">${x.retard ? t("con.ck.j.retard") : x.quand !== Infinity ? I.heure(x.quand) : ""}</span> ${t("con.af." + x.type)}${x.nom ? " · " + lienClient(x.cid, x.nom) : ""}</li>`;
+    // Lot 4 B (revue exploitant : « En retard Alertes » sans dire laquelle ; seules les lignes de client étaient des liens) : chaque ligne mène à sa
+    // tâche (filtre de son type, carte ouverte) et dit laquelle (titre de la carte, sauf s'il répète le nom du client).
+    const ligne = x => { const titre = x.titre && x.titre !== x.nom ? x.titre : "";
+      return `<li data-jour-type="${e(x.type)}"${x.retard ? ' class="ck-rouge"' : ""}><a class="ck-jour-tache" href="#/afaire/${e(x.type)}"${x.cle ? ` data-ouvrir-tache="${e(x.cle)}"` : ""}><span class="fort">${x.retard ? t("con.ck.j.retard") : x.quand !== Infinity ? I.heure(x.quand) : ""}</span> ${t("con.af." + x.type)}${titre ? " · " + e(titre) : ""}${x.nom ? " · " + e(x.nom) : ""}</a></li>`; };
     return `<section class="carte ck-jour" id="a-sortir" aria-labelledby="a-sortir-titre"><h2 id="a-sortir-titre">${t("con.ck.j.titre", { n: j.n })}</h2>
       ${j.n ? `<ul class="ck-jour-liste">${j.items.slice(0, MAX).map(ligne).join("")}</ul>${j.n > MAX ? `<p><a href="#/afaire">${t("con.ck.j.plus", { n: j.n - MAX })}</a></p>` : ""}` : `<p class="texte2">${t("con.ck.j.vide")}</p>`}
-      ${j.retards.length ? `<h3>${t("con.ck.j.retards")}</h3><ul class="ck-jour-retards" id="retards-clients">${j.retards.map(g => `<li data-retard-client="${e(g.cid || "")}">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`} : <span class="ck-rouge fort">${t("con.ck.j.n.retard", { n: g.n })}</span></li>`).join("")}</ul>` : ""}
+      ${j.retards.length ? `<h3>${t("con.ck.j.retards")}</h3><ul class="ck-jour-retards" id="retards-clients">${j.retards.map(g => `<li data-retard-client="${e(g.cid || (g.prospects ? "prospects" : ""))}">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : g.prospects ? `<a href="#/afaire/prospects">${t("con.af.prospects")}</a>` : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`} : <span class="ck-rouge fort">${t("con.ck.j.n.retard", { n: g.n })}</span></li>`).join("")}</ul>` : ""}
       <p><a class="bouton second petit" href="#/afaire">${t("con.ck.f.ouvrir")}</a></p></section>`; }
   const ENG = { fiche: "con.ck.g.fiche", premier_contenu: "con.ck.g.contenu", avis: "con.ck.g.avis" };
   function blocGaranties(r) { const g = r.garanties, now = r.maintenant;
@@ -1531,7 +1576,7 @@
         <p class="note">${d.pause ? t("con.ck.g.pause") : t(d.etat === "depasse" ? "con.ck.g.mois.depasse" : "con.ck.g.mois.risque", { m: nomMois(d.mois_offert) })}</p></li>`;
     const vide = !g.danger.length ? `<p class="texte2 ck-vide" id="garanties-vide">${g.suivis ? t("con.ck.g.calme", { n: g.suivis }) : t("con.ck.g.aucune")}</p>` : "";
     // Lot 3 : les retards de la file hors délais garantis (horloge pas démarrée, publications, alertes…), pour que le bloc ne contredise plus la file.
-    const hors = (g.hors || []).length ? `<div class="ck-hors" id="garanties-hors"><p class="fort">${t("con.ck.g.hors", { n: g.hors.reduce((x, h) => x + h.n, 0) })}</p><ul class="ck-c-det">${g.hors.map(h => `<li data-hors-client="${e(h.cid || "")}">${h.cid ? lienClient(h.cid, h.nom || t("con.non.nomme")) : t("con.ck.f.sans.client")} : ${I.nombre(h.n)} (${I.liste(h.types.map(k => t("con.af." + k).toLowerCase()))})</li>`).join("")}</ul><p class="note">${t("con.ck.g.hors.pourquoi")}</p></div>` : "";
+    const hors = (g.hors || []).length ? `<div class="ck-hors" id="garanties-hors"><p class="fort">${t("con.ck.g.hors", { n: g.hors.reduce((x, h) => x + h.n, 0) })}</p><ul class="ck-c-det">${g.hors.map(h => `<li data-hors-client="${e(h.cid || (h.prospects ? "prospects" : ""))}">${h.cid ? lienClient(h.cid, h.nom || t("con.non.nomme")) : h.prospects ? t("con.af.prospects") : t("con.ck.f.sans.client")} : ${I.nombre(h.n)} (${I.liste(h.types.map(k => { const x = t("con.af." + k); return /\bIA\b|\bAI\b/.test(x) ? x : x.toLowerCase(); }))})</li>`).join("")}</ul><p class="note">${t("con.ck.g.hors.pourquoi")}</p></div>` : "";
     const appl = g.a_appliquer.length ? `<h3>${t("con.ck.g.appliquer.titre")}</h3><ul class="ck-liste" id="mois-a-appliquer">${g.a_appliquer.map(m => `<li class="ck-g ${m.deja ? "ck-attente" : "ck-depasse"}" data-mois="${e(m.mois_offert)}"${m.deja ? " data-deja" : ""}>
         <p class="fort">${lienClient(m.cid, m.nom)}</p><p>${t(m.deja ? "con.ck.g.appliquer.deja" : "con.ck.g.appliquer", { m: nomMois(m.mois_offert) })}</p>
         <p class="note">${t("con.ck.g.appliquer.det", { l: I.liste(m.engagements.map(k => C_({ fiche_7j: "delais.fiche", premier_contenu_72h: "delais.contenu", avis_24h: "delais.avis" }[k]).toLowerCase())) })} ${m.deja ? "" : t(m.rythme === "annuel" ? "con.ck.g.appliquer.annuel" : "con.ck.g.appliquer.mensuel")}</p>
@@ -1544,7 +1589,7 @@
 
   const ligneControle = (c, x) => { const qui = x.nom ? lienClient(x.cid, x.nom) : "", q = x.quand ? dh(x.quand) : "";
     const k = I.a("con.ck.c.i." + c.k + "." + x.cle) ? "con.ck.c.i." + c.k + "." + x.cle : "con.ck.c.i." + c.k + ".defaut";
-    return `<li>${t(k, { qui, d: q, texte: x.texte ? `<span class="casse" translate="no">${e(String(x.texte).slice(0, 160))}</span>` : "" })}</li>`; };
+    return `<li>${t(k, { qui, d: q, texte: x.texte ? `<span class="casse" translate="no">${e(String(x.texte).replace(/, nœud (.*?) : /, (m, n) => `, ${t("con.noeud")} « ${n} » : `).slice(0, 160))}</span>` : "" })}</li>`; };
   // Vidéo IA (11/11/2026 ; 14/11/2026, v53 : compte API Higgsfield de BoostImpact). Le dernier essai vient du journal PRODUIT (cockpit.js) ; le compte,
   // les vidéos et la dépense du mois viennent de admin_video_ia_mois() (table higgsfield_verifications, écrite chaque jour par le workflow GitHub
   // « Vérifier la clé Higgsfield », moteur/verifier_higgsfield.py). Le solde n'est pas lisible : l'API Higgsfield n'en publie aucun (docs.higgsfield.ai,
@@ -1589,17 +1634,22 @@
           : `<ul class="ck-c-det">${c.details.slice(0, 5).map(x => ligneControle(c, x)).join("")}${c.details.length > 5 ? `<li class="note">${t("con.ck.c.plus", { n: c.details.length - 5 })}</li>` : ""}</ul>${I.a("con.ck.c.pourquoi." + c.k) ? `<p class="note">${t("con.ck.c.pourquoi." + c.k)}</p>` : ""}`}
       </div></li>`).join("")}</ul></section>`; }
 
+  // Lot 4 B (revue design : « RESTAURANT D'EXEMPLE » en capitales) : un nom tout en capitales (registre SIRENE de la tournée) s'écrit en casse
+  // normale à l'affichage ; « Le Petit Zinc », « Bistrot de la Gare », « Restaurant d'Exemple ». Un nom en casse mixte reste tel quel.
+  const PETITS = new Set(["d", "l", "de", "du", "des", "la", "le", "les", "et", "à", "au", "aux", "en", "sur", "sous"]);
+  const nomLisible = x => { const s0 = String(x || ""); if (!/[A-ZÀ-Ý]{3}/.test(s0) || s0 !== s0.toUpperCase()) return s0;
+    return s0.toLowerCase().replace(/[\p{L}]+/gu, (m, i) => i > 0 && PETITS.has(m) ? m : m.charAt(0).toUpperCase() + m.slice(1)).replace(/\b([dl])'(\p{L})/gu, (m, a, b) => a + "'" + b.toUpperCase()); };
   function blocPipeline(r) { const total = r.pipeline.reduce((s, x) => s + x.n, 0);
     const det = x => x.k === "relance" && r.rdv ? t("con.ck.p.rdv", { n: r.rdv }) : x.k === "actif" && r.pauses ? t("con.ck.p.pause", { n: r.pauses }) : x.k === "perdu" ? t("con.ck.per." + r.periode) : "";
     return `<section class="carte ck-bloc" id="pipeline"><h2>${t("con.ck.p.titre")}</h2><p class="note ck-chapo">${t("con.ck.p.chapo")}</p>
-      <ol class="ck-etapes">${r.pipeline.map(x => `<li class="ck-etape${x.n ? "" : " ck-zero"}${x.k === "perdu" ? " ck-perdu" : ""}" data-etape="${x.k}" data-n="${x.n}"><span class="ck-etape-n">${I.nombre(x.n)}</span><span class="ck-etape-lib">${t("con.ck.p." + x.k)}</span>${det(x) ? `<span class="note">${det(x)}</span>` : ""}${x.noms.filter(Boolean).length ? `<span class="note ck-noms">${e(x.noms.filter(Boolean).join(", "))}${x.n > x.noms.length ? "…" : ""}</span>` : ""}</li>`).join("")}</ol>
+      <ol class="ck-etapes">${r.pipeline.map(x => `<li class="ck-etape${x.n ? "" : " ck-zero"}${x.k === "perdu" ? " ck-perdu" : ""}" data-etape="${x.k}" data-n="${x.n}"><span class="ck-etape-n">${I.nombre(x.n)}</span><span class="ck-etape-lib">${t("con.ck.p." + x.k)}</span>${det(x) ? `<span class="note">${det(x)}</span>` : ""}${x.noms.filter(Boolean).length ? `<span class="note ck-noms">${e(x.noms.filter(Boolean).map(nomLisible).join(", "))}${x.n > x.noms.length ? "…" : ""}</span>` : ""}</li>`).join("")}</ol>
       ${total ? "" : `<p class="texte2 ck-vide">${t("con.ck.p.vide")}</p>`}</section>`; }
 
   function blocFile(r) {
     const qui = g => !g.cle || !prises ? "" : blocPrise(g.cle);
     return `<section class="carte ck-bloc" id="file-travail"><h2>${t("con.ck.f.titre")}</h2><p class="note ck-chapo">${t("con.ck.f.chapo")}</p>${zoneMoi()}
       ${r.file.length ? `<table class="tab ck-tab"><thead><tr><th>${C_("commerce")}</th><th>${t("con.ck.f.taches")}</th><th>${t("con.ck.f.retard")}</th><th>${t("con.ck.f.prochaine")}</th>${prises ? `<th>${t("con.ck.f.qui")}</th>` : ""}</tr></thead><tbody>
-        ${r.file.map(g => `<tr data-file-client="${e(g.cid || "")}"><td data-l="${C_("commerce")}"><p class="fort">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`}</p>${g.prises ? `<p class="note">${t("con.ck.f.cartes.prises", { n: g.prises })}</p>` : ""}</td>
+        ${r.file.map(g => `<tr data-file-client="${e(g.cid || (g.prospects ? "prospects" : ""))}"><td data-l="${C_("commerce")}"><p class="fort">${g.cid ? lienClient(g.cid, g.nom || t("con.non.nomme")) : g.prospects ? `<a href="#/afaire/prospects">${t("con.af.prospects")}</a>` : `<a href="#/afaire">${t("con.ck.f.sans.client")}</a>`}</p>${g.prises ? `<p class="note">${t("con.ck.f.cartes.prises", { n: g.prises })}</p>` : ""}</td>
           <td data-l="${t("con.ck.f.taches")}">${I.nombre(g.n)}</td><td data-l="${t("con.ck.f.retard")}"${g.retard ? ' class="ck-rouge fort"' : ""}>${I.nombre(g.retard)}</td>
           <td data-l="${t("con.ck.f.prochaine")}">${g.prochaine !== Infinity ? dh(g.prochaine) : `<span class="note">${t("con.ck.f.sans.echeance")}</span>`}</td>${prises ? `<td data-l="${t("con.ck.f.qui")}">${qui(g)}</td>` : ""}</tr>`).join("")}</tbody></table>
         <p><a class="bouton second petit" href="#/afaire">${t("con.ck.f.ouvrir")}</a></p>` : `<p class="texte2 ck-vide">${t("con.ck.f.vide")}</p>`}</section>`; }
@@ -1625,9 +1675,10 @@
       ${blocJour(r)}
       <p class="note ck-lu" id="lu">${t("con.ck.lu", { h: I.heure(maintenant) })} <button type="button" class="lien" id="relire">${t("con.ck.relire")}</button> · <a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
       ${blocKpi(r)}
-      <div class="ck-grille">${blocGaranties(r)}${blocControles(r)}</div>
-      ${blocPipeline(r)}
-      <div class="ck-grille">${blocFile(r)}${blocProvenance(r)}</div>`;
+      ${/* Lot 4 B (revue design : trou d'environ 560 px sous Garanties, au bureau) : deux colonnes qui se remplissent chacune, Garanties puis
+         la file par client à gauche, Contrôles techniques puis Provenance à droite ; le pipeline en pleine largeur dessous. Téléphone : même ordre. */ ""}
+      <div class="ck-grille"><div class="pile ck-col">${blocGaranties(r)}${blocFile(r)}</div><div class="pile ck-col">${blocControles(r)}${blocProvenance(r)}</div></div>
+      ${blocPipeline(r)}`;
     $("relire").onclick = () => cockpit(periode);
     brancherMoi(() => cockpit(periode));
     brancherCartes(() => cockpit(periode));
@@ -1683,6 +1734,7 @@
     const cle = ecran + "/" + (param || "") + "/" + (sous || ""); if (derniere !== cle) window.scrollTo(0, 0); derniere = cle;
     try { await ROUTES[ecran](param ? decodeURIComponent(param) : undefined, sous ? decodeURIComponent(sous) : undefined); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
   }
+  document.addEventListener("click", ev => { const a = ev.target.closest && ev.target.closest("[data-ouvrir-tache]"); if (a) tachesOuvertes.add(a.dataset.ouvrirTache); });
   document.addEventListener("click", async ev => { if (ev.target.closest("#sortir")) { await D.quitter(); location.hash = ""; rendre(); } });
   large.addEventListener("change", dessinerNav);
   window.addEventListener("hashchange", rendre); rendre();

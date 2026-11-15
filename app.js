@@ -326,3 +326,9 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
   if(tel.addEventListener)tel.addEventListener('change',regler);
   regler();
 })();
+// Lot 4a (15/11/2026) : l'extrait de l'audit est replié au téléphone (page plus courte avant le formulaire) et ouvert d'office au bureau.
+(function(){
+  if(typeof window==='undefined'||!document.querySelectorAll||!window.matchMedia)return;
+  if(window.matchMedia('(min-width: 760px)').matches)
+    Array.prototype.forEach.call(document.querySelectorAll('details[data-ouvert-bureau]'),function(d){d.open=true});
+})();

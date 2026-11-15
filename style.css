@@ -1036,8 +1036,8 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
 @media (min-width:760px){.etape{grid-template-columns:minmax(0,1fr)}}
 /* Offres : la Visibilité IA offerte à l'année dite une fois, sous le titre ; langue des publications (pages EN et NL) ; règlement amiable visible. */
 .offres-ia strong,.offres-langue strong{color:var(--texte)}
-.offres-amiable{font-size:var(--t-corps);line-height:1.5;color:var(--texte);font-weight:var(--graisse-moyenne);margin:24px 0 0}
-.offres-amiable+.plie-compare{margin-top:16px}
+.offres-resiliation{font-size:var(--t-corps);line-height:1.5;color:var(--texte);font-weight:var(--graisse-moyenne);margin:24px 0 0}
+.offres-resiliation+.offres-demo+.plie-compare{margin-top:16px}
 /* Carrousels du téléphone : cartes de même hauteur (plus de grand blanc sous la carte visible). */
 @media (max-width:759px){
   .preuves{align-items:stretch}
@@ -1067,3 +1067,50 @@ body.avec-collant .pied{padding-bottom:84px}
   #equipe .equipe{grid-column:1;max-width:none}
   #equipe .responsabilite{grid-column:2;margin-top:0;max-width:none}
 }
+
+/* ==========================================================================================================================
+   Lot 4a (15/11/2026, tour 3 des examinateurs) : grille du bureau tenue (1440 px), « Après » d'abord au téléphone, lien vers la démonstration.
+   ========================================================================================================================== */
+/* Sous les prix : « Au mois, sans engagement » puis le lien vers l'espace client en démonstration. */
+.offres-demo{margin:8px 0 0;font-size:var(--t-corps);line-height:1.5}
+.offres-demo a{font-weight:var(--graisse-forte);color:var(--texte);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.offres-demo a:hover{text-decoration-thickness:2px}
+.offres-resiliation+.offres-demo+.plie-compare{margin-top:16px}
+/* Téléphone : la fiche « Après » (celle qui vend) en premier dans le carrousel, entière au premier regard ; « Avant » glisse à côté. */
+@media (max-width:759px){
+  .fiche-apres{order:-1}
+}
+/* Bureau : avant / après sur toute la colonne. Titre et « Avant » à gauche, « Après » (plus haute) à droite : plus de trou sous « Avant ». */
+@media (min-width:1040px){
+  #fiche .wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:64px;align-items:start}
+  #fiche .tete{grid-column:1;grid-row:1}
+  #fiche .fiches{display:contents}
+  #fiche .fiche{display:flex;flex-direction:column;gap:16px;max-width:none}
+  #fiche .fiche-avant{grid-column:1;grid-row:2}
+  #fiche .fiche-apres{grid-column:2;grid-row:1 / span 2}
+}
+/* Bureau : les trois cartes de réponses à la même hauteur ; le statut se cale en bas. */
+@media (min-width:1040px){
+  .preuves{align-items:stretch}
+  .preuve>.preuve-bouton,.preuve>.preuve-statut:last-child{margin-top:auto}
+}
+/* Grand écran : les quatre exemples de publications restent dans la colonne de texte (1 120 px), plus de débordement. */
+@media (min-width:1320px){
+  .posts{width:auto;left:auto;transform:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+}
+/* Titres des pages légales : jamais coupés au milieu d'un mot (« Verwerkersovereenkomst » à 390 px) ; le mot trop long passe à la taille
+   qui tient sur la ligne. */
+.juridique h1,.simple h1{hyphens:manual;overflow-wrap:normal;word-break:normal}
+@media (max-width:480px){.juridique h1{font-size:min(var(--t-4),7.4vw)}}
+/* Extrait de l'audit : replié au téléphone (la page reste sous 12 écrans avant le formulaire), ouvert d'office au bureau (site/app.js). */
+.plie.extrait-audit{max-width:640px;display:block;gap:0}
+.plie.extrait-audit>summary h3{margin:0;font-family:var(--police-texte);font-size:var(--t-1);line-height:1.3;font-weight:var(--graisse-moyenne);letter-spacing:0;color:var(--texte)}
+.plie.extrait-audit>.extrait-chapo{margin-top:4px}
+@media (min-width:760px){
+  .plie.extrait-audit{border:0}
+  .plie.extrait-audit>summary{min-height:0;padding:0 0 8px;cursor:default;pointer-events:none}
+  .plie.extrait-audit>summary::after{display:none}
+  .plie.extrait-audit>summary h3{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-size:var(--t-3);line-height:var(--i-titre);font-weight:var(--graisse-titre);letter-spacing:var(--a-titre)}
+}
+/* Maquette TikTok : « Boîte de réception » sur deux lignes au lieu d'être coupé. */
+.tt-nav span{white-space:normal;line-height:1.05;overflow:visible}

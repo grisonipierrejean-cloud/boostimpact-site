@@ -74,7 +74,7 @@
         const etat = d.etat === "manque" || ech < maintenant ? "depasse" : ech - maintenant <= AVANT[k] ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: k, etat, echeance: ech, debut: debutBarre, mois_offert: moisOffert(ech), pause }); };
       engagement("fiche", g.fiche, depart); engagement("premier_contenu", g.premier_contenu, depart);
-      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null) return; suivis++;
+      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null || a.retenue_le) return; suivis++;   // « Attendez mon appel » : délai suspendu (CGV art. 10)
         const etat = a.en_retard || ech < maintenant ? "depasse" : ech - maintenant <= AVANT.avis ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: "avis", id: a.id, etat, echeance: ech, debut: ms(a.recu_le), note: a.note, mois_offert: moisOffert(ech), pause }); });
       // Mois offerts à appliquer dans Stripe : un seul par client et par mois (CGV art. 10), même si plusieurs délais sont manqués.
@@ -165,7 +165,9 @@
 
     // ------------------------------------------------------------ File de travail, par client (cartes de « À faire »)
     const groupes = {};
-    items.forEach(i => { const k = i.cid || ""; const g = groupes[k] || (groupes[k] = { cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", n: 0, retard: 0, prochaine: Infinity, prises: 0 });
+    // Lot 4 B (revue design : cockpit « Sans client rattaché : 2 en retard », file « 1 » plus « Prospects : 1 ») : les prospects forment leur propre
+    // groupe, comme dans « À faire » (console.js, parClient).
+    items.forEach(i => { const k = i.cid || (i.type === "prospects" ? "prospects" : ""); const g = groupes[k] || (groupes[k] = { cid: i.cid || null, prospects: !i.cid && i.type === "prospects", nom: i.cid ? nom(i.cid) || "" : "", n: 0, retard: 0, prochaine: Infinity, prises: 0 });
       g.n++; if (i.retard) g.retard++; if (i.quand !== Infinity && i.quand < g.prochaine) g.prochaine = i.quand; if (i.cle && x.prises && x.prises[i.cle]) g.prises++; });
     const file = Object.values(groupes).map(g => ({ ...g, cle: g.cid ? "client:" + g.cid : null, prise: g.cid && x.prises ? x.prises["client:" + g.cid] || null : null }))
       .sort((a, b) => (a.cid ? 0 : 1) - (b.cid ? 0 : 1) || b.retard - a.retard || a.prochaine - b.prochaine || b.n - a.n || a.nom.localeCompare(b.nom));
@@ -174,15 +176,15 @@
     // À sortir aujourd'hui : toute tâche de la file en retard ou dont l'échéance tombe avant minuit (heure de Paris), triée retard d'abord.
     const finJour = (() => { const d = jourParis(maintenant); for (let t = maintenant; t < maintenant + 26 * H; t += 15 * 60000) if (jourParis(t) !== d) return t; return maintenant + 24 * H; })();
     const aSortir = items.filter(i => i.retard || (i.quand !== Infinity && i.quand < finJour))
-      .map(i => ({ cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", type: i.type, quand: i.quand, retard: !!i.retard, cle: i.cle || null }))
+      .map(i => ({ cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", type: i.type, titre: i.titre || "", quand: i.quand, retard: !!i.retard, cle: i.cle || null }))
       .sort((a, b) => (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand);
-    const retardsClient = Object.values(groupes).filter(g => g.retard).map(g => ({ cid: g.cid, nom: g.nom, n: g.retard })).sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom));
+    const retardsClient = Object.values(groupes).filter(g => g.retard).map(g => ({ cid: g.cid, prospects: !!g.prospects, nom: g.nom, n: g.retard })).sort((a, b) => b.n - a.n || a.nom.localeCompare(b.nom));
     // Garanties et file d'accord (revue du 15/11/2026 : « Aucun délai en danger » à côté de « 3 en retard » dans la file). Cause : le bloc ne lisait
     // que les engagements comptés par admin_garantie_delais (depuis le départ de la garantie), la file compte toute tâche en retard (avis reçus avant
     // le départ de l'horloge, erreurs de workflow, publications, options…). Le bloc les dit désormais : « hors délais garantis », par client.
     const avisEnDanger = new Set(danger.filter(d => d.engagement === "avis" && d.id != null).map(d => "avis:" + d.id));
-    const horsG = {}; enRetard.filter(i => i.type !== "garanties" && !(i.cle && avisEnDanger.has(i.cle))).forEach(i => { const k = i.cid || "";
-      const h = horsG[k] || (horsG[k] = { cid: i.cid || null, nom: i.cid ? nom(i.cid) || "" : "", n: 0, types: [] }); h.n++; if (!h.types.includes(i.type)) h.types.push(i.type); });
+    const horsG = {}; enRetard.filter(i => i.type !== "garanties" && !(i.cle && avisEnDanger.has(i.cle))).forEach(i => { const k = i.cid || (i.type === "prospects" ? "prospects" : "");
+      const h = horsG[k] || (horsG[k] = { cid: i.cid || null, prospects: !i.cid && i.type === "prospects", nom: i.cid ? nom(i.cid) || "" : "", n: 0, types: [] }); h.n++; if (!h.types.includes(i.type)) h.types.push(i.type); });
     const hors = Object.values(horsG).sort((a, b) => b.n - a.n);
 
     // ------------------------------------------------------------ Contrôles techniques : tout ce qui ferait rater un client sans bruit
