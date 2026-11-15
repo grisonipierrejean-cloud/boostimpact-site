@@ -1023,3 +1023,47 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
 @media (max-width:759px){.plie>summary{min-height:52px}.q summary{min-height:56px;padding:12px 0}}
 @media (max-width:759px){.tete{margin-bottom:28px;gap:12px}.tete-chapo{font-size:var(--t-corps)}}
 @media (max-width:759px){.preuves{align-items:flex-start}}
+
+/* ==========================================================================================================================
+   Lot 3a (15/11/2026, tour 2 des examinateurs, décisions du 15/11) : lisibilité et confort au téléphone.
+   ========================================================================================================================== */
+/* Noms des réseaux au-dessus des maquettes, sur la bande encre de « Comment ça marche » : en blanc (avant : encre sur encre, 1:1). */
+#fonctionnement .post>.post-reseau,#fonctionnement .post>.post-offre{color:var(--blanc)}
+/* « Comment ça marche » : plus de gros chiffres verts ; un petit numéro dans la couleur du texte. */
+.etape .etape-num,#fonctionnement .etape .etape-num{font-family:var(--police-texte);font-size:var(--t-corps);line-height:var(--i-h);font-weight:var(--graisse-forte);color:inherit;letter-spacing:0}
+#fonctionnement .etape .etape-num{color:var(--blanc)}
+.etape{grid-template-columns:24px minmax(0,1fr)}
+@media (min-width:760px){.etape{grid-template-columns:minmax(0,1fr)}}
+/* Offres : la Visibilité IA offerte à l'année dite une fois, sous le titre ; langue des publications (pages EN et NL) ; règlement amiable visible. */
+.offres-ia strong,.offres-langue strong{color:var(--texte)}
+.offres-amiable{font-size:var(--t-corps);line-height:1.5;color:var(--texte);font-weight:var(--graisse-moyenne);margin:24px 0 0}
+.offres-amiable+.plie-compare{margin-top:16px}
+/* Carrousels du téléphone : cartes de même hauteur (plus de grand blanc sous la carte visible). */
+@media (max-width:759px){
+  .preuves{align-items:stretch}
+  .preuve>.preuve-bouton,.preuve>.preuve-statut:last-child{margin-top:auto}
+  .fiches{align-items:stretch}
+  .fiche .maq-gm{flex:1 1 auto}
+  .posts{align-items:stretch}
+  .post>.maq{flex:1 1 auto}
+  .preuves-repere{display:block;margin:8px 0 0;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
+}
+@media (min-width:760px){.preuves-repere{display:none}}
+/* Bouton « Audit gratuit » collant, téléphone seulement : il apparaît une fois le premier écran passé et s'efface quand le formulaire d'audit est à
+   l'écran (site/app.js). Le bas de page garde sa place (padding) : il ne cache aucun texte en fin de page. */
+.audit-collant{position:fixed;left:var(--marge);right:var(--marge);bottom:calc(12px + env(safe-area-inset-bottom, 0px));z-index:20;min-height:52px;
+  box-shadow:0 0 0 4px var(--blanc)}
+body.avec-collant .pied{padding-bottom:84px}
+@media (min-width:760px){.audit-collant{display:none!important}}
+/* En-tête au bureau : un seul bouton vert (Audit gratuit) ; WhatsApp en contour. */
+@media (min-width:760px){
+  .wa-bouton{background:var(--blanc);border:1.5px solid var(--encre);color:var(--encre)}
+  .wa-bouton:hover{background:var(--encre);border-color:var(--encre);color:var(--blanc)}
+}
+/* « Qui s'occupe de vous » au bureau : le titre sur toute la largeur, puis les deux blocs côte à côte (plus de colonne vide à gauche). */
+@media (min-width:1040px){
+  #equipe .wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:48px;align-items:start}
+  #equipe .tete{grid-column:1 / -1;grid-row:auto;position:static;margin-bottom:32px}
+  #equipe .equipe{grid-column:1;max-width:none}
+  #equipe .responsabilite{grid-column:2;margin-top:0;max-width:none}
+}

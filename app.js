@@ -305,3 +305,24 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
     for(var d=el;d;d=d.parentElement){if(d.tagName==='DETAILS')d.open=true}}
   window.addEventListener('hashchange',ouvrir);ouvrir();
 })();
+
+// Lot 3a (15/11/2026) : au téléphone, repère « 1/3 » du carrousel des avis d'exemple, et bouton « Audit gratuit » collant en bas d'écran, caché
+// tant que le premier écran est visible et dès que le formulaire d'audit est à l'écran (il ne cache jamais le formulaire).
+(function(){
+  if(typeof window==='undefined'||!document.querySelector)return;
+  var liste=document.querySelector('.preuves'),compte=document.querySelector('.preuves-compte');
+  if(liste&&compte){
+    var cartes=liste.querySelectorAll('.preuve'),n=cartes.length;
+    var maj=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;if(!l)return;
+      var pas=l+16,i=Math.round(liste.scrollLeft/pas);compte.textContent=Math.min(n,Math.max(1,i+1))+'/'+n};
+    liste.addEventListener('scroll',maj,{passive:true});maj();
+  }
+  var b=document.querySelector('.audit-collant'),haut=document.getElementById('haut'),audit=document.getElementById('audit');
+  if(!b||!haut||!audit||!window.IntersectionObserver||!window.matchMedia)return;
+  var tel=window.matchMedia('(max-width: 759px)'),hautVu=true,auditVu=false;
+  function regler(){var montrer=tel.matches&&!hautVu&&!auditVu;b.hidden=!montrer;document.body.classList.toggle('avec-collant',tel.matches)}
+  new IntersectionObserver(function(e){hautVu=e[0].isIntersecting;regler()}).observe(haut);
+  new IntersectionObserver(function(e){auditVu=e[0].isIntersecting;regler()},{rootMargin:'0px 0px -20% 0px'}).observe(audit.querySelector('form')||audit);
+  if(tel.addEventListener)tel.addEventListener('change',regler);
+  regler();
+})();

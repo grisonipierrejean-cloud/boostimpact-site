@@ -462,6 +462,26 @@
     // Réseaux que le client a (à relier dans Metricool) ; Instagram pas (ou pas sûr d'être) professionnel : à passer en compte professionnel avec lui.
     aRelier: r => r && typeof r === "object" ? RSC.RESEAUX.filter(k => r[k] === "oui") : [],
     proAFaire: r => !!r && r.instagram === "oui" && r.instagram_pro !== "oui" };
+  // Lot 3 (15/11/2026, revue : « 1 sur 3 » au-dessus d'une liste de 6 lignes, « 5 questions (0 réponses sur 6) », la console à « 0 sur 3 » et
+  // « Dossier 0 sur 5 » pour le même commerce) : UN seul compte de la mise en route, le même dans l'espace et dans la console (window.RENOM_ETAPES).
+  // - Questions : les 5 questions du démarrage (la 6e, « Vos réseaux sociaux », facultative, est suivie par l'étape réseaux, jamais dans ce compte).
+  // - Étapes : les points de la base (commerces.sante.mise_en_route / ma_mise_en_route : compte, fiche Google, questions, réseaux selon l'offre),
+  //   plus les trois points du dossier que l'espace et la console montrent sur la même liste : autorisation photos, au moins une photo utilisable
+  //   (une suffit, cinq recommandées), WhatsApp réglé (numéro et accord). Fait = « fait » pour un point de la base.
+  const ETP = window.RENOM_ETAPES = {
+    QUESTIONS: ["phrase", "distinctions", "ton", "interdits", "action"],
+    repondue(r, k) { if (!r || typeof r !== "object") return false; if (k === "action" && typeof r.action_detail === "string" && r.action_detail.trim()) return true;
+      const v = r[k]; return Array.isArray(v) ? v.some(x => String(x || "").trim()) : typeof v === "string" ? !!v.trim() : !!v; },
+    nbReponses: r => r && typeof r === "object" ? ETP.QUESTIONS.filter(k => ETP.repondue(r, k)).length : 0,
+    photosUtilisables: l => Array.isArray(l) ? l.filter(p => p && (p.statut !== "refusee" || p.refus_motif === "plafond")).length : null,
+    whatsappRegle: c => !!(c && c.whatsapp_numero && (c.notifications || {}).whatsapp && (c.whatsapp_accord_le || !("whatsapp_accord_le" in c))),
+    // points : [{ point, etat }] de la base ; photos : liste lue (null si illisible). Rend { faits, total, etapes: [{ k, fait }] }.
+    etapes(c, points, photos) {
+      const l = (points || []).map(x => ({ k: x.point, fait: x.etat === "fait" }));
+      const n = ETP.photosUtilisables(photos);
+      l.push({ k: "autorisation", fait: !!(c && c.photos_autorisees_le) }, { k: "photos", fait: n != null && n >= 1 }, { k: "whatsapp", fait: ETP.whatsappRegle(c) });
+      return { faits: l.filter(x => x.fait).length, total: l.length, etapes: l };
+    } };
   function controlerDemarrage(r) {
     r = r || {}; const txt = (k, n) => { const v = String(r[k] || "").trim(); if (longueur(v) > n) throw new Error("Réponse trop longue (" + n + " caractères au plus)."); return v; };
     const ton = TONS.includes(r.ton) ? r.ton : "", action = ACTIONS.includes(r.action) ? r.action : "", rs = RSC.normaliser(r.reseaux);

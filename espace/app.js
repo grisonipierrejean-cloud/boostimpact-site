@@ -3,10 +3,13 @@
   // Textes, dates et nombres : espace/web/i18n.js (français ou anglais). Les contenus du commerce (légendes, avis, réponses, idées) restent dans sa langue.
   const I = window.RENOM_I18N, t = I.t, ph = I.phrase;
   // Belgique : « HTVA » dans les prix (i18n.js) dès que le commerce est lu (31/10/2026, test client Essentiel, tour 5).
+  // Lot 3 (15/11/2026, revue EN/NL : bandeau de démonstration en français) : le bandeau de l'aperçu public est écrit par outils/apercu_public.py
+  // d'après <html lang="fr"> de index.html ; l'espace le remet dans sa langue (le changement de langue recharge la page, i18n.js).
+  try { const b = document.body && document.body.firstElementChild; if (b && I.langue !== "fr" && /^Aperçu de démonstration/.test((b.textContent || "").trim())) b.textContent = t("demo.apercu"); } catch (er) {}
   if (D && D.commerce) { const lire = D.commerce.bind(D); D.commerce = async (...a) => { const c = await lire(...a); if (I.pays) I.pays(c && c.pays); return c; }; }
   // Votre contact (31/10/2026) : réglé dans la console (mon_contact) ; rien de réglé (décision de PJ du 01/11/2026) : PJ, le numéro officiel, sans photo.
   // « Votre contact : PJ, BoostImpact · WhatsApp +33 6 99 08 05 39 » (lien wa.me). La console peut régler un autre prénom ou une photo.
-  const CONTACT_DEFAUT = { prenom: "PJ", telephone: "+33699080539", photo: null };
+  const CONTACT_DEFAUT = { prenom: "Pierre-Jean", telephone: "+33699080539", photo: null };
   const contactDe = x => x && x.prenom ? x : CONTACT_DEFAUT;
   // Publications du mois comptées comme les vidéos (01/11/2026, tour 6 Premium) : faites + photos en préparation (vue compteur, publications_preparation ;
   // base sans la colonne : 0, l'ancien compte).
@@ -191,7 +194,8 @@
 
   // ---------------- Morceaux d'écran partagés
   const pauseBandeau = c => c && c.en_pause ? `<div class="alerte" role="alert"><div><p class="fort">${t("pause.titre")}</p><p>${t("pause.texte")}</p></div></div>` : "";
-  const entete = (sur, titre, texte) => `<div class="entete">${sur ? `<p class="sur">${sur}</p>` : ""}<h1>${titre}</h1>${texte ? `<p class="chapo">${texte}</p>` : ""}</div>`;
+  // Lot 3 (15/11/2026, revue design) : plus de sur-titre gris au-dessus des titres (le menu dit déjà où l'on est) ; le paramètre reste pour les appels.
+  const entete = (sur, titre, texte) => `<div class="entete"><h1>${titre}</h1>${texte ? `<p class="chapo">${texte}</p>` : ""}</div>`;
   const jauge = (u, n) => `<div class="jauge" role="img" aria-label="${t("sur", { a: u, b: n })}"><span style="width:${n ? Math.min(100, u / n * 100) : 0}%"></span></div>`;
   // Jamais « 5 sur 2 » (31/10/2026) : au-delà du plafond, « 2 sur 2 ». Plafond atteint (audit Essentiel du 31/10/2026) : la même phrase que l'écran
   // Photos, « 2 sur 2 : la prochaine photo servira en novembre » (plafond.phrase), au lieu de « les publications en plus sont offertes ».
@@ -611,9 +615,8 @@
   const PHOTOS_RECO = 5, PHOTOS_DEMARRAGE = 1;
   const photosUtilisables = l => (l || []).filter(x => x.statut !== "refusee" || x.refus_motif === "plafond").length;
   const photosRefusees = l => (l || []).filter(x => x.statut === "refusee" && x.refus_motif !== "plafond" && x.refus_motif !== "logo").length;   // un logo reconnu (motif « logo ») n'est pas un refus : il sert de logo
-  const nbReponsesClient = c => { const r = c.demarrage && typeof c.demarrage === "object" ? c.demarrage : null; if (!r) return 0;
-    return ["phrase", "distinctions", "ton", "interdits", "action"].filter(k => (k === "action" && String(r.action_detail || "").trim()) || String(Array.isArray(r[k]) ? r[k].join("") : r[k] || "").trim()).length
-      + (window.RENOM_RESEAUX_CLIENT.repondu(r.reseaux) ? 1 : 0); };
+  // Lot 3 (15/11/2026) : réponses aux 5 questions, comptées comme dans la console (window.RENOM_ETAPES, donnees.js) ; la 6e, facultative, n'y entre pas.
+  const nbReponsesClient = c => window.RENOM_ETAPES.nbReponses(c.demarrage);
   const lignesDossierClient = (c, p) => { const n = photosUtilisables(p), r = photosRefusees(p), wa = whatsappActif(c);
     return [{ k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
       { k: "photos", fait: n >= PHOTOS_DEMARRAGE, href: "#/photos", v: { n, m: PHOTOS_RECO }, court: r ? t("photos.refusee.etape", { n: r }) : "" },
@@ -626,14 +629,16 @@
     if (mr.points.every(x => x.etat !== "a_faire" || (x.point === "google" && ficheDemandee(c)))) return "";
     // 27/10/2026 : titres de i18n.js dans toutes les langues (« Mise en route », « 5 questions sur votre commerce »).
     const lib = Object.fromEntries(AU.AUTO.POINTS.map(x => [x.point, { ...x, titre: I.a("mer.titre." + x.point) ? t("mer.titre." + x.point) : x.titre }]));
-    return `<section class="carte mise-en-route" id="mise-en-route" aria-labelledby="mer-titre"><div class="carte-tete"><h2 id="mer-titre">${t("mer.titre", { a: mr.faits, b: mr.total })}</h2></div>
-      ${jauge(mr.faits, mr.total)}
+    // Lot 3 : le titre compte les lignes de la liste (points de la base + autorisation, photos, WhatsApp), comme la console (window.RENOM_ETAPES).
+    const EM = window.RENOM_ETAPES.etapes(c, mr.points, photosL);
+    return `<section class="carte mise-en-route" id="mise-en-route" aria-labelledby="mer-titre"><div class="carte-tete"><h2 id="mer-titre">${t("mer.titre", { a: EM.faits, b: EM.total })}</h2></div>
+      ${jauge(EM.faits, EM.total)}
       <ol class="liste etapes">${mr.points.map(x => { const p = lib[x.point] || { titre: x.point, aide: "" };
         // 27/10/2026 (constat 3) : plus de marche à suivre en une phrase ici ; les étapes numérotées sont dans l'écran de la mise en route.
         const demande = x.point === "google" && x.etat === "a_faire" && ficheDemandee(c);
         const action = x.etat !== "a_faire" || demande ? "" : p.declarable ? `<a class="bouton second petit" href="#/miseenroute">${t("mer.voir.etapes")}</a>`
           : x.point === "demarrage" ? `<a class="bouton second petit" href="#/demarrage?questions">${t("mer.repondre")}</a>` : "";
-        return `<li data-point="${e(x.point)}"><div><p class="fort">${e(p.titre)}${x.point === "demarrage" ? ` <span class="note" data-reponses>${t("acc.dos.reponses", { n: nbReponsesClient(c), t: 6 })}</span>` : ""}</p>${x.etat === "fait" ? "" : `<p class="note">${t("mer.court." + x.point)}</p>`}</div>
+        return `<li data-point="${e(x.point)}"><div><p class="fort">${e(p.titre)}${x.point === "demarrage" ? ` <span class="note" data-reponses>${t("acc.dos.reponses", { n: nbReponsesClient(c), t: window.RENOM_ETAPES.QUESTIONS.length })}</span>` : ""}</p>${x.etat === "fait" ? "" : `<p class="note">${t("mer.court." + x.point)}</p>`}</div>
           <div class="pile serre etape-etat"><span class="etat${x.etat === "fait" ? " actif" : ""}">${demande ? t("mer2.demande.etat") : ETATS_MR[x.etat] || e(x.etat)}</span>${action}</div></li>${x.point === "google" ? lignesDossierClient(c, photosL) : ""}`; }).join("")}</ol></section>`;
   }
   const ORIGINES = I.carte("idee.origine", ["calendrier", "meteo", "saison"]);
@@ -833,6 +838,7 @@
     // Mise en route (31/10/2026, test client Essentiel) : un point déclaré par le commerçant, ou une fiche Google demandée, attend l'équipe ; il ne compte
     // plus comme « à finir ». Tout fait de son côté : « Vous avez tout fait. Nous vérifions… », sans bouton.
     const merRestants = ((mr && mr.points) || []).filter(x => x.etat !== "fait"), merAFaire = merRestants.filter(x => x.etat === "a_faire" && !(x.point === "google" && ficheDemandee(c)));
+    const EMa = window.RENOM_ETAPES.etapes(c, (mr && mr.points) || [], p);   // Lot 3 : même compte que la carte et la console
     const merEnCours = merAFaire.length > 0, merAttente = !merEnCours && merRestants.length > 0, merFaits = mr && mr.total ? mr.total - merAFaire.length : 0;
     const merAttenteTexte = t(merRestants.some(x => x.point === "google") ? "acc.mer.attente.google" : "acc.mer.attente");
     // Réseau de l'offre pas encore connecté (31/10/2026) : une action tant qu'il manque, sauf si l'étape « réseaux » de la mise en route l'annonce déjà.
@@ -864,7 +870,7 @@
       reponses.length ? { id: "avis", href: "#/avis", texte: t("acc.act.avis", { n: reponses.length }) } : null,
       aDecider.length ? { id: "avis-sensible", href: "#/avis", texte: t("acc.act.sensible", { n: aDecider.length }) } : null,
       cmValider.length + cmHumains.length ? { id: "commentaires", href: "#/commentaires", texte: t("acc.act.commentaires", { n: cmValider.length + cmHumains.length }) } : null,
-      merEnCours ? { id: "mise-en-route", href: "#/miseenroute", texte: t("acc.act.mer", { a: merFaits, b: mr.total }) } : null,
+      merEnCours ? { id: "mise-en-route", href: "#/miseenroute", texte: t("acc.act.mer", { a: EMa.faits, b: EMa.total }) } : null,
       // TikTok ne se connecte pas seul : l'équipe l'active avec le commerçant (Comptes, bouton « Demander l'activation »).
       ...aConnecter.map(r => ({ id: "connecter-" + r, href: "#/comptes" + (r === "tiktok" ? "?tiktok" : ""), texte: r === "tiktok" ? t("acc.act.tiktok") : t("acc.act.connecter", { res: RES[r] }) })),
       !c.demarrage_fini ? { id: "demarrage", href: "#/demarrage", texte: t("acc.dem.reprendre") } : null,
@@ -892,22 +898,26 @@
     const replier = actions.length > ACTIONS_VISIBLES && matchMedia("(max-width: 899px) and (max-height: 760px)").matches;
     // « Attendez mon appel » (01/11/2026, tour 6 Premium) : un avis retenu (retenue_le) n'est pas « publié sous 24 h » : « Nous attendons de vous
     // appeler avant de publier. »
+    // Lot 3 (15/11/2026, revue design : paragraphe de 90 mots sur l'accueil) : l'avis sensible en une ligne (titre et lien), l'explication repliée
+    // sous « Pourquoi ? ».
+    const ligneSensible = () => `<div class="note" id="alerte-avis-sensibles"><p>${t("acc.humains.titre", { n: humains.length })}. <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>
+      <details class="pourquoi" id="sensible-pourquoi"><summary>${t("acc.pourquoi")}</summary><p>${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></details></div>`;
     vue.innerHTML = `${pauseBandeau(c)}
       ${waManquant(c) ? carteWaManquant(c) : ""}
       ${sensibleEnTete ? `<section class="alerte" id="alerte-avis-sensibles"><div><p class="fort">${t("acc.humains.titre", { n: humains.length })}</p>
         <p>${raisons.length ? t("acc.motif", { r: e(raisonsTexte(raisons)) }) + " " : ""}${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })}</p></div><a class="bouton second" href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></section>` : ""}
-      <div class="entete-accueil"><div class="entete"><p class="sur">${t("acc.bonjour")}</p><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
+      <div class="entete-accueil"><div class="entete"><h1>${e(c.nom)}</h1><p class="chapo">${phrase}</p></div></div>
       <div class="msg" id="msg" role="status"></div>
       ${blocMiseEnRoute(mr, c, p)}
       ${/* Tour 9 (01/11/2026) : « À faire maintenant » disparaît quand il n'y a rien à faire (avant : la carte restait, avec seulement « notre équipe
          s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
-      ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}
+      ${(sansAFaire || !actions.length) && humains.length && !sensibleEnTete ? ligneSensible() : ""}
       ${sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${actions.length ? `<ul class="actions-attente">${actions.map((a, i) => { const sec = a === principale ? "" : " second";
           return `<li${replier && i >= ACTIONS_VISIBLES ? " hidden data-repliee" : ""}>${a.bouton ? `<button type="button" class="bouton${sec}" data-action="${a.id}">${a.texte}</button>` : a.vers ? `<button type="button" class="bouton${sec}" data-action="${a.id}" data-vers="${a.vers}">${a.texte}</button>`
           : `<a class="bouton${sec}" data-action="${a.id}" href="${a.href}">${a.texte}</a>`}</li>`; }).join("")}</ul>
           ${replier ? `<p class="pied"><button type="button" class="lien" id="acc-tout-voir" aria-expanded="false" data-n="${actions.length - ACTIONS_VISIBLES}">${t("acc.tout.voir", { n: actions.length - ACTIONS_VISIBLES })}</button></p>` : ""}` : ""}
-        ${humains.length && !sensibleEnTete ? `<p class="note" id="alerte-avis-sensibles">${t("acc.humains.titre", { n: humains.length })}. ${t(equipeRepond(c) ? (humains.some(x => x.retenue_le) ? "acc.humains.texte.retenue" : "acc.humains.texte.equipe") : merSql(c) ? "acc.humains.texte.espace" : "acc.humains.texte", { n: humains.length, r: humains.filter(x => x.retenue_le).length })} <a href="#/avis">${t("acc.humains.lire", { n: humains.length })}</a></p>` : ""}</section>`}
+        ${humains.length && !sensibleEnTete ? ligneSensible() : ""}</section>`}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       ${ligneChgOffre(c, dChg)}
@@ -1120,7 +1130,7 @@
         ${dessus ? `<p class="note"><a href="#/offre?dessus" id="plafond-offre">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</section>` : ""}
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 && !pleinG ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
-          <p class="consigne-photo" id="ph-consigne">${t("photos.consigne")}</p>
+          <p class="consigne-photo" id="ph-consigne">${t(sansVideo ? "photos.consigne.pub" : "photos.consigne")}</p><p class="fort" id="ph-regle">${t("photos.regle")}</p><p class="sur-tel" id="ph-tel">${t("photos.consigne.tel")}</p>
           <form id="f"><div class="f"><div class="depot">
             <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
@@ -1128,7 +1138,7 @@
           <ul class="miniatures" id="ph-miniatures" aria-label="${e(t("photos.choisies.liste"))}"></ul>
           <p class="aide">${t("photos.aide", { max: EN.REGLES.PHOTOS_MAX, mo: nombre(EN.REGLES.PHOTO_MAX_MO) })}</p></div>
           <div class="f" id="ph-precision-zone"><label for="ph-precision">${t(c.metier === "restaurant" ? "photos.precision" : "photos.precision.produit")}</label><input id="ph-precision" type="text" maxlength="200" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.precision || "")}" placeholder="${e(t(c.metier === "restaurant" ? "photos.precision.ex" : "photos.precision.ex.produit"))}" aria-describedby="ph-precision-aide"><p class="aide" id="ph-precision-aide">${t("photos.precision.aide")}</p></div>
-          <div class="f" id="ph-occasion-zone"><label for="ph-occasion">${t("photos.occasion")}</label><input id="ph-occasion" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.occasion || "")}" placeholder="${e(t("photos.occasion.ex"))}" aria-describedby="ph-occasion-aide"><p class="aide" id="ph-occasion-aide">${t("photos.occasion.aide")}</p></div>
+          <div class="f" id="ph-occasion-zone"><label for="ph-occasion">${t("photos.occasion")}</label><input id="ph-occasion" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.occasion || "")}" placeholder="${e(t("photos.occasion.ex"))}" aria-describedby="ph-occasion-aide"><p class="aide" id="ph-occasion-aide">${t(sansVideo ? "photos.occasion.aide.pub" : "photos.occasion.aide")}</p></div>
           <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
           <p class="note" id="ph-quota" aria-live="polite" hidden></p><button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
           <div class="confirmer-refus" id="ph-doublon" role="alert" hidden><p class="fort" id="ph-doublon-texte"></p><div class="actions"><button type="button" class="bouton" id="ph-doublon-envoyer">${t("photos.doublon.envoyer")}</button><button type="button" class="bouton second" id="ph-doublon-retirer"></button></div></div><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
@@ -1883,7 +1893,10 @@
   }
   // 1 à 3 étoiles (01/11/2026) : la réponse proposée par l'équipe, lisible ici comme pour un avis sensible, et « Attendez mon appel ».
   const versionEquipe = (x, c, contact) => !x.sensible && x.statut === "escalade" && x.note <= 3 && equipeRepond(c) ? `<div class="sensible-reponse" data-version-equipe>
-      ${proposee(x) ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>` : ""}${blocRetenue(x, contact, c)}${champVersion(x)}</div>` : "";
+      ${proposee(x) ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>`
+        // Lot 3 (15/11/2026, revue : le site montre la réponse au 2 étoiles, l'espace n'en montrait aucune) : la réponse déjà préparée est lisible
+        // AVANT la relecture de l'équipe, dite « préparée, relue par notre équipe avant publication » (CGV art. 8 et 9 : aucune validation du client).
+        : String(x.reponse_proposee || "").trim() ? `<p class="fort" data-reponse-preparee>${t("avis.equipe.preparee")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>` : ""}${blocRetenue(x, contact, c)}${champVersion(x)}</div>` : "";
   // Avis vide : où en est l'accès à la fiche (constat 23). Sans accès : le lien vers l'étape ; fiche en création : ce qui se passe ; sinon : demander des avis.
   const avisVide = (c, mr) => { const g = ((mr && mr.points) || []).find(x => x.point === "google"), acces = !g || g.etat === "fait";
     if (ficheDemandee(c)) return `<section class="carte" id="avis-vide"><h2>${t("avis.vide.titre")}</h2><p class="texte2">${t("avis.vide.fiche.demandee")}</p></section>`;
@@ -2232,8 +2245,9 @@
       <p class="texte2" id="dessus-mensuel">${t(mensuelP ? "offre.dessus.annuel.ou" : "offre.dessus.mensuel", { prix: euros(P.autre) })}</p>
       ${frais ? `<p class="texte2" id="dessus-frais">${frais}</p>` : ""}
       ${ecartPrix > 0 ? `<p class="texte2" id="dessus-difference">${t("offre.dessus.difference", { prix: euros(ecartPrix) })}</p>` : ""}
-      ${parDemande ? blocDemande : lien ? `<p class="pied actions-abo"><a class="bouton" id="offre-passer" href="${e(lien)}" target="_blank" rel="noopener">${t("offre.dessus.passer", { nom })}</a></p>
-        <p class="note" id="dessus-note">${t(enCours ? "offre.dessus.note.paiement" : "offre.dessus.note.paiement.seul", { nom, r: t("offre.dessus.rythme." + rythme) })}</p>`
+      ${parDemande ? blocDemande : enCours ? `<p class="note" id="dessus-note">${t("offre.dessus.note.paiement", { nom })}</p>`   // Lot 3 : CGV art. 4, jamais un second paiement avec un abonnement en cours
+        : lien ? `<p class="pied actions-abo"><a class="bouton" id="offre-passer" href="${e(lien)}" target="_blank" rel="noopener">${t("offre.dessus.passer", { nom })}</a></p>
+        <p class="note" id="dessus-note">${t("offre.dessus.note.paiement.seul", { nom, r: t("offre.dessus.rythme." + rythme) })}</p>`
         : `<p class="note" id="dessus-note">${t("offre.dessus.comment")}</p>`}</section>`;
   }
   // Demande de changement d'offre (tour 9) : jour et plage choisis, gardés sur l'appareil (la base les garde aussi, alertes_exploitant.detail) ;
@@ -2489,6 +2503,8 @@
     if (etapeGoogle && etapeGoogle.etat !== "fait") { pointDeDepart(c, R, mr); vue.insertAdjacentHTML("beforeend", blocReseauxMois(c, calR, cmsR, cptR)); return; }
     // Thèmes nommés en français par la démonstration (FAMILLES de donnees.js) : traduits dans la langue d'affichage ; ceux de Claude, tels quels.
     const THEMES_CONNUS = { "L'accueil et le service": "accueil", "Le matériel": "materiel", "Le parcours et les paysages": "parcours", "L'attente": "attente", "Les plats": "plats", "L'ambiance": "ambiance", "Les prix": "prix" };
+    // Lot 3 (15/11/2026) : concurrents fictifs de la démonstration (« Concurrent A/B/C », donnees.js) dits dans la langue de l'espace ; un vrai nom reste tel quel.
+    const nomConcurrent = n => { const m = D.mode === "demo" && /^Concurrent ([A-C])$/.exec(String(n || "")); return m ? t("res.conc.demo", { x: m[1] }) : n; };
     const prem = avecNote[0], dern = avecNote[avecNote.length - 1], rep = (R && R.reponses) || {}, audit = (R && R.audit) || [], conc = (R && R.concurrents) || [], themes = (R && R.themes) || [], col = (R && R.collecte) || {};
     const pts = k => mois.map(m => ({ v: m[k] == null ? null : +m[k], lib: moisLong(m.mois), court: moisCourt(m.mois) }));
     const periode = mois.length ? t("res.periode", { a: moisLong(mois[0].mois), b: moisLong(mois[mois.length - 1].mois) }) : "";
@@ -2535,7 +2551,7 @@
         ${conc.length ? `<p class="note" id="conc-mention">${t("res.conc.mention")}</p>
           <div class="defile"><table class="comparatif"><thead><tr><th>${t("res.col.commerce")}</th><th>${t("res.col.note")}</th><th>${t("res.col.avis")}</th></tr></thead><tbody>
           <tr class="vous"><td data-l="${t("res.col.commerce")}"><span class="fort">${e(c.nom)}</span> ${t("res.vous")}</td><td data-l="${t("res.col.note")}">${actuel.note == null ? nonLue : nombre(actuel.note, 1)}</td><td data-l="${t("res.col.avis")}">${actuel.nb_avis == null ? nonLuM : nombre(actuel.nb_avis)}</td></tr>
-          ${conc.map(x => { const b = actuelConc(x); return `<tr><td data-l="${t("res.col.commerce")}">${e(x.nom)}</td><td data-l="${t("res.col.note")}">${b.note == null ? nonLue : nombre(b.note, 1)}</td><td data-l="${t("res.col.avis")}">${b.nb_avis == null ? nonLuM : nombre(b.nb_avis)}</td></tr>`; }).join("")}</tbody></table></div>`
+          ${conc.map(x => { const b = actuelConc(x); return `<tr><td data-l="${t("res.col.commerce")}">${e(nomConcurrent(x.nom))}</td><td data-l="${t("res.col.note")}">${b.note == null ? nonLue : nombre(b.note, 1)}</td><td data-l="${t("res.col.avis")}">${b.nb_avis == null ? nonLuM : nombre(b.nb_avis)}</td></tr>`; }).join("")}</tbody></table></div>`
         : `<p class="texte2">${t("res.conc.aucun")}</p>`}</section>
       <div class="rangee">
         <section class="carte moitie" aria-labelledby="r-themes"><h2 id="r-themes">${t("res.themes.titre")}</h2>
