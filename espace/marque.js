@@ -7,7 +7,11 @@
 (function (racine) {
   const STYLES_PHOTO = ["lumineux", "chaleureux", "sombre_contraste", "naturel"], GABARITS = ["plein", "editorial", "annonce"];
   const CLES = ["version", "verrouille", "verrouille_le", "auto", "source", "logo", "logo_fond", "couleurs", "palette", "couple", "police_titres", "police_texte",
-    "style_photo", "gabarit_prefere", "gabarit_impose", "mots_signature", "a_eviter", "maj", "valide_par", "texte_photos"];
+    "style_photo", "gabarit_prefere", "gabarit_impose", "mots_signature", "a_eviter", "maj", "valide_par", "texte_photos",
+    "source_typo", "typo_note", "supports_fournis", "surtitre"];
+  // Typographie du réel par client (14/11/2026, comme moteur/marque.py SOURCES_TYPO, MAX_TYPO) : d'où viennent les polices (site, client, supports,
+  // defaut), note de l'équipe, supports fournis, surtitre de la carte de fin du réel. Écrits par la console (admin_regler_typo), jamais par le commerçant.
+  const SOURCES_TYPO = ["site", "client", "supports", "defaut"], MAX_TYPO = { typo_note: 300, supports_fournis: 500, surtitre: 40 };
   // « Texte sur vos photos » (31/10/2026, écran « Vos publications ») : jamais, annonces (défaut, recommandé), souvent. Lu par le moteur
   // (moteur/marque.choisir_gabarit) : jamais = toujours la photo seule (gabarit « photo ») ; annonces = la photo seule, le gabarit « annonce » pour
   // les annonces seulement ; souvent = modèle préféré et rotation comme avant.
@@ -141,6 +145,8 @@
     [["mots_signature", MAX_MOTS], ["a_eviter", MAX_EVITER]].forEach(([x, n]) => { k[x] = (Array.isArray(k[x]) ? k[x] : []).map(s => String(s).trim().slice(0, MAX_CAR)).filter(Boolean).slice(0, n); });
     k.version = +m.version || 0; k.verrouille = !!m.verrouille;
     k.texte_photos = TEXTE_PHOTOS.includes(m.texte_photos) ? m.texte_photos : TEXTE_PHOTOS_DEFAUT;
+    k.source_typo = SOURCES_TYPO.includes(m.source_typo) ? m.source_typo : null;
+    Object.entries(MAX_TYPO).forEach(([x, n]) => { k[x] = Array.from(String(m[x] || "").split(/\s+/).filter(Boolean).join(" ")).slice(0, n).join("") || null; });
     return k;
   }
   // Fautes d'un kit : mêmes règles que la fonction SQL marque_fautes (la base a le dernier mot). Messages en clés i18n (marque.f.*).
@@ -160,6 +166,8 @@
     if (!liste(m.a_eviter, MAX_EVITER)) f.push("a_eviter");
     if (m.valide_par != null && !AUTEURS.includes(m.valide_par)) f.push("valide_par");
     if (m.texte_photos != null && !TEXTE_PHOTOS.includes(m.texte_photos)) f.push("texte_photos");
+    if (m.source_typo != null && !SOURCES_TYPO.includes(m.source_typo)) f.push("source_typo");
+    Object.entries(MAX_TYPO).forEach(([x, n]) => { if (m[x] != null && (typeof m[x] !== "string" || Array.from(m[x]).length > n)) f.push(x); });
     if (m.logo != null && !new RegExp("^" + cid + "/marque/[A-Za-z0-9._-]{1,80}\\.(png|jpg|jpeg|webp)$").test(m.logo)) f.push("logo");
     return [...new Set(f)];
   }
@@ -196,6 +204,8 @@
     const r = await fetch(base + "fonts/couples.json", { cache: "no-cache" }); catalogue = await r.json();
     if (typeof FontFace === "function" && typeof document !== "undefined") {
       for (const [id, f] of Object.entries(catalogue.familles)) {
+        // Famille livrée en un fichier statique par graisse (clé « graisses », 14/11/2026 : Open Sans) : une police déclarée par graisse.
+        if (f.graisses) { for (const [g, fi] of Object.entries(f.graisses)) document.fonts.add(new FontFace("RM-" + id, `url(${base}fonts/${fi})`, { weight: g, display: "swap" })); continue; }
         const variable = !["dmserif", "zillaslab", "anton", "shrikhand", "alfaslab", "caveatbrush"].includes(id);   // fichiers statiques
         const ff = new FontFace("RM-" + id, `url(${base}fonts/${f.fichier})`, { weight: variable ? "100 1000" : String(f.graisse_titre), display: "swap" });
         document.fonts.add(ff);

@@ -559,7 +559,7 @@
     ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t("cx.chapo"), apres: apresEntree,
       extra: comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
       <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "",
-      pied: `<p class="retour"><a href="../">${t("cx.retour.site")}</a></p>` });
+      pied: `<p class="retour"><a href="https://boostimpact.agency/">${t("cx.retour.site")}</a></p>` });
   }
   // Visite directe de la démonstration (boutons sous le formulaire, redessinés quand on passe d'un mode de l'écran à l'autre).
   vue.addEventListener("click", async ev => { const b = ev.target.closest && ev.target.closest("[data-entrer]"); if (b && D.mode === "demo") { await D.ouvrirLien(b.dataset.entrer); await apresEntree(); } });
@@ -1072,6 +1072,7 @@
         ${dessus ? `<p class="note"><a href="#/offre?dessus" id="plafond-offre">${t("photos.plafond.dessus", { nom: e(I.offre(dessus)), n: (window.RENOM_OFFRES[dessus] || {}).publications })}</a></p>` : ""}</section>` : ""}
       <div class="rangee">
         <section class="carte moitie"><div class="carte-tete"><h2>${t("photos.deposer")}</h2>${k && +k.publications_plafond > 0 && !pleinG ? `<span class="note" id="ph-compteur">${t("photos.compteur.reste", { a: Math.min(pubReservees(k), +k.publications_plafond), b: +k.publications_plafond, r: Math.max(0, +k.publications_plafond - pubReservees(k)), n: +k.publications_preparation || 0 })}</span>` : ""}</div>
+          <p class="consigne-photo" id="ph-consigne">${t("photos.consigne")}</p>
           <form id="f"><div class="f"><div class="depot">
             <span class="depot-choix"><input id="appareil" class="vh" type="file" accept="image/*" capture="environment"><label for="appareil" class="bouton second appareil-photo">${APPAREIL}<span>${t("photos.prendre")}</span></label></span>
             <span class="depot-choix"><input id="fichiers" class="vh" type="file" accept="image/*" multiple><label for="fichiers" class="bouton second">${GALERIE}<span class="sur-tel">${t("photos.galerie")}</span><span class="sur-ordi">${t("photos.choisir")}</span></label></span>
@@ -1079,6 +1080,7 @@
           <ul class="miniatures" id="ph-miniatures" aria-label="${e(t("photos.choisies.liste"))}"></ul>
           <p class="aide">${t("photos.aide", { max: EN.REGLES.PHOTOS_MAX, mo: nombre(EN.REGLES.PHOTO_MAX_MO) })}</p></div>
           <div class="f" id="ph-precision-zone"><label for="ph-precision">${t(c.metier === "restaurant" ? "photos.precision" : "photos.precision.produit")}</label><input id="ph-precision" type="text" maxlength="200" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.precision || "")}" placeholder="${e(t(c.metier === "restaurant" ? "photos.precision.ex" : "photos.precision.ex.produit"))}" aria-describedby="ph-precision-aide"><p class="aide" id="ph-precision-aide">${t("photos.precision.aide")}</p></div>
+          <div class="f" id="ph-occasion-zone"><label for="ph-occasion">${t("photos.occasion")}</label><input id="ph-occasion" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" value="${e(phEnvoi.occasion || "")}" placeholder="${e(t("photos.occasion.ex"))}" aria-describedby="ph-occasion-aide"><p class="aide" id="ph-occasion-aide">${t("photos.occasion.aide")}</p></div>
           <div class="jauge" id="ph-jauge" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="${e(t("photos.progression"))}" hidden><span style="width:0%"></span></div>
           <p class="note" id="ph-quota" aria-live="polite" hidden></p><button class="bouton" type="submit" id="ph-envoyer">${t("envoyer")}</button>
           <div class="confirmer-refus" id="ph-doublon" role="alert" hidden><p class="fort" id="ph-doublon-texte"></p><div class="actions"><button type="button" class="bouton" id="ph-doublon-envoyer">${t("photos.doublon.envoyer")}</button><button type="button" class="bouton second" id="ph-doublon-retirer"></button></div></div><p class="msg" id="msg" role="status" aria-live="polite"></p><p class="note" id="ph-suite" hidden></p></form></section>
@@ -1115,6 +1117,7 @@
       // Photo choisie : le bouton « Envoyer » vient sous le pouce s'il est sous le pli (barre d'onglets comprise).
       const b_ = $("ph-envoyer"); if (phEnvoi.choix.length && b_.getBoundingClientRect().bottom > innerHeight - 90) b_.scrollIntoView({ block: "center" }); };
     $("ph-precision").oninput = ev => { phEnvoi.precision = ev.target.value; };
+    $("ph-occasion").oninput = ev => { phEnvoi.occasion = ev.target.value; };
     $("ph-miniatures").onclick = ev => { const b = ev.target.closest("[data-retirer]"); if (!b || phEnvoi.encours) return; const [x] = phEnvoi.choix.splice(+b.dataset.retirer, 1); if (x) URL.revokeObjectURL(x.u); dessinerChoix(); };
     dessinerChoix();
     $("f").onsubmit = async ev => {
@@ -1136,6 +1139,7 @@
       const ens = EN.controlerPhotos(bonnes.length); if (ens) { msg(t("photos.ens." + ens.code, { n: ens.n, max: EN.REGLES.PHOTOS_MAX })); return; }
       // Plat et prix avec un numéro de téléphone (01/11/2026, tour 7 Premium) : refusé AVANT l'envoi des fichiers (même règle que la base).
       if (M.contientTelephone(($("ph-precision") || {}).value || "")) { msg(t("photos.precision.tel")); const pz = $("ph-precision"); if (pz) pz.focus(); return; }
+      if (M.contientTelephone(($("ph-occasion") || {}).value || "")) { msg(t("photos.occasion.tel")); const oz = $("ph-occasion"); if (oz) oz.focus(); return; }
       // Places calculées AVANT l'envoi (01/11/2026, tour 7 Premium) : la phrase d'après l'envoi reprend exactement celle d'avant (« 7 ce mois-ci,
       // 1 en décembre »). La base fait le même calcul et garde les photos au-delà (réponse ce_mois / gardees de deposer_photos).
       const placesAvant = places;
@@ -1160,11 +1164,14 @@
         // Enregistrement de l'envoi entier : un refus de la base n'enregistre rien (les fichiers reçus restent, un nouvel essai les reprend).
         // Plat et prix (01/11/2026, tour 7 Croissance) : facultatif, le même pour toutes les photos de cet envoi (photos.precision, enregistrer_photos).
         const precision = String(($("ph-precision") || {}).value || "").trim().replace(/\s+/g, " ").slice(0, 200);
-        if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => Object.assign({ chemin, nom, taille }, precision ? { precision } : {}))); deposees = r.nb_photos;
+        // Occasion ou message (14/11/2026, décision de PJ) : facultatif, même règle que le plat (photos.occasion, 120 caractères, enregistrer_photos) ;
+        // le moteur en fait l'accroche du réel et le fil de la légende, sans rien inventer (moteur/redaction.py, fautes_occasion).
+        const occasion = String(($("ph-occasion") || {}).value || "").trim().replace(/\s+/g, " ").slice(0, 120);
+        if (recus.length) { const r = await D.deposerPhotos(recus.map(({ chemin, nom, taille }) => Object.assign({ chemin, nom, taille }, precision ? { precision } : {}, occasion ? { occasion } : {}))); deposees = r.nb_photos;
           gardees = r.gardees != null ? +r.gardees : Math.max(0, deposees - (placesAvant === Infinity ? deposees : placesAvant)); recus.forEach(x => phEnvoi.noms.delete(x.cle)); retenirEnvois(c.id, recus.map(x => x.f)); }
       } catch (er) { erreurs.push(ph(er.message)); }
       finally { phEnvoi.encours = false; }
-      if (deposees) { phEnvoi.choix.forEach(x => URL.revokeObjectURL(x.u)); phEnvoi.choix = []; phEnvoi.precision = ""; }
+      if (deposees) { phEnvoi.choix.forEach(x => URL.revokeObjectURL(x.u)); phEnvoi.choix = []; phEnvoi.precision = ""; phEnvoi.occasion = ""; }
       const bilan = (deposees ? t("photos.deposees", { n: deposees }) : t("photos.aucune.enregistree")) + (erreurs.length ? t("photos.refusees", { n: erreurs.length, l: erreurs.join(" ; ") }) : "");
       if (!surPhotos()) { toast(bilan + (deposees ? " " + phraseSuite(deposees, gardees, moisSuivant) : "")); majCompteurs(); return; }
       await photos(); msg(bilan);

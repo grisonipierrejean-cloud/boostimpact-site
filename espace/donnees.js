@@ -237,6 +237,23 @@
     if (r === "google" && contientTelephone(t)) throw new Error(PHRASE_TEL_GOOGLE);
     return t;
   };
+  // Relecture par l'équipe avant le client (14/11/2026, bloc SQL du même nom) : alerte de la console sous RELECTURE_ALERTE_H heures restantes avant
+  // l'échéance du premier contenu (relecture_alerte_heures() de schema.sql : 12). « Corriger la légende » : mêmes contrôles que
+  // admin_corriger_legende (réseaux du contenu, legende_fautes, mention IA gardée) ; rend les légendes par réseau retenues (vides retirées).
+  const RELECTURE_ALERTE_H = 12;
+  const reseauxCorrection = x => x.type === "video" ? ["instagram", "facebook", "tiktok"] : formatDe(x) === "story" ? ["instagram", "facebook"] : ["instagram", "facebook", "google", "tiktok"];
+  const hashtags = t => (String(t).match(/#[^\s#]+/g) || []).length;
+  const controlerCorrection = (x, t, legendes, langue) => {
+    if (!t) throw new Error("La légende ne peut pas être vide.");
+    const res = reseauxCorrection(x), l = {};
+    for (const [k, v] of Object.entries(legendes || {})) { if (!res.includes(k)) throw new Error(`Réseau ${k} : ce contenu n'y part pas.`); const w = String(v || "").trim(); if (w) l[k] = w; }
+    for (const r of res) { const v = l[r] || t, n = longueur(v), f = [];
+      if (r === "instagram" && n > 2200) f.push("Instagram : 2 200 caractères au plus"); if (r === "instagram" && hashtags(v) > 30) f.push("Instagram : 30 hashtags au plus");
+      if (r === "tiktok" && n > 2200) f.push("TikTok : 2 200 caractères au plus"); if (r === "google" && n > 1500) f.push("fiche Google : 1 500 caractères au plus");
+      if (r === "google" && /#[^\s#]/.test(v)) f.push("fiche Google : pas de hashtag"); if (r === "facebook" && n > 10000) f.push("Facebook : 10 000 caractères au plus (garde-fou BoostImpact)");
+      if (f.length) throw new Error(f.join(" ; ")); controlerMentionIA(x, v, langue); }
+    return l;
+  };
   // Heure de Paris : décalage réel du fuseau à cet instant (heure d'été comprise), sans bibliothèque.
   const FMT_JOUR_PARIS = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" });
   const FMT_PARIS = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -590,7 +607,10 @@
       sans_autorisation: "Ce client n'a pas coché l'autorisation photos dans son espace (ou l'a retirée) : impossible de déposer ses photos.",
       precision: "Le plat et son prix : 200 caractères au plus.",
       // 01/11/2026 (tour 7 Premium) : un numéro dans le plat et son prix irait tel quel sur la fiche Google, qui peut retirer la publication.
-      precision_tel: "Le plat et son prix : pas de numéro de téléphone (il serait repris sur la fiche Google, qui peut retirer la publication). Le numéro de votre fiche est ajouté là où il faut." },
+      precision_tel: "Le plat et son prix : pas de numéro de téléphone (il serait repris sur la fiche Google, qui peut retirer la publication). Le numéro de votre fiche est ajouté là où il faut.",
+      // 14/11/2026 (décision de PJ) : l'occasion ou le message (photos.occasion), mêmes règles que le plat, 120 caractères au plus.
+      occasion: "L'occasion ou le message : 120 caractères au plus.",
+      occasion_tel: "L'occasion ou le message : pas de numéro de téléphone (il serait repris sur la fiche Google, qui peut retirer la publication). Le numéro de votre fiche est ajouté là où il faut." },
     // Plat et prix (01/11/2026, tour 7 Croissance) : comme enregistrer_photos, espaces resserrés, vide = null, 200 caractères au plus.
     precision: v => (typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "") || null,
     // Contrôle d'un envoi (liste de {chemin, nom, taille}) pour le commerce cid, dans l'ordre de deposer_photos. recu(chemin) : fichier présent dans le
@@ -607,6 +627,8 @@
         if (vus.includes(ch)) return P.double;
         if ((PHOTOS.precision(x.precision) || "").length > 200) return P.precision;
         if (contientTelephone(PHOTOS.precision(x.precision) || "")) return P.precision_tel;
+        if ((PHOTOS.precision(x.occasion) || "").length > 120) return P.occasion;
+        if (contientTelephone(PHOTOS.precision(x.occasion) || "")) return P.occasion_tel;
         if (!recu(ch)) return "Fichier non reçu : " + fichier + ".";
         if (connu(ch)) return P.deja;
         vus.push(ch);
@@ -617,7 +639,7 @@
   // Refus de deposer_photos (Supabase) ramenés aux mêmes phrases que la démonstration ; une phrase inconnue reste telle quelle.
   const phrasePhotos = m => { const P = PHOTOS.PHRASES, x = String(m || "");
     return /de 1 à 10 photos/.test(x) ? P.nb : /hors du dossier/.test(x) ? P.hors : /format non accepté/.test(x) ? P.format : /nom de fichier non accepté/.test(x) ? P.nom
-      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /pas de numéro de téléphone/.test(x) ? P.precision_tel : /plat et son prix/.test(x) ? P.precision : /autorisation photos absente/.test(x) ? P.sans_autorisation : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
+      : /déclarée deux fois/.test(x) ? P.double : /déjà enregistrée/.test(x) ? P.deja : /occasion ou le message : pas de numéro/i.test(x) ? P.occasion_tel : /occasion ou le message/i.test(x) ? P.occasion : /pas de numéro de téléphone/.test(x) ? P.precision_tel : /plat et son prix/.test(x) ? P.precision : /autorisation photos absente/.test(x) ? P.sans_autorisation : /commerce introuvable/i.test(x) ? P.introuvable : /commerce en pause/.test(x) ? P.pause
       : /fichier non reçu : (.*)$/.test(x) ? "Fichier non reçu : " + x.match(/fichier non reçu : (.*)$/)[1] + "." : x; };
   // ---- fin des règles communes de l'envoi de photos
 
@@ -1334,6 +1356,23 @@
       },
       // « Accepter quand même » (v52) : admin_accepter_photo (photo « a_traiter », controle_force vrai ; webhook hook_photo_forcee -> n8n -> rendu sans contrôle).
       async adminAccepterPhoto(pid) { return ok(await sb.rpc("admin_accepter_photo", { p_photo: pid })); },
+      // Relecture par l'équipe avant le client (14/11/2026, bloc SQL du même nom) : file « À relire » (admin_contenus_a_relire) et aperçus par adresse
+      // signée d'une heure (seau « contenus », règle contenus_seau_lecture ouverte à l'administrateur) : le visuel (cheminVisuel, comme la fiche client)
+      // et, pour une vidéo, le MP4 lui-même. Actions : admin_envoyer_au_client, admin_corriger_legende (contrôle d'abord ici, mêmes phrases que la
+      // base), admin_refaire_contenu, admin_regler_relecture.
+      async adminContenusARelire() {
+        const l = ok(await sb.rpc("admin_contenus_a_relire", {})) || [];
+        const signe = async ch => { if (!ch) return null; try { const r = await sb.storage.from("contenus").createSignedUrl(ch, 3600); return (r.data && r.data.signedUrl) || null; } catch (e) { return null; } };
+        await Promise.all(l.map(async x => { [x.url, x.video_url] = await Promise.all([signe(cheminVisuel(x)), x.type === "video" && /\.mp4$/i.test(x.fichier || "") ? signe(x.fichier) : null]); }));
+        return l;
+      },
+      async adminEnvoyerAuClient(id) { return ok(await sb.rpc("admin_envoyer_au_client", { p_contenu: id })); },
+      async adminCorrigerLegende(id, legende, legendes, x) { const t = String(legende || "").trim(); if (x) controlerCorrection(x, t, legendes, x.langue || "fr");
+        return ok(await sb.rpc("admin_corriger_legende", { p_contenu: id, p_legende: t, p_legendes: legendes && Object.keys(legendes).length ? legendes : null })); },
+      async adminRefaireContenu(id) { return ok(await sb.rpc("admin_refaire_contenu", { p_contenu: id })); },
+      async adminReglerRelecture(cid, active) { return ok(await sb.rpc("admin_regler_relecture", { p_commerce: cid, p_active: active !== false })); },
+      // Typographie du réel par client (14/11/2026, bloc SQL du même nom) : polices, source, note, supports fournis, surtitre, site web (admin_regler_typo).
+      async adminReglerTypo(cid, p) { return ok(await sb.rpc("admin_regler_typo", { p_commerce: cid, p: p || {} })); },
       // Prises en charge (« Je prends ») et nouveau client complet : bloc « Console : garantie des 24 h tenue à deux » de schema.sql. Tant que ce bloc
       // n'est pas collé, adminPrises rend null (la console masque « Je prends ») et adminCreerClient crée le commerce par admin_creer_commerce, sans
       // ville, langue ni fiche (rend { id, partiel: true } : la console le dit).

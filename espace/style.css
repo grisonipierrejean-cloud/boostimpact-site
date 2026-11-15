@@ -1351,3 +1351,10 @@ details.repliable.mer-reponses>summary h3{margin:0}
 .interrupteur-texte{min-width:0}
 @media (prefers-reduced-motion:reduce){.interrupteur-piste,.interrupteur-piste::after{transition:none}}
 .via-ligne .option{align-items:flex-start}
+/* Relecture par l'équipe avant le client (14/11/2026, console, « À faire » > « À relire ») : aperçu du contenu (visuel ou vidéo 9:16) sans largeur fixe,
+   alerte de l'échéance des 72 h en tête de la file. */
+.rl-apercu{max-width:min(100%,320px)}
+.rl-apercu img,.rl-apercu video{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:var(--r-image);background:var(--releve)}
+.alerte-relire{margin:0 0 16px;padding:12px 16px;background:var(--surface);border:1.5px solid var(--bord-fort);border-radius:var(--r-carte)}
+/* Consigne de prise de vue (14/11/2026, écran Photos) : noir sur blanc, texte courant (pas une aide grisée). */
+.consigne-photo{margin:0 0 16px;color:var(--encre);font-size:1rem;line-height:1.5}

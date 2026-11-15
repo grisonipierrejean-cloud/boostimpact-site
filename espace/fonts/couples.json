@@ -1,5 +1,5 @@
 {
- "_lisez_moi": "Liste FERMÉE des polices du kit de marque (moteur/marque.py, espace/web/marque.js, fonction SQL polices_marque()). Fichiers d'origine, non modifiés, tous sous SIL Open Font License 1.1 (relevé dans LICENCES.md). Copie exacte dans espace/web/fonts/couples.json (égalité testée). Ajouter une police : fichier ici ET dans espace/web/fonts/, licence relue et notée dans LICENCES.md, identifiant ajouté à polices_marque() dans schema.sql. Clés facultatives d'une famille (14/11/2026, polices d'affiche) : titre_affiche (titres en grand, réglage « affiche » de moteur/gabarits.py, mêmes nombres dans espace/web/marque.js), majuscules (titre du visuel en capitales), capitale (hauteur de capitale en fraction du corps, 0.74 par défaut), interligne (multiplie l'interligne du titre, 1 par défaut). Sans ces clés, rendu inchangé.",
+ "_lisez_moi": "Liste FERMÉE des polices du kit de marque (moteur/marque.py, espace/web/marque.js, fonction SQL polices_marque()). Fichiers d'origine, non modifiés, tous sous SIL Open Font License 1.1 (relevé dans LICENCES.md). Copie exacte dans espace/web/fonts/couples.json (égalité testée). Ajouter une police : fichier ici ET dans espace/web/fonts/, licence relue et notée dans LICENCES.md, identifiant ajouté à polices_marque() dans schema.sql. Clés facultatives d'une famille (14/11/2026, polices d'affiche) : titre_affiche (titres en grand, réglage « affiche » de moteur/gabarits.py, mêmes nombres dans espace/web/marque.js), majuscules (titre du visuel en capitales), capitale (hauteur de capitale en fraction du corps, 0.74 par défaut), interligne (multiplie l'interligne du titre, 1 par défaut). Sans ces clés, rendu inchangé. Clés facultatives (14/11/2026, typographie du réel IA, moteur/montage.py typo_reel) : mot_cle_majuscules (mot-clé du réel en capitales, comme la référence validée en Oswald, sans toucher aux titres des visuels), graisses (famille livrée en un fichier statique par graisse, {\"300\": fichier, ...} : marque.fichier_police prend la graisse la plus proche, marque.js déclare une police par graisse ; « fichier » reste le fichier 400).",
  "familles": {
   "bricolage": {"nom": "Bricolage Grotesque", "fichier": "bricolage.ttf", "axes": {"opsz": 48, "wdth": 100}, "graisse_titre": 800},
   "figtree": {"nom": "Figtree", "fichier": "figtree.ttf", "axes": {}, "graisse_titre": 800},
@@ -7,7 +7,7 @@
   "dmsans": {"nom": "DM Sans", "fichier": "dmsans.ttf", "axes": {"opsz": 14}, "graisse_titre": 700},
   "fraunces": {"nom": "Fraunces", "fichier": "fraunces.ttf", "axes": {"opsz": 72, "SOFT": 50, "WONK": 0}, "graisse_titre": 700},
   "nunito": {"nom": "Nunito", "fichier": "nunito.ttf", "axes": {}, "graisse_titre": 800},
-  "oswald": {"nom": "Oswald", "fichier": "oswald.ttf", "axes": {}, "graisse_titre": 600},
+  "oswald": {"nom": "Oswald", "fichier": "oswald.ttf", "axes": {}, "graisse_titre": 600, "mot_cle_majuscules": true},
   "karla": {"nom": "Karla", "fichier": "karla.ttf", "axes": {}, "graisse_titre": 800},
   "dmserif": {"nom": "DM Serif Display", "fichier": "dmserif.ttf", "axes": {}, "graisse_titre": 400},
   "manrope": {"nom": "Manrope", "fichier": "manrope.ttf", "axes": {}, "graisse_titre": 800},
@@ -16,9 +16,10 @@
   "anton": {"nom": "Anton", "fichier": "anton.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "majuscules": true, "capitale": 0.86, "interligne": 1.02},
   "shrikhand": {"nom": "Shrikhand", "fichier": "shrikhand.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.67, "interligne": 1.06},
   "alfaslab": {"nom": "Alfa Slab One", "fichier": "alfaslab.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.78, "interligne": 1.06},
-  "caveatbrush": {"nom": "Caveat Brush", "fichier": "caveatbrush.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.66, "interligne": 0.96}
+  "caveatbrush": {"nom": "Caveat Brush", "fichier": "caveatbrush.ttf", "axes": {}, "graisse_titre": 400, "titre_affiche": true, "capitale": 0.66, "interligne": 0.96},
+  "opensans": {"nom": "Open Sans", "fichier": "opensans.ttf", "axes": {}, "graisse_titre": 700, "graisses": {"300": "opensans-300.ttf", "400": "opensans.ttf", "500": "opensans-500.ttf", "600": "opensans-600.ttf", "700": "opensans-700.ttf", "800": "opensans-800.ttf"}}
  },
- "textes": ["figtree", "dmsans", "nunito", "karla", "manrope"],
+ "textes": ["figtree", "dmsans", "nunito", "karla", "manrope", "opensans"],
  "couples": [
   {"id": "franc", "titres": "bricolage", "texte": "figtree", "nom": "Franc", "en": "Bold", "nl": "Krachtig"},
   {"id": "elegant", "titres": "playfair", "texte": "dmsans", "nom": "Élégant", "en": "Elegant", "nl": "Elegant"},

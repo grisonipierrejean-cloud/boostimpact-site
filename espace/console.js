@@ -698,9 +698,37 @@
           <p class="note">${t("con.col.mer")}</p>${taches.length ? `<ul class="taches-admin">${taches.map(k => `<li data-tache="${k}">${t("con.af.tache." + k)}</li>`).join("")}</ul>` : ""}
           ${lien ? `<div class="actions"><button type="button" class="bouton second petit" data-mer-lien data-cid="${e(c.id)}">${t("con.mer.lien.bouton")}</button></div>` : ""}${bloque ? miseEnRoute(c) : ""}</article>`; };
 
+  // ================= Relecture par l'équipe avant le client (14/11/2026, décision de PJ : un droit de regard AVANT le client). Le moteur crée les
+  // contenus « a_relire » (commerces.relecture_equipe, vrai par défaut) : invisibles du commerçant, aucun email. File « À relire » de « À faire »
+  // (admin_contenus_a_relire) : par client, le plus ancien d'abord ; aperçu (visuel, ou la vidéo elle-même) et légendes ; trois gestes :
+  // « Envoyer au client » (admin_envoyer_au_client : « a_valider », lien et email du soir), « Corriger la légende et envoyer » (admin_corriger_legende),
+  // « Refaire » (admin_refaire_contenu : rendu relancé, photo ou montage). L'horloge de la garantie des 72 h n'est PAS suspendue : quand le premier
+  // contenu du client n'est pas encore parti, la carte dit l'échéance, passe en tête et en alerte sous 12 h (urgent) ou au-delà (en retard).
+  const RES_RL = x => x.type === "video" ? ["instagram", "facebook", "tiktok"] : x.format === "story" ? ["instagram", "facebook"] : ["instagram", "facebook", "google", "tiktok"];
+  const lignesTexte = v => Math.min(12, Math.max(3, Math.ceil(String(v || "").length / 34) + 1));
+  const echeanceRelire = x => x.echeance == null ? "" : `<p class="note fort" data-rl-echeance${x.urgent || x.en_retard ? " data-rl-alerte" : ""}>${t(x.en_retard ? "con.rl.echeance.depassee" : x.urgent ? "con.rl.echeance.urgent" : "con.rl.echeance", { d: dh(x.echeance), h: I.nombre(Math.max(0, Math.floor(+x.heures_restantes || 0))) })}</p>`;
+  const apercuRelire = x => x.video_url ? `<video class="rl-video" src="${e(x.video_url)}"${x.url ? ` poster="${e(x.url)}"` : ""} controls playsinline preload="metadata" data-rl-video></video>`
+    : x.url ? `<img class="rl-visuel" src="${e(x.url)}" alt="${e(t("con.rl.apercu", { f: formatRelire(x) }))}" loading="lazy" data-rl-visuel>` : `<p class="note" data-rl-sans>${t("con.rl.sans.apercu")}</p>`;
+  const formatRelire = x => t("con.pm.format." + (x.type === "video" ? "video" : x.format === "story" ? "story" : "publication"));
+  const carteRelire = x => { const id = e(x.id), ls = x.legendes || {};
+    return `<article class="carte rl${x.urgent || x.en_retard ? " attention" : ""}" data-rl="${id}" data-cid="${e(x.commerce_id)}">
+          <div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.rl.recu", { d: dh(x.cree_le) })}</span></div>
+          <p class="note">${t("con.rl.titre")}</p>
+          <p class="fort">${formatRelire(x)}${+x.version > 1 ? " · " + t("con.rl.version", { n: x.version }) : ""}</p>${x.ia ? `<p class="etiquette-ia" data-ia>${t("con.pm.ia")}</p>` : ""}
+          ${echeanceRelire(x)}${x.precision_photo ? `<p class="note">${t("con.rl.precision")} <span class="casse" translate="no">${e(x.precision_photo)}</span></p>` : ""}
+          <div class="rl-apercu">${apercuRelire(x)}</div>
+          <div class="f"><label for="rl-l-${id}">${t("con.rl.legende")}</label><textarea id="rl-l-${id}" data-rl-legende translate="no" rows="${lignesTexte(x.legende)}" data-avant="${e(x.legende || "")}">${e(x.legende || "")}</textarea></div>
+          <details class="rl-reseaux"${Object.keys(ls).length ? " open" : ""}><summary>${t("con.rl.par.reseau")}</summary><p class="note">${t("con.rl.reprend")}</p>
+            ${RES_RL(x).map(r => `<div class="f"><label for="rl-${r}-${id}">${NOM_RESEAU[r] || e(r)}</label><textarea id="rl-${r}-${id}" data-rl-res="${r}" translate="no" rows="${lignesTexte(ls[r])}" data-avant="${e(ls[r] || "")}">${e(ls[r] || "")}</textarea></div>`).join("")}</details>
+          <div class="actions"><button type="button" class="bouton petit" data-rl-envoyer>${t("con.rl.envoyer")}</button><button type="button" class="bouton second petit" data-rl-corriger>${t("con.rl.corriger")}</button>${x.refaire !== "non" ? `<button type="button" class="lien" data-rl-refaire="${e(x.refaire)}">${t("con.rl.refaire")}</button>` : ""}</div>
+          ${x.refaire === "non" ? `<p class="note" data-rl-refaire-non>${t("con.rl.refaire.non")}</p>` : ""}</article>`; };
+  // Légendes de la carte : la légende commune et chaque légende par réseau (vide = la commune est reprise) ; change = une zone diffère de l'origine.
+  const legendesCarte = a => { const l = {}; a.querySelectorAll("[data-rl-res]").forEach(z => { const v = z.value.trim(); if (v) l[z.dataset.rlRes] = v; });
+    return { legende: a.querySelector("[data-rl-legende]").value.trim(), legendes: l, change: [...a.querySelectorAll("[data-rl-legende], [data-rl-res]")].some(z => z.value.trim() !== (z.dataset.avant || "").trim()) }; };
+
   // ================= Écran « À faire » : une seule file, triée par urgence (en retard d'abord, puis l'échéance la plus proche, puis le reste, le plus
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
-  const TYPES_AF = ["alertes", "apublier", "avis", "videos", "garanties", "miseenroute", "options"];
+  const TYPES_AF = ["alertes", "arelire", "apublier", "avis", "videos", "garanties", "miseenroute", "options"];
   let afCtx = {};
   // 26/10/2026 (garantie des 24 h tenue à deux) : les alertes prioritaires (avis sensibles, erreurs de workflow) passent avant tout, avec leur échéance ;
   // un avis sensible reste dans la file jusqu'à sa publication ; un dépôt vidéo refusé n'est jamais « en retard » ; « Charge du jour » en haut ;
@@ -709,10 +737,14 @@
   // règles de retard ; chaque tâche porte le commerce concerné (cid), pour la file de travail par client du cockpit.
   async function collecterAFaire() {
     const sur = p => p.catch(() => null);
-    const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
-      sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [], lirePrises()]);
+    const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts, relire] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
+      sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [],
+      D.adminContenusARelire ? sur(D.adminContenusARelire()) : [], lirePrises()]);
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
-    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date });
+    const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date, ordre: o.ordre ?? null });
+    // À relire (14/11/2026) : une carte par contenu ; l'échéance de la garantie des 72 h (si elle court encore) fait l'urgence ; ordre de la base gardé
+    // pour le filtre « À relire » (par client, le plus ancien d'abord).
+    (relire || []).forEach((x, i) => ajout("arelire", carteRelire(x), x.en_retard, T_(x.echeance), T_(x.cree_le), { prio: !!(x.urgent || x.en_retard), cle: "relire:" + x.id, cid: x.commerce_id, ordre: i }));
     // Avis sensibles de la file : une seule carte (l'alerte ET la réponse), en tête.
     const sensibles = new Set((file || []).filter(a => a.sensible).map(a => a.id));
     (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id))).forEach(a => { const ech = echeanceAlerte(a);
@@ -735,8 +767,11 @@
       if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), (bloque && (ageJours(c) ?? 0) >= 5) || tk.includes("whatsapp"), NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
     (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
     items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
-    return { items, alertes, pubs, dl, cs, erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl].some(x => x === null) };
+    return { items, alertes, pubs, dl, cs, relire: relire || [], erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, relire].some(x => x === null) };
   }
+  // Alerte « À relire » en haut de « À faire » (14/11/2026) : contenus dont l'échéance de la garantie des 72 h tombe dans moins de 12 h, ou est passée.
+  const alerteRelire = l => { const u = (l || []).filter(x => x.urgent || x.en_retard); if (!u.length) return "";
+    return `<p class="alerte-relire fort" id="alerte-relire" role="alert"><a href="#/afaire/arelire">${t("con.rl.alerte", { n: u.length, c: I.liste([...new Set(u.map(x => x.commerce))].map(e)) })}</a></p>`; };
   // Prénom de l'appareil (compte partagé) : la même zone dans « À faire » et dans le cockpit.
   const zoneMoi = () => { if (!prises) return ""; const noms = [...new Set(Object.values(prises).map(x => x.par))];
     return moi ? `<p class="note moi" id="moi">${t("con.moi.est", { p: e(moi) })} <button type="button" class="lien" id="moi-changer">${t("con.moi.changer")}</button></p>`
@@ -744,11 +779,11 @@
   const brancherMoi = refaire => { const fm = $("f-moi"); if (fm) fm.onsubmit = ev => { ev.preventDefault(); const v = $("moi-prenom").value.trim(); if (!v) return; garderMoi(v); refaire(); };
     const mc = $("moi-changer"); if (mc) mc.onclick = () => { garderMoi(""); refaire(true); }; };
   async function afaire(filtreType) {
-    const { items, pubs, dl, cs, erreurs } = await collecterAFaire();
+    const { items, pubs, dl, cs, erreurs, relire } = await collecterAFaire();
     const avecMoi = !!(prises && moi), TYPES = avecMoi ? [...TYPES_AF, "moi"] : TYPES_AF;
     const de = k => k === "moi" ? items.filter(x => aMoi(x.cle)) : items.filter(x => x.types.includes(k));
     const n = Object.fromEntries(TYPES.map(k => [k, de(k).length])), f = TYPES.includes(filtreType) ? filtreType : "";
-    const visibles = f ? de(f) : items;
+    const visibles = f === "arelire" ? de(f).sort((a, b) => a.ordre - b.ordre) : f ? de(f) : items;
     afCtx = { pubs: pubs || [], dl: dl || [], cs };
     // Charge du jour (constat 7) : toutes les actions de la file ; « en retard » et « avant <heure> » (échéance aujourd'hui, l'heure de la plus tardive).
     const finJour = new Date(); finJour.setHours(23, 59, 59, 999);
@@ -756,7 +791,7 @@
     const charge = t("con.charge", { n: items.length, r: enRetard, m: duJour.length, h: duJour.length ? I.heure(Math.max(...duJour.map(x => x.quand))) : "" });
     vue.innerHTML = `${entete(t("con.entree.afaire"), t("con.afaire.chapo"))}<p class="charge fort" id="charge">${charge}</p>${zoneMoi()}<p class="msg" id="msg" role="status"></p>
       <nav class="filtres compteurs" id="a-faire" aria-label="${t("con.afaire.types")}"><a href="#/afaire" data-type=""${f ? "" : ' aria-current="page"'}>${t("con.afaire.tout", { n: items.length })}</a>${TYPES.map(k => `<a href="#/afaire/${k}" data-type="${k}" data-n="${n[k]}"${f === k ? ' aria-current="page"' : ""}>${t("con.af." + k)}, ${n[k]}</a>`).join("")}</nav>
-      ${erreurs ? `<p class="note">${t("con.afaire.erreur")}</p>` : ""}
+      ${erreurs ? `<p class="note">${t("con.afaire.erreur")}</p>` : ""}${alerteRelire(relire)}
       ${visibles.length ? `<div class="pile" id="file-a-faire">${visibles.map(x => x.html.replace("<article ", `<article data-type="${f && x.types.includes(f) ? f : x.type}" data-types="${x.types.join(" ")}"${x.prio ? " data-prio" : ""} `)).join("")}</div>` : `<section class="carte"><p class="texte2" id="a-faire-vide">${t(f ? "con.afaire.vide.type" : "con.afaire.vide")}</p></section>`}`;
     const fl = vue.querySelector(".compteurs"), fp = fl && fl.querySelector("[aria-current]");
     if (fp && fl.scrollWidth > fl.clientWidth) fl.scrollLeft += fp.getBoundingClientRect().left - fl.getBoundingClientRect().left - 8;
@@ -851,6 +886,17 @@
     sur("[data-delegation]", i => agir(() => D.adminDelegation(i.closest("[data-ret]").dataset.ret, i.checked)));
     sur("[data-gar-releve]", b => { const z = b.closest("[data-gar]"), v = z.querySelector("[data-releve]").value; agir(() => D.adminGarantie(z.dataset.gar, { avis_releve: v })); });
     sur("[data-gar-cartes]", b => agir(() => D.adminGarantie(b.closest("[data-gar]").dataset.gar, { cartes_en_place_le: window.RENOM_MAJ.aujourdhui() })));
+    // Relecture par l'équipe (14/11/2026) : envoyer tel quel (refusé si une légende a été modifiée : c'est « Corriger »), corriger puis envoyer, refaire.
+    const rlId = b => b.closest("[data-rl]").dataset.rl;
+    sur("[data-rl-envoyer]", b => { const a = b.closest("[data-rl]"), x = legendesCarte(a); if (x.change) { msgPres(repereBouton(b), t("con.rl.modifiee"), true); msg(t("con.rl.modifiee")); return; }
+      agir(async () => { const r = await D.adminEnvoyerAuClient(rlId(b)); return t(r && r.etat === "deja" ? "con.rl.deja" : "con.rl.envoye"); }, null, b); });
+    sur("[data-rl-corriger]", b => { const a = b.closest("[data-rl]"), x = legendesCarte(a);
+      agir(async () => { await D.adminCorrigerLegende(rlId(b), x.legende, x.legendes); return t("con.rl.corrige"); }, null, b); });
+    sur("[data-rl-refaire]", b => { if (!window.confirm(t(b.dataset.rlRefaire === "montage" ? "con.rl.refaire.confirmer.montage" : "con.rl.refaire.confirmer"))) return;
+      agir(async () => { const r = await D.adminRefaireContenu(rlId(b)); return t(r && r.mecanisme === "montage" ? "con.rl.refait.montage" : "con.rl.refait", { n: (r && r.contenus_effaces) || 1 }); }, null, b); });
+    sur("[data-typo-enregistrer]", b => { const z = b.closest("[data-typo]"), p = {}; z.querySelectorAll("[data-ty]").forEach(i => { p[i.dataset.ty] = i.value.trim(); });
+      agir(async () => { await D.adminReglerTypo(z.dataset.typo, p); return t("con.typo.ok"); }, null, b); });
+    sur("[data-relecture]", i => agir(async () => { const r = await D.adminReglerRelecture(cidDe(i), i.checked); return t(r.relecture_equipe ? "con.rl.active" : "con.rl.coupee", { n: r.en_relecture || 0 }); }));
     // Dépôts vidéo, mise en route, options
     sur("[data-relancer]", b => agir(() => D.adminRelancerMontage(b.closest("[data-depot]").dataset.depot), t("con.relance.ok"), b));
     // « Google vérifié » : action complète (verifier). « Metricool vérifié » ne reste que pour une offre à réseaux sans réseau social retenu.
@@ -1075,7 +1121,7 @@
   const videContenus = phs => { const l = Array.isArray(phs) ? phs : [];
     return t(l.some(p => ["a_traiter", "en_cours"].includes(p.statut) && (p.controle_force || p.statut === "en_cours")) ? "con.ctc.vide.cours" : l.some(p => p.statut === "a_traiter") ? "con.ctc.vide.controle"
       : l.some(p => p.statut === "refusee" && p.refus_motif === "plafond") ? "con.ctc.vide.plafond" : "con.ctc.vide.photo"); };
-  const nowContenus = (cts, phs) => !Array.isArray(cts) ? "" : !cts.length ? videContenus(phs) : cts.some(x => x.statut === "a_valider") ? t("con.ai.ctc.valider", { n: cts.filter(x => x.statut === "a_valider").length }) : t("con.ai.ctc.ok");
+  const nowContenus = (cts, phs) => !Array.isArray(cts) ? "" : !cts.length ? videContenus(phs) : cts.some(x => x.statut === "a_relire") ? t("con.ai.ctc.relire", { n: cts.filter(x => x.statut === "a_relire").length }) : cts.some(x => x.statut === "a_valider") ? t("con.ai.ctc.valider", { n: cts.filter(x => x.statut === "a_valider").length }) : t("con.ai.ctc.ok");
   const blocContenus = (cts, phs) => `<section class="carte" id="client-contenus"><h2>${t("con.ctc.titre")}</h2>${aide("ctc", nowContenus(cts, phs))}
       ${!Array.isArray(cts) ? `<p class="note">${t("con.ctc.illisible")}</p>` : !cts.length ? `<p class="texte2" id="contenus-vide">${videContenus(phs)}</p>`
       : `<p class="note">${t("con.ctc.n", { n: cts.length })}</p><div class="galerie">${cts.map(carteContenu).join("")}</div>`}</section>`;
@@ -1092,6 +1138,32 @@
   const ligneAccordIa = c => !D.adminReglerAccordVideoIa ? "" : `<div class="pile serre via-ligne" id="client-via-ligne" data-via="${c.video_ia_accord_le ? "oui" : "non"}"><p class="fort">${c.video_ia_accord_le ? t("con.via.oui", { d: I.date(c.video_ia_accord_le) }) : t("con.via.non")}</p>
     ${c.video_ia_accord_le ? `<p><button type="button" class="lien" id="via-retirer">${t("con.via.retirer")}</button></p>`
     : `<label class="option"><input type="checkbox" id="via-accord"><span>${t("con.via.accord.equipe")}</span></label><div class="actions"><button type="button" class="bouton second petit" id="via-ok">${t("con.via.enregistrer")}</button></div>`}</div>`;
+  // Relecture par l'équipe (14/11/2026) : interrupteur du client (commerces.relecture_equipe, vrai par défaut ; admin_regler_relecture) et contenus en
+  // attente de relecture, avec le lien vers la file « À relire ».
+  const blocRelecture = (c, cts) => { const n = Array.isArray(cts) ? cts.filter(x => x.statut === "a_relire").length : 0, actif = c.relecture_equipe !== false;
+    return `<section class="carte" id="client-relecture"><h2>${t("con.rl.bloc.titre")}</h2><p class="note">${t("con.rl.bloc.texte")}</p>
+      <label class="option"><input type="checkbox" data-relecture data-cid="${e(c.id)}"${actif ? " checked" : ""}><span>${t("con.rl.interrupteur")}</span></label>
+      <p class="note" data-relecture-etat>${t(actif ? "con.rl.etat.on" : "con.rl.etat.off")}</p>
+      ${n ? `<p class="fort" data-relecture-n><a href="#/afaire/arelire">${t("con.rl.bloc.n", { n })}</a></p>` : ""}</section>`; };
+  // Typographie du réel par client (14/11/2026, décision de PJ ; bloc SQL « Typographie du réel par client », admin_regler_typo). Ordre de source :
+  // 1) relevée sur le site web du commerce (à la main : rien n'est lu automatiquement), 2) choisie par le client (sur demande : l'espace ne règle plus
+  // les polices depuis le 31/10/2026), 3) déduite de ses supports (carte, flyers, PDF : à la main, non automatisé, note « supports fournis »).
+  // Polices de la liste fermée (couples.json) ; surtitre de la carte de fin du réel.
+  const SOURCES_TYPO = ["site", "client", "supports", "defaut"];
+  const blocTypo = (c, cat) => { if (!cat) return ""; const k = c.marque || {}, id = e(c.id), fam = cat.familles || {}, nomF = x => (fam[x] || {}).nom || x;
+    const opt = (l, v) => l.map(x => `<option value="${e(x)}"${x === v ? " selected" : ""}>${e(nomF(x))}</option>`).join("");
+    return `<section class="carte" id="client-typo" data-typo="${id}"><h2>${t("con.typo.titre")}</h2><p class="note">${t("con.typo.texte")}</p>
+      <p class="fort" data-typo-actuelle>${t("con.typo.actuelle", { a: e(nomF(k.police_titres || "bricolage")), b: e(nomF(k.police_texte || "figtree")) })} · ${t("con.typo.src." + (SOURCES_TYPO.includes(k.source_typo) ? k.source_typo : "aucune"))}</p>
+      ${k.typo_note ? `<p class="note" data-typo-note>${e(k.typo_note)}</p>` : ""}${k.supports_fournis ? `<p class="note" data-typo-supports>${t("con.typo.supports.vus")} ${e(k.supports_fournis)}</p>` : ""}
+      <details class="repliable sous"><summary><h3>${t("con.typo.modifier")}</h3></summary><div class="pile serre">
+        <div class="f"><label for="ty-site-${id}">${t("con.typo.site")}</label><input id="ty-site-${id}" type="url" inputmode="url" maxlength="300" data-ty="site_web" value="${e(c.site_web || "")}"></div>
+        <div class="champs deux"><div class="f"><label for="ty-t-${id}">${t("con.typo.titres")}</label><select id="ty-t-${id}" data-ty="police_titres">${opt(Object.keys(fam), k.police_titres)}</select></div>
+          <div class="f"><label for="ty-x-${id}">${t("con.typo.texte.police")}</label><select id="ty-x-${id}" data-ty="police_texte">${opt(cat.textes || [], k.police_texte)}</select></div></div>
+        <div class="f"><label for="ty-s-${id}">${t("con.typo.source")}</label><select id="ty-s-${id}" data-ty="source_typo">${SOURCES_TYPO.map(x => `<option value="${x}"${x === k.source_typo ? " selected" : ""}>${t("con.typo.src." + x)}</option>`).join("")}</select></div>
+        <div class="f"><label for="ty-n-${id}">${t("con.typo.note")}</label><textarea id="ty-n-${id}" rows="2" maxlength="300" data-ty="typo_note">${e(k.typo_note || "")}</textarea></div>
+        <div class="f"><label for="ty-p-${id}">${t("con.typo.supports")}</label><textarea id="ty-p-${id}" rows="2" maxlength="500" data-ty="supports_fournis">${e(k.supports_fournis || "")}</textarea></div>
+        <div class="f etroit"><label for="ty-u-${id}">${t("con.typo.surtitre")}</label><input id="ty-u-${id}" type="text" maxlength="40" data-ty="surtitre" value="${e(k.surtitre || "")}"></div>
+        <div class="actions"><button type="button" class="bouton second petit" data-typo-enregistrer>${t("con.typo.enregistrer")}</button></div></div></details></section>`; };
   const blocVideosIa = (c, jl) => { const l = videosIaDe(jl); if (!l.length && c.offre_id !== "premium") return "";
     return `<section class="carte" id="client-videos-ia"><h2>${t("con.vic.titre")}</h2>${ligneAccordIa(c)}<p class="note">${t("con.vic.chapo")}</p>${!l.length ? `<p class="texte2" id="videos-ia-vide">${t("con.vic.vide")}</p>`
       : `<ul class="liste-ia">${l.slice(0, 12).map(j => { const y = j.detail.video_ia, et = ["faite", "plan_b", "desactivee"].includes(y.etat) ? y.etat : "plan_b", cout = coutIa(y);
@@ -1110,7 +1182,8 @@
     else robotsFiche = { passage: undefined, alertes: [] };
     // v49 : photos du client pour le dossier de démarrage (x sur 5 utilisables) ; illisibles : null, la ligne dit « nombre inconnu ».
     // v52 : contenus du client (bloc « Contenus ») lus en même temps ; illisibles : null, le bloc le dit.
-    const [phs, cts] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null]);
+    const [phs, cts, catT] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null,
+      MQ && MQ.charger ? sur(MQ.charger()) : null]);
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
     const journalClient = (jl || []).filter(x => x.commerce_id === cid);
@@ -1130,8 +1203,8 @@
       <section class="carte" id="client-sante" data-mer-commerce="${e(c.id)}"><h2>${C_("sante")}</h2>${aide("sante", nowSante(c.sante))}${sante(c.sante)}<h3>${C_("mer")}</h3>${aide("mer", "")}${merFiche(c)}</section>
       ${mesAvis.length ? `<section class="carte" id="client-avis"><h2>${t("con.client.avis")}, ${mesAvis.length}</h2>${aide("avis", t("con.ai.avis.now"))}</section><div class="pile" id="client-avis-file">${mesAvis.map(a => avecPrise(carteAvisFile(a, { surClient: true }), "avis:" + a.id)).join("")}</div>` : ""}
       <section class="carte" id="client-comptes" data-id="${e(c.id)}"><h2>${C_("comptes")}</h2>${aide("comptes", nowComptes(c))}<p>${t("con.connectes", { n: Object.values(c.comptes || {}).filter(x => x.etat === "connecte").length })}</p>${ligneAcces(c)}${ligneMarque(c)}${ligneFiche(c)}</section>
-      <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>
-      ${blocPhotos(phs)}${blocContenus(cts, phs)}${blocVideosIa(c, journalClient)}
+      <section class="carte" id="client-style"><h2>${t("con.client.style")}</h2>${aide("style", nowStyle(c))}${ligneStyle(c)}</section>${blocTypo(c, catT)}
+      ${blocPhotos(phs)}${blocContenus(cts, phs)}${blocVideosIa(c, journalClient)}${blocRelecture(c, cts)}
       <section class="carte" id="client-garanties"><h2>${t("con.entree.garanties")}</h2>${aide("gar", "")}
         <h3>${t("con.delais.titre")}</h3>${aide("delais", nowDelais(g, o, phs))}${g ? `<div data-delais="${e(cid)}"><dl class="liste-delais">${[["delais.depart", g.depart ? `<p>${dh(g.depart)}</p>` : `<p class="note">${t("con.delais.pas.demarre")}</p>`], ["delais.fiche", delai(g.fiche) + coherenceEtat(g.fiche)], ["delais.contenu", delai(g.premier_contenu)],
             ["delais.avis", `<p class="fort">${(g.avis_en_cours || []).length}</p>`]].map(([lib, v]) => `<div><dt class="note">${C_(lib)}</dt><dd>${v}</dd></div>`).join("")}</dl>${saisieDelais(g)}</div>`
