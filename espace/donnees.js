@@ -909,9 +909,11 @@
         : ["reauthentication_needed", "session_not_found", "session_expired", "bad_jwt", "no_authorization"].includes(c) || st === 401 ? "session" : "autre";
       return Object.assign(new Error((er && er.message) || code), { code, codeSupabase: c });
     };
+    // Compte connu ? (15/11/2026, décision de PJ : « aucun compte n'existe avec cette adresse » en rouge) ; null si la base ne répond pas.
+    const compteExiste = async email => { try { const r = await sb.rpc("compte_existe", { p_email: String(email || "").trim() }); return r.error ? null : r.data === true; } catch (x) { return null; } };
     const entrerParMotDePasse = async (email, mdp) => {
       const r = await sb.auth.signInWithPassword({ email, password: mdp });
-      if (r.error) throw erreurAuth(r.error);
+      if (r.error) { const er = erreurAuth(r.error); if (er.code === "identifiants" && await compteExiste(email) === false) er.code = "inconnu"; throw er; }
       if (!parMotDePasse(r.data && r.data.session)) { await sb.auth.signOut({ scope: "local" }); throw Object.assign(new Error("jeton sans mot de passe"), { code: "autre" }); }
       cache = null;
     };
@@ -983,9 +985,13 @@
       // « Première connexion ou mot de passe oublié ? » : lien de récupération, qui revient sur la page ouverte. Même réponse que l'adresse ait un
       // compte ou non (Supabase répond 200 pour une adresse inconnue ; son 429 « déjà envoyé » ne vise qu'un compte existant : il est tu lui
       // aussi, sinon il trahirait l'existence du compte). Seule une panne du réseau est dite.
+      // 15/11/2026 (décision de PJ) : une adresse sans compte est dite (« inconnu », ligne rouge), vérifiée par compte_existe() (schema.sql) ;
+      // un envoi limité (429 : un email est déjà parti il y a moins d'une minute) est dit aussi (« deja »). Base injoignable : on envoie quand même.
       async demanderLienMotDePasse(email) {
-        const r = await sb.auth.resetPasswordForEmail(String(email || "").trim(), { redirectTo: retourConnexion() });
-        if (r.error && erreurAuth(r.error).code === "service") throw erreurAuth(r.error);
+        const adr = String(email || "").trim();
+        if (await compteExiste(adr) === false) throw Object.assign(new Error("compte inconnu"), { code: "inconnu" });
+        const r = await sb.auth.resetPasswordForEmail(adr, { redirectTo: retourConnexion() });
+        if (r.error) { const er = erreurAuth(r.error); if (er.code === "service") throw er; if (er.code === "trop") throw Object.assign(er, { code: "deja" }); }
         return {};
       },
       // Lien d'email au nouveau format (26/10/2026, acces.js, lienEmail) : vérifié seulement au clic de la personne. verifyOtp({ token_hash, type })

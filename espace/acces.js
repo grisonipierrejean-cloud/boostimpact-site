@@ -140,7 +140,8 @@
   const tete = I => `<div class="connexion-tete"><p class="logo" translate="no"><img class="logo-img" src="icones/logo-ligne-encre.png?v=pascal" width="482" height="80" alt="boost impact."></p>${I.selecteur()}</div>`;
   const EMAIL = /^[^\s@]+@[^\s@]+$/;   // contrôle léger : Supabase valide l'adresse ; les adresses de démonstration n'ont pas de point dans le domaine
   const texteErreur = (I, er) => er && er.code && I.a("acc.err." + er.code) ? I.t("acc.err." + er.code) : I.phrase(er && er.message || "");
-  const message = x => { const m = $("msg"); if (m) m.textContent = x; };
+  // Message sous le formulaire ; erreur = ligne rouge (.msg.erreur), retirée au message suivant.
+  const message = (x, erreur) => { const m = $("msg"); if (m) { m.textContent = x; m.classList.toggle("erreur", !!erreur); } };
   const voir = (case_, champs) => { case_.onchange = () => champs.forEach(c => { if (c) c.type = case_.checked ? "text" : "password"; }); };
   // Fragment d'erreur lu une fois : retiré de l'adresse (rien d'autre n'est touché).
   function oublierErreurLien() {
@@ -163,7 +164,7 @@
       <button class="bouton plein" type="submit">${t(lien ? "cx.recevoir" : "acc.entrer")}</button><p class="msg" id="msg" role="status"></p></form>
       <p class="acces-bascule"><button type="button" class="lien" id="bascule">${t(lien ? "acc.retour.connexion" : "acc.oubli")}</button></p>
       ${lien ? "" : o.extra || ""}</div>${o.pied || ""}</div>`;
-    if (erreurLien) { message(t("acc.err.lien")); oublierErreurLien(); }
+    if (erreurLien) { message(t("acc.err.lien"), true); oublierErreurLien(); }
     if (!lien) voir($("voir-mdp"), [$("mdp")]);
     $("bascule").onclick = () => { connexion(o, lien ? "mdp" : "lien", $("email").value.trim()); const c = $("email"); if (c) c.focus(); };
     const bouton = $("f").querySelector("button[type=submit]");
@@ -171,7 +172,7 @@
       ev.preventDefault();
       const adr = $("email").value.trim();
       if (lien) {
-        if (!EMAIL.test(adr)) { message(t("acc.err.email")); $("email").focus(); return; }
+        if (!EMAIL.test(adr)) { message(t("acc.err.email"), true); $("email").focus(); return; }
         bouton.disabled = true; message(t("envoi.en.cours"));
         try {
           const r = await D.demanderLienMotDePasse(adr);
@@ -179,16 +180,17 @@
           if (D.mode === "demo" && r && r.lien) {
             $("msg").innerHTML = `${t("cx.lien.pret")} <button type="button" class="lien" id="ouvrir">${t("cx.ouvrir.lien")}</button>`;
             $("ouvrir").onclick = async () => { await D.ouvrirLienMotDePasse(r.lien); await o.apres(); };
-          } else message(t("acc.lien.envoye"));   // même message que l'adresse ait un compte ou non
-        } catch (er) { message(texteErreur(I, er)); }
+          } else message(t("acc.lien.envoye"));
+          // Adresse sans compte (15/11/2026, décision de PJ) : D.demanderLienMotDePasse lève le code « inconnu », dit en rouge.
+        } catch (er) { message(texteErreur(I, er), true); if (er && er.code === "inconnu") $("email").focus(); }
         bouton.disabled = false;
         return;
       }
       const mdp = $("mdp").value;
-      if (!adr || !mdp) { message(t("acc.err.champs")); (adr ? $("mdp") : $("email")).focus(); return; }
+      if (!adr || !mdp) { message(t("acc.err.champs"), true); (adr ? $("mdp") : $("email")).focus(); return; }
       bouton.disabled = true; message(t("acc.connexion.en.cours"));
       try { await D.connecter(adr, mdp); await o.apres(); }
-      catch (er) { message(texteErreur(I, er)); bouton.disabled = false; const c = $("mdp"); if (c) { c.value = ""; c.focus(); } }
+      catch (er) { message(texteErreur(I, er), true); bouton.disabled = false; if (er && er.code === "inconnu") { const a = $("email"); if (a) a.focus(); } else { const c = $("mdp"); if (c) { c.value = ""; c.focus(); } } }
     };
   }
 

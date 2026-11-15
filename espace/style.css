@@ -167,6 +167,7 @@ h2 .etat{font-size:inherit;font-weight:var(--graisse-forte)}
 .prix-offre .chiffre{font-size:40px;color:var(--encre)}
 .msg{font-size:15px;color:var(--texte2)}
 .msg:empty{display:none}
+.msg.erreur{color:var(--danger);font-weight:var(--graisse-forte)}   /* 15/11/2026 : erreur de connexion en rouge (compte inconnu, mot de passe, champs) */
 /* Console v48 (12/11/2026) : confirmation juste sous le bouton cliqué (role=status), qui reste jusqu'au geste suivant ; erreur au même endroit. */
 .msg-local{display:block;flex:1 1 100%;margin:8px 0 0;padding:10px 12px;border:1px solid var(--bord);border-radius:var(--r);background:var(--releve);color:var(--encre);font-size:15px;font-weight:var(--graisse-forte);overflow-wrap:anywhere}
 .msg-local.erreur{border-color:var(--danger);color:var(--danger);background:var(--surface)}
