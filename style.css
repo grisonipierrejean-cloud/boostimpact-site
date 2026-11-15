@@ -396,7 +396,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 .offre-nom{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
 .offre-nom h3{font-weight:var(--graisse-titre);font-size:var(--t-4);line-height:var(--i-display);letter-spacing:var(--a-display)}
 .reco-lib{font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte-discret)}
-.offre.reco .reco-lib{color:var(--encre);font-weight:var(--graisse-forte);text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:4px}
+.offre.reco .reco-lib{color:var(--encre);font-weight:var(--graisse-forte)}
 .offre-promesse{font-size:var(--t-corps);line-height:1.55;color:var(--texte-doux)}
 .prix-bloc{display:flex;flex-direction:column;gap:4px;padding-top:20px;border-top:1px solid var(--trait)}
 .prix{display:flex;align-items:baseline;gap:8px}
@@ -418,7 +418,6 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 .inclus li:not(.inclus-tout)::before{top:16px}
 .inclus .inclus-tout{font-weight:var(--graisse-moyenne);border-top:0;padding-top:0}
 .offre-sans{font-size:var(--t-2);color:var(--texte-discret)}
-.offre-frais{font-size:var(--t-2);line-height:1.5;color:var(--texte-discret)}
 .offre-vous{font-size:var(--t-corps);line-height:1.5;color:var(--texte);padding-top:12px;border-top:1px solid var(--trait)}
 .offres-fiche strong{color:var(--texte)}
 /* Comparatif : lisible sur téléphone. Sur téléphone, chaque ligne devient un bloc : son libellé, puis les trois offres côte à côte, chacune
@@ -445,9 +444,6 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
   .compare td.meme{display:none}
   .compare td[data-l]:not(.meme):first-of-type:has(~ td.meme){grid-column:1 / -1}
 }
-.urgence{margin-top:32px;background:var(--blanc);border:1px solid var(--filet-clair);border-radius:var(--r-carte);padding:24px 20px;display:flex;flex-direction:column;gap:12px}
-.urgence-titre{font-family:var(--police-titre);font-stretch:var(--largeur-titre);font-size:var(--t-2b);line-height:var(--i-titre);letter-spacing:var(--a-titre);font-weight:var(--graisse-titre);font-variant-numeric:lining-nums}
-.urgence p:not(.urgence-titre){font-size:var(--t-corps);color:var(--texte-doux)}
 .offres-pied{margin-top:28px;display:flex;flex-direction:column;gap:8px}
 .offres-pied .garantie{font-size:var(--t-corps);font-weight:var(--graisse-moyenne)}
 .contrat{font-size:var(--t-2);color:var(--texte-doux)}
@@ -628,7 +624,6 @@ body.clair main a:hover{color:var(--encre);text-decoration-thickness:2px}
   .offre{padding:36px 28px}
   .offre-promesse{min-height:4.7em}
   .options-liste{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-  .urgence{padding:32px}
   .service{padding:24px 0 8px}
   .audit-bloc{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:80px}
   .audit-texte{position:sticky;top:32px}
@@ -698,7 +693,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 }
 
 /* 2. Offres : une sous-grille pour aligner les rangées des trois cartes */
-.offre-notes{display:flex;flex-direction:column;gap:8px}
 .inclus .inclus-tout{padding-bottom:4px}
 @media (min-width:1040px){
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:20px;row-gap:0;align-items:stretch}
@@ -708,7 +702,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
   .offre>.prix-bloc{align-self:start}
   .offre>.offre-payer{align-self:start}
   .offre>.inclus{align-self:start}
-  .offre>.offre-notes{align-self:end}
   .offre>.offre-vous{align-self:end}
 }
 
@@ -806,4 +799,92 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
   .entete:not(.entete-simple) .wa-bouton{display:none}
   .wa-lien{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;color:#fff;font-size:var(--t-corps);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
   .wa-lien svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+}
+/* 14/11/2026 : Visibilité IA mise en avant : la carte de l'option en tête des options, sur fond encre (la phrase .haut-ia du premier écran est remplacée par .chapo-ia). */
+.option-vedette{background:var(--encre);color:var(--blanc);border-color:var(--encre);--trait:rgba(255,255,255,.22);scroll-margin-top:96px}
+.option-vedette .option-tete h4{color:var(--blanc);font-size:var(--t-4);line-height:1.1}
+.option-vedette .vedette-accroche{margin:8px 0 4px;font-size:var(--t-1);line-height:1.4;color:var(--blanc)}
+.option-vedette .option-prix,.option-vedette .option-seo{color:var(--blanc)}
+.option-vedette .option-seo{color:rgba(255,255,255,.78);font-weight:var(--graisse-texte)}
+.option-vedette .inclus li{color:rgba(255,255,255,.9)}
+.option-preuve{display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.22)}
+.option-preuve-titre{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-size:var(--t-3);line-height:1.15;letter-spacing:var(--a-titre);color:var(--blanc)}
+.option-preuve p:not(.option-preuve-titre){font-size:var(--t-corps);line-height:1.55;color:rgba(255,255,255,.86)}
+.option-actions{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.option-actions .btn{width:100%}
+.option-audit{display:inline-flex;align-items:center;min-height:44px;color:var(--blanc);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.option-audit:hover{text-decoration-thickness:2px}
+@media (min-width:760px){
+  .options-liste{grid-template-columns:minmax(0,1fr)}
+  .option{display:grid;grid-template-rows:none;grid-row:auto;grid-template-columns:minmax(0,5fr) minmax(0,6fr);column-gap:48px;row-gap:20px;align-items:start}
+  .option>.option-tete{grid-column:1;grid-row:1}
+  .option>.inclus{grid-column:2;grid-row:1 / span 3}
+  .option>.btn{grid-column:1;grid-row:2;align-self:start;width:auto;justify-self:start}
+  .option-vedette{padding:40px 36px}
+  .option-vedette>.option-preuve{grid-column:1;grid-row:2}
+  .option-vedette>.option-actions{grid-column:1;grid-row:3;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px 24px}
+  .option-vedette>.option-actions .btn{width:auto}
+}
+@media (min-width:1040px){
+  .option-vedette{padding:48px 48px}
+  .option-vedette .option-tete h4{font-size:var(--t-5)}
+}
+#haut .chapo .chapo-ia{color:var(--blanc);font-weight:var(--graisse-moyenne)}
+#haut .chapo .chapo-ia a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+#haut .chapo .chapo-ia a:hover{text-decoration-thickness:2px}
+/* 15/11/2026 : modèle hybride. Visibilité IA comprise dans Croissance et Premium, option ponctuelle en Essentiel : ligne « comprise »
+   en tête de la carte vedette, prix de l'option en dessous, conseil TheFork (non compris) en note discrète ; mention sur la carte Essentiel. */
+.option-vedette .option-incluse{margin-top:4px;font-size:var(--t-1);line-height:1.4;font-weight:var(--graisse-moyenne);color:var(--blanc)}
+.option-vedette .option-prix{font-size:var(--t-corps);font-weight:var(--graisse-texte);color:rgba(255,255,255,.86)}
+.option-vedette .inclus a,.option-conseil a{color:inherit}
+.option-conseil{font-size:var(--t-2);line-height:1.5;color:rgba(255,255,255,.78)}
+.offre-ia{font-size:var(--t-2);line-height:1.5;color:var(--texte-discret)}
+.offre-ia a,.inclus li a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+@media (min-width:760px){
+  .option-vedette>.inclus{grid-row:1 / span 2}
+  .option-vedette>.option-conseil{grid-column:2;grid-row:3;align-self:start}
+}
+
+/* ==========================================================================================================================
+   15/11/2026 (soir) : offres allégées, Visibilité IA mise en avant (retour : « trop chargé »).
+   Chaque carte : une promesse d'une ligne, le prix, un encart encre « À l'année, la Visibilité IA est offerte » (Croissance, Premium ;
+   en Essentiel, l'option à 490 € HT dans un encart gris), les deux boutons, puis 3 à 5 points courts, sans filet entre eux. Le détail complet
+   reste dans le comparatif, toujours visible, sous un titre. L'encre est la couleur de la Visibilité IA partout : encart des cartes, carte vedette.
+   Trois cartes côte à côte seulement à partir de 1040 px ; en dessous, une colonne (plus de cartes de 200 px à 760 px).
+   ========================================================================================================================== */
+.offre{gap:20px}
+.offre-promesse{font-size:var(--t-1);line-height:1.4;color:var(--texte);font-weight:var(--graisse-moyenne);letter-spacing:-.005em;text-wrap:balance}
+.prix-bloc{display:flex;flex-direction:column;gap:4px}
+.prix-detail[data-rythme="annuel"]{margin-bottom:12px}
+.annee{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:var(--r-carte);background:var(--encre);color:var(--blanc)}
+.annee-titre{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-2b);line-height:1.15;letter-spacing:var(--a-titre);color:var(--blanc);text-wrap:balance}
+.annee-titre a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.annee-titre a:hover{color:inherit;text-decoration-thickness:2px}
+.annee-texte{font-size:var(--t-2);line-height:1.45;color:rgba(255,255,255,.86)}
+.annee-mois{margin-top:4px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2);font-size:var(--t-2);line-height:1.45;color:rgba(255,255,255,.72)}
+.annee-sans{background:var(--gris-clair);color:var(--texte)}
+.annee-sans .offre-ia{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-2b);line-height:1.15;letter-spacing:var(--a-titre);color:var(--texte);text-wrap:balance}
+.annee-sans .annee-texte{color:var(--texte-doux)}
+.annee-sans .annee-mois{border-top-color:var(--trait);color:var(--texte-doux)}
+.offre-bas{gap:16px}
+.offre .inclus{gap:12px}
+.offre .inclus li{border-top:0;padding-top:0;line-height:1.45}
+.offre .inclus li:not(.inclus-tout)::before{top:4px}
+.offre .inclus .inclus-tout{font-weight:var(--graisse-forte);padding-bottom:2px}
+.offre .offre-sans{font-size:var(--t-2);line-height:1.5;color:var(--texte-doux)}
+.offre .offre-vous{font-size:var(--t-2);line-height:1.5;color:var(--texte);padding-top:16px}
+.compare-titre{margin:56px 0 16px;font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-3);line-height:var(--i-titre);letter-spacing:var(--a-titre);scroll-margin-top:24px}
+.compare-titre+.compare-cadre{margin-top:0}
+.offres-pied{margin-top:28px;gap:12px}
+.offres-pied .frais,.offres-pied .bonus{font-size:var(--t-corps);line-height:1.55;color:var(--texte-doux)}
+.offres-pied .frais strong{color:var(--texte)}
+.offres-pied .garantie{margin-top:4px}
+@media (min-width:760px) and (max-width:1039px){
+  .offres{grid-template-columns:minmax(0,1fr);max-width:560px;gap:20px}
+  .offre-promesse{min-height:0}
+}
+@media (min-width:1040px){
+  .offre>.prix-bloc{align-self:stretch}
+  .annee-titre,.annee-sans .offre-ia{font-size:var(--t-1)}
+  .compare-titre{margin-top:72px;font-size:var(--t-4)}
 }
