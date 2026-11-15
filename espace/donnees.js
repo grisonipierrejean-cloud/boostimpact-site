@@ -1089,6 +1089,10 @@
         const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });
         if (r.error) throw new Error(/indicatif du pays/.test(r.error.message) ? phraseWhatsapp(c.pays) : r.error.message); cache = null; return r.data;
       },
+      // ---- Notifications de l'application (15/11/2026) : abonnement de CE téléphone, enregistré après l'accord du client (bouton, puis la question du
+      // téléphone) ; retiré par « Arrêter les notifications ». Le commerce est celui du compte (mon_commerce), jamais choisi par l'espace.
+      async enregistrerPush(a) { return ok(await sb.rpc("enregistrer_abonnement_push", { p_endpoint: a.endpoint, p_p256dh: a.p256dh, p_auth: a.auth, p_user_agent: String(navigator.userAgent || "").slice(0, 400) })); },
+      async retirerPush(endpoint) { return ok(await sb.rpc("retirer_abonnement_push", { p_endpoint: endpoint })); },
       async adminAutoriserPhotos(cid, accord) { if (!accord) throw new Error(PHRASE_PHOTOS_ACCORD_EQUIPE); return ok(await sb.rpc("admin_autoriser_photos", { p_commerce: cid, p_accord: true })); },
       async adminRetirerAutorisationPhotos(cid) { return ok(await sb.rpc("admin_retirer_autorisation_photos", { p_commerce: cid })); },
       // ---- Accord vidéo IA (14/11/2026) : interrupteur du commerçant (regler_accord_video_ia) et accord noté par l'équipe (admin_regler_accord_video_ia).

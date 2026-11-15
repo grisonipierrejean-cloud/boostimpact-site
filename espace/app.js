@@ -448,10 +448,10 @@
     { id: "avalider", ecrans: ["avalider", "contenus", "avis", "commentaires", "collecte"], sections: ["contenus", "avis", "commentaires"], compte: "avalider" },
     { id: "resultats", ecrans: ["resultats"] },
   ];
-  const REGLAGES = { id: "reglages", ecrans: ["reglages", "offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"] };
+  const REGLAGES = { id: "reglages", ecrans: ["reglages", "offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage", "application"] };
   GROUPES.concat(REGLAGES).forEach(g => { g.nom = t("groupe." + g.id); });
   const ECRANS = I.carte("ecran", ["accueil", "resultats", "photos", "avalider", "contenus", "calendrier", "avis", "commentaires", "collecte", "fichegoogle", "fiche", "offre", "comptes",
-    "notifications", "demarrage", "videoavis", "publications", "reglages"]);
+    "notifications", "demarrage", "videoavis", "publications", "reglages", "application"]);
   // Anciennes adresses : elles mènent toujours quelque part (aucun lien cassé).
   const ANCIENNES = { idees: "contenus", style: "publications" };   // #/style : ancien « Votre style » (31/10/2026)
   const groupeDe = r => GROUPES.concat(REGLAGES).find(g => g.ecrans.includes(r)) || GROUPES[0];
@@ -513,7 +513,7 @@
   async function majCompteurs() {
     try {
       const n = await compterAValider();
-      nb.contenus = n.contenus; nb.avis = n.avis; nb.commentaires = n.commentaires; nb.avalider = n.decisions;
+      nb.contenus = n.contenus; nb.avis = n.avis; nb.commentaires = n.commentaires; nb.avalider = n.decisions; pastilleIcone(n.contenus);
       offreNom = n.k.offre || n.k.offre_nom || "";   // identifiant : le nom vient de moteur/offres.json, dans la langue de la page
       if (commentairesInclus !== !!n.k.commentaires_inclus) { commentairesInclus = !!n.k.commentaires_inclus; dessinerNav(); }
       nb.retours = await retoursNonLus();   // ---- Collecte
@@ -966,8 +966,10 @@
   async function reglages() {
     // Une seule entrée vers « Vos publications » (audit Essentiel du 31/10/2026) : la carte tant que le style n'est pas validé, sinon la ligne de la liste.
     const c = await D.commerce(), carte = carteStyle(c);
+    const inst = installee();
     vue.innerHTML = `${entete("", t("ecran.reglages"), t("reg.chapo"))}
       ${carte}
+      <nav class="carte reglages" id="reglages-app" aria-label="${t(inst ? "reg.application.installee" : "reg.application")}"><ul class="liste"><li><a href="#/application" id="lien-application"><span class="pile serre"><span class="fort">${t(inst ? "reg.application.installee" : "reg.application")}</span><span class="note">${t(inst ? "reg.application.installee.texte" : "reg.application.texte")}</span></span></a></li></ul></nav>
       <nav class="carte reglages" id="reglages" aria-label="${t("ecran.reglages")}"><ul class="liste">${ENTREES_REGLAGES.filter(r => !(carte && r === "publications")).map(r => { const g = r === "comptes" && sansReseaux(c) ? ".google" : "";
         return `<li><a href="#/${r}" data-r="${r}"><span class="pile serre"><span class="fort">${t("reg." + r + g)}</span><span class="note">${t("reg." + r + ".texte" + g, { res: I.liste(["google", "facebook", "instagram", "tiktok"].filter(x => window.RENOM_RESEAUX_AUTORISES(c).includes(x)).map(x => x === "google" ? "Google" : RES[x])) })}</span></span></a></li>`; }).join("")}</ul></nav>
       ${large.matches ? "" : `<p class="pied-reglages"><button type="button" id="sortir" class="bouton second">${t("quitter")}</button></p>`}`;
@@ -2590,22 +2592,131 @@
     }));
   }
 
-  // ---------------- Application installable (écran Notifications) : marche à suivre iPhone et Android, bouton direct quand le navigateur le permet.
+  // ---------------- Application sur le téléphone (15/11/2026, étape 1 : une PWA qui se comporte comme une app ; règles dans pwa.js).
+  // Écran « Installer l'application » (#/application) : guide selon le téléphone (iPhone dans Safari : Partager puis « Sur l'écran d'accueil » ;
+  // Android : bouton du navigateur, sinon le menu ; autre navigateur ou application : ouvrir dans Safari ou Chrome ; ordinateur : code QR).
+  // Montré d'office UNE fois, à la première connexion sur un téléphone (pwa.js, guideAMontrer), puis depuis Réglages. Installé : il le dit.
+  const P = window.RENOM_PWA;
   let invitationInstall = null;
-  window.addEventListener("beforeinstallprompt", ev => { ev.preventDefault(); invitationInstall = ev; const b = $("installer-maintenant"); if (b) b.hidden = false; });
-  window.addEventListener("appinstalled", () => { invitationInstall = null; if (ecranCourant === notifications) rendre(); });
-  const installee = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", ev => { ev.preventDefault(); invitationInstall = ev; const b = $("installer-maintenant"); if (b) b.hidden = false; if (ecranCourant === application) rendre(); });
+  window.addEventListener("appinstalled", () => { invitationInstall = null; if (ecranCourant === notifications || ecranCourant === application) rendre(); });
+  const envApp = () => P.environnement(window);
+  const installee = () => P.estInstallee(envApp());
+  const guideVu = () => { try { return localStorage.getItem(P.CLE_GUIDE_VU) === "1"; } catch (er) { return false; } };
+  const noterGuideVu = () => { try { localStorage.setItem(P.CLE_GUIDE_VU, "1"); } catch (er) {} };
   function blocInstaller() {
     return `<section class="carte" id="installer" aria-labelledby="inst-titre"><h2 id="inst-titre">${t("inst.titre")}</h2>
       ${installee() ? `<p class="texte2">${t("inst.deja")}</p>`
       : `<p class="texte2">${t("inst.texte")}</p>
       <ul class="liste reponses"><li><span class="fort">iPhone</span><span>${t("inst.iphone")}</span></li>
         <li><span class="fort">Android</span><span>${t("inst.android")}</span></li></ul>
-      <div class="actions"><button type="button" class="bouton second" id="installer-maintenant"${invitationInstall ? "" : " hidden"}>${t("inst.maintenant")}</button></div>`}</section>`;
+      <div class="actions"><button type="button" class="bouton second" id="installer-maintenant"${invitationInstall ? "" : " hidden"}>${t("inst.maintenant")}</button><a class="lien-seul" href="#/application">${t("app.voir.guide")}</a></div>`}</section>`;
   }
   document.addEventListener("click", async ev => {
     if (!ev.target.closest("#installer-maintenant") || !invitationInstall) return;
-    const i = invitationInstall; invitationInstall = null; ev.target.closest("#installer-maintenant").hidden = true; i.prompt(); try { await i.userChoice; } catch (er) {}
+    const i = invitationInstall; invitationInstall = null; ev.target.closest("#installer-maintenant").hidden = true; i.prompt();
+    try { await i.userChoice; } catch (er) {}
+    if (ecranCourant === application) rendre();
+  });
+  // Pictogrammes au trait, couleur du texte : ceux que le client cherche à l'écran (Partager d'iOS, Ajouter, menu à trois points d'Android).
+  const PICTO_PARTAGER = trait('<path d="M8.5 9.5H6v10.5h12V9.5h-2.5"></path><path d="M12 3.5v11"></path><path d="M8.5 7L12 3.5 15.5 7"></path>');
+  const PICTO_AJOUTER = trait('<rect x="4.5" y="4.5" width="15" height="15" rx="3"></rect><path d="M12 8.5v7M8.5 12h7"></path>');
+  const PICTO_MENU = `<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5.5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="18.5" r="1.8"></circle></svg>`;
+  const PICTO_INSTALLER = trait('<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"></rect><path d="M12 7.5v7"></path><path d="M9 11.5l3 3 3-3"></path>');
+  const etapesApp = l => `<ol class="etapes-app">${l.map(([texte, picto], i) => `<li><span class="app-num" aria-hidden="true">${i + 1}</span><span class="app-texte">${texte}</span>${picto ? `<span class="app-picto">${picto}</span>` : ""}</li>`).join("")}</ol>`;
+  const adresseEspace = () => location.href.split("#")[0].split("?")[0];
+  const copierLien = `<div class="actions"><button type="button" class="bouton second" id="app-copier">${t("app.copier")}</button></div><p class="note" id="app-lien" hidden><span class="casse" translate="no">${e(adresseEspace())}</span></p>`;
+  function corpsGuide(etape) {
+    if (etape === "ios_safari") return `<h2 id="guide-titre">${t("app.ios.titre")}</h2>${etapesApp([[t("app.ios.1"), PICTO_PARTAGER], [t("app.ios.2"), PICTO_AJOUTER], [t("app.ios.3"), ""]])}<p class="note">${t("app.ios.note")}</p>`;
+    if (etape === "ios_autre") return `<h2 id="guide-titre">${t("app.ios.titre")}</h2><p class="texte2">${t("app.ios.autre")}</p>${copierLien}`;
+    if (etape === "android_bouton") return `<h2 id="guide-titre">${t("app.android.titre")}</h2><p class="texte2">${t("app.android.bouton.texte")}</p>
+      <div class="actions"><button type="button" class="bouton grand" id="installer-maintenant">${PICTO_INSTALLER}<span>${t("app.installer")}</span></button></div><p class="note">${t("app.android.sinon")}</p>`;
+    if (etape === "android_menu") return `<h2 id="guide-titre">${t("app.android.titre")}</h2>${etapesApp([[t("app.android.1"), PICTO_MENU], [t("app.android.2"), PICTO_INSTALLER], [t("app.android.3"), ""]])}`;
+    if (etape === "android_autre") return `<h2 id="guide-titre">${t("app.android.titre")}</h2><p class="texte2">${t("app.android.autre")}</p>${copierLien}`;
+    return `<h2 id="guide-titre">${t("app.ordi.titre")}</h2><div class="app-qr"><div class="app-qr-code" role="img" aria-label="${t("app.ordi.qr")}">${qrSvg(adresseEspace())}</div><p class="texte2">${t("app.ordi")}</p></div>`;
+  }
+  async function application() {
+    const env = envApp(), etape = P.etapeGuide(env, invitationInstall), premiere = /(^|&)premiere\b/.test(paramRoute), inst = etape === "installee";
+    const push = await blocPush(true);
+    vue.innerHTML = `${premiere ? "" : retourOrigine()}${entete(premiere ? "" : t("groupe.reglages"), t(inst ? "app.titre.installee" : "ecran.application"), t(inst ? "app.deja" : "app.chapo"))}
+      ${inst ? "" : `<section class="carte guide-app" id="guide-app" data-etape="${etape}" aria-labelledby="guide-titre">${corpsGuide(etape)}</section>`}
+      ${push}
+      ${premiere ? `<div class="actions guide-suite"><a class="bouton second plein" href="#/accueil" id="guide-plus-tard">${t(inst ? "app.continuer" : "app.plus.tard")}</a></div><p class="note guide-rappel">${t("app.rappel")}</p>` : ""}`;
+    const cp = $("app-copier");
+    if (cp) cp.onclick = async () => { let fait = false; try { await navigator.clipboard.writeText(adresseEspace()); fait = true; } catch (er) {}
+      $("app-lien").hidden = false; toast(t(fait ? "app.copie" : "app.copie.main")); };
+  }
+
+  // ---------------- Notifications de l'application (15/11/2026). Demande d'autorisation SEULEMENT au clic sur « Recevoir les notifications »
+  // (Notification.requestPermission appelé tout de suite dans le geste, avant tout await : Safari l'exige), et sur iPhone seulement dans
+  // l'application installée (iOS 16.4+) ; pwa.js, etatNotifications. L'abonnement va à la base (enregistrer_abonnement_push) ; « Arrêter les
+  // notifications » le retire de la base et du téléphone. Envoi : fonction Edge « push », appelée par n8n (1 à 2 par semaine, regroupées).
+  const vapidPublic = () => String((window.RENOM_CONFIG || {}).vapidPublic || "");
+  const CLE_PUSH_VOULU = "renom-push-voulu";
+  const pushVoulu = v => { try { if (v === undefined) return localStorage.getItem(CLE_PUSH_VOULU) === "1"; if (v) localStorage.setItem(CLE_PUSH_VOULU, "1"); else localStorage.removeItem(CLE_PUSH_VOULU); } catch (er) {} return false; };
+  async function abonnementCourant() {
+    try { if (!("serviceWorker" in navigator)) return null; const r = await navigator.serviceWorker.getRegistration(); return r && r.pushManager ? await r.pushManager.getSubscription() : null; } catch (er) { return null; }
+  }
+  async function etatPush() { const env = envApp(), sub = env.push && P.cleVapidValide(vapidPublic()) ? await abonnementCourant() : null; return { env, sub, etat: P.etatNotifications({ env, vapid: vapidPublic(), abonne: !!sub }) }; }
+  // dansGuide : sur l'écran d'installation, rien tant que l'iPhone n'a pas installé l'application (le guide passe d'abord).
+  async function blocPush(dansGuide) {
+    const { etat, env } = await etatPush();
+    if (etat === "indisponible" || (dansGuide && etat === "installer_dabord")) return "";
+    const ios = P.plateforme(env) === "ios";
+    const corps = etat === "proposer" ? `<div class="actions"><button type="button" class="bouton" id="push-activer" data-etat="proposer">${t("push.activer")}</button></div>`
+      : etat === "actif" ? `<p class="fort" id="push-etat">${t("push.actif")}</p><div class="actions"><button type="button" class="bouton second" id="push-arreter">${t("push.arreter")}</button></div>`
+      : etat === "installer_dabord" ? `<p class="texte2">${t("push.installer")}</p><p><a class="lien-seul" href="#/application">${t("app.voir.guide")}</a></p>`
+      : etat === "refusee" ? `<p class="texte2">${t(ios ? "push.refusee.ios" : "push.refusee")}</p>`
+      : `<p class="texte2">${t("push." + etat.replace("_", "."))}</p>`;
+    return `<section class="carte" id="push-bloc" data-etat="${etat}" aria-labelledby="push-titre"><h2 id="push-titre">${t("push.titre")}</h2><p class="texte2">${t("push.texte")}</p>${corps}<p class="msg" id="push-msg" role="status"></p></section>`;
+  }
+  async function redessinerPush(note) {
+    const z = $("push-bloc"); if (!z) return; const html = await blocPush(ecranCourant === application);
+    if (!html) { z.remove(); return; } z.outerHTML = html; if (note) { const m = $("push-msg"); if (m) m.textContent = note; }
+  }
+  function activerPush(b) {
+    if (!P.peutDemander(b.dataset.etat, true) || typeof Notification === "undefined") return;
+    b.disabled = true;
+    // Dans le geste, sans attendre : la question du téléphone (« Autoriser les notifications ? »).
+    const demande = Notification.permission === "granted" ? Promise.resolve("granted") : Promise.resolve(Notification.requestPermission());
+    demande.then(async p => {
+      if (p !== "granted") { await redessinerPush(t("push.pas.accord")); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: P.cleVapidOctets(vapidPublic()) });
+      const a = P.abonnementPourBase(sub); if (!a) throw new Error("abonnement illisible");
+      await D.enregistrerPush(a); pushVoulu(true); await redessinerPush(t("push.ok"));
+    }).catch(async () => { await redessinerPush(t("push.erreur")); });
+  }
+  async function arreterPush(b) {
+    b.disabled = true; const sub = await abonnementCourant();
+    try { if (sub) { await D.retirerPush(sub.endpoint).catch(() => null); await sub.unsubscribe(); } pushVoulu(false); await redessinerPush(t("push.retire")); }
+    catch (er) { b.disabled = false; const m = $("push-msg"); if (m) m.textContent = t("push.erreur"); }
+  }
+  document.addEventListener("click", ev => {
+    const a = ev.target.closest("#push-activer"); if (a) { activerPush(a); return; }
+    const s = ev.target.closest("#push-arreter"); if (s) arreterPush(s);
+  });
+  // À l'ouverture (une fois par session) : un téléphone abonné renvoie son abonnement à la base (le compte a pu changer, la base a pu le retirer
+  // après un 410) ; un abonnement perdu par le navigateur est refait sans question si le client l'avait demandé (autorisation déjà donnée).
+  let pushRafraichi = false;
+  async function rafraichirPush() {
+    if (pushRafraichi) return; pushRafraichi = true;
+    try {
+      const { etat, sub } = await etatPush();
+      if (etat === "actif" && sub) { const a = P.abonnementPourBase(sub); if (a) await D.enregistrerPush(a); return; }
+      if (etat === "proposer" && pushVoulu() && Notification.permission === "granted") {
+        const reg = await navigator.serviceWorker.ready, s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: P.cleVapidOctets(vapidPublic()) });
+        const a = P.abonnementPourBase(s); if (a) await D.enregistrerPush(a);
+      }
+    } catch (er) {}
+  }
+  // Pastille de l'icône de l'application : nombre de contenus à valider (effacée à zéro). Navigateur sans Badging API : rien.
+  function pastilleIcone(n) {
+    try { const v = P.pastille(n); if (typeof navigator.setAppBadge !== "function") return; (v ? navigator.setAppBadge(v) : navigator.clearAppBadge()).catch(() => {}); } catch (er) {}
+  }
+  // Toucher une notification avec l'espace déjà ouvert : sw.js demande d'aller sur l'écran du lien (« #/avalider » par défaut).
+  if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", ev => {
+    const d = ev.data || {}; if (d.type === "renom-ouvrir" && typeof d.lien === "string" && /^#\/[a-z]{3,20}(\?[a-z0-9=&_-]{0,60})?$/.test(d.lien)) location.hash = d.lien;
   });
 
   // ---------------- Notifications : email de validation (lien à usage unique, 7 jours) ; alertes WhatsApp (22/10/2026) avec accord explicite.
@@ -2624,6 +2735,7 @@
           <ul class="liste"><li>${t("notif.lien.1")}</li><li>${t("notif.lien.2")}</li><li>${t("notif.lien.3")}</li><li>${t("notif.lien.4")}</li></ul>
           <p class="note">${t("notif.adresse")}</p></section>
       </div>
+      ${await blocPush(false)}
       ${blocInstaller()}
       ${D.mode === "demo" ? `<section class="carte" aria-labelledby="n-demo"><h2 id="n-demo">${t("demonstration")}</h2><p class="texte2">${t("notif.demo")}</p>
         <div class="actions"><button type="button" class="bouton second" id="voir-email" aria-expanded="false" aria-controls="apercu-email">${t("notif.voir.email")}</button></div><div id="apercu-email" class="pile" hidden></div></section>` : ""}`;
@@ -2723,7 +2835,7 @@
   // Sans le bloc SQL (colonnes absentes) : ni écran du nom, ni « rappelez-moi », ni fiche à créer ; le reste est inchangé.
   const PAS_GOOGLE = [1, 2, 3, 4, 5, 6];
   function etapeTete(n, titre, etat, id) {
-    return `<div class="etape-tete"><span class="etape-num" aria-hidden="true">${n}</span><h2 id="${id}">${titre}</h2>${etat ? `<span class="etat${etat === "fait" ? " actif" : ""}">${etat === "demande" ? t("mer2.demande.etat") : etat === "facultatif" ? t("mer2.facultatif") : ETATS_MR[etat] || e(etat)}</span>` : ""}</div>`;
+    return `<div class="etape-tete"><span class="app-num" aria-hidden="true">${n}</span><h2 id="${id}">${titre}</h2>${etat ? `<span class="etat${etat === "fait" ? " actif" : ""}">${etat === "demande" ? t("mer2.demande.etat") : etat === "facultatif" ? t("mer2.facultatif") : ETATS_MR[etat] || e(etat)}</span>` : ""}</div>`;
   }
   async function ecranNom(c) {
     // Offre activée sur le même écran (27/10/2026, demande de PJ) : le commerçant voit tout de suite quelle offre il a prise.
@@ -3127,7 +3239,7 @@
   // ---- fin du bloc Votre style ------------------------------------------------------------------------------------
 
   // ---------------- Routage
-  const ROUTES = { connexion, accueil, resultats, fiche, photos, avalider, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, publications: style, reglages };
+  const ROUTES = { connexion, accueil, resultats, fiche, photos, avalider, contenus, calendrier, avis, commentaires, collecte, fichegoogle: ficheGoogle, comptes, offre, notifications, demarrage, videoavis: videoAvis, publications: style, reglages, application };
   // Administrateur arrivé dans l'espace des commerçants (25/10/2026) : il le dit, avec « Ouvrir la console » et « Se connecter avec un autre compte »
   // (déconnexion, puis le formulaire de connexion). Même écran que la console pour un commerçant (console.js, refuse).
   function reserveCommercants() {
@@ -3161,11 +3273,14 @@
     }
     connecte = true; route = ECRANS[r] ? r : "accueil"; dessinerNav();
     if (route === "publications" && derniere !== route) pubDepuis = derniere === "accueil" ? "accueil" : "reglages";
+    // Application sur le téléphone (15/11/2026) : guide d'installation montré d'office une seule fois, à la première connexion sur un téléphone,
+    // sur l'accueil seulement (jamais par-dessus un lien précis). Noté vu tout de suite : « Plus tard » ne le fait pas revenir ; Réglages le rouvre.
+    if (P.guideAMontrer({ connecte: true, route, dejaVu: guideVu(), env: envApp() })) { noterGuideVu(); history.replaceState(null, "", "#/application?premiere"); return rendre(); }
     if (derniere !== route) noterOrigine(derniere, route, hashPrecedent);
     if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; if (route !== "videoavis") vaOuvert = false; if (derniere === "demarrage") { dem.vue = null; if (dem.fini) dem.pour = null; } } derniere = route;
     hashPrecedent = location.hash || "#/" + route; ecranCourant = ROUTES[route];
     try { await ROUTES[route](); } catch (er) { vue.innerHTML = `<section class="carte"><h1>${t("souci")}</h1><p>${e(ph(er.message))}</p></section>`; }
-    vue.focus({ preventScroll: true }); majCompteurs();
+    vue.focus({ preventScroll: true }); majCompteurs(); rafraichirPush();
   }
   document.addEventListener("click", async ev => { if (ev.target.closest("#sortir")) { await D.quitter(); aller("accueil"); } });
   document.querySelectorAll("[data-o]").forEach(b => b.onclick = async () => { await D.outilsDemo[b.dataset.o](); rendre(); });
