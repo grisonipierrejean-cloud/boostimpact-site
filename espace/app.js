@@ -1286,6 +1286,7 @@
       const res = await D.finaliserDepotVideo(depot, ok.map(y => ({ chemin: y.chemin, nom: y.f.name, taille: y.f.size, duree_s: y.ctrl.duree })));
       dv.fichiers = []; dv.envoi = false; dv.note = ""; dv.depot = null;
       await photos(); dvMsg(t("dv.envoye", { v: res.nb_videos, p: res.nb_photos })); majCompteurs();
+      { const su = $("dv-suivi"); if (su) su.scrollIntoView({ block: "start" }); }   // 15/11/2026 : le récapitulatif du dépôt, en haut, juste après l'envoi
     } catch (er) {
       dv.envoi = false; if (x && x.etat === "envoi") x.etat = "interrompu"; dv.interrompu = !!x;
       dvDessinerListe(); dvMsg(er && er.annule ? ph(er.message) : x ? t("dv.interrompu") + (er && er.statut ? " (" + ph(er.message) + ")" : "") : ph(er.message));
@@ -1297,6 +1298,9 @@
     return `<li data-depot="${e(d.id)}"><div><p class="fort">${t("dv.depot.du", { d: cap(date(d.cree_le)) })}</p>
       ${d.statut !== "en_envoi" && d.nb_videos ? `<p class="note">${t("dv.depot.contenu", { v: d.nb_videos, p: (d.nb_fichiers || 0) - d.nb_videos, d: duree })}</p>` : ""}
       ${d.note ? `<p class="note">${t("dv.depot.note", { x: `<span${lc()}>${e(d.note)}</span>` })}</p>` : ""}
+      ${/* Récapitulatif des fichiers envoyés (15/11/2026, retour de PJ : « je n'ai pas de récapitulatif des 3 vidéos ») : nom, nature, durée, dans l'ordre d'envoi. */ ""}
+      ${d.statut !== "en_envoi" && Array.isArray(d.details) && d.details.length ? `<ol class="dv-detail" data-dv-detail>${d.details.map(f => `<li><span class="dv-detail-nom">${e(f.nom || "")}</span> <span class="note">${t(f.type === "photo" ? "dv.detail.photo" : "dv.detail.video")}${f.type !== "photo" && f.duree_s != null ? ", " + secondes(+f.duree_s) : ""}</span></li>`).join("")}</ol>` : ""}
+      ${["envoye", "en_montage"].includes(d.statut) ? `<p class="note" data-dv-attente>${t("dv.detail.attente")}</p>` : ""}
       ${d.motif && ["refuse", "abandonne"].includes(d.statut) ? `<p class="texte2 dv-motif">${e(ph(d.motif))}</p>` : ""}
       ${d.statut === "a_valider" ? `<p><a href="#/contenus">${t("dv.voir.valider")}</a></p>` : ""}
       ${d.rushes_effaces_le ? `<p class="note">${t("dv.efface.le", { d: date(d.rushes_effaces_le) })}</p>` : ""}</div>
@@ -1325,7 +1329,9 @@
     dvOuvert = l.find(d => d.statut === "en_envoi" && Date.now() - Date.parse(d.cree_le) < DV.OUVERT_MS) || null;
     const attente = k.videos_reservees - k.videos_utilisees, plein = k.videos_reservees >= k.videos_plafond && !dvOuvert;
     const plans = t("dv.plans." + (c.metier === "restaurant" ? "restaurant" : "autre"));
-    return `<section class="carte" id="depot-video" aria-labelledby="dv-titre">
+    // Dépôt en cours (envoyé, en montage, à valider) : son suivi passe AU-DESSUS du formulaire, visible sans défiler (15/11/2026, retour de PJ).
+    const suiviEnTete = l.some(d => ["envoye", "en_montage", "a_valider"].includes(d.statut)), suivi = `<section class="carte" id="dv-suivi">${dvSuivi(l)}</section>`;
+    return `${suiviEnTete ? suivi : ""}<section class="carte" id="depot-video" aria-labelledby="dv-titre">
       <div class="carte-tete"><h2 id="dv-titre">${t("dv.titre")}</h2><span class="note" id="dv-compteur">${t("dv.compteur.reste", { a: k.videos_reservees, b: k.videos_plafond, r: Math.max(0, k.videos_plafond - k.videos_reservees), n: attente })}</span></div>
       ${dvOuvert && !dv.envoi ? `<div class="alerte dv-ouvert" role="status"><div><p class="fort">${t("dv.ouvert.titre")}</p><p>${t("dv.ouvert.texte", { d: I.dateHeureDans(dvOuvert.cree_le) })}</p>
         <p><button type="button" class="lien" id="dv-annuler">${t("dv.annuler")}</button></p></div></div>` : ""}
@@ -1348,7 +1354,7 @@
           <p class="note" id="dv-guide-accord">${t("dv.guide.accord")}</p>
           <h3>${t("dv.plans.titre." + (c.metier === "restaurant" ? "restaurant" : "autre"))}</h3><ul class="dv-points">${plans.map(x => `<li>${x}</li>`).join("")}</ul></div></details></div>
       </div></section>
-      <section class="carte" id="dv-suivi">${dvSuivi(l)}</section>`;
+      ${suiviEnTete ? "" : suivi}`;
   }
   function brancherDepotVideo() {
     D.depotsVideo().then(dvSurveiller).catch(() => {});
