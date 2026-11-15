@@ -19,7 +19,10 @@
   --filet:rgba(18,22,20,.12);--bord:#7A817D;--bord-fort:rgba(18,22,20,.55);
   --marque:#7CCE12;--marque-survol:#6CB80E;--sur-marque:#121614;--vert:#0A6847;--bleu-texte:#121614;--teinte:#E8EAE7;--citron:#121614;--sur-citron:#FFFFFF;
   --accent:#7CCE12;--accent-fonce:#6CB80E;--attention:#7A5C00;--danger:#A61B1B;
-  --focus:var(--accent);
+  /* Lot 1 (15/11/2026) : anneau de focus foncé, comme le site (encre #121614 : 18,3:1 sur le blanc, 16,4:1 sur le fond), au lieu du vert
+     #7CCE12 (1,96:1, sous le 3:1 de WCAG 1.4.11). Traits et barres des graphiques : vert du même ton, plus foncé, #58910D (3,84:1 sur le
+     blanc, 3,17:1 sur le gris des jauges #E8EAE7). */
+  --focus:var(--encre);--marque-trait:#58910D;
   --r-carte:8px;--r-grande:10px;--r:6px;--r-image:8px;
   --police-titre:'Newsreader',Georgia,'Times New Roman',serif;--police-texte:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;--largeur-titre:100%;--graisse-titre:400;--graisse-texte:400;--graisse-moyenne:500;--graisse-forte:600;--titre:var(--police-titre);--sans:var(--police-texte);
   --serif:var(--titre);
@@ -353,7 +356,7 @@ legend{padding:0;margin-bottom:4px}
 .mesure{display:flex;flex-direction:column;gap:8px}
 .mesure-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .jauge{height:8px;background:var(--releve);border-radius:4px;overflow:hidden}
-.jauge>span{display:block;height:100%;background:var(--marque);border-radius:4px}
+.jauge>span{display:block;height:100%;background:var(--marque-trait);border-radius:4px}
 
 /* ---------- Accueil */
 .entete-accueil{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px 24px}
@@ -435,7 +438,7 @@ video.visuel{object-fit:contain;background:#000}
 .cal>div:has(> .cal-libre){padding:0}
 .cal-libre:hover{background:var(--fond-survol, rgba(0,0,0,.04))}
 .cal-saut{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;height:100%;min-height:44px;min-width:0;padding:5px 4px;margin:0;background:none;border:0;border-radius:inherit;font:inherit;color:inherit;text-align:left;cursor:pointer}
-.cal-saut:focus-visible{outline:2px solid var(--marque);outline-offset:1px}
+.cal-saut:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .liste.semaine .cal-saut{min-height:44px;height:auto;padding:0;justify-content:center;text-decoration:underline;text-underline-offset:3px}
 .cal [data-cell]{background:var(--marque);color:var(--sur-marque);font-weight:var(--graisse-forte);font-size:11px;border-radius:5px;padding:1px 3px;max-width:100%}
 /* Tour 9 (01/11/2026) : heure entière dans la pastille (« 11 h 30 », jamais coupée ni débordante) ; sous 360 px, « 11 h » (un point hors français). */
@@ -688,7 +691,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .c-zone svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .c-base{stroke:var(--bord);stroke-width:1;vector-effect:non-scaling-stroke}
 .c-grille{stroke:var(--filet);stroke-width:1;vector-effect:non-scaling-stroke}
-.c-trait{fill:none;stroke:var(--marque);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.c-trait{fill:none;stroke:var(--marque-trait);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .c-point{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--bleu-texte);box-shadow:0 0 0 2px var(--surface)}
 .c-val{position:absolute;font-size:14px;font-weight:var(--graisse-forte);color:var(--encre);white-space:nowrap;transform:translate(-50%,-170%)}
 .c-val.debut{transform:translate(-25%,-170%)}
@@ -716,7 +719,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .barre{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
 .b-val{font-size:14px;font-weight:var(--graisse-forte);min-height:1.4em}
 .b-zone{flex:1 1 auto;width:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--bord)}
-.b-col{display:block;width:100%;max-width:34px;background:var(--marque);border-radius:4px 4px 0 0}
+.b-col{display:block;width:100%;max-width:34px;background:var(--marque-trait);border-radius:4px 4px 0 0}
 .b-mois{font-size:12px;color:var(--discret)}
 .piliers .chiffre{font-size:20px}
 .piliers .mesure-tete{font-size:15px}
@@ -725,7 +728,7 @@ input.code-2fa{font-size:24px;letter-spacing:.3em;text-align:center;font-variant
 .t-barre{display:flex;gap:2px;height:8px}
 /* Thèmes des avis (24/10/2026) : positives en vert sapin #0A6847 (6,8:1 sur la surface), négatives en gris #7A817D (4,0:1 sur la surface,
    WCAG 1.4.11 ; le pierre #5D6270 ne ferait que 2,4:1) ; 2,2:1 entre les deux. Les nombres sont aussi écrits sous chaque thème. */
-.t-pos{background:var(--accent);border-radius:4px}
+.t-pos{background:var(--marque-trait);border-radius:4px}
 .t-neg{background:#7A817D;border-radius:4px}
 .liste li>.t-compte{text-align:left}
 

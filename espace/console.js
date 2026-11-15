@@ -508,12 +508,14 @@
     const ouvrir = a.avis_id && a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}/avis" data-ouvrir-avis>${t("con.al.ouvrir.avis")}</a>`
       : a.commerce_id ? `<a class="bouton second petit" href="#/client/${encodeURIComponent(a.commerce_id)}" data-ouvrir-client>${t("con.al.ouvrir.client")}</a>` : "";
     const traite = a.id != null && D.adminAlerteVue ? `<button type="button" class="bouton petit" data-alerte-vue>${t("con.al.traite")}</button>` : "";
+    // Lot 1 (15/11/2026) : fermer une erreur de workflow demande une note courte (ce qui a été fait) et une confirmation (admin_alerte_vue, p_note).
+    const noteErreur = a.code === "ERREUR_WORKFLOW" && traite ? `<div class="f"><label for="al-note-${e(a.id)}">${t("con.al.note.lib")}</label><input id="al-note-${e(a.id)}" type="text" maxlength="500" data-alerte-note></div>` : "";
     // v49 (13/11/2026, vu en prod : la fiche « Gild-Tech » du gérant reçue sur team@) : fiche Google sans client, « Ignorer cette fiche » (admin_ignorer_fiche_google).
     const ignorer = a.code === "FICHE_A_RELIER" && !a.commerce_id && a.id != null && D.adminIgnorerFicheGoogle ? `<button type="button" class="bouton second petit" data-fiche-ignorer>${t("con.al.fiche.ignorer")}</button>` : "";
     const titreFiche = a.code === "FICHE_A_RELIER" && !a.commerce_id && (a.detail_alerte || {}).titre ? `<p class="fort" data-fiche-titre>${t("con.al.fiche.titre", { x: e(a.detail_alerte.titre) })}</p>` : "";
     return `<article class="carte${retard ? " attention" : ""}" data-alerte="${e(a.id ?? "")}" data-code="${e(a.code || "")}"><div class="carte-tete"><h2>${e(a.journal ? libelleEtape(a.code) : ph(a.type))}</h2>${ech != null ? `<span class="etat${retard ? " retard" : " actif"}">${t(retard ? "con.al.retard" : "con.al.avant", { d: dh(ech) })}</span>` : `<span class="note">${dh(a.date)}</span>`}</div>
       ${a.commerce ? `<p class="fort">${e(a.commerce)}</p>` : ""}<p class="texte2 casse">${a.journal ? `<span translate="no">${e(detailJournal(a.detail))}</span>` : alerteHtml(a.texte)}</p>${ech != null ? `<p class="note">${t("con.file.recu", { d: dh(a.date) })}</p>` : ""}
-      ${titreFiche}${a.avis_id ? `<p class="note">${t("con.al.publiee.seulement")}</p>` : ""}${ouvrir || traite || ignorer ? `<div class="actions">${ouvrir}${traite}${ignorer}</div>` : ""}</article>`; };
+      ${titreFiche}${a.avis_id ? `<p class="note">${t("con.al.publiee.seulement")}</p>` : ""}${noteErreur}${ouvrir || traite || ignorer ? `<div class="actions">${ouvrir}${traite}${ignorer}</div>` : ""}</article>`; };
   // File « à publier à la main » : réponses aux commentaires validées par le commerçant, tant que l'accès de Meta n'est pas accordé (ou si l'API a
   // refusé). Texte prêt à copier, lien vers la publication ; « Publiée » une fois la réponse collée sous le commentaire, sous le compte du commerce.
   const RESEAUX_CM = { instagram: "Instagram", facebook: "Facebook" };
@@ -618,10 +620,10 @@
   const valeurDate = i => !i.value ? null : i.type === "datetime-local" && !isNaN(new Date(i.value)) ? new Date(i.value).toISOString() : i.value;
   const saisieDelais = g => `<div class="pile serre">
             <div class="f etroit"><label for="acc-${e(g.commerce_id)}">${t("con.delais.acces.lib")}</label><input id="acc-${e(g.commerce_id)}" type="datetime-local" value="${e(dateHeureLocale(g.acces_remis_le))}" data-d="acces_remis_le"></div>
-            <div class="f etroit"><label for="pho-${e(g.commerce_id)}">${t("con.delais.photos.lib")}</label><input id="pho-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.photos_recues_le))}" data-d="photos_recues_le"></div>
-            <div class="f etroit"><label for="coh-${e(g.commerce_id)}">${t("con.coh.lib")}</label><input id="coh-${e(g.commerce_id)}" type="date" value="${e(jourDe(((g.fiche || {}).coherence || {}).verifiee_le))}" data-d="coherence_verifiee_le"></div>
+            <div class="f etroit"><label for="pho-${e(g.commerce_id)}">${t("con.delais.photos.lib")}</label><input id="pho-${e(g.commerce_id)}" type="date" value="${e(jourDe(g.photos_recues_le))}" max="${jourParis(Date.now())}" data-d="photos_recues_le"></div>
+            <div class="f etroit"><label for="coh-${e(g.commerce_id)}">${t("con.coh.lib")}</label><input id="coh-${e(g.commerce_id)}" type="date" value="${e(jourDe(((g.fiche || {}).coherence || {}).verifiee_le))}" max="${jourParis(Date.now())}"${((g.fiche || {}).coherence || {}).verifiee_le ? "" : ` min="${jourParis(Date.now() - 7 * 864e5)}"`} data-d="coherence_verifiee_le"></div>
             <div class="f etroit"><label for="eca-${e(g.commerce_id)}">${t("con.coh.ecarts.lib")}</label><textarea id="eca-${e(g.commerce_id)}" rows="3" maxlength="2000" data-d="coherence_ecarts" data-coh-ecarts translate="no">${e(((g.fiche || {}).coherence || {}).ecarts || "")}</textarea><p class="aide">${t("con.coh.ecarts.aide")}</p></div>
-            <div class="f etroit"><label for="fic-${e(g.commerce_id)}">${t("con.delais.fiche.lib")}</label><input id="fic-${e(g.commerce_id)}" type="date" value="${e(jourDe((g.fiche || {}).fait_le))}" data-d="fiche_optimisee_le"></div>
+            <div class="f etroit"><label for="fic-${e(g.commerce_id)}">${t("con.delais.fiche.lib")}</label><input id="fic-${e(g.commerce_id)}" type="date" value="${e(jourDe((g.fiche || {}).fait_le))}" max="${jourParis(Date.now())}"${(g.fiche || {}).fait_le ? "" : ` min="${jourParis(Date.now() - 7 * 864e5)}"`} data-d="fiche_optimisee_le"></div>
             <button type="button" class="bouton second petit" data-delais-enregistrer>${t("enregistrer")}</button>
             <button type="button" class="bouton second petit" data-coh-copier>${t("con.coh.copier")}</button>
             <div class="f etroit"><label for="msg-coh-${e(g.commerce_id)}">${t("con.coh.message.lib", { l: (g.langue || "fr").toUpperCase() })}</label><textarea id="msg-coh-${e(g.commerce_id)}" rows="6" readonly data-coh-message translate="no">${e(messageCoherence(g, ((g.fiche || {}).coherence || {}).ecarts))}</textarea></div></div>`;
@@ -719,12 +721,20 @@
           <div class="rl-apercu">${apercuRelire(x)}</div>
           <div class="f"><label for="rl-l-${id}">${t("con.rl.legende")}</label><textarea id="rl-l-${id}" data-rl-legende translate="no" rows="${lignesTexte(x.legende)}" data-avant="${e(x.legende || "")}">${e(x.legende || "")}</textarea></div>
           <details class="rl-reseaux"${Object.keys(ls).length ? " open" : ""}><summary>${t("con.rl.par.reseau")}</summary><p class="note">${t("con.rl.reprend")}</p>
-            ${RES_RL(x).map(r => `<div class="f"><label for="rl-${r}-${id}">${NOM_RESEAU[r] || e(r)}</label><textarea id="rl-${r}-${id}" data-rl-res="${r}" translate="no" rows="${lignesTexte(ls[r])}" data-avant="${e(ls[r] || "")}">${e(ls[r] || "")}</textarea></div>`).join("")}</details>
+            ${RES_RL(x).map(r => `<div class="f"><label for="rl-${r}-${id}">${NOM_RESEAU[r] || e(r)}</label><textarea id="rl-${r}-${id}" data-rl-res="${r}" translate="no" rows="${lignesTexte(ls[r])}" data-avant="${e(ls[r] || "")}"${ls[r] && String(ls[r]).trim() === String(x.legende || "").trim() ? " data-rl-suit" : ""}>${e(ls[r] || "")}</textarea></div>`).join("")}
+            ${Object.keys(ls).length ? `<button type="button" class="lien" data-rl-reprendre>${t("con.rl.reprendre")}</button>` : ""}</details>
           <div class="actions"><button type="button" class="bouton petit" data-rl-envoyer>${t("con.rl.envoyer")}</button><button type="button" class="bouton second petit" data-rl-corriger>${t("con.rl.corriger")}</button>${x.refaire !== "non" ? `<button type="button" class="lien" data-rl-refaire="${e(x.refaire)}">${t("con.rl.refaire")}</button>` : ""}</div>
           ${x.refaire === "non" ? `<p class="note" data-rl-refaire-non>${t("con.rl.refaire.non")}</p>` : ""}</article>`; };
   // Légendes de la carte : la légende commune et chaque légende par réseau (vide = la commune est reprise) ; change = une zone diffère de l'origine.
+  // Lot 1 (15/11/2026) : anciennes = réseaux dont la case est restée à l'ancien texte alors que la commune a changé (la base refuse aussi l'envoi,
+  // admin_corriger_legende) ; une case vidée reprend la commune.
   const legendesCarte = a => { const l = {}; a.querySelectorAll("[data-rl-res]").forEach(z => { const v = z.value.trim(); if (v) l[z.dataset.rlRes] = v; });
-    return { legende: a.querySelector("[data-rl-legende]").value.trim(), legendes: l, change: [...a.querySelectorAll("[data-rl-legende], [data-rl-res]")].some(z => z.value.trim() !== (z.dataset.avant || "").trim()) }; };
+    const c = a.querySelector("[data-rl-legende]"), commune = c.value.trim(), communeChange = commune !== (c.dataset.avant || "").trim();
+    const anciennes = communeChange ? [...a.querySelectorAll("[data-rl-res]")].filter(z => z.value.trim() && z.value.trim() === (z.dataset.avant || "").trim() && z.value.trim() !== commune) : [];
+    return { legende: commune, legendes: l, anciennes, change: [...a.querySelectorAll("[data-rl-legende], [data-rl-res]")].some(z => z.value.trim() !== (z.dataset.avant || "").trim()) }; };
+  // Les cases par réseau qui reprenaient mot pour mot la légende commune la suivent quand on la corrige.
+  const suivreCommune = a => { const c = a.querySelector("[data-rl-legende]"); let avant = c.value;
+    c.addEventListener("input", () => { a.querySelectorAll("[data-rl-res][data-rl-suit]").forEach(z => { if (z.value === avant) z.value = c.value; }); avant = c.value; }); };
 
   // ================= Écran « À faire » : une seule file, triée par urgence (en retard d'abord, puis l'échéance la plus proche, puis le reste, le plus
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
@@ -849,7 +859,10 @@
     const copier = async (x, ok) => { try { await navigator.clipboard.writeText(x.value); msg(t(ok)); } catch (er) { x.select(); msg(t("con.selectionnee")); } };
     const sur = (sel, f) => vue.querySelectorAll(sel).forEach(b => { const ev = b.tagName === "INPUT" && b.type === "checkbox" ? "onchange" : "onclick"; b[ev] = () => { clicCourant = b; return f(b, b.closest("[data-type], article, tr, section")); }; });
     // Alertes de l'exploitant : « Traité » (admin_alerte_vue) ; prise en charge : « Je prends », « Je prends à la place », « Je laisse ».
-    sur("[data-alerte-vue]", b => agir(() => D.adminAlerteVue(b.closest("article").dataset.alerte), t("con.al.traite.ok"), b));
+    sur("[data-alerte-vue]", b => { const a = b.closest("article"), z = a.querySelector("[data-alerte-note]"), n = z ? z.value.trim() : "";
+      if (z && n.length < 5) { const x = t("con.al.note.manque"); msg(x); msgPres(repereBouton(b), x, true); z.focus(); return; }
+      if (!window.confirm(t(a.dataset.code === "ERREUR_WORKFLOW" ? "con.al.traite.confirmer.erreur" : "con.al.traite.confirmer"))) return;
+      agir(() => D.adminAlerteVue(a.dataset.alerte, n || null), t("con.al.traite.ok"), b); });
     sur("[data-fiche-ignorer]", b => { if (!window.confirm(t("con.al.fiche.ignorer.confirmer"))) return;
       agir(async () => { const r = await D.adminIgnorerFicheGoogle(b.closest("article").dataset.alerte); return t(r && r.etat === "deja" ? "con.al.fiche.ignoree.deja" : "con.al.fiche.ignoree"); }, null, b); });
     sur("[data-prendre]", b => { if (!moi) { msg(t("con.moi.dabord")); const i = $("moi-prenom"); if (i) i.focus(); return; }
@@ -869,13 +882,13 @@
       catch (er) { msg(ph(er.message)); } finally { b.disabled = false; } });
     sur("[data-pm-publiee]", b => { const x = pm(b); agir(async () => { const r = await D.adminPublicationPubliee(x.id, x.reseau); return t("con.pm.notee", { res: NOM_RESEAU[x.reseau] || x.reseau, h: dh(r.publie_le) }); }, null, b); });
     sur("[data-copier-gbp]", b => copier(b.closest("article").querySelector("[data-rep-gbp]"), "con.copiee"));
-    sur("[data-publie-gbp]", b => agir(() => D.adminAvisMarquerPubliee(b.closest("article").dataset.avisPub), t("con.gbp.publiee"), b));
+    sur("[data-publie-gbp]", b => { if (!window.confirm(t("con.reponse.publiee.confirmer"))) return; agir(() => D.adminAvisMarquerPubliee(b.closest("article").dataset.avisPub), t("con.gbp.publiee"), b); });   // lot 1 : confirmation
     sur("[data-son-pose]", b => agir(() => D.adminMusiquePosee(b.closest("article").dataset.pub), t("con.son.enregistre"), b));
     // Avis de la file de BoostImpact et commentaires des commerces Premium
     sur("[data-copier-avis]", b => copier(b.closest("article").querySelector("[data-rep-avis]"), "con.copiee"));
     sur("[data-avis-proposer]", b => { const a = b.closest("article"); agir(() => D.adminAvisProposer(a.dataset.avis, a.querySelector("[data-rep-avis]").value), t("con.file.proposee.msg")); });
     sur("[data-avis-liberer]", b => agir(() => D.adminLibererAvis(b.closest("article").dataset.avis), t("con.file.liberee"), b));
-    sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"); agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
+    sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"); if (!window.confirm(t("con.reponse.publiee.confirmer"))) return; agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });
     sur("[data-cm-d]", b => { const a = b.closest("article"); agir(() => D.adminCommentaireDecider(a.dataset.cm, b.dataset.cmD, b.dataset.cmD === "valide" ? a.querySelector("[data-cm-texte]").value : null)); });
     // Garanties : dates du commerce, message de cohérence, manquements, réseaux retenus, délégation, objectif interne
     sur("[data-delais-enregistrer]", b => { const z = b.closest("[data-delais]"), p = {}; z.querySelectorAll("[data-d]").forEach(i => { p[i.dataset.d] = valeurDate(i); }); agir(() => D.adminDelais(z.dataset.delais, p)); });
@@ -894,7 +907,11 @@
     const rlId = b => b.closest("[data-rl]").dataset.rl;
     sur("[data-rl-envoyer]", b => { const a = b.closest("[data-rl]"), x = legendesCarte(a); if (x.change) { msgPres(repereBouton(b), t("con.rl.modifiee"), true); msg(t("con.rl.modifiee")); return; }
       agir(async () => { const r = await D.adminEnvoyerAuClient(rlId(b)); return t(r && r.etat === "deja" ? "con.rl.deja" : "con.rl.envoye"); }, null, b); });
+    vue.querySelectorAll("[data-rl]").forEach(suivreCommune);
+    sur("[data-rl-reprendre]", b => { const a = b.closest("[data-rl]"); a.querySelectorAll("[data-rl-res]").forEach(z => { z.value = ""; }); msg(t("con.rl.repris")); });
     sur("[data-rl-corriger]", b => { const a = b.closest("[data-rl]"), x = legendesCarte(a);
+      if (x.anciennes.length) { const m = t("con.rl.anciennes", { l: I.liste(x.anciennes.map(z => NOM_RESEAU[z.dataset.rlRes] || z.dataset.rlRes)) }); msg(m); msgPres(repereBouton(b), m, true);
+        const d = a.querySelector("details.rl-reseaux"); if (d) d.open = true; x.anciennes[0].focus(); return; }
       agir(async () => { await D.adminCorrigerLegende(rlId(b), x.legende, x.legendes); return t("con.rl.corrige"); }, null, b); });
     sur("[data-rl-refaire]", b => { if (!window.confirm(t(b.dataset.rlRefaire === "montage" ? "con.rl.refaire.confirmer.montage" : "con.rl.refaire.confirmer"))) return;
       agir(async () => { const r = await D.adminRefaireContenu(rlId(b)); return t(r && r.mecanisme === "montage" ? "con.rl.refait.montage" : "con.rl.refait", { n: (r && r.contenus_effaces) || 1 }); }, null, b); });
@@ -919,7 +936,7 @@
     // Étape réseaux (27/10/2026, branche nuit-emails) : l'équipe note l'envoi du lien de connexion (admin_lien_reseaux).
     sur("[data-mer-lien]", b => agir(async () => { await D.adminLienReseaux(cidDe(b), true); return t("con.mer.lien.ok"); }, null, b));
     sur("[data-opt-elements]", b => { const a = b.closest("article"); agir(async () => { const r = await D.adminCommandeOptionElements(a.dataset.opt, a.querySelector("[data-opt-date]").value); return t("con.opt.elements.ok", { d: I.dateLongue(r.livraison_prevue_le) }); }, null, b); });
-    sur("[data-opt-livree]", b => { const a = b.closest("article"); agir(async () => { if (!window.confirm(t("con.opt.livree.confirmer"))) return null; const r = await D.adminCommandeOptionLivree(a.dataset.opt);
+    sur("[data-opt-livree]", b => { const a = b.closest("article"); agir(async () => { if (!window.confirm(t(a.querySelector("[data-opt-elements]") ? "con.opt.livree.confirmer.sans" : "con.opt.livree.confirmer"))) return null; const r = await D.adminCommandeOptionLivree(a.dataset.opt);
       return r.second_test_prevu_le ? t("con.opt.livree.ok.second", { d: I.dateLongue(r.second_test_prevu_le) }) : t("con.opt.livree.ok"); }, null, b); });
     sur("[data-opt-second]", b => agir(async () => { await D.adminCommandeOptionSecondTest(b.closest("article").dataset.opt); return t("con.opt.second.ok"); }, null, b));
     sur("[data-opt-rattacher]", b => { const a = b.closest("article"), s_ = a.querySelector("[data-opt-commerce]"), cid = s_ && s_.value; if (!cid) { msg(t("con.opt.choisir.dabord")); return; }

@@ -1343,7 +1343,7 @@
           ...rechercheBloquee(fb).map(x => ({ ...x, commerce: n(x.commerce_id) || "", type: titreAlerte(x, n(x.commerce_id)), texte: texteAlerte(x) })),
           ...cm.map(x => ({ type: "Commentaire sensible", code: "COMMENTAIRE_SENSIBLE", commentaire_id: x.id, commerce_id: x.commerce_id, commerce: n(x.commerce_id), texte: (x.raisons || []).join(", ") + " : " + (x.texte || "texte effacé après 30 jours").slice(0, 100), date: x.cree_le }))];
       },
-      async adminAlerteVue(id) { ok(await sb.rpc("admin_alerte_vue", { p_id: id })); },
+      async adminAlerteVue(id, note) { ok(await sb.rpc("admin_alerte_vue", note ? { p_id: id, p_note: note } : { p_id: id })); },
       // Console v49 (13/11/2026, bloc « Console : réponses du démarrage remplies par l'équipe et fiche Google ignorée ») : contrôle d'abord ici (mêmes
       // phrases que la base), puis la fonction (est_admin, journal).
       async adminReponsesDemarrage(cid, rep) { fusionnerDemarrage({}, rep); return ok(await sb.rpc("admin_reponses_demarrage", { p_commerce: cid, p_reponses: rep })); },

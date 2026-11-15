@@ -559,7 +559,8 @@
     ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t("cx.chapo"), apres: apresEntree,
       extra: comptesDemo.length ? `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t("cx.visite")}</p>${comptesDemo.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}">${c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>
       <p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "",
-      pied: `<p class="retour"><a href="https://boostimpact.agency/">${t("cx.retour.site")}</a></p>` });
+      // Lot 1 (15/11/2026) : retour au site dans la langue de l'espace (/en/, /nl/), le site français sinon.
+      pied: `<p class="retour"><a href="${{ en: "../en/", nl: "../nl/" }[I.langue] || "../"}">${t("cx.retour.site")}</a></p>` });
   }
   // Visite directe de la démonstration (boutons sous le formulaire, redessinés quand on passe d'un mode de l'écran à l'autre).
   vue.addEventListener("click", async ev => { const b = ev.target.closest && ev.target.closest("[data-entrer]"); if (b && D.mode === "demo") { await D.ouvrirLien(b.dataset.entrer); await apresEntree(); } });
