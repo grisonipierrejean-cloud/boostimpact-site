@@ -1034,6 +1034,10 @@
       // d'image de Supabase (forfait payant ; le projet est sur le forfait gratuit, voir ordres/BRANCHEMENT.md) et RENOM_CONFIG.vignettes200 à
       // true. Sinon aucune adresse : la vignette reste vide, jamais la photo d'origine (jusqu'à 50 Mo) chargée pour une vignette de 48 px.
       async photos() { const c = await self.commerce(), l = ok(await sb.from("photos").select("*").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(100));
+        // 15/11/2026 (retour de PJ : « Contenu prêt » alors que rien n'arrive) : la règle contenus_lecture cache au commerçant les contenus « a_relire » ;
+        // une photo « traitee » sans aucun contenu visible est donc encore relue par l'équipe -> en_relecture (affichée « En préparation »).
+        try { const ids = l.filter(p => p.statut === "traitee").map(p => p.id);
+          if (ids.length) { const vus = new Set((ok(await sb.from("contenus").select("photo_id").in("photo_id", ids)) || []).map(x => x.photo_id)); l.forEach(p => { p.en_relecture = p.statut === "traitee" && !vus.has(p.id); }); } } catch (x) {}
         if (cfg.vignettes200 === true) await Promise.all(l.map(async p => { try { const r = await sb.storage.from("photos").createSignedUrl(p.chemin, 3600, { transform: { width: 200, height: 200, resize: "cover", quality: 70 } }); if (r.data && r.data.signedUrl) p.url = r.data.signedUrl; } catch (e) {} }));
         return l; },
       // ---- Photos (17/10/2026 : SEUL chemin des photos, plus aucune par email). Envoi résumable TUS dans le seau « photos », directement dans le

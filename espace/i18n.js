@@ -95,6 +95,7 @@
     // ---- Pied légal (le texte français vient de site/legal.json par outils/legal.py ; en anglais, il est reconstruit à partir de lui)
     "legal.mentions": ["Mentions légales", "Legal notice", "Wettelijke vermeldingen"], "legal.cgv": ["Conditions de vente", "Terms of sale", "Verkoopvoorwaarden"], "legal.confidentialite": ["Confidentialité", "Privacy", "Privacy"],
     // ---- États et listes
+    "st.photo.relecture": ["En préparation : votre contenu arrive bientôt dans « À valider »", "Being prepared: your post will soon be in “To approve”", "In voorbereiding: uw post komt binnenkort bij “Goed te keuren”"],   // 15/11/2026 : contenus encore relus par l'équipe
     "st.photo.a_traiter": ["En préparation", "Being prepared", "In voorbereiding"], "st.photo.en_cours": ["En préparation", "Being prepared", "In voorbereiding"], "st.photo.traitee": ["Contenu prêt", "Content ready", "Post klaar"], "st.photo.refusee": ["Refusée", "Rejected", "Geweigerd"],
     "st.contenu.a_relire": ["En relecture par l'équipe", "Being reviewed by the team", "In nalezing door het team"], "st.contenu.a_valider": ["À valider", "To approve", "Goed te keuren"], "st.contenu.approuve": ["Validée", "Approved", "Goedgekeurd"], "st.contenu.modification": ["Modification demandée", "Change requested", "Wijziging gevraagd"],
     "st.contenu.programme": ["Programmé", "Scheduled", "Ingepland"], "st.contenu.publie": ["Publié", "Published", "Gepubliceerd"], "st.contenu.refuse": ["Refusée", "Rejected", "Geweigerd"],
