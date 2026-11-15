@@ -728,7 +728,8 @@
 
   // ================= Écran « À faire » : une seule file, triée par urgence (en retard d'abord, puis l'échéance la plus proche, puis le reste, le plus
   // récent d'abord). Un compteur par type en haut ; chaque compteur filtre la file (#/afaire/<type>).
-  const TYPES_AF = ["alertes", "arelire", "apublier", "avis", "videos", "garanties", "miseenroute", "options"];
+  const TYPES_AF = ["alertes", "arelire", "apublier", "avis", "videos", "garanties", "miseenroute", "options", "visibilite"];
+  const G = window.RENOM_GEO;   // Visibilité IA (15/11/2026, geo.js) : bloc de la fiche client et carte de « À faire »
   let afCtx = {};
   // 26/10/2026 (garantie des 24 h tenue à deux) : les alertes prioritaires (avis sensibles, erreurs de workflow) passent avant tout, avec leur échéance ;
   // un avis sensible reste dans la file jusqu'à sa publication ; un dépôt vidéo refusé n'est jamais « en retard » ; « Charge du jour » en haut ;
@@ -740,6 +741,7 @@
     const [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, cs, opts, relire] = await Promise.all([sur(D.adminAlertes()), sur(D.adminPublicationsAPublier()), sur(D.adminAvisAPublier()), sur(D.adminCommentairesAPublier()),
       sur(D.adminMusiquesAPoser()), sur(D.adminFileAvis()), sur(D.adminCommentairesEquipe()), sur(D.adminDepotsVideo()), sur(D.adminGarantieDelais()), D.adminCommerces(), D.adminCommandesOptions ? sur(D.adminCommandesOptions()) : [],
       D.adminContenusARelire ? sur(D.adminContenusARelire()) : [], lirePrises()]);
+    const geos = G && D.adminDossiersGeo ? await sur(D.adminDossiersGeo()) : [];
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
     const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date, ordre: o.ordre ?? null });
     // À relire (14/11/2026) : une carte par contenu ; l'échéance de la garantie des 72 h (si elle court encore) fait l'urgence ; ordre de la base gardé
@@ -766,6 +768,8 @@
     cs.forEach(c => { const tk = tachesAdmin(c, jls[c.id]), bloque = merBloquee(c);
       if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), (bloque && (ageJours(c) ?? 0) >= 5) || tk.includes("whatsapp"), NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
     (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
+    // Visibilité IA (15/11/2026) : un dossier dont une étape VOUS attend, dont l'échéance tombe sous 3 jours, dont une mesure est due ou a échoué.
+    (geos || []).filter(G.aFaire).forEach(x => ajout("visibilite", G.carte(x), x.en_retard, T_(x.livre_le ? x.prochaine_mesure_le : x.livraison_prevue_le), T_(x.ouvert_le), { cle: "geo:" + x.id, cid: x.commerce_id }));
     items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
     return { items, alertes, pubs, dl, cs, relire: relire || [], erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, relire].some(x => x === null) };
   }
@@ -1184,8 +1188,8 @@
     // v52 : contenus du client (bloc « Contenus ») lus en même temps ; illisibles : null, le bloc le dit.
     // 15/11/2026 (retour de PJ : « je ne vois pas de relecture dans la fiche du client ») : les contenus « À relire » de CE client sont lus avec le reste
     // et affichés en tête de la fiche, avec les mêmes gestes que la file de « À faire » (Envoyer au client, Corriger la légende et envoyer, Refaire).
-    const [phs, cts, catT, rlTous] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null,
-      MQ && MQ.charger ? sur(MQ.charger()) : null, D.adminContenusARelire ? sur(D.adminContenusARelire()) : null]);
+    const [phs, cts, catT, rlTous, geo] = await Promise.all([D.adminPhotosClient ? sur(D.adminPhotosClient(cid)) : null, D.adminContenusClient ? sur(D.adminContenusClient(cid)) : null,
+      MQ && MQ.charger ? sur(MQ.charger()) : null, D.adminContenusARelire ? sur(D.adminContenusARelire()) : null, G && D.adminDossierGeo ? sur(D.adminDossierGeo(cid)) : undefined]);
     const mesRelire = (rlTous || []).filter(x => x.commerce_id === cid);
     const g = (dl || []).find(x => x.commerce_id === cid), gar = (gs || []).find(x => x.commerce_id === cid), o = OFFRES[c.offre_id] || {}, ret = Array.isArray(c.reseaux_retenus) ? c.reseaux_retenus : RESEAUX_RET;
     const k = c.compteur || {}, mq = g ? [...groupesManquements(g), ...(g.manquements || []).filter(m => m.statut !== "a_appliquer").map(m => ({ ...m, commerce: g.commerce }))] : [], mesOpts = (opts || []).filter(x => x.commerce_id === cid), mesDepots = (depots || []).filter(d => d.commerce_id === cid);
@@ -1223,6 +1227,7 @@
             <button type="button" class="bouton second petit" data-gar-releve>${t("con.gar.enregistrer")}</button>${!gar.cartes_en_place_le ? `<button type="button" class="bouton second petit" data-gar-cartes>${t("con.gar.cartes.ok")}</button>` : ""}</div>`
           : `<form id="f-gar-client" class="pile serre"><div class="champs deux"><div class="f"><label for="gar-date">${t("con.gar.date")}</label><input id="gar-date" type="date" required></div><div class="f"><label for="gar-avis">${t("con.gar.avis.capture")}</label><input id="gar-avis" type="number" min="0" inputmode="numeric" required></div></div>
             <div class="f etroit"><label for="gar-cartes">${t("con.gar.cartes.lib")}</label><input id="gar-cartes" type="date"></div><p class="note">${t("con.gar.regle")}</p><button class="bouton second petit" type="submit">${t("con.gar.demarrer.bouton")}</button></form>`}</section>
+      ${G && geo !== undefined ? G.bloc(c, geo, { peutOuvrir: !!D.adminGeoOuvrir, optionPayee: mesOpts.some(x => x.option === "visibilite_ia") }) : ""}
       ${mesOpts.length ? `<section class="carte" id="client-options"><h2>${t("con.opt.titre")}</h2>${aide("opt", t("con.ai.opt.now"))}</section><div class="pile">${mesOpts.map(x => carteOption(x, cs)).join("")}</div>` : ""}
       ${!mesDepots.length && +k.videos_plafond > 0 ? `<section class="carte" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.aucun.depot")}</p><p class="note">${t("con.videos.client", { b: k.videos_plafond })}</p></section>` : ""}
       ${mesDepots.length ? `<section class="carte tableau" id="client-videos"><h2>${t("con.entree.videos")}</h2>${aide("videos", nowVideos(mesDepots))}<p class="texte2">${t("con.videos.client", { b: k.videos_plafond || 0 })}</p><table class="tab"><thead><tr><th>${C_("depot")}</th><th>${C_("fichiers")}</th><th>${C_("statut")}</th><th>${C_("actions")}</th></tr></thead><tbody>${mesDepots.map(d =>
@@ -1310,8 +1315,11 @@
     // Bouton de la bannière qui mène au bon champ (« Vérifier la fiche », « Noter le blogId »…) : défilement et focus, sans changer d'adresse.
     vue.querySelectorAll("[data-aller]").forEach(b => b.onclick = () => { const z = $(b.dataset.aller); if (!z) return;
       const d = z.closest("details"); if (d) d.open = true; z.scrollIntoView({ block: "center" }); if (z.matches("input, select, textarea, button")) z.focus({ preventScroll: true }); });
+    // Visibilité IA (15/11/2026, geo.js) : mêmes gestes que le reste de la fiche (faire : la base, la fiche redessinée, le message près du bouton).
+    if (G) G.brancher(vue, { cid, dossier: geo, D, faire, msg });
     brancherCartes(() => client(cid));
     if (ancre === "avis") { const z = $("client-avis"); if (z) z.scrollIntoView({ block: "start" }); }
+    if (ancre === "geo") { const z = $("client-geo"); if (z) z.scrollIntoView({ block: "start" }); }
   }
   // Journal : libellé lisible (etape.* de i18n.js, les mêmes que l'historique de l'espace), le code en petit dessous pour le filtre et le support ;
   // détail : « clé : valeur » au lieu du JSON brut (24/10/2026). Le même tableau sert au journal de tous les clients et à celui d'un client.

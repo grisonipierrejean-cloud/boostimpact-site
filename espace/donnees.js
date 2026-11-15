@@ -16,7 +16,7 @@
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
   // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "14 novembre 2026";   // 14/11/2026 : bloc « Accord vidéo IA et CGV du 14 novembre 2026 » (regler_delegation, même version)
+  const VERSION_CGV = "15 novembre 2026";   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -24,11 +24,23 @@
       alerte_avis_avant_heures: 4, contrepartie: "mois_suivant_offert" },
     avis: { collecte_minutes: 15, relances_client_heures: [4, 24] }, delegation: { publication_auto_heures: 48 }, annuel: { mois_couverts: 12, majoration_mensuel_pct: 20 },
     objectif_interne_pilotes: { nouveaux_avis: 10, jours: 60, rappel_jour: 45, en_vue_pct: 75, fermeture_prolonge_au_dela_de_jours: 7 },
-    mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"] } };
+    mise_en_route: { prix_ht: 190, offerts_paiement: "annuel", offres: ["standard", "premium"], offerts_apres_option: "visibilite_ia" } };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
   // (égalité testée par espace/test_ecrans.py et rls.test.mjs). Livraison : jours après le paiement ou la réception des éléments du client, le plus tardif.
-  const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 14, second_test_jours: 90 },
+  // Modèle hybride (décision de PJ du 15/11/2026, CGV du 15 novembre 2026, article 3 bis) : la Visibilité IA est COMPRISE dans la mise en route de
+  // Croissance (standard) et Premium, mesure refaite tous les 90 jours en Premium (remesure_jours_premium).
+  // 15/11/2026, 12 h 29 (décision de PJ) : comprise SEULEMENT en paiement annuel (inclus_annuel) ; au mois, option pour toutes les offres.
+  const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 14, second_test_jours: 90,
+      inclus_annuel: ["standard", "premium"], achetable_par: ["essentiel", "standard", "premium"], remesure_jours_premium: 90 },
     site_restaurant: { nom: "Site du restaurant", nom_en: "Restaurant website", nom_nl: "Website van het restaurant", prix_ht: 990, livraison_jours: 14, second_test_jours: null } };
+  // Une option s'achète-t-elle pour cette offre, à ce rythme de paiement ? Non quand l'offre la comprend déjà (Visibilité IA en Croissance et Premium
+  // payés à l'année) ; même règle que option_achetable(offre, rythme, option) de schema.sql (bloc « Visibilité IA comprise dans Croissance et Premium »).
+  // L'espace ne vend aucune option (paiement par lien). Rythme inconnu : mensuel (rien de compris).
+  const optionIncluse = (offre, rythme, opt) => rythme === "annuel" && ((OPTIONS[opt] || {}).inclus_annuel || []).includes(offre);
+  const optionAchetable = (offre, rythme, opt) => { const o = OPTIONS[opt]; if (!o || optionIncluse(offre, rythme, opt)) return false; return !o.achetable_par || o.achetable_par.includes(offre); };
+  // Option payée par le commerce (commandes_options : à livrer ou livrée ; lecture du commerçant, mesCommandesOptions) : décide des frais de mise en
+  // route offerts à la montée depuis l'Essentiel (site/legal.json offerts_apres_option ; la base revérifie : lire_jeton_paiement, checkout.js).
+  const optionPayee = (cmds, opt) => (cmds || []).some(k => k && k.option_id === opt && (k.statut === "a_livrer" || k.statut === "livree"));
   // Réseaux où un commerce peut publier (même règle que reseaux_autorises() de schema.sql et redaction.reseaux_du_commerce) : la fiche Google toujours ;
   // Instagram, Facebook, TikTok si l'offre comprend les réseaux sociaux ET s'ils sont retenus (aucun choix enregistré : ceux de l'offre).
   const reseauxAutorises = c => { const o = OFFRES[(c || {}).offre_id] || {}, ret = Array.isArray((c || {}).reseaux_retenus) ? c.reseaux_retenus : ["instagram", "facebook", "tiktok"];
@@ -716,7 +728,9 @@
     AVIS_A_PUBLIER_ATTENTE: "Avis Google : réponse à publier depuis 4 h", AVIS_NON_REDIGE: "Avis Google : avis relevé sans réponse rédigée",
     AVIS_NON_VISIBLES: "Avis Google : nouveaux avis non lus par le relevé",
     // Options commandées (22/10/2026, enregistrer_commande_option de schema.sql)
-    OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché",
+    OPTION_COMMANDEE: "Option commandée : à livrer", OPTION_SANS_COMMERCE: "Option payée sans commerce rattaché", OPTION_DEJA_INCLUSE: "Option payée alors que l'offre la comprend",
+    // Frais de mise en route offerts après la Visibilité IA payée (15/11/2026, bloc SQL du même nom) : montée de l'Essentiel faite, facture à vérifier
+    FRAIS_OFFERTS_A_VERIFIER: "Frais de mise en route offerts : facture à vérifier",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
     RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
     FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
@@ -746,7 +760,7 @@
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
-    if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer au ${telLisible(d.telephone) || "commerçant (numéro inconnu)"}, puis changer l'abonnement dans Stripe (prorata), sans second paiement.`;
+    if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer au ${telLisible(d.telephone) || "commerçant (numéro inconnu)"}, puis changer l'abonnement dans Stripe (prorata), sans second paiement.${d.frais_offerts_option ? " Visibilité IA déjà payée : NE PAS ajouter les frais de mise en route (offerts, CGV art. 3 bis et 4)." : ""}`;
     if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
@@ -790,6 +804,10 @@
     if (a.type === "AVIS_NON_VISIBLES") return `${d.nombre} avis apparu(s) sur la fiche sans être lu(s) par le relevé (Places ne rend que 5 avis) : ouvrir la fiche et y répondre à la main.`;
     if (a.type === "OPTION_COMMANDEE") return `${d.option_nom || d.option || "Option"}${d.montant_ht_centimes != null ? ` (${(d.montant_ht_centimes / 100).toFixed(2).replace(".", ",")} € HT)` : ""} : livraison ${d.livraison_jours || 14} jours après les éléments du client, au plus tôt le ${String(d.livraison_prevue_le || "").slice(0, 10)}. Console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
     if (a.type === "OPTION_SANS_COMMERCE") return `${d.option_nom || d.option || "Option"} payée sans commerce reconnu (session ${d.session || ""}) : la rattacher dans la console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
+    // 15/11/2026 (modèle hybride) : Visibilité IA payée par un commerce Croissance ou Premium, qui la reçoit déjà avec la mise en route.
+    if (a.type === "OPTION_DEJA_INCLUSE") return `${d.option_nom || d.option || "Option"} payée (session ${d.session || ""}) alors que l'offre ${d.offre_nom || d.offre || ""} la comprend déjà (CGV, article 3 bis) : rien à livrer en double ; rembourser le paiement dans Stripe ou en parler avec le client.${d.test ? " (mode test)" : ""}`;
+    // 15/11/2026 : Essentiel qui avait payé la Visibilité IA, passé en Croissance ou Premium hors paiement annuel : les 190 € HT ne sont pas dus.
+    if (a.type === "FRAIS_OFFERTS_A_VERIFIER") return `${nomO(d.ancienne)} vers ${nomO(d.offre)}${d.rythme ? " (" + d.rythme + ")" : ""}, Visibilité IA déjà payée : les frais de mise en route sont offerts (CGV art. 3 bis et 4). Dans Stripe, ouvrir la première facture de l'abonnement ${d.abonnement || "de la nouvelle offre"} : si une ligne « Frais de mise en route » y figure, la rembourser (Paiements, ce paiement, Rembourser, montant partiel) ; sinon, rien à faire.`;
     if (/_A_EFFACER$/.test(a.type)) return `Toujours en attente d'une personne. Texte effacé le ${String(d.efface_le || "").slice(0, 10)} (règle des 30 jours) : à traiter avant.`;
     return JSON.stringify(d); };
   // Commerces dont la recherche automatique de la fiche attend depuis plus de FG.ATTENTE_HEURES : carte « Identifier la fiche Google » (sans
@@ -832,13 +850,15 @@
   // frais ne lisaient pas le même rythme par défaut) : celui de l'abonnement en cours ; inconnu ou sans abonnement en cours : MENSUEL (sans
   // engagement), comme le lien de paiement. Partagée par le prix (prixMontee), les frais de mise en route (app.js, offreDessus) et ce lien.
   const rythmeMontee = ab => ab && ab.statut !== "resilie" && ab.rythme === "annuel" ? "annuel" : "mensuel";
-  function lienMonteeOffre(ab, c, offreSuivante, maintenant) {
+  // cmds (15/11/2026, décision de PJ) : options commandées du commerce ; l'Essentiel qui a payé la Visibilité IA monte avec les frais « offerts ».
+  function lienMonteeOffre(ab, c, offreSuivante, maintenant, cmds) {
     if (!(OFFRES[offreSuivante] && OFFRES_EN_VENTE.includes(offreSuivante))) return null;
     const rythme = rythmeMontee(ab);
     // Mise en route déjà payée (correctif du 27/10/2026, décision de PJ) : un commerce dont l'offre comprend la mise en route (Croissance) ne la repaie
     // jamais : Croissance -> Premium prend TOUJOURS la variante « offerts » (sans ligne de frais), quelle que soit la date. Seule la montée depuis
     // l'Essentiel (offre sans mise en route) prend « factures » après fraisOffertsJusquAu.
-    const dejaPayes = !!(OFFRES[(c || {}).offre_id] || {}).frais_mise_en_route;
+    const optF = CONDITIONS.mise_en_route.offerts_apres_option;
+    const dejaPayes = !!(OFFRES[(c || {}).offre_id] || {}).frais_mise_en_route || (!!optF && optionPayee(cmds, optF));
     const base = lienAbonnement(null, c, offreSuivante, maintenant, rythme, dejaPayes); if (!base) return null;
     const em = String((c || {}).email_validation || "").trim().toLowerCase();
     return /^[^\s@"<>]+@[^\s@"<>]+\.[^\s@"<>]+$/.test(em) ? base + "&prefilled_email=" + encodeURIComponent(em) : base;
@@ -1412,6 +1432,17 @@
       async adminCommandeOptionLivree(id) { return ok(await sb.rpc("admin_commande_option_livree", { p_id: id })); },
       async adminCommandeOptionSecondTest(id) { return ok(await sb.rpc("admin_commande_option_second_test", { p_id: id })); },
       async adminCommandeOptionRattacher(id, cid) { return ok(await sb.rpc("admin_commande_option_rattacher", { p_id: id, p_commerce: cid })); },
+      // Visibilité IA (15/11/2026, bloc « Visibilité IA : dossier de livraison » de schema.sql) : console (est_admin) et carte du commerçant.
+      async adminDossiersGeo() { return ok(await sb.rpc("admin_dossiers_geo", {})) || []; },
+      async adminDossierGeo(cid) { return ok(await sb.rpc("admin_dossier_geo", { p_commerce: cid })) || null; },
+      async adminGeoOuvrir(cid) { return ok(await sb.rpc("admin_geo_ouvrir", { p_commerce: cid })); },
+      async adminGeoEtape(id, etape, fait, note) { return ok(await sb.rpc("admin_geo_etape", { p_dossier: id, p_etape: etape, p_fait: !!fait, p_note: note == null ? null : String(note) })); },
+      async adminGeoQuestions(id, questions, valider) { return ok(await sb.rpc("admin_geo_questions", { p_dossier: id, p_questions: questions, p_valider: !!valider })); },
+      async adminGeoReference(id, ref) { return ok(await sb.rpc("admin_geo_reference", { p_dossier: id, p_reference: ref })); },
+      async adminGeoPlateforme(id, cle, etat, note) { return ok(await sb.rpc("admin_geo_plateforme", { p_dossier: id, p_cle: cle, p_etat: etat, p_note: note == null ? null : String(note) })); },
+      async adminGeoDemander(id, type) { return ok(await sb.rpc("admin_geo_demander", { p_dossier: id, p_type: type })); },
+      async adminGeoRapport(mid) { return ok(await sb.rpc("admin_geo_rapport", { p_mesure: mid })) || null; },
+      async maVisibiliteIa() { return ok(await sb.rpc("ma_visibilite_ia", {})) || null; },
       async adminAccesReseau(cid, reseau, acces) { return ok(await sb.rpc("admin_acces_reseau", { p_commerce: cid, p_reseau: reseau, p_acces: !!acces })); },
       async adminPublicationPubliee(id, reseau) { return ok(await sb.rpc("admin_publication_publiee", { p_id: id, p_reseau: reseau })); },
       async adminLienMedia(x) {
@@ -1500,7 +1531,7 @@
     const cle = rythme === "mensuel" ? "prix_mensuel_ht" : "prix_ht", actuel = +(o || {})[cle] || 0, cible = +(s_ || {})[cle] || 0;
     return { rythme, enCours, actuel, cible, autre: +(s_ || {})[rythme === "mensuel" ? "prix_ht" : "prix_mensuel_ht"] || 0, ecart: actuel && cible ? cible - actuel : 0 }; };
   window.RENOM_PRIX_MONTEE = prixMontee; window.RENOM_RYTHME_MONTEE = rythmeMontee;
-  window.RENOM_OPTIONS = OPTIONS; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO; window.RENOM_MONTAGE_MAIN = MONTAGE_MAIN;
+  window.RENOM_OPTIONS = OPTIONS; window.RENOM_OPTION_ACHETABLE = optionAchetable; window.RENOM_OPTION_INCLUSE = optionIncluse; window.RENOM_OPTION_PAYEE = optionPayee; window.RENOM_OFFRES = OFFRES; window.RENOM_OFFRES_EN_VENTE = OFFRES_EN_VENTE; window.RENOM_RESEAUX_AUTORISES = reseauxAutorises; window.RENOM_CONDITIONS = CONDITIONS; window.RENOM_RESEAUX = RESEAUX; window.RENOM_VIDEO_AVIS = VIDEO_AVIS; window.RENOM_COMMENTAIRES = COMMENTAIRES; window.RENOM_DEPOT_VIDEO = DEPOT_VIDEO; window.RENOM_MONTAGE_MAIN = MONTAGE_MAIN;
   // ---- Collecte : ce dont la page publique a besoin (aucune session, aucune bibliothèque), et la règle du lien d'avis pour l'espace
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;

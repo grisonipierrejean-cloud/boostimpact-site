@@ -201,6 +201,29 @@ h2 .etat{font-size:inherit;font-weight:var(--graisse-forte)}
 .etat-dos-fait{color:var(--vert);border-color:var(--vert)}
 .etat-dos-vous{color:var(--encre);border-color:var(--encre);background:var(--releve)}
 .etat-dos-robot{border-style:dashed}
+/* Visibilité IA (15/11/2026, geo.js) : étapes en liste à cocher, questions, synthèse des mesures, plateformes. Mêmes filets et couleurs que le dossier de démarrage. */
+.geo-etapes{list-style:none;margin:8px 0 16px;padding:0}
+.geo-etapes>li{padding:10px 0;border-bottom:1px solid var(--filet)}
+.geo-etapes>li:last-child{border-bottom:0}
+.geo-etapes .option{align-items:flex-start}
+.geo-qui{margin:4px 0 0 30px}
+.geo-etapes .f,.geo-etapes [data-geo-note-lue],.geo-etapes [data-geo-garantie]{margin:6px 0 0 30px}
+.geo-questions{margin:8px 0;padding-left:28px}
+.geo-questions li{margin:6px 0}
+.geo-questions input{width:100%}
+.geo-mesure{margin:12px 0;padding:12px 0;border-top:1px solid var(--filet)}
+.geo-syn{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+.geo-syn th,.geo-syn td{padding:6px 4px;border-bottom:1px solid var(--filet);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.geo-syn th:first-child,.geo-syn td:first-child{width:3.2em}
+.geo-plateformes{list-style:none;margin:8px 0 16px;padding:0}
+.geo-plateformes li{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--filet)}
+.geo-plateformes label{flex:1 1 180px}
+.geo-plateformes select{flex:0 1 220px;max-width:100%}
+.geo-horaires{border:0;margin:0;padding:0}
+.geo-horaires legend{font-weight:var(--graisse-forte);padding:0}
+.geo-ref,.geo-contenus{margin:12px 0}
+.geo-ref summary,.geo-contenus summary{cursor:pointer;font-weight:var(--graisse-forte);padding:8px 0}
+.geo-contenus textarea{width:100%;font-size:13px}
 @media (max-width:719px){
   .dossier-tab thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
   .dossier-tab tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--filet)}

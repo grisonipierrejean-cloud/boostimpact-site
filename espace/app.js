@@ -785,8 +785,8 @@
     if (nomAConfirmer(c0) || (!c0.demarrage_fini && !plusTard(c0.id))) return demarrage();
     const [c, k, p, ct, av, cal, mr, ids, cm0, bilanP] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
       D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => []), debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null]);
-    const [nonLus, cpt, tfT, , contact, dChg] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
-      D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null]);
+    const [nonLus, cpt, tfT, , contact, dChg, geo] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
+      D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null, D.maVisibiliteIa ? D.maVisibiliteIa().catch(() => null) : null]);
     const ligneFiche = await ligneFicheAccueil(c0, mr);
     const cm = k.commentaires_inclus ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
@@ -884,6 +884,7 @@
       ${ligneSemaine(c, av, cal, cm)}
       ${tempsGagne(av, cal, bilanP, +k.videos_plafond > 0)}
       ${ligneFiche}
+      ${carteVisibiliteIa(geo)}
       ${ligneContact(contact, "contact-accueil")}
       ${boutonPointMois(c, "point-mois-accueil") ? `<p class="pied">${boutonPointMois(c, "point-mois-accueil")}</p>${notePointMois(c, "point-mois-accueil")}` : ""}
       ${ligneAutorisation(c)}
@@ -949,6 +950,16 @@
       catch (er) { b.disabled = false; msg(ph(er.message)); } };
     if ($("aut-non")) $("aut-non").onclick = async () => { try { await D.refuserAutorisationPhotos(); await accueil(); msg(t("aut.non.merci")); } catch (er) { msg(ph(er.message)); } };
   }
+
+  // ---------------- Visibilité IA (15/11/2026, ma_visibilite_ia) : où on en est et ce qu'on attend du commerçant (codes de vérification des
+  // plateformes). Rien sans dossier (Essentiel sans l'option). Aucune note de l'équipe ni résultat brut : le rapport lui est envoyé par l'équipe.
+  const carteVisibiliteIa = g => { if (!g) return "";
+    const etat = g.livre_le ? t("geo.cli.livre", { d: date(g.livre_le) }) + (g.prochaine_mesure_le ? " " + t("geo.cli.prochaine", { d: I.dateLongue(g.prochaine_mesure_le) }) : "")
+      : !g.questions_validees ? t("geo.cli.questions") : t("geo.cli.en.cours", { d: I.dateLongue(g.livraison_prevue_le) });
+    return `<section class="carte" id="geo-client" aria-labelledby="geo-client-titre"><div class="carte-tete"><h2 id="geo-client-titre">${t("geo.titre")}</h2><span class="note">${t("geo.cli.n", { a: g.faites, b: g.total })}</span></div>
+      <p class="texte2" data-geo-cli-etat>${etat}</p>
+      ${(g.codes_attendus || []).length ? `<p class="fort" data-geo-cli-codes>${t("geo.cli.codes", { l: I.liste(g.codes_attendus.map(k => t("geo.pf." + k))) })}</p><p class="note">${t("geo.cli.codes.comment")}</p>` : ""}
+      ${(g.mesures || []).length ? `<p class="note" data-geo-cli-mesures>${t("geo.cli.mesures", { d: date(g.mesures[g.mesures.length - 1].faite_le) })}</p>` : ""}</section>`; };
 
   // ---------------- Réglages (25/10/2026) : tout ce qui se règle une fois, rangé derrière un seul lien de l'en-tête. Chaque écran garde son adresse.
   const ENTREES_REGLAGES = ["offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"];
@@ -2140,7 +2151,7 @@
   // demande en un geste (D.demanderRappel, sujet « changement_offre », offre visée), jamais un second paiement Stripe (risque de double abonnement) ;
   // PJ confirme et change l'abonnement au prorata. Sans abonnement, le lien de paiement Stripe reste (premier paiement, aucun doublon possible).
   let demandeChgOffre = null;
-  function offreDessus(c, o, ab, voulue) {
+  function offreDessus(c, o, ab, voulue, cmds) {
     const O = window.RENOM_OFFRES || {}, h = COND.delegation.publication_auto_heures;
     if (o.delegation) {
       const actif = delegationActive(c), bouton = !!(D.reglerDelegation && D.delegationParBouton && D.delegationParBouton(c));
@@ -2158,7 +2169,7 @@
     }
     const suiv = offreCible(c, voulue), s_ = O[suiv]; if (!s_) return "";
     // Lien de paiement de l'offre du dessus (jamais le portail : décision de PJ du 27/10/2026), même rythme que l'abonnement en cours.
-    const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv) : null, enCours = !!(ab && ab.statut !== "resilie");
+    const nom = e(I.offre(suiv)), lien = D.lienMonteeOffre ? D.lienMonteeOffre(ab, c, suiv, undefined, cmds) : null, enCours = !!(ab && ab.statut !== "resilie");
     // Même rythme que le prix et le lien (tour 8) : window.RENOM_RYTHME_MONTEE (donnees.js), une seule règle.
     const rythme = window.RENOM_RYTHME_MONTEE(ab), mer = COND.mise_en_route, offertsF = rythme === mer.offerts_paiement;
     // Mise en route déjà payée (offre actuelle avec mise en route, Croissance) : jamais refacturée.
@@ -2166,8 +2177,13 @@
     // paiement » (phrases contradictoires) : les frais tels que les CGV les prévoient (article 4, une seule fois, offerts en annuel), et la note
     // « PJ vous confirme le montant avant tout changement ».
     const parDemande = !!D.demanderRappel && (enCours || !lien);
-    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : parDemande ? "offre.dessus.frais.demande" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
-    const lignes = suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"];
+    // 15/11/2026 (décision de PJ, CGV art. 3 bis et 4) : Essentiel qui a payé la Visibilité IA : frais offerts au mois (la base revérifie au paiement).
+    const optPayee = !!mer.offerts_apres_option && !!window.RENOM_OPTION_PAYEE && window.RENOM_OPTION_PAYEE(cmds, mer.offerts_apres_option);
+    const frais = !s_.frais_mise_en_route ? "" : o.frais_mise_en_route ? t("offre.dessus.frais.deja") : t(offertsF ? "offre.dessus.frais.offerts" : optPayee ? "offre.dessus.frais.option" : parDemande ? "offre.dessus.frais.demande" : "offre.dessus.frais.factures", { prix: euros(mer.prix_ht) });
+    // 15/11/2026 (décision de PJ, CGV art. 3 bis) : la Visibilité IA comprise dans Croissance et Premium payés à l'année seulement (12 h 29), au
+    // rythme de la montée (window.RENOM_OPTION_INCLUSE, donnees.js).
+    const ia = window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, rythme, "visibilite_ia") ? [suiv === "standard" ? "offre.dessus.std.ia" : "offre.dessus.prem.ia"] : [];
+    const lignes = (suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"]).concat(ia);
     const P = window.RENOM_PRIX_MONTEE(o, s_, ab), ecartPrix = P.ecart, mensuelP = P.rythme === "mensuel";
     // Tour 9 (01/11/2026) : plus de « aujourd'hui ou demain » écrit en dur. Le numéro est demandé comme pour « Attendez mon appel » (prérempli,
     // obligatoire) et le jour est un vrai jour ouvré (M.joursRappel : jamais un dimanche ni un jour férié du pays), nommé (« lundi 2 novembre »),
@@ -2231,7 +2247,7 @@
           ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
           ${o.reseaux_sociaux === false || !o.commentaires_disponible ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter ; 30/10/2026 : compteur masqué tant que offres.json dit commentaires_disponible faux (aucun « bientôt » à l'écran) */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
-      ${o.delegation ? offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1]) : ""}
+      ${o.delegation ? offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1], cmds) : ""}
         <section class="carte" id="offre-inclus"><h2>${t("offre.inclus")}</h2><ul class="liste">
           <li id="offre-contenus"><span>${t("offre.inc.contenus")}</span><span class="fort">${o.videos ? t("offre.contenus.dont.videos", { n: contenus, p: o.publications || contenus - o.videos, v: o.videos }) : t("offre.contenus.n", { n: contenus })}</span></li>
           <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
@@ -2251,7 +2267,7 @@
             « Frais de mise en route : 190 € HT » à un client qui paie déjà. */ ""}
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : ab && ["actif", "impaye"].includes(ab.statut) ? t("offre.frais.deja.faite") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
-      ${o.delegation ? "" : (() => { const h = offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), suiv = offreCible(c, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), s_ = (window.RENOM_OFFRES || {})[suiv];
+      ${o.delegation ? "" : (() => { const h = offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1], cmds), suiv = offreCible(c, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), s_ = (window.RENOM_OFFRES || {})[suiv];
         return h && s_ ? `<details class="repliable carte" id="offre-dessus-repli"${/dessus/.test(paramRoute) || demandeChgOffre ? " open" : ""}><summary><span class="fort">${t("offre.dessus.ligne", { nom: e(I.offre(suiv)), n: s_.contenus, prix: euros(window.RENOM_PRIX_MONTEE(o, s_, ab).cible) })}</span></summary>${h}</details>` : ""; })()}
       <section class="carte" id="offre-garanties"><h2>${t("offre.garanties.titre")}</h2>
         <ul class="liste-engagements"><li><p class="fort">${t("offre.garantie.fiche", { n: gd.fiche_optimisee_jours })}</p></li>
@@ -2269,7 +2285,7 @@
         <p class="texte2 lecture" id="offre-regle-contenus">${t(delegationActive(c) ? "offre.regle.contenus.delegation" : o.delegation ? (D.reglerDelegation && D.delegationParBouton && D.delegationParBouton(c) ? "offre.regle.contenus.delegation.bouton" : "offre.regle.contenus.delegation.option") : "offre.regle.contenus", { h: COND.delegation.publication_auto_heures })}</p>`)}
       ${repli("offre-processus", t("offre.processus.titre"), `<ol class="etapes-offre">${[1, 2, 3].map(n => `<li>${t("offre.processus." + n + (n === 1 && o.reseaux_sociaux === false ? ".google" : ""))}</li>`).join("")}</ol>`)}
       ${/* Renvoi au bouton « Passer à … » seulement si ce bouton existe (lien Stripe configuré, 01/11/2026, tour 6 Essentiel). */ ""}
-      ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c)) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
+      ${repli("offre-plafond", t("offre.plafond.titre"), `<p class="texte2 lecture">${t("offre.plafond.texte", { mois: (new Date().getMonth() + 1) % 12 })}${offreCible(c) && D.lienMonteeOffre && D.lienMonteeOffre(ab, c, offreCible(c), undefined, cmds) ? " " + t("offre.plafond.dessus", { nom: e(I.offre(offreCible(c))) }) : ""}</p>`)}
       ${repli("offre-historique", t("offre.historique"), j.filter(x => x.type !== "EMAIL_VALIDATION").length ? `<ul class="liste">${j.filter(x => x.type !== "EMAIL_VALIDATION").slice(0, 12).map(x => `<li><span>${e(ETAPES[x.type] || t("etape.autre"))}${x.detail && x.detail.raison ? `<span class="note">${t("deux.points")}${e(ph(x.detail.raison))}</span>` : ""}</span><span class="note">${cap(date(x.cree_le))}</span></li>`).join("")}</ul>` : `<p class="texte2">${t("offre.aucune.etape")}</p>`)}</section>`;
     if (/dessus/.test(paramRoute) && $("offre-dessus")) $("offre-dessus").scrollIntoView({ block: "start" });
     // Paiement en euros (02/11/2026) : « Payer au mois / à l'année » sans abonnement en cours et « Passer à <offre> » sans abonnement demandent une
