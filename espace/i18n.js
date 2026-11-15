@@ -2141,7 +2141,7 @@
       "Your original videos are deleted 30 days after the edit is approved (or 30 days after a rejection). Only the edited video is kept.", "Uw originele video's worden 30 dagen na de goedkeuring van de montage gewist (of 30 dagen na een weigering). Alleen de gemonteerde video blijft."],
     "dv.montage.de.vos": ["montage de vos vidéos", "edit of your videos", "montage van uw video's"],
     // Vidéo animée par IA (24/10/2026) : étiquette des cartes (Accueil, Contenus, valider.html) et de la console (« À publier à la main »).
-    "ia.etiquette": ["Vidéo animée par IA (Higgsfield) à partir de votre photo", "Video animated by AI (Higgsfield) from your photo", "Video met AI (Higgsfield) geanimeerd op basis van uw foto"],
+    "ia.etiquette": ["Vidéo animée par IA à partir de votre photo", "Video animated by AI from your photo", "Video met AI geanimeerd op basis van uw foto"],   // 15/11/2026 : sans nom d'outil (décision de PJ) ; le prestataire est nommé dans les CGV, art. 11
     // Explication sous l'étiquette (14/11/2026) : vraie et rassurante. La consigne donnée au modèle (moteur/video_ia.json, prompt) interdit d'ajouter
     // ou de changer quoi que ce soit, mais un modèle vidéo peut quand même modifier un détail (ordres/PRODUCTION-VISUELLE.md, 1 bis) : d'où
     // « consigne » et « regardez-la avant de valider », jamais « garanti ».
@@ -2152,22 +2152,28 @@
     // moteur/video_ia.json) ; « une photo sans personne » (contrôle automatique du moteur, aucune_personne) ; retrait possible, sans effet sur une
     // photo déjà envoyée (art. 16.5 : ce qui a servi à l'entraînement n'est pas effacé). Même texte que l'accord noté au journal (VIDEO_IA_ACCORDEE).
     "via.titre": ["Vidéos animées par IA", "AI-animated videos", "Video's geanimeerd met AI"],
-    "via.p1": ["Avec votre accord, nous pouvons animer une de vos photos par intelligence artificielle pour en faire une courte vidéo. Nous passons par le service Higgsfield, avec des modèles comme Google Gemini ou Kling.",
-      "With your consent, we can animate one of your photos with artificial intelligence to make a short video. We use the Higgsfield service, with models such as Google Gemini or Kling.",
-      "Met uw toestemming kunnen wij een van uw foto's met artificiële intelligentie animeren tot een korte video. Wij gebruiken daarvoor de dienst Higgsfield, met modellen zoals Google Gemini of Kling."],
-    "via.p2": ["Votre photo est alors envoyée à Higgsfield, qui peut s'en servir pour entraîner et améliorer ses modèles. Nous choisissons une photo sans personne.",
-      "Your photo is then sent to Higgsfield, which may use it to train and improve its models. We choose a photo with no people in it.",
-      "Uw foto wordt dan naar Higgsfield gestuurd, dat ze mag gebruiken om zijn modellen te trainen en te verbeteren. Wij kiezen een foto zonder personen."],
-    "via.p3": ["Sans votre accord, vos vidéos sont faites sans IA, à partir de vos photos. Vous pouvez retirer votre accord ici à tout moment ; une photo déjà envoyée ne peut pas être récupérée.",
-      "Without your consent, your videos are made without AI, from your photos. You can withdraw your consent here at any time; a photo already sent cannot be recovered.",
-      "Zonder uw toestemming worden uw video's zonder AI gemaakt, op basis van uw foto's. U kunt uw toestemming hier op elk moment intrekken; een al verstuurde foto kan niet worden teruggehaald."],
+    // 15/11/2026 (décision de PJ) : plus de nom d'outil ni de modèle côté client ; « notre prestataire » reste (l'envoi à un tiers et l'entraînement
+    // doivent être dits pour que l'accord soit éclairé, RGPD) ; le nom (Higgsfield) reste dans les CGV, art. 11. Sans accord : vidéo MONTÉE par notre
+    // moteur à partir des photos (moteur/montage.py), jamais « sans IA » (les textes restent écrits par IA).
+    "via.p1": ["Avec votre accord, nous animons une de vos photos par intelligence artificielle pour en faire une courte vidéo.",
+      "With your consent, we animate one of your photos with artificial intelligence to make a short video.",
+      "Met uw toestemming animeren wij een van uw foto's met artificiële intelligentie tot een korte video."],
+    "via.p2": ["La photo est alors envoyée à notre prestataire, qui peut aussi s'en servir pour entraîner et améliorer ses modèles. Seules les photos où l'on ne voit personne partent : un contrôle automatique écarte toute photo montrant quelqu'un, même de loin.",
+      "The photo is then sent to our provider, which may also use it to train and improve its models. Only photos with nobody in them are sent: an automatic check rules out any photo showing a person, even in the distance.",
+      "De foto wordt dan naar onze dienstverlener gestuurd, die ze ook mag gebruiken om zijn modellen te trainen en te verbeteren. Alleen foto's waarop niemand te zien is, worden verstuurd: een automatische controle sluit elke foto uit waarop iemand staat, ook in de verte."],
+    "via.p3": ["Sans votre accord, vos vidéos sont quand même faites : nous les montons à partir de vos photos (mouvements, enchaînements, textes, musique), sans animation par IA.",
+      "Without your consent, your videos are still made: we edit them from your photos (movement, transitions, text, music), without AI animation.",
+      "Zonder uw toestemming worden uw video's toch gemaakt: wij monteren ze op basis van uw foto's (beweging, overgangen, tekst, muziek), zonder AI-animatie."],
+    "via.p4": ["Vous pouvez changer d'avis ici à tout moment ; une photo déjà envoyée ne peut pas être récupérée.",
+      "You can change your mind here at any time; a photo already sent cannot be recovered.",
+      "U kunt hier op elk moment van gedachten veranderen; een al verstuurde foto kan niet worden teruggehaald."],
     "via.case": ["J'accepte les vidéos animées par\u00a0IA", "I accept AI-animated videos", "Ik aanvaard video's geanimeerd met\u00a0AI"],
     "via.oui": ["Activé : accord donné le {d}.", "On: consent given on {d}.", "Aan: toestemming gegeven op {d}."],
-    "via.non": ["Désactivé : vos vidéos sont faites sans IA.", "Off: your videos are made without AI.", "Uit: uw video's worden zonder AI gemaakt."],
-    "via.cgv": ["Détails dans les <a href=\"https://boostimpact.agency/cgv.html#video-ia\">conditions de vente, article 11</a>.", "Details in the <a href=\"https://boostimpact.agency/en/terms.html#video-ia\">terms of sale, section 11</a>.", "Details in de <a href=\"https://boostimpact.agency/nl/verkoopvoorwaarden.html#video-ia\">verkoopvoorwaarden, artikel 11</a>."],
+    "via.non": ["Désactivé : vos vidéos sont montées à partir de vos photos, sans animation par IA.", "Off: your videos are edited from your photos, without AI animation.", "Uit: uw video's worden gemonteerd op basis van uw foto's, zonder AI-animatie."],
+    "via.cgv": ["Détails : <a href=\"https://boostimpact.agency/cgv.html#video-ia\">conditions de vente, article 11</a>.", "Details: <a href=\"https://boostimpact.agency/en/terms.html#video-ia\">terms of sale, section 11</a>.", "Details: <a href=\"https://boostimpact.agency/nl/verkoopvoorwaarden.html#video-ia\">verkoopvoorwaarden, artikel 11</a>."],
     "via.merci": ["C'est noté : vos prochaines vidéos peuvent être animées par IA.", "Noted: your next videos may be animated by AI.", "Genoteerd: uw volgende video's kunnen met AI worden geanimeerd."],
     "via.merci.deja": ["Votre accord était déjà enregistré.", "Your consent was already recorded.", "Uw toestemming was al opgeslagen."],
-    "via.retire": ["Accord retiré : nous n'envoyons plus vos photos à Higgsfield.", "Consent withdrawn: we no longer send your photos to Higgsfield.", "Toestemming ingetrokken: wij sturen uw foto's niet meer naar Higgsfield."],
+    "via.retire": ["Accord retiré : nous n'envoyons plus vos photos à animer.", "Consent withdrawn: we no longer send your photos to be animated.", "Toestemming ingetrokken: wij sturen uw foto's niet meer door om te animeren."],
     "con.pm.ia": ["Vidéo animée par IA à partir de la photo du commerce : la mention IA reste dans la légende.", "Video animated by AI from the business's photo: the AI notice stays in the caption.", "Video met AI geanimeerd op basis van de foto van de zaak: de AI-vermelding blijft in het bijschrift."],
     "dv.st.en_envoi": ["Envoi en cours", "Uploading", "Wordt verstuurd"], "dv.st.envoye": ["Envoyé", "Sent", "Verstuurd"], "dv.st.en_montage": ["En montage", "Being edited", "In montage"], "dv.st.a_valider": ["À valider", "To approve", "Goed te keuren"],
     "dv.st.valide": ["Validé", "Approved", "Goedgekeurd"], "dv.st.refuse": ["Refusé", "Rejected", "Geweigerd"], "dv.st.annule": ["Annulé", "Cancelled", "Geannuleerd"], "dv.st.abandonne": ["Non terminé", "Not finished", "Niet afgerond"],

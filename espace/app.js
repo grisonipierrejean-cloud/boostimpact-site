@@ -1727,7 +1727,7 @@
   const avecVideoIa = c => !!c && c.offre_id === "premium" && !!D.reglerAccordVideoIa;
   const carteVideoIa = c => !avecVideoIa(c) ? "" : `<section class="carte video-ia-accord" id="video-ia-accord" aria-labelledby="via-titre">
       <h2 id="via-titre">${t("via.titre")}</h2>
-      ${["via.p1", "via.p2", "via.p3"].map(k => `<p class="texte2">${t(k)}</p>`).join("")}
+      ${["via.p1", "via.p2", "via.p3", "via.p4"].map(k => `<p class="texte2">${t(k)}</p>`).join("")}
       <label class="interrupteur" for="via-case"><input id="via-case" type="checkbox" role="switch" aria-describedby="via-etat"${c.video_ia_accord_le ? " checked" : ""}><span class="interrupteur-piste" aria-hidden="true"></span><span class="interrupteur-texte">${t("via.case")}</span></label>
       <p class="note" id="via-etat" data-via-etat="${c.video_ia_accord_le ? "oui" : "non"}">${c.video_ia_accord_le ? t("via.oui", { d: date(c.video_ia_accord_le) }) : t("via.non")}</p>
       <p class="note">${t("via.cgv")}</p><p class="msg" id="via-msg" role="status"></p></section>`;
