@@ -1,0 +1,910 @@
+{
+ "_lisez_moi": "Graine BRUXELLOISE de la démonstration publique (lot 8), écrite par outils/graine_demo_be.py à partir de etat-public.json : chargée quand l'espace est en anglais ou en néerlandais. Commerces fictifs, avis fictifs (un en anglais), numéros +32 fictifs (fixe en +32 2 000, préfixe non attribué). Ne pas modifier à la main : relancer le script.",
+ "users": {
+  "restaurant@demo": {
+   "role": "commerçant",
+   "commerce": "c-table"
+  },
+  "nouveau@demo": {
+   "role": "commerçant",
+   "commerce": "c-nouveau"
+  },
+  "essentiel@demo": {
+   "role": "commerçant",
+   "commerce": "c-table-essentiel"
+  },
+  "croissance@demo": {
+   "role": "commerçant",
+   "commerce": "c-table-croissance"
+  },
+  "premium@demo": {
+   "role": "commerçant",
+   "commerce": "c-table"
+  }
+ },
+ "commerces": {
+  "c-table": {
+   "id": "c-table",
+   "nom": "Brasserie Voorbeeld",
+   "google_place_id": "ChIJexempleTableDemo01",
+   "metier": "restaurant",
+   "ville": "Brussel",
+   "offre_id": "premium",
+   "reseaux_retenus": [
+    "instagram",
+    "facebook",
+    "tiktok"
+   ],
+   "en_pause": false,
+   "specialites": "Seizoenskeuken, ter plaatse bereid: verse pasta, stoofgerechten, voorgerechten op het moment geschikt.",
+   "horaires": "Van dinsdag tot zaterdag, van 12 tot 14 uur en van 19 tot 22 uur.",
+   "ton": "warm, met u",
+   "mots_cles": [
+    "verse pasta",
+    "seizoenskeuken"
+   ],
+   "mentions_autorisees": [],
+   "contact": "+32 2 000 12 34",
+   "whatsapp_numero": "+32470001234",
+   "whatsapp_accord_le": "2026-10-26T09:00:00.000Z",
+   "email_validation": "",
+   "lien_avis": "https://g.page/r/exemple-renom-demo/review",
+   "couleurs": {
+    "fond": "#FBF8F3",
+    "texte": "#1C1B19",
+    "accent": "#1F3A5F"
+   },
+   "reglage_avis": "auto_des_4_etoiles",
+   "demarrage_fini": true,
+   "demarrage": {
+    "phrase": "Restaurant met seizoenskeuken, voor lunch en diner.",
+    "distinctions": "Verse pasta, ter plaatse gemaakt.\nKorte kaart die met de seizoenen wisselt.",
+    "ton": "chaleureux",
+    "interdits": "Geen prijzen of promoties in de posts.",
+    "action": "reserver",
+    "action_detail": "Telefonisch of door op het bericht te antwoorden"
+   },
+   "notifications": {
+    "email": true,
+    "whatsapp": true
+   },
+   "marque": {
+    "version": 1,
+    "auto": true,
+    "verrouille": false,
+    "source": {
+     "type": "photos",
+     "photos": [
+      "demo/files/public/marque/spaghetti.jpg",
+      "demo/files/public/marque/bol-sauce.jpg",
+      "demo/files/public/marque/entree-marbre.jpg"
+     ]
+    },
+    "logo": null,
+    "logo_fond": null,
+    "couleurs": {
+     "principale": "#1F3A5F",
+     "secondaire": "#B09884",
+     "fond": "#FBF8F3",
+     "texte": "#1C1B19"
+    },
+    "palette": [
+     "#140E0D",
+     "#ADABAA",
+     "#81634E",
+     "#3F2A20",
+     "#948983",
+     "#704320"
+    ],
+    "couple": "chaleureux",
+    "police_titres": "fraunces",
+    "police_texte": "nunito",
+    "style_photo": "chaleureux",
+    "gabarit_prefere": null,
+    "gabarit_impose": false,
+    "mots_signature": [],
+    "a_eviter": [],
+    "maj": "2026-10-14T08:00:00Z"
+   },
+   "langue": "nl",
+   "pays": "BE"
+  },
+  "c-nouveau": {
+   "id": "c-nouveau",
+   "nom": "Studio Voorbeeld",
+   "metier": "beaute",
+   "ville": "",
+   "offre_id": "essentiel",
+   "en_pause": false,
+   "mots_cles": [],
+   "mentions_autorisees": [],
+   "couleurs": {
+    "fond": "#FFFFFF",
+    "texte": "#000000",
+    "accent": "#2438FF"
+   },
+   "reglage_avis": "auto_des_4_etoiles",
+   "demarrage_fini": false,
+   "demarrage": null,
+   "notifications": {
+    "email": true,
+    "whatsapp": false
+   },
+   "cree_il_y_a_h": 26,
+   "nom_confirme_le": null,
+   "langue": "nl",
+   "pays": "BE"
+  }
+ },
+ "photos": [
+  {
+   "id": "p-spaghetti",
+   "commerce_id": "c-table",
+   "nom_fichier": "spaghetti.jpg",
+   "statut": "traitee",
+   "il_y_a_h": 30,
+   "url": "demo/files/public/spaghetti-visuel-4x5-nl.jpg"
+  },
+  {
+   "id": "p-bol-sauce",
+   "commerce_id": "c-table",
+   "nom_fichier": "bol-sauce.jpg",
+   "statut": "traitee",
+   "il_y_a_h": 96,
+   "url": "demo/files/public/bol-sauce-visuel-4x5-nl.jpg"
+  },
+  {
+   "id": "p-entree-marbre",
+   "commerce_id": "c-table",
+   "nom_fichier": "entree-marbre.jpg",
+   "statut": "traitee",
+   "il_y_a_h": 52,
+   "url": "demo/files/public/entree-marbre-visuel-4x5-nl.jpg"
+  }
+ ],
+ "contenus": [
+  {
+   "id": "ct-spaghetti",
+   "commerce_id": "c-table",
+   "photo_id": "p-spaghetti",
+   "type": "publication",
+   "format": "publication",
+   "statut": "a_valider",
+   "mois": "courant",
+   "il_y_a_h": 4,
+   "demo": true,
+   "legende": "Verse pasta, kruiden, een romige saus. Een eenvoudig gerecht, op bestelling bereid. Reserveer uw tafel telefonisch op +32 2 000 12 34.",
+   "legendes": {
+    "instagram": "Verse pasta, kruiden, een romige saus. Een eenvoudig gerecht, op bestelling bereid. Reserveer uw tafel telefonisch op +32 2 000 12 34.\n\n#versepasta",
+    "facebook": "Verse pasta, kruiden, een romige saus. Een eenvoudig gerecht, op bestelling bereid. Reserveer uw tafel telefonisch op +32 2 000 12 34.",
+    "google": "Verse pasta, kruiden, een romige saus. Een eenvoudig gerecht, op bestelling bereid. Reserveer uw tafel van dinsdag tot zaterdag.",
+    "tiktok": "Verse pasta, op bestelling bereid. #versepasta #seizoenskeuken"
+   },
+   "visuel_url": "demo/files/public/spaghetti-visuel-4x5-nl.jpg",
+   "visuel_9x16_url": "demo/files/public/spaghetti-visuel-9x16-nl.jpg",
+   "note_modification": null
+  },
+  {
+   "id": "ct-story-entree",
+   "commerce_id": "c-table",
+   "photo_id": "p-entree-marbre",
+   "type": "publication",
+   "format": "story",
+   "statut": "programme",
+   "mois": "courant",
+   "il_y_a_h": 2,
+   "demo": true,
+   "legende": "Het voorgerecht van de dag staat klaar. Kom het ontdekken.",
+   "legendes": {
+    "instagram": "Het voorgerecht van de dag staat klaar. Kom het ontdekken.",
+    "facebook": "Het voorgerecht van de dag staat klaar. Kom het ontdekken, we houden uw tafel vrij.",
+    "tiktok": "Het voorgerecht van de dag, op het moment geschikt. #seizoenskeuken"
+   },
+   "visuel_url": "demo/files/public/entree-marbre-visuel-9x16-nl.jpg",
+   "note_modification": null
+  },
+  {
+   "id": "ct-avis-semaine",
+   "commerce_id": "c-table",
+   "photo_id": null,
+   "type": "publication",
+   "format": "publication",
+   "statut": "programme",
+   "hors_plafond": true,
+   "mois": "courant",
+   "il_y_a_h": 3,
+   "demo": true,
+   "legende": "De review van de week. “Uitstekende verse pasta, attente bediening.” (Lotte V.). Bedankt!",
+   "visuel_url": "demo/files/public/avis-semaine-visuel-4x5-nl.jpg",
+   "visuel_9x16_url": "demo/files/public/avis-semaine-visuel-9x16-nl.jpg",
+   "note_modification": null
+  },
+  {
+   "id": "ct-entree",
+   "commerce_id": "c-table",
+   "photo_id": "p-entree-marbre",
+   "type": "publication",
+   "format": "publication",
+   "statut": "programme",
+   "mois": "courant",
+   "il_y_a_h": 50,
+   "demo": true,
+   "legende": "Een voorgerecht, op het moment geschikt, geserveerd op een marmeren tafel. Kom het ontdekken, we houden uw tafel vrij.",
+   "visuel_url": "demo/files/public/entree-marbre-visuel-4x5-nl.jpg",
+   "visuel_9x16_url": "demo/files/public/entree-marbre-visuel-9x16-nl.jpg",
+   "note_modification": null
+  },
+  {
+   "id": "ct-video-spaghetti",
+   "commerce_id": "c-table",
+   "photo_id": "p-spaghetti",
+   "type": "video",
+   "format": "video",
+   "statut": "programme",
+   "mois": "courant",
+   "il_y_a_h": 28,
+   "demo": true,
+   "legende": "Verse pasta, zonder wachten geserveerd. Reserveer uw tafel telefonisch op +32 2 000 12 34.",
+   "legendes": {
+    "instagram": "Verse pasta, zonder wachten geserveerd. Reserveer uw tafel telefonisch op +32 2 000 12 34.\n\n#versepasta",
+    "facebook": "Verse pasta, zonder wachten geserveerd. Reserveer uw tafel telefonisch op +32 2 000 12 34.",
+    "tiktok": "Verse pasta, zonder wachten geserveerd. #versepasta"
+   },
+   "visuel_url": "demo/files/public/spaghetti-visuel-9x16-nl.jpg",
+   "video_url": "demo/files/public/spaghetti-video-9x16-nl.mp4",
+   "note_modification": null
+  },
+  {
+   "id": "ct-bol-sauce",
+   "commerce_id": "c-table",
+   "photo_id": "p-bol-sauce",
+   "type": "publication",
+   "format": "publication",
+   "statut": "publie",
+   "mois": "courant",
+   "il_y_a_h": 94,
+   "demo": true,
+   "legende": "Een stoofgerecht, warm geserveerd in een diep bord. Kom het vanavond proeven, de keuken is open tot de laatste service.",
+   "legendes": {
+    "instagram": "Een stoofgerecht, warm geserveerd in een diep bord. Kom het vanavond proeven, de keuken is open tot de laatste service.\n\n#seizoenskeuken",
+    "facebook": "Een stoofgerecht, warm geserveerd in een diep bord. Kom het vanavond proeven, de keuken is open tot de laatste service.",
+    "google": "Een stoofgerecht, warm geserveerd in een diep bord. Van dinsdag tot zaterdag, 's middags en 's avonds.",
+    "tiktok": "Een stoofgerecht, warm geserveerd. #seizoenskeuken"
+   },
+   "visuel_url": "demo/files/public/bol-sauce-visuel-4x5-nl.jpg",
+   "visuel_9x16_url": "demo/files/public/bol-sauce-visuel-9x16-nl.jpg",
+   "note_modification": null
+  },
+  {
+   "id": "ct-video-avis",
+   "commerce_id": "c-table",
+   "photo_id": null,
+   "type": "video",
+   "format": "video",
+   "statut": "programme",
+   "mois": "courant",
+   "il_y_a_h": 20,
+   "demo": true,
+   "legende": "Wat onze klanten zeggen. Hartelijk dank aan Lotte V. en Pieter D. voor hun reviews.",
+   "visuel_url": "demo/files/public/video-avis-exemple-nl.jpg",
+   "video_url": "demo/files/public/video-avis-exemple-nl.mp4",
+   "note_modification": null
+  }
+ ],
+ "publications": [
+  {
+   "id": "pub-bol",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-bol-sauce",
+   "reseaux": [
+    "facebook",
+    "instagram",
+    "google"
+   ],
+   "prevu_il_y_a_h": 72,
+   "statut": "publie",
+   "il_y_a_h": 90
+  },
+  {
+   "id": "pub-video",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-video-spaghetti",
+   "reseaux": [
+    "instagram",
+    "facebook"
+   ],
+   "dans_h": 30,
+   "statut": "programme",
+   "il_y_a_h": 26
+  },
+  {
+   "id": "pub-story-entree",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-story-entree",
+   "reseaux": [
+    "instagram",
+    "facebook"
+   ],
+   "dans_h": 6,
+   "statut": "programme",
+   "auto": true,
+   "il_y_a_h": 2
+  },
+  {
+   "id": "pub-avis-semaine",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-avis-semaine",
+   "reseaux": [
+    "instagram",
+    "facebook",
+    "google"
+   ],
+   "dans_h": 54,
+   "statut": "programme",
+   "auto": true,
+   "il_y_a_h": 3
+  },
+  {
+   "id": "pub-entree",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-entree",
+   "reseaux": [
+    "instagram",
+    "facebook",
+    "google"
+   ],
+   "dans_h": 78,
+   "statut": "programme",
+   "auto": true,
+   "il_y_a_h": 50
+  },
+  {
+   "id": "pub-video-avis",
+   "commerce_id": "c-table",
+   "contenu_id": "ct-video-avis",
+   "reseaux": [
+    "instagram",
+    "facebook"
+   ],
+   "dans_h": 100,
+   "statut": "programme",
+   "auto": true,
+   "il_y_a_h": 20
+  }
+ ],
+ "idees_demandes": [
+  {
+   "id": "idd-1",
+   "commerce_id": "c-table",
+   "statut": "traitee",
+   "mois": "courant",
+   "il_y_a_h": 70
+  }
+ ],
+ "idees": [
+  {
+   "id": "idee-1",
+   "commerce_id": "c-table",
+   "titre": "De mise-en-place vóór de service",
+   "texte": "Fotografeer het werkblad klaar, net voor de opening.",
+   "il_y_a_h": 70,
+   "demo": true
+  },
+  {
+   "id": "idee-2",
+   "commerce_id": "c-table",
+   "titre": "Het gerecht dat met het seizoen wisselt",
+   "texte": "Toon het eerste gerecht van de nieuwe kaart, in daglicht.",
+   "il_y_a_h": 70,
+   "demo": true
+  }
+ ],
+ "avis": [
+  {
+   "id": "av-1",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-1",
+   "auteur": "Lotte V.",
+   "note": 5,
+   "texte": "Uitstekende verse pasta, attente bediening.",
+   "reponse": "Dank u, Lotte! Fijn dat onze verse pasta u gesmaakt heeft, en uw compliment over de bediening geven we door aan het hele zaalteam. Tot binnenkort aan tafel.",
+   "reponse_proposee": "Dank u, Lotte! Fijn dat onze verse pasta u gesmaakt heeft, en uw compliment over de bediening geven we door aan het hele zaalteam. Tot binnenkort aan tafel.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "publication_automatique",
+   "statut": "publie",
+   "il_y_a_h": 200,
+   "repondu_apres_h": 2,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-2",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-2",
+   "auteur": "Jonas P.",
+   "note": 4,
+   "texte": "Heel lekker diner, maar wat lang wachten op het dessert.",
+   "reponse": "Bedankt voor uw reactie, Jonas! Fijn dat het diner u beviel. Het wachten op het dessert hebben we genoteerd en we bespreken het in de keuken. Graag tot ziens.",
+   "reponse_proposee": "Bedankt voor uw reactie, Jonas! Fijn dat het diner u beviel. Het wachten op het dessert hebben we genoteerd en we bespreken het in de keuken. Graag tot ziens.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "publication_automatique",
+   "statut": "publie",
+   "il_y_a_h": 170,
+   "repondu_apres_h": 3,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-3",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-3",
+   "auteur": "Pieter D.",
+   "note": 5,
+   "texte": "Warm onthaal, we komen zeker terug.",
+   "reponse": "Dank u, Pieter! Een warm onthaal, dat willen we elke tafel bieden. Graag tot ziens: tegen dan is de kaart wellicht met het seizoen meegegaan.",
+   "reponse_proposee": "Dank u, Pieter! Een warm onthaal, dat willen we elke tafel bieden. Graag tot ziens: tegen dan is de kaart wellicht met het seizoen meegegaan.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "publication_automatique",
+   "statut": "publie",
+   "il_y_a_h": 140,
+   "repondu_apres_h": 4,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-4",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-4",
+   "auteur": "Emma W.",
+   "note": 5,
+   "texte": "Simple pasta dish, done perfectly. Lovely spot.",
+   "reponse": "Dank u, Emma! Eenvoudig en perfect, dat is het mooiste compliment voor een pastagerecht. We verwelkomen u graag voor de volgende seizoenskaart.",
+   "reponse_proposee": "Dank u, Emma! Eenvoudig en perfect, dat is het mooiste compliment voor een pastagerecht. We verwelkomen u graag voor de volgende seizoenskaart.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "publication_automatique",
+   "statut": "publie",
+   "il_y_a_h": 110,
+   "repondu_apres_h": 2,
+   "demo": true,
+   "langue": "en"
+  },
+  {
+   "id": "av-5",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-5",
+   "auteur": "Sofie M.",
+   "note": 4,
+   "texte": "Goed adres, korte maar verzorgde kaart.",
+   "reponse": "Dank u, Sofie! Een korte kaart is een keuze: ze wisselt met de seizoenen en alles wordt ter plaatse bereid. Tot binnenkort voor de volgende.",
+   "reponse_proposee": "Dank u, Sofie! Een korte kaart is een keuze: ze wisselt met de seizoenen en alles wordt ter plaatse bereid. Tot binnenkort voor de volgende.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "validation_commercant",
+   "statut": "publie",
+   "il_y_a_h": 80,
+   "repondu_apres_h": 18,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-6",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-6",
+   "auteur": "An D.",
+   "note": 2,
+   "texte": "Gerecht kwam lauw aan, jammer. De rest van de maaltijd was goed.",
+   "reponse_proposee": "Dag An, bedankt dat u de tijd nam om ons te schrijven. Het spijt ons dat uw gerecht lauw aankwam, en we zijn blij dat de rest van de maaltijd u beviel. Wilt u erover praten, bel ons dan op +32 2 000 12 34. We hopen u snel terug te zien.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "validation_commercant",
+   "statut": "a_valider",
+   "il_y_a_h": 2,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-7",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-7",
+   "auteur": "Wout V.",
+   "note": 1,
+   "texte": "Ik ben ziek geworden na de maaltijd, ik ga een klacht indienen.",
+   "sensible": true,
+   "raisons": [
+    "santé",
+    "menace juridique"
+   ],
+   "decision": "humain",
+   "statut": "humain",
+   "il_y_a_h": 6,
+   "propose_apres_h": 3,
+   "reponse_proposee": "Dag, het spijt ons oprecht dit te lezen. Uw gezondheid gaat voor alles: kunt u ons bellen in het restaurant, zodat we er rechtstreeks over kunnen praten? Het team van Brasserie Voorbeeld",
+   "retenue_il_y_a_h": 6,
+   "demo": true,
+   "langue": "nl"
+  },
+  {
+   "id": "av-8",
+   "commerce_id": "c-table",
+   "google_review_id": "pub-8",
+   "auteur": "Bram L.",
+   "note": 3,
+   "texte": "Goed gegeten, maar we moesten 40 minuten wachten op een gereserveerde tafel.",
+   "reponse_proposee": "Dag Bram, bedankt voor uw bericht. Het spijt ons dat u moest wachten ondanks uw reservatie: zo willen we het niet. Bedankt voor uw bezoek, en tot binnenkort.",
+   "sensible": false,
+   "raisons": [],
+   "decision": "validation_commercant",
+   "statut": "escalade",
+   "il_y_a_h": 5,
+   "retenue_il_y_a_h": 2,
+   "demo": true,
+   "langue": "nl"
+  }
+ ],
+ "commentaires": [
+  {
+   "commerce_id": "c-table",
+   "raisons": [],
+   "refus": [],
+   "demo": true,
+   "id": "cm-2",
+   "reseau": "instagram",
+   "commentaire_id": "demo-ig-2",
+   "publication_id": "demo-media-2",
+   "lien": "https://reseau.exemple.invalid/instagram/demo-media-2",
+   "auteur": "voorbeeld_jonas",
+   "il_y_a_h": 5,
+   "texte": "Die pasta ziet er heerlijk uit!",
+   "categorie": "compliment",
+   "decision": "validation_commercant",
+   "statut": "publie",
+   "decide_apres_h": 1,
+   "repondu_apres_h": 1,
+   "reponse_proposee": "Hartelijk bedankt voor uw bericht! We laten ze u graag aan tafel proeven.",
+   "reponse": "Hartelijk bedankt voor uw bericht! We laten ze u graag aan tafel proeven."
+  },
+  {
+   "commerce_id": "c-table",
+   "raisons": [],
+   "refus": [],
+   "demo": true,
+   "id": "cm-3",
+   "reseau": "facebook",
+   "commentaire_id": "demo-fb-3",
+   "publication_id": "demo-post-3",
+   "lien": "https://reseau.exemple.invalid/facebook/demo-post-3",
+   "auteur": "Voorbeeld Pieter",
+   "il_y_a_h": 20,
+   "texte": "Ik heb gisteravond gebeld, niemand nam op.",
+   "categorie": "reclamation",
+   "decision": "validation_commercant",
+   "statut": "publie",
+   "decide_apres_h": 2,
+   "repondu_apres_h": 3,
+   "reponse_proposee": "Dag, het spijt ons dat we u gisteravond niet konden antwoorden. Stuur ons een privébericht, we lezen het met aandacht.",
+   "reponse": "Dag, het spijt ons dat we u gisteravond niet konden antwoorden. Stuur ons een privébericht, we lezen het met aandacht."
+  },
+  {
+   "commerce_id": "c-table",
+   "raisons": [],
+   "refus": [],
+   "demo": true,
+   "id": "cm-4",
+   "reseau": "instagram",
+   "commentaire_id": "demo-ig-4",
+   "publication_id": "demo-media-1",
+   "lien": "https://reseau.exemple.invalid/instagram/demo-media-1",
+   "auteur": "voorbeeld_volgers",
+   "il_y_a_h": 9,
+   "texte": "Win volgers in 24 uur, link in mijn bio!",
+   "categorie": "spam",
+   "decision": "ignore",
+   "statut": "ignore",
+   "decide_apres_h": 0
+  },
+  {
+   "commerce_id": "c-table",
+   "raisons": [
+    "accusation",
+    "juridique"
+   ],
+   "refus": [],
+   "demo": true,
+   "id": "cm-5",
+   "reseau": "facebook",
+   "commentaire_id": "demo-fb-5",
+   "publication_id": "demo-post-3",
+   "lien": "https://reseau.exemple.invalid/facebook/demo-post-3",
+   "auteur": "Voorbeeld Wout",
+   "il_y_a_h": 26,
+   "texte": "Jullie zijn dieven, ik ga een klacht indienen.",
+   "categorie": "sensible",
+   "decision": "humain",
+   "statut": "clos",
+   "decide_apres_h": 3
+  },
+  {
+   "commerce_id": "c-table",
+   "raisons": [],
+   "refus": [],
+   "demo": true,
+   "id": "cm-6",
+   "reseau": "facebook",
+   "commentaire_id": "demo-fb-6",
+   "publication_id": "demo-post-6",
+   "lien": "https://reseau.exemple.invalid/facebook/demo-post-6",
+   "auteur": "Voorbeeld An",
+   "il_y_a_h": 30,
+   "texte": "Hebben jullie ook gerechten om mee te nemen?",
+   "categorie": "question",
+   "decision": "validation_commercant",
+   "statut": "a_publier_main",
+   "decide_apres_h": 6,
+   "reponse_proposee": "Dag, bedankt voor uw vraag. Stuur ons een privébericht, dan vertellen we u wat we kunnen voorstellen.",
+   "erreur": "Toegang van Meta nog niet verleend: publicatie door het team van BoostImpact."
+  },
+  {
+   "commerce_id": "c-table",
+   "raisons": [],
+   "refus": [],
+   "demo": true,
+   "id": "cm-7",
+   "reseau": "instagram",
+   "commentaire_id": "demo-ig-7",
+   "publication_id": "demo-media-2",
+   "lien": "https://reseau.exemple.invalid/instagram/demo-media-2",
+   "auteur": "voorbeeld_emma",
+   "il_y_a_h": 52,
+   "texte": "Prachtige avond, bedankt aan het hele team!",
+   "categorie": "compliment",
+   "decision": "validation_commercant",
+   "statut": "publie",
+   "publie_par": "equipe",
+   "decide_apres_h": 2,
+   "repondu_apres_h": 4,
+   "reponse_proposee": "Hartelijk bedankt, het hele team zal blij zijn met uw bericht!",
+   "reponse": "Hartelijk bedankt, het hele team zal blij zijn met uw bericht!"
+  }
+ ],
+ "retours_prives": [
+  {
+   "commerce_id": "c-table",
+   "note": 3,
+   "message": "De muziek stond wat luid tijdens het diner.",
+   "prenom": "Sofie",
+   "il_y_a_h": 26
+  },
+  {
+   "commerce_id": "c-table",
+   "note": 5,
+   "message": null,
+   "prenom": null,
+   "il_y_a_h": 50,
+   "lu": true
+  }
+ ],
+ "journal": [
+  {
+   "id": "j-6",
+   "commerce_id": "c-table",
+   "type": "AVIS_PUBLIE",
+   "detail": {
+    "par": "renomia",
+    "depuis": "escalade",
+    "recu_le_il_y_a_h": 50,
+    "echeance_il_y_a_h": 26,
+    "dans_les_24h": true
+   },
+   "il_y_a_h": 40
+  },
+  {
+   "id": "j-7",
+   "commerce_id": "c-table",
+   "type": "AVIS_PUBLIE",
+   "detail": {
+    "par": "renomia",
+    "depuis": "humain",
+    "recu_le_il_y_a_h": 100,
+    "echeance_il_y_a_h": 76,
+    "dans_les_24h": true
+   },
+   "il_y_a_h": 81
+  },
+  {
+   "id": "j-8",
+   "commerce_id": "c-table",
+   "type": "OPTION_LIVREE",
+   "detail": {
+    "option": "site_restaurant",
+    "elements_recus_le_il_y_a_h": 300,
+    "livraison_prevue_le_il_y_a_h": 0,
+    "en_retard": false
+   },
+   "il_y_a_h": 30
+  },
+  {
+   "id": "j-1",
+   "commerce_id": "c-table",
+   "type": "PRODUIT",
+   "detail": {
+    "simule": true
+   },
+   "il_y_a_h": 4
+  },
+  {
+   "id": "j-2",
+   "commerce_id": "c-table",
+   "type": "AVIS_SENSIBLE",
+   "detail": {
+    "simule": true
+   },
+   "il_y_a_h": 30
+  },
+  {
+   "id": "j-3",
+   "commerce_id": "c-table",
+   "type": "VIDEO_AVIS",
+   "detail": {
+    "simule": true
+   },
+   "il_y_a_h": 20
+  },
+  {
+   "id": "j-4",
+   "commerce_id": "c-table",
+   "type": "PUBLIE",
+   "detail": {
+    "simule": true
+   },
+   "il_y_a_h": 72
+  },
+  {
+   "id": "j-5",
+   "commerce_id": "c-table",
+   "type": "IDEES",
+   "detail": {
+    "simule": true
+   },
+   "il_y_a_h": 70
+  }
+ ],
+ "invitations": [],
+ "comptes": {
+  "c-table": {
+   "google": {
+    "etat": "connecte",
+    "detail": "Gesimuleerde verbinding (demo)"
+   },
+   "facebook": {
+    "etat": "connecte",
+    "detail": "Gesimuleerde verbinding (demo)"
+   },
+   "instagram": {
+    "etat": "connecte",
+    "detail": "Gesimuleerde verbinding (demo)"
+   },
+   "tiktok": {
+    "etat": "non_connecte",
+    "detail": ""
+   }
+  },
+  "c-nouveau": {
+   "google": {
+    "etat": "non_connecte"
+   },
+   "facebook": {
+    "etat": "non_connecte"
+   },
+   "instagram": {
+    "etat": "non_connecte"
+   },
+   "tiktok": {
+    "etat": "non_connecte"
+   }
+  }
+ },
+ "videos_avis_demandes": [
+  {
+   "id": "vad-1",
+   "commerce_id": "c-table",
+   "avis_ids": [
+    "av-1",
+    "av-3"
+   ],
+   "fond": "photos",
+   "style": "franc",
+   "statut": "traitee",
+   "motif": null,
+   "contenu_id": "ct-video-avis",
+   "mois": "courant",
+   "il_y_a_h": 21,
+   "demo": true
+  }
+ ],
+ "video_avis_exemple": {
+  "video_url": "demo/files/public/video-avis-exemple-nl.mp4",
+  "visuel_url": "demo/files/public/video-avis-exemple-nl.jpg"
+ },
+ "depots_video": [
+  {
+   "id": "dv-exemple-1",
+   "commerce_id": "c-table",
+   "fichiers": [],
+   "details": [],
+   "note": "Het middagmenu",
+   "nb_fichiers": 3,
+   "nb_videos": 3,
+   "duree_totale_s": 41.5,
+   "statut": "refuse",
+   "motif": "De ontvangen video's zijn te donker om te monteren: film opnieuw overdag, met het licht van voren.",
+   "contenu_id": null,
+   "mois": "courant",
+   "il_y_a_h": 50,
+   "essais": 0,
+   "demo": true
+  }
+ ],
+ "montage_exemple": {
+  "_note": "Vidéo d'EXEMPLE montrée par le faux montage de la démonstration : rendue par le vrai moteur à partir de photos, pas à partir de vidéos déposées.",
+  "video_url": "demo/files/public/spaghetti-video-9x16-nl.mp4",
+  "visuel_url": "demo/files/public/spaghetti-visuel-9x16-nl.jpg"
+ },
+ "abonnements": [
+  {
+   "commerce_id": "c-table",
+   "offre": "premium",
+   "statut": "actif",
+   "rythme": "mensuel",
+   "stripe_customer": "cus_fictif_demo",
+   "maj_il_y_a_h": 700,
+   "demo": true
+  }
+ ],
+ "demo_maj": {
+  "principal": "c-table",
+  "comptes_offres": {
+   "essentiel@demo": {
+    "offre": "essentiel",
+    "commerce": "c-table-essentiel",
+    "nom": "Bistro Voorbeeld",
+    "visuels": "bistro",
+    "auteurs": {
+     "Jonas P.": "Ruben K.",
+     "Pieter D.": "Elke B.",
+     "Emma W.": "James O.",
+     "Sofie M.": "Lien V.",
+     "An D.": "Nathalie G.",
+     "Wout V.": "Kobe S.",
+     "Bram L.": "Fien H."
+    }
+   },
+   "croissance@demo": {
+    "offre": "standard",
+    "commerce": "c-table-croissance",
+    "nom": "Café Voorbeeld",
+    "visuels": "cafe",
+    "auteurs": {
+     "Jonas P.": "Tom W.",
+     "Pieter D.": "Eva R.",
+     "Emma W.": "Olivia S.",
+     "Sofie M.": "Hanne J.",
+     "An D.": "Joke P.",
+     "Wout V.": "Arne C.",
+     "Bram L.": "Marie D."
+    }
+   }
+  },
+  "base": {
+   "nb": 40,
+   "somme": 168
+  },
+  "photos_fiche": [
+   "p-spaghetti",
+   "p-bol-sauce"
+  ]
+ }
+}

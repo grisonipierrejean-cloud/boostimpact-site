@@ -74,7 +74,7 @@
         const etat = d.etat === "manque" || ech < maintenant ? "depasse" : ech - maintenant <= AVANT[k] ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: k, etat, echeance: ech, debut: debutBarre, mois_offert: moisOffert(ech), pause }); };
       engagement("fiche", g.fiche, depart); engagement("premier_contenu", g.premier_contenu, depart);
-      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null || a.retenue_le) return; suivis++;   // « Appelez-moi avant de publier » : délai suspendu (CGV art. 10)
+      (g.avis_en_cours || []).forEach(a => { const ech = ms(a.echeance); if (ech == null) return; suivis++;   // « Appelez-moi avant de publier » : délai suspendu (échéance nulle, CGV art. 10) ; lot 8 : retenue posée après l'échéance, l'avis reste en danger
         const etat = a.en_retard || ech < maintenant ? "depasse" : ech - maintenant <= AVANT.avis ? "risque" : "en_cours";
         if (etat !== "en_cours") danger.push({ cid: c.id, nom: c.nom, offre: c.offre_id, engagement: "avis", id: a.id, etat, echeance: ech, debut: ms(a.recu_le), note: a.note, mois_offert: moisOffert(ech), pause }); });
       // Mois offerts à appliquer dans Stripe : un seul par client et par mois (CGV art. 10), même si plusieurs délais sont manqués.
@@ -288,7 +288,7 @@
 
     return {
       maintenant, periode, debut, niveau,
-      verdict: { retard: enRetard.length, depasses, risques, systeme, a_appliquer: aStripe, attente_longue: attente.filter(a => a.long).length, vide },
+      verdict: { retard: enRetard.length, depasses, risques, systeme, systeme_noms: controles.filter(c => c.etat === "alerte").map(c => c.k), a_appliquer: aStripe, attente_longue: attente.filter(a => a.long).length, vide },
       kpi: {
         retard: { n: enRetard.length, garanties: enRetard.filter(i => i.type === "garanties").length, total: items.length },
         clients: { n: actifs.length, pause: servis.length - actifs.length, mise_en_route: actifs.filter(c => !merFinie(c)).length },

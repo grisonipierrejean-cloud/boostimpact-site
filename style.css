@@ -45,7 +45,7 @@
 
   /* Échelle typographique (30/10/2026) : corps 16 px, tierce mineure (x 1,2) pour les titres, 14 px secondaire, 12 px pour les mentions seulement.
      Interlignage : 1,1 pour l'affichage, 1,2 pour les titres, 1,55 pour le texte. */
-  --t-meta:.75rem;     /* 12 */
+  --t-meta:.8125rem;   /* 13 : 16/11/2026 (DA), plus aucun texte sous 13 px */
   --t-2:.875rem;       /* 14 */
   --t-corps:1rem;      /* 16 */
   --t-1:1.2rem;        /* 19,2 */
@@ -113,7 +113,6 @@ h3{font-weight:var(--graisse-titre);font-size:var(--t-1);line-height:var(--i-h);
 .hp{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .evitement{position:absolute;left:var(--marge);top:-80px;background:var(--encre);color:var(--blanc);padding:12px 16px;border-radius:var(--r-btn);z-index:30;font-weight:var(--graisse-moyenne)}
 .evitement:focus{top:8px}
-.prix-montant{font-variant-numeric:lining-nums}
 
 /* ---------- Fonds : blanc, ou un pas de gris. */
 body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:var(--gris-clair)}
@@ -142,28 +141,27 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 .logo img{display:block;height:34px;width:auto;max-width:none}
 .btn-menu{order:3;min-height:44px;padding:8px 20px;font-size:var(--t-2)}
 .menu{order:4;flex:1 0 100%;display:flex;flex-wrap:wrap;gap:0 20px;font-size:var(--t-2);font-weight:var(--graisse-moyenne)}
-.menu a{display:inline-flex;align-items:center;min-height:40px;text-decoration:none;color:var(--encre)}
+.menu a{display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center;text-decoration:none;color:var(--encre)}
 .menu a:hover{color:var(--encre);text-decoration:underline}
 .entete-simple .wrap{flex-wrap:nowrap;min-height:64px;padding-top:0;padding-bottom:0;gap:0 12px}
 .entete-simple .logo img{height:30px}
-.retour{order:3;display:inline-flex;align-items:center;min-height:44px;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--encre)}
+.retour{order:3;white-space:nowrap;display:inline-flex;align-items:center;min-height:44px;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--encre)}
 @media (max-width:480px){.entete-simple .wrap{gap:0 8px}.entete-simple .logo img{height:28px}}
 @media (max-width:400px){.entete-simple .logo img{height:26px}}
 /* Langues « FR / EN / NL » (bloc legal:langues, outils/legal.py) : la langue courante en graisse de titre, cibles de 44 px. */
 .langues{order:2;margin-left:auto;display:flex;align-items:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);line-height:var(--i-display);color:var(--gris)}
-.langues a{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;color:var(--gris);text-decoration:none}
+.langues a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--gris);text-decoration:none}
 .langues a:hover{color:var(--encre);text-decoration:underline}
 .langue-active{display:inline-flex;align-items:center;justify-content:center;min-width:40px;min-height:44px;color:var(--encre);font-weight:var(--graisse-forte)}
-.langues-sep{padding:0 1px;color:var(--champ-bord)}   /* lot 5a : 4,0:1 sur blanc (1,9:1 avant) */
-@media (max-width:480px){.langues a,.langue-active{min-width:32px}}
-@media (max-width:380px){.entete-simple .langues a,.entete-simple .langue-active{min-width:28px}}
+.langues-sep{padding:0 1px;color:var(--texte-doux)}   /* lot 8 : 7,5:1 sur blanc (3,99:1 au lot 5a) */
+
+
 /* Téléphone (30/10/2026) : « Audit gratuit » aussi dans l'en-tête, à côté des langues, en bouton compact ; logo et langues un peu resserrés pour
    tenir sur une ligne à 360 px. Le menu passe sur la deuxième ligne. */
 @media (max-width:759px){
   .entete:not(.entete-simple) .wrap{gap:0 8px}
   .entete:not(.entete-simple) .logo{min-height:44px}
   .entete:not(.entete-simple) .logo img{height:23px}
-  .entete:not(.entete-simple) .langues a,.entete:not(.entete-simple) .langue-active{min-width:26px}
   .entete:not(.entete-simple) .langues-sep{margin:0 -2px}
   .entete:not(.entete-simple) .btn-menu{min-height:44px;padding:0 12px;font-size:var(--t-2)}
 }
@@ -399,16 +397,8 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 .reco-lib{font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte-discret)}
 .offre.reco .reco-lib{color:var(--encre);font-weight:var(--graisse-forte)}
 .offre-promesse{font-size:var(--t-corps);line-height:1.55;color:var(--texte-doux)}
-.prix-bloc{display:flex;flex-direction:column;gap:4px;padding-top:20px;border-top:1px solid var(--trait)}
-.prix{display:flex;align-items:baseline;gap:8px}
-.prix-montant{font-family:var(--police-titre);font-stretch:var(--largeur-titre);font-size:var(--t-6);line-height:var(--i-display);letter-spacing:var(--a-display);color:var(--texte);font-weight:var(--graisse-titre);font-variant-numeric:lining-nums}
-.prix-unite{font-size:var(--t-corps);font-weight:var(--graisse-moyenne);color:var(--texte-doux)}
-.prix-detail{font-size:var(--t-2);line-height:1.5;color:var(--texte-discret)}
-.prix-detail strong{color:var(--texte);font-weight:var(--graisse-forte)}
-.prix-detail[data-rythme="mensuel"]+.prix-detail[data-rythme="annuel"]{margin-top:8px;color:var(--texte-doux)}
 /* Prix et boutons (30/10/2026) : le prix le plus gros est celui du bouton vert, au mois ; l'annuel suit en une ligne (« 2 mois offerts »),
    puis les deux boutons collés au prix : au mois en vert, à l'année en contour. */
-.prix[data-rythme="mensuel"] .prix-montant{font-size:var(--t-6)}
 .offre-payer{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .offre .offre-payer .btn{flex-direction:column;gap:2px;min-height:64px;padding:12px 8px;font-size:var(--t-corps);line-height:1.25;text-align:center;width:100%}
 .offre-choisir-detail{font-size:var(--t-2);font-weight:var(--graisse-texte);opacity:.9}
@@ -434,12 +424,13 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 @media (max-width:759px){
   .compare,.compare tbody{display:block}
   .compare thead{display:none}
-  .compare tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 12px;padding:16px 16px 16px;border-top:1px solid var(--filet-clair)}
+  .compare tr{display:grid;grid-template-columns:minmax(0,1fr);gap:6px 0;padding:16px 16px 16px;border-top:1px solid var(--filet-clair)}
   .compare tbody tr:first-child{border-top:0}
   .compare th,.compare td{display:block;border-top:0;padding:0;background:none}
   .compare tbody th{grid-column:1 / -1;font-weight:var(--graisse-forte);margin-bottom:8px;font-size:var(--t-corps)}
   .compare td{font-size:var(--t-2);line-height:var(--i-2);color:var(--texte)}
-  .compare td::before{content:attr(data-l);display:block;font-size:var(--t-meta);font-weight:var(--graisse-moyenne);color:var(--texte-discret);margin-bottom:2px}
+  .compare td{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:8px}
+  .compare td::before{content:attr(data-l);display:block;font-size:var(--t-meta);font-weight:var(--graisse-moyenne);color:var(--texte-discret)}
   .compare td.reco{background:none}
   .compare td.reco::before{color:var(--encre);font-weight:var(--graisse-forte)}
   .compare td.meme{display:none}
@@ -698,11 +689,10 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 .inclus .inclus-tout{padding-bottom:4px}
 @media (min-width:1040px){
   .offres{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:20px;row-gap:0;align-items:stretch}
-  .offre{display:grid;grid-template-rows:subgrid;grid-row:span 7;row-gap:20px;align-content:start}
+  .offre{display:grid;grid-template-rows:subgrid;grid-row:span 4;row-gap:20px;align-content:start}
+  .offre>.paiements{align-self:start}
   .offre>.offre-nom{align-self:start}
   .offre>.offre-promesse{min-height:0;align-self:start}
-  .offre>.prix-bloc{align-self:start}
-  .offre>.offre-payer{align-self:start}
   .offre>.inclus{align-self:start}
   .offre>.offre-vous{align-self:end}
 }
@@ -840,8 +830,7 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 .option-vedette .option-prix{font-size:var(--t-corps);font-weight:var(--graisse-texte);color:rgba(255,255,255,.86)}
 .option-vedette .inclus a,.option-conseil a{color:inherit}
 .option-conseil{font-size:var(--t-2);line-height:1.5;color:rgba(255,255,255,.78)}
-.offre-ia{font-size:var(--t-2);line-height:1.5;color:var(--texte-discret)}
-.offre-ia a,.inclus li a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.paiement-extras a,.offre-option-ia a,.inclus li a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 @media (min-width:760px){
   .option-vedette>.inclus{grid-row:1 / span 2}
   .option-vedette>.option-conseil{grid-column:2;grid-row:3;align-self:start}
@@ -856,18 +845,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
    ========================================================================================================================== */
 .offre{gap:20px}
 .offre-promesse{font-size:var(--t-1);line-height:1.4;color:var(--texte);font-weight:var(--graisse-moyenne);letter-spacing:-.005em;text-wrap:balance}
-.prix-bloc{display:flex;flex-direction:column;gap:4px}
-.prix-detail[data-rythme="annuel"]{margin-bottom:12px}
-.annee{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:var(--r-carte);background:var(--encre);color:var(--blanc);--coche:var(--accent)}
-.annee-titre{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-2b);line-height:1.15;letter-spacing:var(--a-titre);color:var(--blanc);text-wrap:balance}
-.annee-titre a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
-.annee-titre a:hover{color:inherit;text-decoration-thickness:2px}
-.annee-texte{font-size:var(--t-2);line-height:1.45;color:rgba(255,255,255,.86)}
-.annee-mois{margin-top:4px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2);font-size:var(--t-2);line-height:1.45;color:rgba(255,255,255,.72)}
-.annee-sans{background:var(--gris-clair);color:var(--texte);--coche:var(--encre)}
-.annee-sans .offre-ia{font-family:var(--police-titre);font-variant-numeric:lining-nums;font-weight:var(--graisse-titre);font-size:var(--t-2b);line-height:1.15;letter-spacing:var(--a-titre);color:var(--texte);text-wrap:balance}
-.annee-sans .annee-texte{color:var(--texte-doux)}
-.annee-sans .annee-mois{border-top-color:var(--trait);color:var(--texte-doux)}
 .offre-bas{gap:16px}
 .offre .inclus{gap:12px}
 .offre .inclus li{border-top:0;padding-top:0;line-height:1.45}
@@ -886,8 +863,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
   .offre-promesse{min-height:0}
 }
 @media (min-width:1040px){
-  .offre>.prix-bloc{align-self:stretch}
-  .annee-titre,.annee-sans .offre-ia{font-size:var(--t-1)}
   .compare-titre{margin-top:72px;font-size:var(--t-4)}
 }
 
@@ -898,7 +873,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 @media (min-width:760px){#haut .haut-grille{padding-top:120px}#haut .chapo{max-width:42ch}}
 @media (min-width:1040px){#haut .haut-grille{padding-top:88px}#haut .chapo{max-width:46ch}}
 .offre .inclus .inclus-ia{font-weight:var(--graisse-forte);color:var(--texte)}
-.annee-sans .offre-ia,.annee-sans .offre-ia a{font-family:var(--police-texte);font-size:var(--t-corps);line-height:1.45;letter-spacing:0;font-weight:var(--graisse-moyenne)}
 @media (min-width:1040px){.annee-sans .offre-ia{font-size:var(--t-corps)}}
 #haut .insec{white-space:nowrap}
 
@@ -911,7 +885,9 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(2.1rem,8.4vw,2.6rem);max-width:15
 /* Premier écran : une seule phrase ; voile assez dense pour 4,5:1 même sur les reflets des verres (mesuré, voir ordres/BRANCHEMENT.md). */
 #haut h1{font-size:clamp(2rem,8.4vw,2.5rem);line-height:1.08;max-width:17ch;margin-bottom:24px}
 html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch}
-#haut::after{background:linear-gradient(to top,rgba(12,15,13,.92) 0%,rgba(12,15,13,.78) 45%,rgba(12,15,13,.62) 100%)}
+#haut::after{background:linear-gradient(to top,rgba(12,15,13,.92) 0%,rgba(12,15,13,.82) 45%,rgba(12,15,13,.66) 100%)}
+/* Lot 8 (DA tour 6) : ligne de prix au-dessus de 4,5:1 même sur le pixel le plus clair à 390 px (voile un peu plus dense, ombre douce). */
+#haut .haut-prix{text-shadow:0 1px 2px rgba(12,15,13,.6)}
 #haut .haut-prix{text-transform:none;letter-spacing:0;font-size:var(--t-corps);line-height:1.5;color:var(--blanc);max-width:36ch}
 @media (min-width:1040px){
   #haut::after{background:linear-gradient(90deg,rgba(12,15,13,.9) 0%,rgba(12,15,13,.78) 45%,rgba(12,15,13,.42) 72%,rgba(12,15,13,.12) 100%)}
@@ -997,9 +973,6 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
 @media (max-width:759px){
   /* Cartes d'offres plus serrées sur téléphone (même contenu) */
   .offre{padding:20px 16px;gap:12px}
-  .prix-bloc{padding-top:12px}
-  .prix-detail[data-rythme="annuel"]{margin-bottom:8px}
-  .annee{padding:12px 16px;gap:8px}
   .offre-bas{gap:12px}
   .offre .inclus{gap:8px}
   .offre .offre-vous{padding-top:12px}
@@ -1038,7 +1011,10 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
 /* Offres : la Visibilité IA offerte à l'année dite une fois, sous le titre ; langue des publications (pages EN et NL) ; règlement amiable visible. */
 .offres-ia strong,.offres-langue strong{color:var(--texte)}
 .offres-resiliation{font-size:var(--t-corps);line-height:1.5;color:var(--texte);font-weight:var(--graisse-moyenne);margin:24px 0 0}
-.offres-resiliation+.offres-demo+.plie-compare{margin-top:16px}
+.offres-garantie,.offres-tva{font-size:var(--t-2);line-height:1.5;color:var(--texte-doux);margin:8px 0 0;max-width:68ch}
+.en-bref{margin:16px 0 24px;padding:16px;border:1px solid var(--trait);border-radius:var(--r-carte);background:var(--gris-clair)}
+.en-bref p{margin:0;line-height:1.55}
+.offres-garantie+.offres-demo+.plie-compare{margin-top:16px}
 /* Carrousels du téléphone : cartes de même hauteur (plus de grand blanc sous la carte visible). */
 @media (max-width:759px){
   .preuves{align-items:stretch}
@@ -1047,7 +1023,7 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
   .fiche .maq-gm{flex:1 1 auto}
   .posts{align-items:stretch}
   .post>.maq{flex:1 1 auto}
-  .preuves-repere{display:block;margin:8px 0 0;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
+  .preuves-repere{display:block;margin:0 0 8px;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
 }
 @media (min-width:760px){.preuves-repere{display:none}}
 /* Bouton « Audit gratuit » collant, téléphone seulement : il apparaît une fois le premier écran passé et s'efface quand le formulaire d'audit est à
@@ -1076,11 +1052,8 @@ body.avec-collant .pied{padding-bottom:84px}
 .offres-demo{margin:8px 0 0;font-size:var(--t-corps);line-height:1.5}
 .offres-demo a{font-weight:var(--graisse-forte);color:var(--texte);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
 .offres-demo a:hover{text-decoration-thickness:2px}
-.offres-resiliation+.offres-demo+.plie-compare{margin-top:16px}
-/* Téléphone : la fiche « Après » (celle qui vend) en premier dans le carrousel, entière au premier regard ; « Avant » glisse à côté. */
-@media (max-width:759px){
-  .fiche-apres{order:-1}
-}
+.offres-garantie+.offres-demo+.plie-compare{margin-top:16px}
+/* 16/11/2026 (DA) : « Avant » puis « Après », l'ordre du titre, au téléphone aussi. */
 /* Bureau : avant / après sur toute la colonne. Titre et « Avant » à gauche, « Après » (plus haute) à droite : plus de trou sous « Avant ». */
 @media (min-width:1040px){
   #fiche .wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:64px;align-items:start}
@@ -1145,12 +1118,13 @@ body.avec-collant .pied{padding-bottom:84px}
   /* Lot 6a (directeur artistique, tour 5) : chaque carte à sa hauteur dans le carrousel (plus 100 px blancs au bas de l'Essentiel). */
   .offre{flex:0 0 86%;scroll-snap-align:start}
   .offres-choix{display:block;margin:0 0 16px}
-  .offres-repere{display:block;margin:0 0 8px;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
   .offres-onglets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .offres-onglet{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:8px 4px;border:1px solid var(--trait-fort);border-radius:var(--r-btn);background:var(--blanc);color:var(--texte);font:inherit;line-height:1.2;text-align:center;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
   .offres-onglet .onglet-nom{font-size:var(--t-2);font-weight:var(--graisse-forte)}
-  .offres-onglet .onglet-prix{font-size:var(--t-2);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .offres-onglet .onglet-unite{font-size:var(--t-meta)}
+  /* Lot 8 (tour 6, James et DA) : « dès 79 € » sur sa ligne, l'unité dessous et libre de passer à la ligne (plus aucun débordement de 320 à 430 px
+     en FR, EN, NL). Le prix à l'année, comme le héros ; le prix au mois reste sur la carte. */
+  .offres-onglet{min-width:0;overflow-wrap:anywhere}
+  .offres-onglet .onglet-prix{font-size:var(--t-2);font-variant-numeric:tabular-nums;max-width:100%}
   .offres-onglet[aria-current="true"]{background:var(--encre);border-color:var(--encre);color:var(--blanc)}
   .offres-onglet:focus-visible{outline:2px solid var(--encre);outline-offset:2px}
 }
@@ -1161,3 +1135,49 @@ body.avec-collant .pied{padding-bottom:84px}
   .options-liste{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
   .option>.option-actions,.option>.btn{margin-top:auto}
 }
+
+/* ==========================================================================================================================
+   16/11/2026 (DA « visiteur neuf », arbitrages du coordinateur) : deux blocs de paiement identiques, à l'année d'abord puis au mois ;
+   prix par mois en même taille ; vert réservé à l'audit (« Choisir à l'année » encre pleine, « Choisir au mois » contour) ;
+   « Notre conseil » au-dessus du nom ; unité des onglets dite une fois au-dessus.
+   ========================================================================================================================== */
+.offres-unite{margin:0 0 8px;font-size:var(--t-2);line-height:1.4;color:var(--texte-doux);text-align:center}
+@media (min-width:760px){.offres-unite{display:none}}
+.offre-nom{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px}
+.offre-nom .reco-lib{order:-1;font-size:var(--t-meta);letter-spacing:.04em;text-transform:uppercase;font-weight:var(--graisse-forte);color:var(--texte)}
+.paiements{display:grid;gap:12px}
+.paiement{display:grid;gap:4px;align-content:start;padding:16px;border:1px solid var(--trait-fort);border-radius:var(--r-carte);background:var(--blanc);min-width:0}
+.paiement-annee{border:2px solid var(--encre)}
+.paiement-mode{font-size:var(--t-2);font-weight:var(--graisse-forte);color:var(--texte)}
+.paiement-prix{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.paiement-prix .prix-montant{font-family:var(--police-titre);font-stretch:var(--largeur-titre);font-size:var(--t-5);line-height:1.1;letter-spacing:var(--a-display);color:var(--texte);font-weight:var(--graisse-titre);font-variant-numeric:lining-nums;white-space:nowrap}
+html[lang="en"] .paiement-prix .prix-montant{letter-spacing:0}
+.paiement-prix .prix-unite{font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte-doux)}
+.paiement-debit{font-size:var(--t-corps);line-height:1.45;color:var(--texte);overflow-wrap:break-word}
+.paiement-extras,.offre-option-ia{font-size:var(--t-2);line-height:1.5;color:var(--texte-doux);overflow-wrap:break-word}
+.paiement .btn{margin-top:8px;width:100%;min-height:52px}
+.btn-encre{background:var(--encre);border-color:var(--encre);color:var(--blanc)}
+.btn-encre:hover{background:var(--texte);border-color:var(--texte);color:var(--blanc)}
+.ok input[type="checkbox"]{width:24px;height:24px;flex:0 0 24px}
+.ok label{min-height:44px;display:flex;align-items:center}
+.ok{flex-wrap:wrap}
+.ok>a{flex-basis:100%;padding-left:36px;min-height:44px;display:inline-flex;align-items:center;text-decoration:underline}
+/* 16/11/2026 (DA) : en-tête sur deux lignes au plus à 360 px (FR, EN, NL), liens de langue gardés à 44 px : sous 400 px, le bouton « Audit gratuit »
+   de l'en-tête s'efface (le premier écran a son bouton d'audit, puis le bouton collant prend le relais). Exposant « 1er » à 13 px au moins. */
+@media (max-width:399px){.entete .btn-menu{display:none}}
+sup{font-size:max(13px,.7em)}
+/* 16/11/2026 (retour sur téléphone) : un montant et son unité ne se séparent jamais (« 79 € HT/mois », « €79 excl. VAT/month »). */
+.paiement-prix{flex-wrap:nowrap}
+.paiement-prix .prix-unite,.onglet-prix{white-space:nowrap}
+@media (max-width:380px){.paiement-prix .prix-montant{font-size:var(--t-4)}.paiement-prix{gap:4px}}
+
+/* 16/11/2026 (coordinateur) : la TVA dite au-dessus des cartes, visible sans défiler, au téléphone comme au bureau. */
+.offres-tva{margin:0 0 16px;text-align:center;margin-inline:auto}
+@media (max-width:759px){.offres-tva{text-align:left}}
+@media (max-width:759px){.offres>.offre{scroll-snap-align:center}
+  /* 16/11/2026 : espace de fin pour que la dernière carte (Premium) puisse se centrer : (100 % - 86 %) / 2, moins l'écart entre cartes. */
+  .offres::after{content:"";flex:0 0 max(0px,calc(7% - 12px))}}
+
+/* 16/11/2026 : démonstration de l'espace client visible dès le haut de page, en second bouton discret (contour, jamais
+   vert) ; au téléphone, plus bas et plus léger que l'audit pour ne pas lui faire concurrence. */
+@media (max-width:759px){#haut .btn-demo{min-height:48px;padding:8px 20px;font-weight:var(--graisse-moyenne);border-color:rgba(255,255,255,.6)}}

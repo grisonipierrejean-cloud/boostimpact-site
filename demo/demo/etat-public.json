@@ -513,25 +513,23 @@
    "il_y_a_h": 6,
    "propose_apres_h": 3,
    "reponse_proposee": "Bonjour, nous sommes sincèrement désolés de lire cela. Votre santé compte avant tout : pouvez-vous nous appeler au restaurant pour que nous en parlions directement ? L'équipe de La Table d'exemple",
+   "retenue_il_y_a_h": 6,
    "demo": true
   },
   {
    "id": "av-8",
    "commerce_id": "c-table",
    "google_review_id": "pub-8",
-   "auteur": "Marc L.",
+   "auteur": "Thomas G.",
    "note": 3,
    "texte": "Bon repas, mais on nous a fait attendre 40 minutes pour une table réservée.",
-   "reponse_proposee": "Bonjour Marc, merci pour votre message. Nous sommes désolés pour cette attente malgré votre réservation : ce n'est pas ce que nous voulons pour vous. Merci d'être venu, et à bientôt.",
+   "reponse_proposee": "Bonjour Thomas, merci pour votre message. Nous sommes désolés pour cette attente malgré votre réservation : ce n'est pas ce que nous voulons pour vous. Merci d'être venu, et à bientôt.",
    "sensible": false,
    "raisons": [],
    "decision": "validation_commercant",
    "statut": "escalade",
    "il_y_a_h": 5,
    "retenue_il_y_a_h": 2,
-   "retenue_jour": "aujourdhui",
-   "retenue_creneau": "9-18",
-   "retenue_telephone": "+33639981234",
    "demo": true
   }
  ],
@@ -861,13 +859,31 @@
     "offre": "essentiel",
     "commerce": "c-table-essentiel",
     "nom": "Le Bistrot d'exemple",
-    "visuels": "bistrot"
+    "visuels": "bistrot",
+    "auteurs": {
+     "Karim B.": "Hugo R.",
+     "Paul D.": "Inès F.",
+     "Nina T.": "Malik A.",
+     "Marc L.": "Claire V.",
+     "Julie R.": "Anaïs B.",
+     "Sam V.": "Yann K.",
+     "Thomas G.": "Élodie S."
+    }
    },
    "croissance@demo": {
     "offre": "standard",
     "commerce": "c-table-croissance",
     "nom": "Le Comptoir d'exemple",
-    "visuels": "comptoir"
+    "visuels": "comptoir",
+    "auteurs": {
+     "Karim B.": "Lucas P.",
+     "Paul D.": "Sarah N.",
+     "Nina T.": "Omar D.",
+     "Marc L.": "Camille J.",
+     "Julie R.": "Manon T.",
+     "Sam V.": "Rémi C.",
+     "Thomas G.": "Laura H."
+    }
    }
   },
   "base": {

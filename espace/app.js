@@ -55,11 +55,9 @@
   // Essentiel, Croissance (standard) et Premium (avis_equipe ou delegation) : 4 et 5 étoiles automatiques, 1 à 3 étoiles et avis sensibles traités par
   // l'équipe BoostImpact. Le cas « tout passe par le commerçant » ne reste que pour une offre sans ces drapeaux. Un avis sensible n'est jamais automatique.
   const offreDe = c => (window.RENOM_OFFRES || {})[(c || {}).offre_id] || {};
-  // Réponses aux commentaires (lot 4 B, 15/11/2026) : comprises en Croissance et Premium, mais pas encore actives (accès de Meta en attente,
-  // CGV art. 3 « Disponible prochainement ») : tout l'espace suit moteur/offres.json, commentaires_disponible. Faux : ni écran, ni compteur, ni
-  // tâche ; « Disponible prochainement, sans supplément ». Le code reste derrière ce drapeau.
+  // Réponses aux commentaires : tout l'espace suit moteur/offres.json, commentaires_disponible. Faux (16/11/2026, décision du fondateur : ni
+  // vendues ni annoncées) : ni onglet, ni écran, ni compteur, ni tâche, ni mention « prochainement ». Le code reste derrière ce drapeau.
   const cmActifs = (k, c) => !!(k || {}).commentaires_inclus && !!offreDe(c).commentaires_disponible;
-  const cmBientot = c => !!offreDe(c).commentaires && !offreDe(c).commentaires_disponible;
   // Langue des publications (01/11/2026, tour 7 Premium ; commerces.langues_publication, même repli que redaction.langues_de du moteur).
   const languesPub = c => { const l = ["fr", "nl"].filter(x => Array.isArray((c || {}).langues_publication) && c.langues_publication.includes(x)); return l.length ? l : [(c || {}).langue === "nl" ? "nl" : "fr"]; };
   // Offre sans réseaux sociaux (Essentiel : fiche Google seulement, moteur/offres.json). 26/10/2026 (test réel de PJ) : ses écrans ne parlent ni de
@@ -550,7 +548,7 @@
     return ct.filter(x => x.statut === "approuve" && !horsOffreContenu(x, c) && !occupes.has(x.id) && resDe(x).some(r => connectes.includes(r))); };
   const compteDe = ({ ct, av, cm, k, c, cal, cpt }) => { const contenus = ct.filter(x => x.statut === "a_valider").length, avis = av.filter(x => (x.statut === "a_valider" && !x.sensible) || sensibleADecider(x, c)).length,
     commentaires = cmActifs(k, c) ? cm.filter(x => x.statut === "a_valider" || x.statut === "humain").length : 0;
-    return { k, cmOk: cmActifs(k, c), cmOnglet: !!(k || {}).commentaires_inclus, contenus, avis, commentaires, decisions: contenus + avis + commentaires, aProgrammer: sansDateDe(ct, cal, cpt, c).length }; };
+    return { k, cmOk: cmActifs(k, c), cmOnglet: cmActifs(k, c),   /* 16/11/2026 (décision du fondateur) : onglet seulement si les réponses aux commentaires sont disponibles */ contenus, avis, commentaires, decisions: contenus + avis + commentaires, aProgrammer: sansDateDe(ct, cal, cpt, c).length }; };
   async function compterAValider() {
     const [ct, av, k, cm, c, cal, cpt] = await Promise.all([D.contenus(), D.avis(), D.compteur(), D.commentaires().catch(() => []), D.commerce(), D.calendrier().catch(() => []), D.comptes().catch(() => null)]);
     return compteDe({ ct, av, cm, k, c, cal, cpt });
@@ -613,6 +611,14 @@
     // Démonstration publique (/demo/, config.js : window.RENOM_DEMO_ENTREE = "visite", écrit par outils/demo_espace.py) : visites d'abord, une par
     // offre, formulaire replié. Démonstration locale (tests, recette) : l'écran d'avant, formulaire ouvert et un bouton par compte dessous.
     const visite = comptesDemo.length > 0 && window.RENOM_DEMO_ENTREE === "visite";
+    // 16/11/2026 (demande du fondateur) : /demo/?offre=croissance (bouton du site, email et rapport d'audit, page merci) ouvre directement l'espace
+    // Croissance de la démonstration ; le paramètre est retiré de l'adresse, pour que « Quitter » ramène au choix des offres.
+    const voulue = (() => { try { const q = new URLSearchParams(location.search), o = (q.get("offre") || "").toLowerCase(); return { croissance: "standard", groei: "standard", growth: "standard", standard: "standard", essentiel: "essentiel", premium: "premium" }[o] || ""; } catch (er) { return ""; } })();
+    if (visite && voulue) {
+      const c = comptesDemo.find(x => x.offre === voulue && !x.nouveau && x.role !== "administrateur" && PAR_OFFRE.test(x.email)) || comptesDemo.find(x => x.offre === voulue && !x.nouveau && x.role !== "administrateur");
+      try { const q = new URLSearchParams(location.search); q.delete("offre"); history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash); } catch (er) {}
+      if (c) { await D.ouvrirLien(c.email); await apresEntree(); return; }
+    }
     const boutonsDemo = l => `<div class="entrer-demo" id="entrer-demo"><p class="fort">${t(visite ? "cx.visite" : "cx.visite.directe")}</p>${l.map(c => `<button type="button" class="bouton second" data-entrer="${e(c.email)}"${c.offre && !c.nouveau ? ` data-offre="${e(c.offre)}"` : ""}>${visite ? libVisite(c) : c.role === "administrateur" ? t("cx.console.exploitant") : e(c.commerce || c.email)}</button>`).join("")}</div>`;
     const noteDemo = comptesDemo.length ? `<p class="note" id="comptes-demo">${t("cx.demo", { comptes: e(comptesTexte(comptesDemo)) })}</p>` : "";
     ACC.connexion({ vue, I, D, titre: t("cx.titre"), chapo: t(visite ? "cx.chapo.demo" : "cx.chapo"), apres: apresEntree,
@@ -764,7 +770,7 @@
   // l'écran Offre (Réglages). Texte sobre : ni badge, ni couleur d'accent.
   function offreAccueil(c) {
     const o = offreDe(c); if (!o.nom) return "";
-    const ligne = t("acc.offre.inclus", { n: o.contenus ?? ((o.publications || 0) + (o.videos || 0)), p: o.publications || 0, v: o.videos || 0, g: o.reseaux_sociaux === false, cm: !!o.commentaires_disponible, bientot: !!o.commentaires && !o.commentaires_disponible });   // même drapeau que l'offre (01/11/2026, tour 6 Croissance)
+    const ligne = t("acc.offre.inclus", { n: o.contenus ?? ((o.publications || 0) + (o.videos || 0)), p: o.publications || 0, v: o.videos || 0, g: o.reseaux_sociaux === false, cm: !!o.commentaires_disponible });   // 16/11/2026 (décision du fondateur) : plus aucun « disponible prochainement » pour les commentaires
     return `<div class="offre-accueil" id="offre-accueil"><p class="fort" id="offre-accueil-nom">${e(t("offre.nom", { nom: c.offre_id }))}</p>
       <p class="texte2" id="offre-accueil-inclus">${e(ligne)}</p><p><a href="#/offre" id="offre-accueil-lien">${t("acc.voir.offre")}</a></p></div>`;
   }
@@ -934,7 +940,9 @@
     // Lot 2 (15/11/2026, retour testeur : « 2 choses à faire » au-dessus d'un badge « 1 ») : l'en-tête compte d'abord les choses à VALIDER, le même
     // nombre que le badge de l'onglet « À valider » (N.decisions, compteDe), puis les autres actions de la liste à part.
     const autresActions = actions.filter(a => !["contenus", "avis", "avis-sensible", "commentaires"].includes(a.id)).length;
-    if (!sansAFaire && (actions.length || nMer)) phrase = N.decisions ? t("acc.chapo.valider", { n: N.decisions, a: autresActions + nMer }) : t("acc.chapo.actions", { n: autresActions + nMer });
+    // 16/11/2026 (DA) : le nombre annoncé = les lignes affichées dans « À faire maintenant », la ligne de l'avis sensible (« Lire l'avis ») comprise.
+    const nSens = humains.length && !(humains.length && aDecider.length) ? 1 : 0;
+    if (!sansAFaire && (actions.length || nMer || nSens)) phrase = N.decisions ? t("acc.chapo.valider", { n: N.decisions, a: autresActions + nMer + nSens }) : t("acc.chapo.actions", { n: autresActions + nMer + nSens });
     // Avis sensible : bandeau en tête seulement s'il y a quelque chose à décider ; sinon (l'équipe s'en charge) une ligne sous « À faire maintenant ».
     const sensibleEnTete = humains.length && aDecider.length;
     // Petit écran (01/11/2026, tour 8, iPhone SE) : 3 actions au plus, puis « Tout voir, N de plus » (N = exactement les actions repliées).
@@ -1922,21 +1930,21 @@
   // règle que jours_rappel() en base) ; avant, un seul jour était proposé après 17 h. Même bloc pour l'avis, TikTok et la montée d'offre (radiosJours).
   const radiosJours = (nom, jr, auj) => `<label class="option"><input type="radio" name="${nom}" value="aujourdhui" checked data-jour-rappel="${jr.aujourdhui}"><span>${libJourRappel(jr.aujourdhui, auj)}</span></label>
         <label class="option"><input type="radio" name="${nom}" value="demain" data-jour-rappel="${jr.demain}"><span>${libJourRappel(jr.demain, auj)}</span></label>`;
-  const formRetenue = (x, c) => { const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c && c.pays), tel = x.retenue_telephone || telRetenue(c);
-    return `<form class="pile serre encart" data-retenir-f="${e(x.id)}" novalidate><p class="fort">${t("avis.rappel.titre")}</p>
-      <div class="f"><label for="ret-tel-${e(x.id)}">${t("avis.rappel.tel")}</label><input id="ret-tel-${e(x.id)}" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="ret-aide-${e(x.id)}" data-ret-tel><p class="aide" id="ret-aide-${e(x.id)}">${t("rappel.aide", numParams(c))}${numeroHorsPays(tel, c) ? " " + t("rappel.hors.pays") : ""}</p></div>
-      <fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${radiosJours("ret-jour-" + e(x.id), jr, auj)}</fieldset>
-      <fieldset><legend>${t("avis.rappel.heure")}</legend>
-        <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value=""${x.retenue_creneau === "15-17" ? "" : " checked"}><span>${t("avis.rappel.plage.journee")}</span></label>
-        <label class="option"><input type="radio" name="ret-plage-${e(x.id)}" value="_15_17"${x.retenue_creneau === "15-17" ? " checked" : ""}><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label>
-        <p class="aide">${t("avis.rappel.rien")}</p></fieldset>
-      <div class="actions"><button type="submit" class="bouton">${t("avis.rappel.confirmer")}</button><button type="button" class="lien" data-retenir-annuler>${t("annuler")}</button></div>
-      <p class="msg" data-ret-msg role="status"></p></form>`; };
-  const blocRetenue = (x, contact, c) => !D.retenirReponseAvis ? "" : retenueOuverte === x.id ? formRetenue(x, c) : x.retenue_le
-    ? `<div class="encart" data-retenue><p class="fort">${t("avis.retenue.fait")}</p><p class="note" data-retenue-delai>${t("avis.retenue.delai")}</p>${x.retenue_telephone ? `<p class="texte2" data-retenue-quand>${t(x.retenue_creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(x.retenue_telephone))}</span>`, quand: quandRappel(x.retenue_jour) })}</p>
-        <p><button type="button" class="lien" data-retenir="${e(x.id)}">${t("avis.rappel.modifier")}</button></p>` : ""}${ligneContact(contact, "contact-retenue-" + x.id)}</div>`
-    : peutRetenir(x) ? `<div class="pile serre"><div class="actions"><button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button></div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>` : "";
+  // Lot 8 : l'ancien formulaire « Appelez-moi avant de publier » (formRetenue) est retiré : plus aucun appel promis pour un avis.
+  // Lot 8 (décision du fondateur du 16/11/2026) : plus d'appel promis. « Je réponds par message » met la publication en attente du message du
+  // commerçant (D.retenirReponseAvis, retenir_reponse_avis) : il l'écrit juste dessous (« Votre version ») ou répond à notre WhatsApp ; rien n'est
+  // publié avant que l'équipe l'ait lu, le délai de 24 h est suspendu jusque-là. Plus de numéro, de jour ni de créneau à choisir.
+  // Lot 8 (angle mort 1) : à côté, « OK, publiez cette réponse » et « Ce n'est pas un client », même effet qu'une réponse OK ou FAUX à notre
+  // WhatsApp (D.repondreAvisCommercant, repondre_avis_commercant). OK seulement quand une réponse proposée est lisible.
+  const boutonsReponse = x => { if (!D.repondreAvisCommercant) return { fait: "", ok: "", faux: "" };
+    if (accordDonne(x)) return { fait: `<p class="note" data-repondu="ok">${t("avis.repondre.ok.fait", { d: date(x.decision_client_le) })}</p>`, ok: "", faux: "" };
+    if (x.faux_signale_le) return { fait: `<p class="note" data-repondu="faux">${t("avis.repondre.faux.fait", { d: date(x.faux_signale_le) })}</p>`, ok: "", faux: "" };
+    return { fait: "", ok: String(x.reponse_proposee || "").trim() ? `<button type="button" class="bouton" data-repondre="ok" data-id="${e(x.id)}">${t("avis.repondre.ok")}</button>` : "",
+      faux: `<button type="button" class="lien" data-repondre="faux" data-id="${e(x.id)}">${t("avis.repondre.faux")}</button>` }; };
+  const blocRetenue = (x, contact, c) => { if (!D.retenirReponseAvis) return ""; const r = boutonsReponse(x);
+    if (x.retenue_le) return `<div class="encart" data-retenue><p class="fort" data-retenue-delai>${t("avis.retenue.fait")}</p>${r.fait}${r.ok || r.faux ? `<div class="actions">${r.ok}${r.faux}</div>` : ""}</div>`;
+    if (!peutRetenir(x)) return r.fait;
+    return `<div class="pile serre">${r.fait}<div class="actions">${r.ok}<button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button>${r.faux}</div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>`; };
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
         ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${(echeanceAvisEspace(x) || 0) > Date.now() ? t("avis.sensible.publication", { d: I.dateHeureDans(new Date(echeanceAvisEspace(x)).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
@@ -1987,17 +1995,13 @@
     vue.querySelectorAll("form[data-version]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const b = f.querySelector("button"), id = f.dataset.version; b.disabled = true;
       try { await D.donnerVersionAvis(id, f.querySelector("textarea").value); await avis(); toast(t("avis.version.merci")); }   // le toast seul (role=status) : plus de 2e phrase en clair sous la liste
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
-    vue.querySelectorAll("[data-retenir]").forEach(b => b.onclick = async () => { const id = b.dataset.retenir; retenueOuverte = id; fermerToast(); await avis();
-      const f = vue.querySelector(`[data-retenir-f="${CSS.escape(id)}"]`); if (f) { f.scrollIntoView({ block: "center" }); const i = f.querySelector("[data-ret-tel]"); if (i) i.focus({ preventScroll: true }); } });
-    vue.querySelectorAll("[data-retenir-annuler]").forEach(b => b.onclick = async () => { retenueOuverte = null; await avis(); });
-    vue.querySelectorAll("form[data-retenir-f]").forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const id = f.dataset.retenirF, b = f.querySelector("button[type=submit]"); b.disabled = true;
-      const j = ((f.querySelector('input[name^="ret-jour-"]:checked') || {}).value || "demain") + ((f.querySelector('input[name^="ret-plage-"]:checked') || {}).value || "");
-      // Tour 7 Essentiel (01/11/2026) : champ vide = bloqué ici (« Indiquez votre numéro »), jamais un repli sur le contact (texte libre) du commerce.
-      const telSaisi = f.querySelector("[data-ret-tel]").value.trim();
-      if (!telSaisi) { b.disabled = false; f.querySelector("[data-ret-msg]").textContent = t("avis.rappel.tel.vide"); f.querySelector("[data-ret-tel]").focus(); return; }
-      try { await D.retenirReponseAvis(id, telSaisi, j); retenueOuverte = null; await avis(); toast(t("avis.retenue.toast"));
-        const z = vue.querySelector(`[data-avis="${CSS.escape(id)}"] [data-retenue]`); if (z) z.scrollIntoView({ block: "center" }); }
-      catch (er) { b.disabled = false; f.querySelector("[data-ret-msg]").textContent = ph(er.message); } });
+    vue.querySelectorAll("[data-retenir]").forEach(b => b.onclick = async () => { const id = b.dataset.retenir; b.disabled = true; fermerToast();
+      try { await D.retenirReponseAvis(id); await avis(); toast(t("avis.retenue.toast"));
+        const z = vue.querySelector(`[data-version="${CSS.escape(id)}"] textarea`); if (z) { z.scrollIntoView({ block: "center" }); z.focus({ preventScroll: true }); } }
+      catch (er) { b.disabled = false; toast(ph(er.message)); } });
+    vue.querySelectorAll("[data-repondre]").forEach(b => b.onclick = async () => { const id = b.dataset.id, ch = b.dataset.repondre; b.disabled = true; fermerToast();
+      try { await D.repondreAvisCommercant(id, ch); await avis(); toast(t(ch === "ok" ? "avis.repondre.ok.toast" : "avis.repondre.faux.toast")); majCompteurs(); }
+      catch (er) { b.disabled = false; toast(ph(er.message)); } });
     vue.querySelectorAll("[data-sensible]").forEach(b => b.onclick = async () => { const d = b.dataset.sensible; b.disabled = true;
       try { await D.deciderAvisSensible(b.closest("[data-avis]").dataset.avis, d); await avis(); msg(t(d === "approuve" ? "avis.sensible.approuvee.msg" : "avis.sensible.en.parler.msg")); majCompteurs(); }
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
@@ -2292,7 +2296,7 @@
     // rythme de la montée (window.RENOM_OPTION_INCLUSE, donnees.js).
     // Lot 5 B (revue copywriter : l'argument principal du site manquait) : au mois, la ligne dit que la Visibilité IA est offerte à l'année.
     const ia = window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, rythme, "visibilite_ia") ? [suiv === "standard" ? "offre.dessus.std.ia" : "offre.dessus.prem.ia"]
-      : window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? ["offre.dessus.ia.annuel"] : [];
+      : window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? [suiv === "premium" ? "offre.dessus.ia.premium" : "offre.dessus.ia.annuel"] : [];
     const lignes = (suiv === "standard" ? ["offre.dessus.std.1", "offre.dessus.std.2"] : ["offre.dessus.prem.1", "offre.dessus.prem.2", "offre.dessus.prem.3"]).concat(ia);
     const P = window.RENOM_PRIX_MONTEE(o, s_, ab), ecartPrix = P.ecart, mensuelP = P.rythme === "mensuel";
     // Tour 9 (01/11/2026) : plus de « aujourd'hui ou demain » écrit en dur. Le numéro est demandé comme pour « Appelez-moi avant de publier » (prérempli,
@@ -2327,18 +2331,15 @@
     return { quand: minJour(I.jourEtDate(new Date(q.jour + "T12:00:00"))), plage: q.creneau === "15-17" ? "15-17" : "9-18", tel: q.telephone ? window.RENOM_WHATSAPP.lisible(q.telephone) : "" };
   }
   const formChgOffre = (c, suiv, nom) => { const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c && c.pays), tel = telRetenue(c);
-    return `<form id="chg-f" class="pile serre" novalidate data-offre="${e(suiv)}"><p class="fort">${t("avis.rappel.titre")}</p>
-      <div class="f"><label for="chg-tel">${t("avis.rappel.tel")}</label><input id="chg-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="chg-aide"><p class="aide" id="chg-aide">${t("rappel.aide", numParams(c))}</p></div>
-      ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${radiosJours("chg-jour", jr, auj)}</fieldset>
-      <fieldset><legend>${t("avis.rappel.heure")}</legend>
-        <label class="option"><input type="radio" name="chg-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
-        <label class="option"><input type="radio" name="chg-plage" value="_15_17"><span>${t(c && c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
+    // Lot 8 (décision du fondateur) : plus d'appel ; confirmation par message au numéro WhatsApp du commerce (ni jour ni créneau).
+    return `<form id="chg-f" class="pile serre" novalidate data-offre="${e(suiv)}"><p class="fort">${t("offre.dessus.demande.titre")}</p>
+      <div class="f"><label for="chg-tel">${t("offre.dessus.demande.tel")}</label><input id="chg-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="chg-aide"><p class="aide" id="chg-aide">${t("rappel.aide", numParams(c))}</p></div>
       <div class="actions actions-abo"><button type="submit" class="bouton" id="offre-demander" data-offre="${e(suiv)}">${t("offre.dessus.passer.en", { nom })}</button></div>
       <p class="msg" id="msg-chg" role="status"></p><p class="note" id="dessus-note">${t("offre.dessus.demande.note")}</p></form>`; };
   async function offre() {
     const [k, j, c, ab, g, cmds] = await Promise.all([D.compteur(), D.journal(), D.commerce(), D.abonnement ? D.abonnement().catch(() => null) : null, D.maGarantieDelais ? D.maGarantieDelais().catch(() => null) : null,
       D.mesCommandesOptions ? D.mesCommandesOptions().catch(() => []) : []]);
+    const cptO = D.comptes ? await D.comptes().catch(() => null) : null;   // lot 8 (Sophie) : TikTok pas encore relié dit « à activer »
     demandeChgOffre = D.demandeRappel ? await D.demandeRappel("changement_offre").catch(() => null) : null;
     const o = window.RENOM_OFFRES[k.offre] || {}, mois = new Date(k.mois + "T12:00:00"), mer = COND.mise_en_route;
     const gd = COND.garantie_delais, reseaux = window.RENOM_RESEAUX_AUTORISES(c), sociaux = reseaux.filter(r => r !== "google");
@@ -2354,29 +2355,30 @@
     vue.innerHTML = `${pauseBandeau(c)}${retourOrigine()}${entete(t("offre.sur"), t("offre.titre.nom", { nom: e(k.offre || k.offre_nom) }))}
         <section class="carte" id="offre-mois"><div class="carte-tete"><h2>${t("ce.mois")}</h2><span class="note">${cap(MOIS[mois.getMonth()])} ${mois.getFullYear()}</span></div>
           ${/* Compteur de l'offre (01/11/2026, tour 7 Premium) : comme Photos, publications faites + photos en préparation (pubReservees), « dont N en préparation ». */ ""}
+          ${k.videos_plafond ? `<p class="fort" id="offre-total">${t("offre.total.mois", { n: (+pubReservees(k) || 0) + (+k.videos_utilisees || 0), m: (+k.publications_plafond || 0) + (+k.videos_plafond || 0), v: +k.videos_utilisees || 0, vm: +k.videos_plafond })}</p>` : ""}
           ${mesure(t("offre.pub.reservees"), pubReservees(k), k.publications_plafond, "plafond.phrase")}${+k.publications_preparation > 0 ? `<p class="note" id="offre-preparation">${t("offre.pub.preparation", { n: +k.publications_preparation })}</p>` : ""}
           ${k.videos_plafond ? mesure(t("offre.vid.utilisees"), k.videos_utilisees, k.videos_plafond) : o.reseaux_sociaux === false ? "" : `<div class="mesure-tete"><span>${t("mes.videos")}</span><span class="note">${t("non.comprises.offre")}</span></div>`}
-          ${o.reseaux_sociaux === false || !o.commentaires_disponible ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter ; 30/10/2026 : compteur masqué tant que offres.json dit commentaires_disponible faux (aucun « bientôt » à l'écran) */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
+          ${o.reseaux_sociaux === false || !o.commentaires_disponible ? "" /* Essentiel (26/10/2026) : ni vidéos ni commentaires de réseaux à compter ; 30/10/2026 : compteur masqué tant que offres.json dit commentaires_disponible faux (aucun « bientôt » à l'écran) */ : `<div class="mesure-tete" id="offre-commentaires"><span>${t("offre.rep.commentaires.libelle")}</span>${k.commentaires_inclus ? `<span>${t("offre.cm.sans.plafond", { n: `<span class="chiffre">${nombre(+k.commentaires_repondus || 0)}</span>` })}</span>` : `<span class="note">${t("non.comprises.offre")}</span>`}</div>`}
           <p class="note pied">${t("offre.compteur.debut")}</p></section>
       ${o.delegation ? offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1], cmds) : ""}
         <section class="carte" id="offre-inclus"><h2>${t("offre.inclus")}</h2><ul class="liste">
           <li id="offre-contenus"><span>${t("offre.inc.contenus")}</span><span class="fort">${o.videos ? t("offre.contenus.dont.videos", { n: contenus, p: o.publications || contenus - o.videos, v: o.videos }) : t("offre.contenus.n", { n: contenus })}</span></li>
-          <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
+          <li id="offre-reseaux"><span>${t("offre.inc.reseaux")}</span><span class="fort">${sociaux.length ? [...sociaux, "google"].map(r => r === "tiktok" && Array.isArray(cptO) && !cptO.some(x => x.reseau === "tiktok" && x.etat === "connecte") ? t("offre.res.tiktok.aactiver") : RES[r]).join(", ") : t("offre.reseaux.google.seul")}</span></li>
           <li><span>${t("offre.inc.avis")}</span><span class="fort">${t("comprises")}</span></li>
           <li><span>${t(o.delegation ? "offre.inc.bilan.premium" : "offre.inc.bilan")}</span><span class="fort">${t("compris")}</span></li></ul>
           <p class="note pied">${t(o.reseaux_sociaux === false ? "offre.contenus.unite.google" : "offre.contenus.unite")} ${t("offre.idees.compte")}</p></section>
       ${/* Tour 9 (01/11/2026) : « Prix de votre offre » au même rythme que la montée d'offre (RENOM_RYTHME_MONTEE : celui de l'abonnement en cours,
-          mensuel s'il est inconnu) ; avant, 79 € « payé à l'année » ici et 95 € par mois dans « Passer à Croissance », sur le même écran. */ ""}
+          mensuel s'il est inconnu) ; avant, 79 € « payé à l'année » ici et 95 € par mois dans « Passer à Croissance », sur le même écran. */ ""}
       ${o.prix_ht ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2>${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht
           ? `<p class="prix-offre" id="offre-prix-vous" data-rythme="mensuel"><span class="chiffre">${euros(o.prix_mensuel_ht)}</span> ${t("offre.ht.mois.mensuel")}</p>` : `<p class="prix-offre" id="offre-prix-vous" data-rythme="annuel"><span class="chiffre">${euros(o.prix_ht)}</span> ${t("offre.ht.mois.annuel")}</p>`}
         ${ab && ab.statut !== "resilie" && ab.rythme ? `<p class="note" id="offre-votre-rythme">${t("offre.votre.rythme." + (ab.rythme === "mensuel" ? "mensuel" : "annuel"))}</p>` : ""}
-        ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
+        ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
         <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
         ${/* Lot 7 (16/11/2026, revue DA : prix dit 3 fois au paiement mensuel) : le prix au mois est déjà en tête ; la ligne « Au mois » ne reste
             que quand la tête montre le prix à l'année (c'est alors l'autre choix). */ ""}
         ${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? "" : `<p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>`}
         ${/* Tour 11 (v37) : abonnement en cours (actif, ou impayé à régulariser) sur une offre qui comprend la mise en route : elle est faite, plus de
-            « Frais de mise en route : 190 € HT » à un client qui paie déjà. */ ""}
+            « Frais de mise en route : 190 € HT » à un client qui paie déjà. */ ""}
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : ab && ["actif", "impaye"].includes(ab.statut) ? t("offre.frais.deja.faite") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>
         <p class="note">${t("offre.sans.engagement")} ${t("offre.cgv")}</p></section>` : o.retiree ? `<section class="carte" id="offre-prix"><h2>${t("offre.prix.titre")}</h2><p class="texte2 lecture">${t("offre.retiree")}</p></section>` : ""}
       ${o.delegation ? "" : (() => { const h = offreDessus(c, o, ab, (/dessus=(\w+)/.exec(paramRoute) || [])[1], cmds), suiv = offreCible(c, (/dessus=(\w+)/.exec(paramRoute) || [])[1]), s_ = (window.RENOM_OFFRES || {})[suiv];
@@ -2421,8 +2423,7 @@
       const saisi = $("chg-tel").value.trim(), num = saisi && window.RENOM_WHATSAPP.numero(saisi, M.paysDe(c.pays));
       if (!saisi || !num) { b.disabled = false; m.textContent = saisi ? t("chg.tel.invalide", numParams(c)) : t("avis.rappel.tel.vide"); $("chg-tel").focus(); return; }
       try { const r = await D.demanderRappel("changement_offre", num, b.dataset.offre); demandeChgOffre = (r && r.cree_le) || new Date().toISOString();
-        const jv = (vue.querySelector("input[name=chg-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=chg-plage]:checked") || {}).value || "";
-        const q = jv && D.preciserRappel ? await D.preciserRappel("changement_offre", jv + pv).catch(() => null) : null;
+        const jv = "", pv = "", q = null;   // lot 8 : plus de jour ni de créneau d'appel
         try { localStorage.setItem(cleChgOffre(c), JSON.stringify({ demande: String(demandeChgOffre), jour: q && q.jour ? String(q.jour).slice(0, 10) : M.joursRappelA(Date.now(), c.pays)[jv === "demain" ? "demain" : "aujourdhui"], creneau: (q && q.creneau) || (pv ? "15-17" : "9-18"), telephone: (r && r.telephone) || num })); } catch (er) {}
         await offre(); const z = $("offre-demande-envoyee"); if (z) z.scrollIntoView({ block: "center" }); toast(t("offre.dessus.demande.toast", quandChgOffre(c, demandeChgOffre))); }
       catch (er) { b.disabled = false; if (m) m.textContent = ph(er.message); } };
@@ -2575,7 +2576,13 @@
     const nomConcurrent = n => { const m = D.mode === "demo" && /^Concurrent ([A-C])$/.exec(String(n || "")); return m ? t("res.conc.demo", { x: m[1] }) : n; };
     const prem = avecNote[0], dern = avecNote[avecNote.length - 1], rep = (R && R.reponses) || {}, audit = (R && R.audit) || [], conc = (R && R.concurrents) || [], themes = (R && R.themes) || [], col = (R && R.collecte) || {};
     const pts = k => mois.map(m => ({ v: m[k] == null ? null : +m[k], lib: moisLong(m.mois), court: moisCourt(m.mois) }));
-    const periode = mois.length ? t("res.periode", { a: moisLong(mois[0].mois), b: moisLong(mois[mois.length - 1].mois) }) : "";
+    // Lot 8 (Karim, tour 6 : « de juin 2026 à novembre 2026 », « +31 avis depuis juin » alors que BoostImpact est arrivé le 4 novembre) : la
+    // période et les écarts partent de l'arrivée (début du service, mon_taux_reponse.depuis ; sinon la création du compte). Les mois d'avant
+    // restent sur les courbes, pour comparer, et le disent. Référence des écarts : la fin du mois qui précède l'arrivée (dernier relevé d'avant).
+    const arrivee = (TR && TR.depuis) || (c && c.cree_le) || null, moisArr = arrivee ? String(arrivee).slice(0, 7) + "-01" : null;
+    const avantArr = moisArr ? avecNote.filter(m => String(m.mois).slice(0, 10) < moisArr) : [];
+    const base = moisArr ? (avantArr[avantArr.length - 1] || null) : avecNote[0];
+    const periode = arrivee ? t("res.periode.arrivee", { d: date(arrivee) }) : mois.length ? t("res.periode", { a: moisLong(mois[0].mois), b: moisLong(mois[mois.length - 1].mois) }) : "";
     const ecart = (a, b, d) => { const x = Math.round((b - a) * 10 ** d) / 10 ** d; return x > 0 ? "+" + nombre(x, d) : x < 0 ? "−" + nombre(-x, d) : t("res.stable"); };
     // Taux de réponse (lot 2, 15/11/2026) : seulement sur les avis reçus depuis le début du service (TR, mon_taux_reponse ; démonstration : même
     // calcul) ; les plus anciens sont comptés à part. Sans TR (bloc pas encore appliqué) : resultats().reponses, comme avant.
@@ -2593,11 +2600,12 @@
       ${bilanBloc(bilan, NR)}
       ${blocReseauxMois(c, calR, cmsR, cptR)}
       <div class="rangee">
-        <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.note, +dern.note, 1), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
+        <section class="carte moitie" aria-labelledby="r-note"><div class="carte-tete"><h2 id="r-note">${t("bilan.note")}</h2>${base && dern && base !== dern ? `<span class="note">${t(moisArr ? "res.depuis.arrivee" : "res.depuis", { x: ecart(+base.note, +dern.note, 1), mois: MOIS[moisDe(base.mois).getMonth()] })}</span>` : ""}</div>
           ${dern ? `<p><span class="chiffre grand-chiffre">${nombre(dern.note, 1)}</span> <span class="note">${t(enCours ? "res.sur5.auj" : "res.sur5.fin", { mois: moisLong(dern.mois) })}</span></p>` : ""}
           ${courbe(pts("note"), { fmt: v => nombre(v, 1), pas: 0.4, min: 1, alt: t("res.note.alt", { l: avecNote.map(m => moisLong(m.mois) + " " + nombre(m.note, 1)).join(", ") }), vide: nonLu })}
-          ${lg.historique_reconstitue && avecNote.length > 1 ? `<p class="note" id="historique-note">${t("res.historique")}</p>` : ""}</section>
-        <section class="carte moitie" aria-labelledby="r-nb"><div class="carte-tete"><h2 id="r-nb">${t("res.nb.avis")}</h2>${prem && dern && prem !== dern ? `<span class="note">${t("res.depuis", { x: ecart(+prem.nb_avis, +dern.nb_avis, 0), mois: MOIS[moisDe(prem.mois).getMonth()] })}</span>` : ""}</div>
+          ${lg.historique_reconstitue && avecNote.length > 1 ? `<p class="note" id="historique-note">${t("res.historique")}</p>` : ""}
+          ${arrivee && avantArr.length ? `<p class="note" id="res-avant-arrivee">${t("res.avant.arrivee", { d: date(arrivee) })}</p>` : ""}</section>
+        <section class="carte moitie" aria-labelledby="r-nb"><div class="carte-tete"><h2 id="r-nb">${t("res.nb.avis")}</h2>${base && dern && base !== dern ? `<span class="note">${t(moisArr ? "res.depuis.arrivee" : "res.depuis", { x: ecart(+base.nb_avis, +dern.nb_avis, 0), mois: MOIS[moisDe(base.mois).getMonth()] })}</span>` : ""}</div>
           ${dern ? `<p><span class="chiffre grand-chiffre">${nombre(dern.nb_avis)}</span> <span class="note">${t("res.avis.total")}</span></p>` : ""}
           ${courbe(pts("nb_avis"), { fmt: v => nombre(v), pas: 2, min: 0, alt: t("res.nb.alt", { l: avecNote.map(m => moisLong(m.mois) + " " + nombre(m.nb_avis)).join(", ") }), vide: lg.fiche === "non_reliee" ? nonLu : t("res.nb.non.lu") })}</section>
       </div>
@@ -2631,6 +2639,8 @@
       </div>
       ${resultatsDessus(c)}
       ${lecture ? `<p class="note lecture-google" id="lecture-google">${e(lecture)}</p>` : ""}`;
+    // Lot 8 (DA, tour 6 : « Chiffres de démonstration » dit 3 fois sur Résultats) : le bandeau du haut suffit ; les rappels des cartes sont tus ici.
+    if (D.mode === "demo" && vue.querySelector(".bandeau-demo")) vue.querySelectorAll("#fiche-rapporte .carte-tete .note, #fiche-rap-demo, .bilan-demo > .fort").forEach(x => x.remove());
     // 27/10/2026 (constat 9) : la carte « Portée de vos publications » reviendra quand les statistiques des réseaux seront branchées.
   }
   // Essentiel (27/10/2026, audit du parcours, constat 22) : sous ses résultats, ce que Croissance ajouterait (mêmes lignes que l'écran Offre, chiffres de
@@ -2639,7 +2649,7 @@
     const suiv = sansReseaux(c) ? offreCible(c) : null, s_ = suiv && (window.RENOM_OFFRES || {})[suiv]; if (!s_) return "";
     const nom = e(I.offre(suiv));
     return `<section class="carte" id="resultats-dessus" aria-labelledby="r-dessus"><h2 id="r-dessus">${t("offre.dessus.titre", { nom })}</h2>
-      <ul class="liste-engagements">${["offre.dessus.std.1", "offre.dessus.std.2"].concat(window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? ["offre.dessus.ia.annuel"] : []).map(k => `<li><p>${t(k, { n: s_.contenus, resto: !c || c.metier !== "autre" && (!c.metier || c.metier === "restaurant"), prix: euros((window.RENOM_OPTIONS || {}).visibilite_ia ? window.RENOM_OPTIONS.visibilite_ia.prix_ht : 490) })}</p></li>`).join("")}</ul>
+      <ul class="liste-engagements">${["offre.dessus.std.1", "offre.dessus.std.2"].concat(window.RENOM_OPTION_INCLUSE && window.RENOM_OPTION_INCLUSE(suiv, "annuel", "visibilite_ia") ? [suiv === "premium" ? "offre.dessus.ia.premium" : "offre.dessus.ia.annuel"] : []).map(k => `<li><p>${t(k, { n: s_.contenus, resto: !c || c.metier !== "autre" && (!c.metier || c.metier === "restaurant"), prix: euros((window.RENOM_OPTIONS || {}).visibilite_ia ? window.RENOM_OPTIONS.visibilite_ia.prix_ht : 490) })}</p></li>`).join("")}</ul>
       <p class="pied"><a class="bouton second" href="#/offre?dessus" id="resultats-passer">${t("offre.passer.lien", { nom })}</a></p></section>`;
   }
 
@@ -3162,19 +3172,15 @@
   }
   async function commentaires() {
     const [c, k, l0] = await Promise.all([D.commerce(), D.compteur(), D.commentaires().catch(() => [])]);
+    // Lot 8 (Sophie, tour 6 : #/commentaires s'ouvrait encore par l'adresse en Essentiel) : sans commentaires dans l'offre (onglet caché), retour à l'accueil.
+    if (!k.commentaires_inclus && !(l0 || []).length) { location.replace("#/accueil"); return; }
+    // 16/11/2026 (décision du fondateur : aucune étape Meta faite) : réponses aux commentaires ni vendues ni annoncées. Écran masqué dans toutes
+    // les offres tant que offres.json dit commentaires_disponible faux ; le code reste, derrière ce drapeau.
+    if (!offreDe(c).commentaires_disponible) { location.replace("#/accueil"); return; }
     // Lot 5 B (revue Sophie : l'Essentiel lisait « comprises dans Croissance et Premium » avec « Passer à Croissance », pour une fonction qui
     // n'existe pas encore) : tant que les réponses aux commentaires ne sont disponibles dans aucune offre, en-tête au futur, « prévues en Croissance
     // et Premium, disponibles prochainement », et aucun bouton de montée d'offre sur cet écran.
-    const nulPart = !(window.RENOM_OFFRES || {}).standard || !window.RENOM_OFFRES.standard.commentaires_disponible;
-    const titre = entete(t("cm.sur"), t("ecran.commentaires"), t(cmBientot(c) || (!k.commentaires_inclus && nulPart) ? "cm.chapo.bientot" : "cm.chapo"));
-    if (!k.commentaires_inclus && nulPart) {
-      vue.innerHTML = `${titre}<section class="carte" data-cm-prevues><h2>${t("cm.prevues.titre")}</h2><p class="texte2 lecture">${t("cm.prevues.texte")}</p></section>`;
-      return;
-    }
-    if (k.commentaires_inclus && cmBientot(c)) {
-      vue.innerHTML = `${titre}<section class="carte" data-cm-bientot><h2>${t("cm.bientot.titre")}</h2><p class="texte2 lecture">${t("cm.bientot.texte")}</p></section>`;
-      return;
-    }
+    const titre = entete(t("cm.sur"), t("ecran.commentaires"), t("cm.chapo"));
     if (!k.commentaires_inclus) {
       vue.innerHTML = `${titre}<section class="carte"><h2>${t("cm.offre.titre")}</h2>
         <p class="texte2 lecture">${t("cm.offre.texte")}</p><p class="pied"><a class="bouton second" href="#/offre?dessus" id="cm-passer">${t("offre.passer.lien", { nom: e(I.offre("standard")) })}</a></p></section>`;

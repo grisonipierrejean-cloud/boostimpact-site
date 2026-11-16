@@ -362,6 +362,10 @@ legend{padding:0;margin-bottom:4px}
 /* ---------- Jauges */
 .mesure{display:flex;flex-direction:column;gap:8px}
 .mesure-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.mesure-tete>span:first-child{min-width:0;hyphens:manual}
+.mesure-tete>span:last-child{white-space:nowrap}   /* 16/11/2026 (DA) : « 3 sur 4 » jamais coupé */
+/* 16/11/2026 (DA) : démonstration publique, un seul bandeau : le gris de l'espace ne garde que « Outils de démonstration ». */
+.apercu-demo~.app .demo>p{display:none}
 .jauge{height:8px;background:var(--releve);border-radius:4px;overflow:hidden}
 .jauge>span{display:block;height:100%;background:var(--marque-trait);border-radius:4px}
 
@@ -1015,6 +1019,8 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 .kpi{display:flex;flex-direction:column;gap:2px;padding:14px 16px 16px;color:var(--encre);text-decoration:none;border-top:1px solid var(--filet);min-width:0}
 .kpi:nth-child(odd){border-left:1px solid var(--filet)}
 .kpi:first-child{grid-column:1/-1;border-top:0;border-left:0}
+/* Lot 8 : 4 tuiles (« En retard » tue) : deux rangées de deux au téléphone. */
+@media (max-width:899px){.kpis-4 .kpi:first-child{grid-column:auto;border-left:0}.kpis-4 .kpi:nth-child(2){border-top:0}.kpis-4 .kpi:nth-child(odd){border-left:0}.kpis-4 .kpi:nth-child(even){border-left:1px solid var(--filet)}}
 @media (hover:hover){.kpi:hover{background:var(--releve);color:var(--encre)}}
 .kpi-lib{font-size:14px;font-weight:var(--graisse-forte);color:var(--texte2)}
 .kpi-sous{display:block;font-weight:var(--graisse-texte);color:var(--discret);font-size:13px}
@@ -1078,6 +1084,7 @@ details.formats>summary{cursor:pointer;display:flex;align-items:center;min-heigh
 .ck-bloc .prise{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 @media (min-width:900px){
   .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .kpis.kpis-4{grid-template-columns:repeat(4,minmax(0,1fr))}
   .kpi{border-top:0;border-left:1px solid var(--filet);padding:18px 20px 20px}
   .kpi:first-child{grid-column:auto;border-left:0}
   .kpi-val{font-size:44px}
@@ -1210,7 +1217,7 @@ p a[href="#/fiche"]{display:inline-block;padding:12px 0;margin:-12px 0}
 /* En-tête du téléphone (31/10/2026) : le logo ne chevauche plus « FR » (375, 390 et 430 px). Avant : l'image (max-width:none, flex-shrink:0)
    débordait de son lien, que le flex rétrécissait. Le lien garde maintenant la largeur du logo (flex:none), un peu plus petit sous 440 px ;
    « Réglages » ne garde que son icône sous 390 px (règle plus haut, son nom reste lu par les lecteurs d'écran). */
-@media (max-width:439px){.haut{gap:4px}.haut .logo,html[lang=nl] .haut .logo{flex:none;min-width:auto}.haut .logo-img,html[lang=nl] .haut .logo-img{height:21px}
+@media (max-width:439px){.haut{gap:4px}.haut .logo,html[lang=nl] .haut .logo{flex:none;min-width:auto}.haut .logo-img,html[lang=nl] .haut .logo-img{height:22px}
   .haut .langues button{min-width:44px;padding:0}}   /* 44 px (01/11/2026, tour 7 Premium) */
 
 /* Dix sur dix (31/10/2026) : réseau de l'offre pas encore connecté (onglet grisé, aperçu atténué), confirmations de refus et d'annulation,
@@ -1541,5 +1548,29 @@ details.eqwa>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12
 details.eqwa>summary::-webkit-details-marker{display:none}
 details.eqwa>summary h2{margin:0}
 details.eqwa[open]>summary{margin-bottom:8px}
+/* Lot 8 (DA, tour 6) : le dépliant « WhatsApp de l'équipe » a le même « + » que les autres (classe repliable), poussé à droite. */
+details.eqwa>summary::after{margin-left:auto;align-self:center}
 /* Lot 6 B (revue design : cockpit de 6,5 écrans au téléphone) : la file par client en lignes compactes, comme le journal. */
 @media (max-width:899px){.ck-bloc .tab tr{padding:10px 16px}.ck-bloc .tab td{padding:2px 0;gap:2px 10px;grid-template-columns:96px minmax(0,1fr)}.ck-bloc .tab td::before{grid-row:auto}}
+
+/* Lot 8 (DA, tour 6) : titre d'un groupe de cartes (fiche client, « Avis à traiter ») posé au-dessus des cartes, sans carte vide. */
+.groupe-cartes{display:flex;flex-direction:column;gap:12px}.groupe-tete h2{margin:8px 0 4px}.groupe-tete>*:last-child{margin-bottom:0}
+/* Lot 8 (DA, tour 6) :
+   - « Conseils » (Photos) : le même « + » / « − » que les autres dépliants, poussé à droite ;
+   - champs dans une carte en blanc, comme « Votre version » (plus de gris #F2F3F1 sur l'écran Photos) ;
+   - calendrier : le bouton de vue choisi (« Semaine » / « Mois ») en encre, comme les filtres ;
+   - Premium : « Activer le mode délégation » en bouton à contour sur fond blanc (plus de gris dans du gris). */
+details.conseils>summary{list-style:none;justify-content:space-between;gap:12px}
+details.conseils>summary::-webkit-details-marker{display:none}
+details.conseils>summary::after{content:"+";flex:none;color:var(--discret);font-size:22px;font-weight:400;line-height:1}
+details.conseils[open]>summary::after{content:"\2212"}
+.carte input[type=text],.carte input[type=number],.carte input[type=email],.carte input[type=url],.carte input[type=tel],.carte input[type=date],.carte input[type=time],.carte input[type=datetime-local],.carte select,.carte textarea{background:var(--surface)}
+.cal-modes .bouton.second[aria-pressed=true]{background:var(--encre);border-color:var(--encre);color:var(--surface)}
+#contenus-delegation{background:var(--surface);border:1px solid var(--filet)}
+#contenus-delegation .bouton.second{background:var(--surface)}
+/* Lot 8 (Sophie et DA, tour 6 : écran Offre à 1440 px, texte arrêté à mi-largeur dans des cartes pleine largeur) : au bureau, les cartes de
+   l'écran Offre prennent la largeur de leur texte (lecture : 72 caractères), au lieu de s'étirer sur 1 200 px. */
+@media (min-width:1100px){#vue:has(#offre-inclus)>*{max-width:880px;width:100%}}
+/* 16/11/2026 (DA, démonstration à 360 px) : logo et langues sur deux lignes plutôt qu'un « NL » rogné dans la carte de connexion. */
+@media (max-width:400px){.haut,.connexion-tete{flex-wrap:wrap;row-gap:4px}.haut .langues,.connexion-tete .langues{margin-left:auto}}
+/* 16/11/2026 (DA) : logo de 130 px de large au moins à 360 px (22 px de haut). */

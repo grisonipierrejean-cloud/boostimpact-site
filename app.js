@@ -316,16 +316,20 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
   // et droite entre les onglets. Bureau : onglets cachés (style.css), rien ne défile.
   [['.preuves','.preuves-compte','.preuve'],['.offres','.offres-compte','.offre','.offres-onglet']].forEach(function(c){
     var liste=document.querySelector(c[0]),compte=document.querySelector(c[1]);
-    if(!liste||!compte)return;
+    if(!liste||(!compte&&!c[3]))return;   // 16/11/2026 (DA) : plus de repère « 2/3 » sur les offres, les onglets suffisent
     var cartes=liste.querySelectorAll(c[2]),n=cartes.length,onglets=c[3]?document.querySelectorAll(c[3]):[];
     var calme=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var pas=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;return cartes[1]?cartes[1].getBoundingClientRect().left-cartes[0].getBoundingClientRect().left:l+16};
     var actif=function(i){for(var k=0;k<onglets.length;k++){if(k===i)onglets[k].setAttribute('aria-current','true');else onglets[k].removeAttribute('aria-current')}};
+    // 16/11/2026 (coordinateur) : carte active = celle dont le centre est le plus près du centre de la liste ; « aller » centre la carte
+    // (la dernière, Premium, n'est plus collée au bord avec un bout de Croissance visible).
+    var centre=function(i){var lb=liste.getBoundingClientRect(),cb=cartes[i].getBoundingClientRect();return liste.scrollLeft+(cb.left-lb.left)-(lb.width-cb.width)/2};
     var maj=function(){var l=cartes[0]?cartes[0].getBoundingClientRect().width:0;if(!l)return;
-      var i=Math.min(n-1,Math.max(0,Math.round(liste.scrollLeft/(pas()||l))));
-      compte.textContent=(i+1)+'/'+n;actif(i)};
-    var aller=function(i,doux){if(!cartes[i])return;var p=pas();if(!p)return;
-      if(liste.scrollTo)liste.scrollTo({left:i*p,behavior:doux&&!calme?'smooth':'auto'});else liste.scrollLeft=i*p};
+      var lb=liste.getBoundingClientRect(),m=lb.left+lb.width/2,i=0,dm=Infinity;
+      for(var k=0;k<n;k++){var cb=cartes[k].getBoundingClientRect(),dd=Math.abs(cb.left+cb.width/2-m);if(dd<dm){dm=dd;i=k}}
+      if(compte)compte.textContent=(i+1)+'/'+n;actif(i)};
+    var aller=function(i,doux){if(!cartes[i])return;var x=Math.max(0,centre(i));
+      if(liste.scrollTo)liste.scrollTo({left:x,behavior:doux&&!calme?'smooth':'auto'});else liste.scrollLeft=x};
     Array.prototype.forEach.call(onglets,function(o,i){
       o.addEventListener('click',function(){actif(i);aller(i,true)});
       o.addEventListener('keydown',function(e){var j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:e.key==='Home'?0:e.key==='End'?onglets.length-1:-1;
@@ -337,9 +341,11 @@ if(calme&&calme.addEventListener)calme.addEventListener('change',function(e){if(
   });
   var b=document.querySelector('.audit-collant'),haut=document.getElementById('haut'),audit=document.getElementById('audit');
   if(!b||!haut||!audit||!window.IntersectionObserver||!window.matchMedia)return;
-  var tel=window.matchMedia('(max-width: 759px)'),hautVu=true,auditVu=false;
-  function regler(){var montrer=tel.matches&&!hautVu&&!auditVu;b.hidden=!montrer;document.body.classList.toggle('avec-collant',tel.matches)}
+  var tel=window.matchMedia('(max-width: 759px)'),hautVu=true,auditVu=false,offresVu=false,offres=document.getElementById('offres');
+  // 16/11/2026 (DA) : masqué aussi pendant les offres, pour ne pas concurrencer « Choisir à l'année » / « Choisir au mois ».
+  function regler(){var montrer=tel.matches&&!hautVu&&!auditVu&&!offresVu;b.hidden=!montrer;document.body.classList.toggle('avec-collant',tel.matches)}
   new IntersectionObserver(function(e){hautVu=e[0].isIntersecting;regler()}).observe(haut);
+  if(offres)new IntersectionObserver(function(e){offresVu=e[0].isIntersecting;regler()}).observe(offres);
   new IntersectionObserver(function(e){auditVu=e[0].isIntersecting;regler()},{rootMargin:'0px 0px -20% 0px'}).observe(audit.querySelector('form')||audit);
   if(tel.addEventListener)tel.addEventListener('change',regler);
   regler();

@@ -35,7 +35,7 @@
     }
   },
   "documents": {
-    "version": "15 novembre 2026"
+    "version": "16 novembre 2026"
   },
   "facturation": {
     "premier_mois": "le premier mois, ou la première année en paiement annuel, est facturé en entier le jour de la souscription, sans calcul au prorata ; l'abonnement se renouvelle ensuite de date à date, chaque mois ou chaque année selon le rythme de paiement choisi",
@@ -52,7 +52,7 @@
     ],
     "offerts_apres_option": "visibilite_ia"
   },
-  "droit_applicable": "francais",
+  "droit_applicable": "pays_client",
   "fournisseur_email": "Google Workspace (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irlande)",
   "pied_email": "{nom_commercial} est un nom commercial de {denomination}, société immatriculée en {pays_immatriculation} ({registre}) sous le numéro {numero}. Siège : {siege}."
 }

@@ -16,7 +16,7 @@
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
   // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "15 novembre 2026";   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
+  const VERSION_CGV = "16 novembre 2026";   // 16/11/2026 : CGV du lot 8 (alerte WhatsApp, OK écrit, retouches, droit du pays du Client) ;   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -52,6 +52,8 @@
     return null;
   }
   // Retenues d'un avis de la démonstration : son historique (a.retenues), plus une retenue en cours posée avant cet historique.
+  const RETENUE_SANS_MESSAGE_HEURES = 48;   // lot 8 : même valeur que retenue_sans_message_heures() (schema.sql)
+  const RETOUCHE_DELAI_HEURES = 48;   // lot 8 : CGV art. 3, nouvelle proposition sous 48 h après une demande de retouche
   const retenuesDe = a => { const l = Array.isArray(a.retenues) ? a.retenues.slice() : []; if (a.retenue_le && !l.some(x => x.retenue_le === a.retenue_le)) l.push({ retenue_le: a.retenue_le, liberee_le: null }); return l; };
   // Options ponctuelles (22/10/2026, CGV article 3 bis) : mêmes noms et délais que moteur/options.json et options_ponctuelles de schema.sql
   // (égalité testée par espace/test_ecrans.py et rls.test.mjs). Livraison : jours après le paiement ou la réception des éléments du client, le plus tardif.
@@ -792,9 +794,13 @@
     FRAIS_OFFERTS_A_VERIFIER: "Frais de mise en route offerts : facture à vérifier",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
     RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
-    FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis sensible : réponse approuvée, à publier",
-    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis sensible : version du commerçant à lire avant de publier",
-    AVIS_RETENU: "Avis : le commerçant attend votre appel avant toute publication",
+    FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis : le commerçant a répondu OK, réponse à publier",
+    AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis : message du commerçant à lire avant de publier",
+    AVIS_RETENU: "Avis : le commerçant répond par message, rien n'est publié avant de l'avoir lu",
+    // Lot 8 (16/11/2026, décision du fondateur) : alerte WhatsApp garantie, réponses du commerçant par message, surveillance de WaSender
+    AVIS_SANS_MESSAGE_48H: "Avis : 48 h sans message du commerçant, décision à prendre", ALERTE_WHATSAPP_ECHEC: "Alerte WhatsApp non délivrée : publication bloquée",
+    ALERTE_AVIS_SANS_WHATSAPP: "Commerce sans numéro WhatsApp : alerte d'avis impossible", WASENDER_EN_PANNE: "WhatsApp (WaSender) en panne",
+    AVIS_FAUX_SIGNALE: "Avis signalé « pas un client » par le commerçant", WHATSAPP_RECU: "Message WhatsApp reçu sans avis en attente",
     // Fiches Google reliées automatiquement (02/11/2026, rapprocher_fiches_google de schema.sql) : une fiche du compte Google sans commerce sûr
     FICHE_A_RELIER: "Fiche Google à relier",
     // Carrousel TikTok (02/11/2026, reprendre_carrousel_tiktok de schema.sql) : la publication qui portait le carrousel est annulée ou en échec.
@@ -821,7 +827,7 @@
   const telLisible = n => /^\+33[1-9]\d{8}$/.test(n || "") ? "+33 " + n.slice(3, 4) + " " + n.slice(4).replace(/(\d\d)(?=\d)/g, "$1 ") : n;
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
-    if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer au ${telLisible(d.telephone) || "commerçant (numéro inconnu)"}, puis changer l'abonnement dans Stripe (prorata), sans second paiement.${d.frais_offerts_option ? " Visibilité IA déjà payée : NE PAS ajouter les frais de mise en route (offerts, CGV art. 3 bis et 4)." : ""}`;
+    if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer par message (WhatsApp au ${telLisible(d.telephone) || "numéro du commerçant"}, ou email), jamais par appel (lot 8), puis changer l'abonnement dans Stripe (prorata), sans second paiement.${d.frais_offerts_option ? " Visibilité IA déjà payée : NE PAS ajouter les frais de mise en route (offerts, CGV art. 3 bis et 4)." : ""}`;
     if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
@@ -834,7 +840,13 @@
       return `Fiche ${f} accessible au compte Google de BoostImpact, non reliée : ${m}${(d.noms || []).length ? " (" + d.noms.join(", ") + ")" : ""}.${d.place_id ? " place_id : " + d.place_id + "." : ""} Coller ce place_id dans la fiche du bon client, Comptes : la fiche se relie au passage suivant (30 minutes au plus). Fiche d'un autre établissement : « Traité ».`; }
     if (a.type === "TIKTOK_CARROUSEL_A_REPRENDRE") return `La publication qui portait le carrousel TikTok est ${d.statut === "echec" ? "en échec" : "annulée"}. ${(d.contenus || []).length} photo(s) déjà envoyée(s) ou entamée(s) ne paraîtront pas sur TikTok : les publier à la main sur TikTok si le commerçant le veut${d.reprises ? ` (${d.reprises} autre(s) ont retrouvé TikTok seules)` : ""}.`;
     if (a.type === "FICHE_GOOGLE_RECHERCHE_BLOQUEE") return `Recherche automatique sans réponse depuis ${d.heures} h (n8n « RENOM, identification de la fiche Google » ou GitHub Actions). Lien collé : ${d.lien || "aucun"}. Coller l'identifiant (place_id) dans la fiche du client, Comptes.`;
-    if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée dans l'espace (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
+    if (a.type === "AVIS_ACCORD_A_PUBLIER") return `Réponse approuvée ${d.canal === "whatsapp" ? "par WhatsApp" : "dans l'espace"} (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}) : la publier telle quelle sur la fiche, puis la noter publiée.`;
+    if (a.type === "AVIS_SANS_MESSAGE_48H") return `${d.note || "?"} étoile(s)${d.sensible ? ", avis sensible" : ""} : le commerçant a demandé d'attendre et n'a pas écrit depuis 48 h. ${d.sensible ? "Jamais publié sans son OK écrit : le relancer par WhatsApp et décider avec lui." : "Réponse proposée absente : la rédiger, puis relancer le commerçant."}`;
+    if (a.type === "ALERTE_WHATSAPP_ECHEC") return `L'alerte WhatsApp ${d.type ? "« " + d.type + " » " : ""}n'a pas été délivrée${d.erreur ? " (" + d.erreur + ")" : ""}. Rien n'est publié d'office : vérifier le numéro du commerçant et WaSender, puis le prévenir à la main.`;
+    if (a.type === "ALERTE_AVIS_SANS_WHATSAPP") return `Avis de ${d.note || "?"} étoile(s) arrivé alors que le commerce n'a pas de numéro WhatsApp : l'alerte garantie n'a pas pu partir. Obtenir le numéro (fiche du client, Comptes), puis prévenir le commerçant.`;
+    if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
+    if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié : vérifier l'avis, le signaler à Google si besoin, répondre au commerçant.`;
+    if (a.type === "WHATSAPP_RECU") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}sans avis en attente : le lire dans WhatsApp et répondre à la main (le texte n'est pas gardé).`;
     if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
     // Changement d'offre (27/10/2026) : ce qu'il reste à faire à la main, avec les noms des offres (moteur/offres.json) et les clés de prix du catalogue.
     const nomO = k => (OFFRES[k] || {}).nom || k || "offre inconnue";
@@ -864,7 +876,7 @@
     if (a.type === "AVIS_A_PUBLIER_ATTENTE") return `${d.note} étoile(s), à publier depuis le ${String(d.depuis || "").slice(0, 16).replace("T", " ")} (UTC)${d.echeance ? `, échéance des 24 h : ${String(d.echeance).slice(0, 16).replace("T", " ")} (UTC)` : ", garantie déjà tenue"}. Console, À publier.`;
     if (a.type === "AVIS_NON_REDIGE") return `${d.note} étoile(s), relevé le ${String(d.recu_le || "").slice(0, 16).replace("T", " ")} (UTC) : aucune réponse rédigée. Vérifier n8n (réponse aux avis relevés).`;
     if (a.type === "AVIS_NON_VISIBLES") return `${d.nombre} avis apparu(s) sur la fiche sans être lu(s) par le relevé (Places ne rend que 5 avis) : ouvrir la fiche et y répondre à la main.`;
-    if (a.type === "OPTION_COMMANDEE") return `${d.option_nom || d.option || "Option"}${d.montant_ht_centimes != null ? ` (${(d.montant_ht_centimes / 100).toFixed(2).replace(".", ",")} € HT)` : ""} : livraison ${d.livraison_jours || 14} jours après les éléments du client, au plus tôt le ${String(d.livraison_prevue_le || "").slice(0, 10)}. Console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
+    if (a.type === "OPTION_COMMANDEE") return `${d.option_nom || d.option || "Option"}${d.montant_ht_centimes != null ? ` (${(d.montant_ht_centimes / 100).toFixed(2).replace(".", ",")} € HT)` : ""} : livraison ${d.livraison_jours || 14} jours après les éléments du client, au plus tôt le ${String(d.livraison_prevue_le || "").slice(0, 10)}. Console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
     if (a.type === "OPTION_SANS_COMMERCE") return `${d.option_nom || d.option || "Option"} payée sans commerce reconnu (session ${d.session || ""}) : la rattacher dans la console, Commerces, Options commandées.${d.test ? " (mode test)" : ""}`;
     // 15/11/2026 (modèle hybride) : Visibilité IA payée par un commerce Croissance ou Premium, qui la reçoit déjà avec la mise en route.
     if (a.type === "OPTION_DEJA_INCLUSE") return `${d.option_nom || d.option || "Option"} payée (session ${d.session || ""}) alors que l'offre ${d.offre_nom || d.offre || ""} la comprend déjà (CGV, article 3 bis) : rien à livrer en double ; rembourser le paiement dans Stripe ou en parler avec le client.${d.test ? " (mode test)" : ""}`;
@@ -950,7 +962,13 @@
     // Deux graines : celle du parcours (demo/etat.json, générée par demo/parcours.py) et la graine PUBLIQUE, entièrement fictive
     // (demo/etat-public.json), choisie par window.RENOM_GRAINE = "public" dans config.js. Chacune a son propre stockage.
     const PUBLIQUE = window.RENOM_GRAINE === "public";
-    const K = "renom-demo-v16" + (PUBLIQUE ? "-public" : "");   // v16 (16/11/2026, lot 7) : légendes de l'entrée sans « l'heure du déjeuner » (programmée le soir). v15 : visuels au nom de chaque commerce.
+    // Lot 8 (James, tour 6 : démo EN/NL française et lyonnaise) : en anglais ou en néerlandais, la graine publique est bruxelloise
+    // (demo/etat-public-be.json : +32, avis et réponses en néerlandais, un avis en anglais, légendes en néerlandais), avec son propre stockage.
+    // La langue est relue à chaque ouverture : changer de langue sur l'écran d'entrée recharge la bonne graine (init remise à zéro).
+    const familleGraine = () => PUBLIQUE && ["en", "nl"].includes((window.RENOM_I18N || {}).langue) ? "-be" : "";
+    let famille = familleGraine();
+    const cle = () => "renom-demo-v17" + (PUBLIQUE ? "-public" + famille : "");
+    let K = cle();   // v16 (16/11/2026, lot 7) : légendes de l'entrée sans « l'heure du déjeuner » (programmée le soir). v15 : visuels au nom de chaque commerce.
     let E = null, session = null, aChoisir = false, pret = null, TF = null;   // aChoisir : session ouverte par un lien, mot de passe à choisir (acces.js)
     let aal2 = false;   // double authentification de l'administrateur (18/10/2026) : code vérifié dans cette session (comme aal2 de Supabase)
     // Interrupteur de la double authentification (acces.js, DOUBLE_AUTH_ADMIN ; false depuis le 22/10/2026) : sans lui, ni code, ni facteur.
@@ -962,7 +980,7 @@
     // Deux onglets ouverts (l'espace et la page de validation par lien) : chacun reprend l'état écrit par l'autre.
     try { window.addEventListener("storage", ev => { if (ev.key === K && ev.newValue && E) { try { E = JSON.parse(ev.newValue); } catch (x) {} } }); } catch (e) {}
     const graine = async () => {
-      try { const r = await fetch(PUBLIQUE ? "demo/etat-public.json" : "demo/etat.json", { cache: "no-store" }); if (r.ok) return await r.json(); } catch (e) {}
+      try { const r = await fetch(PUBLIQUE ? "demo/etat-public" + famille + ".json" : "demo/etat.json", { cache: "no-store" }); if (r.ok) return await r.json(); } catch (e) {}
       if (PUBLIQUE) throw new Error("La démonstration n'a pas pu se charger. Rechargez la page.");   // jamais de repli sur les données du parcours
       return { users: { "commerce@demo": { role: "commerçant", commerce: "c-demo" }, "autre@demo": { role: "commerçant", commerce: "c-autre" }, "admin@demo": { role: "administrateur" } },
         commerces: { "c-demo": { id: "c-demo", nom: "Commerce de démonstration", metier: "autre", ville: "", offre_id: "essentiel", en_pause: false, mots_cles: [], mentions_autorisees: [], couleurs: { fond: "#FFFFFF", texte: "#000000", accent: "#2438FF" }, reglage_avis: "auto_des_4_etoiles" },
@@ -970,7 +988,8 @@
         photos: [], contenus: [], publications: [], idees_demandes: [], idees: [], avis: [], journal: [], invitations: [],
         comptes: { "c-demo": { google: { etat: "non_connecte" }, facebook: { etat: "non_connecte" }, instagram: { etat: "non_connecte" }, tiktok: { etat: "non_connecte" } }, "c-autre": { google: { etat: "non_connecte" }, facebook: { etat: "non_connecte" }, instagram: { etat: "non_connecte" }, tiktok: { etat: "non_connecte" } } } };
     };
-    const init = () => pret || (pret = (async () => {
+    const init = () => { if (familleGraine() !== famille) { famille = familleGraine(); K = cle(); pret = null; E = null; session = null; } return initGraine(); };
+    const initGraine = () => pret || (pret = (async () => {
       const reset = /[?&]reset\b/.test(location.search + location.hash);
       try { if (!reset) E = JSON.parse(localStorage.getItem(K)); } catch (e) { E = null; }
       if (!E) {
@@ -1675,9 +1694,14 @@
         : typeof v === "string" && ids.has(v) ? ids.get(v)
         // Lot 6 B (revue design : « La Table d'exemple » imprimé sur le visuel du Comptoir) : chaque commerce copié a ses visuels, à son nom
         // (demo/files/public/<photo>-visuel-<format>-<visuels>.jpg, rendus par le moteur ; demo_maj.comptes_offres.<compte>.visuels).
-        : typeof v === "string" && def.visuels && /^demo\/files\/public\/[a-z-]+-visuel-(4x5|9x16)\.jpg$/.test(v) ? v.replace(/\.jpg$/, "-" + def.visuels + ".jpg")
+        : typeof v === "string" && def.visuels && /^demo\/files\/public\/[a-z-]+-visuel-(4x5|9x16)(-nl)?\.jpg$/.test(v) ? v.replace(/\.jpg$/, "-" + def.visuels + ".jpg")
         : typeof v === "string" && def.nom && src.nom && def.nom !== src.nom && v.includes(src.nom) ? elisionDe(v.split(src.nom).join(def.nom), def.nom) : v;   // lot 4 B : signatures au nom du commerce copié
       tables.forEach(k => { E[k].push(...E[k].filter(x => x && x.commerce_id === src.id).map(copie)); });
+      // Lot 8 (Sophie, tour 6 : les mêmes clients dans les trois commerces de démonstration) : chaque copie a ses auteurs d'avis
+      // (demo_maj.comptes_offres.<compte>.auteurs : « Prénom I. » d'origine -> nouveau), dans l'avis et dans la réponse (prénom seul).
+      if (def.auteurs) (E.avis || []).filter(a => a.commerce_id === id).forEach(a => Object.entries(def.auteurs).forEach(([de, vers]) => {
+        const p0 = de.split(" ")[0], p1 = vers.split(" ")[0];
+        ["auteur", "texte", "reponse", "reponse_proposee"].forEach(k => { if (typeof a[k] === "string") a[k] = a[k].split(de).join(vers).split(p0 + " ").join(p1 + " ").split(p0 + ",").join(p1 + ",").split(p0 + " !").join(p1 + " !"); }); }));
       ["comptes", "bases"].forEach(k => { if (E[k] && E[k][src.id]) E[k][id] = copie(E[k][src.id]); });
       const c = E.commerces[id] = Object.assign(copie(src), { id, nom: def.nom || src.nom, offre_id: def.offre, delegation_signee_le: null });
       const o = OFFRES[def.offre], du = k => (E[k] || []).filter(x => x.commerce_id === id);
@@ -1863,9 +1887,12 @@
         premier_contenu: o.reseaux_sociaux ? { echeance: ec == null ? null : iso(ec), fait_le: pc == null ? null : iso(pc), etat: etatDelai(ec, pc == null ? null : Math.max(pc, dep)) } : null,
         avis_en_cours: dep == null ? [] : E.avis.filter(a => a.commerce_id === g.commerce_id && !a.traite_le && Date.parse(a.cree_le) >= dep).sort((a, b) => a.cree_le.localeCompare(b.cree_le))
           .map(a => { const ech = echeanceAvis(a.cree_le, retenuesDe(a)); return { id: a.id, note: a.note, recu_le: a.cree_le, echeance: ech == null ? null : iso(ech),
-            en_retard: !a.retenue_le && ech != null && Date.now() > ech, retenue_le: a.retenue_le || null, liberee_le: a.liberee_le || null }; }),
+            en_retard: ech != null && Date.now() > ech, /* lot 8 : retenue posée après l'échéance = en retard */ retenue_le: a.retenue_le || null, liberee_le: a.liberee_le || null }; }),
         manquements: ms.map(m => ({ id: m.id, engagement: m.engagement, objet_id: m.objet_id, echeance: m.echeance, mois_offert: m.mois_offert, statut: m.statut, motif: m.motif || null })),
-        mois_offerts: [...new Set(ms.filter(m => m.statut !== "ecarte").map(m => m.mois_offert))], demo: !!g.demo };
+        mois_offerts: [...new Set(ms.filter(m => m.statut !== "ecarte").map(m => m.mois_offert))], demo: !!g.demo,
+        // Lot 8 (CGV art. 3) : retouches sans limite, nouvelle proposition sous RETOUCHE_DELAI_HEURES (même calcul que delais_etat en base).
+        retouches: E.contenus.filter(x => x.commerce_id === g.commerce_id && x.statut === "modification" && x.decide_le).map(x => { const ech = Date.parse(x.decide_le) + RETOUCHE_DELAI_HEURES * 3600000;
+          return { id: x.id, demande_le: x.decide_le, echeance: iso(ech), en_retard: Date.now() > ech }; }) };
     }
     const moisSuivant = t => { const d = jourParis(t), [a, m] = d.split("-").map(Number); return (m === 12 ? (a + 1) + "-01" : a + "-" + String(m + 1).padStart(2, "0")) + "-01"; };
     function noterManquement(cid, engagement, objet, echeance, l) {
@@ -1891,6 +1918,19 @@
       E.contenus.filter(x => x.statut === "a_valider" && !(E.commerces[x.commerce_id] || {}).en_pause && offreDe(x.commerce_id).delegation && (E.commerces[x.commerce_id] || {}).delegation_signee_le
           && maintenant - Date.parse(x.soumis_le || x.cree_le) >= CONDITIONS.delegation.publication_auto_heures * MS_H).forEach(x => {
         x.statut = "approuve"; x.valide_tacitement_le = iso(maintenant); jour(x.commerce_id, "VALIDATION_TACITE", { contenu: x.id, heures: CONDITIONS.delegation.publication_auto_heures, mode: "delegation" }); l.validations_tacites.push(x.id); programmerALApprobation(x, true); });
+      // Lot 8 (décision du fondateur du 16/11/2026, même calcul que retenues_sans_message) : 48 h après la demande d'attendre sans message du
+      // commerçant, la réponse proposée part d'office dans la file de publication (« à publier sur Google ») ; un avis sensible jamais : alerte urgente.
+      E.avis.filter(a => a.retenue_le && !a.traite_le && ["escalade", "humain"].includes(a.statut) && maintenant - Date.parse(a.retenue_le) >= RETENUE_SANS_MESSAGE_HEURES * MS_H
+          && !(a.version_client_le && Date.parse(a.version_client_le) >= Date.parse(a.retenue_le))).forEach(a => {
+        if (a.sensible || a.statut === "humain" || !String(a.reponse_proposee || "").trim()) {
+          if (!liste("alertes_exploitant").some(x => x.type === "AVIS_SANS_MESSAGE_48H" && (x.detail || {}).avis === a.id && (x.detail || {}).retenue_le === a.retenue_le)) {
+            liste("alertes_exploitant").unshift({ id: uid(), type: "AVIS_SANS_MESSAGE_48H", commerce_id: a.commerce_id, detail: { avis: a.id, note: a.note, sensible: !!a.sensible, retenue_le: a.retenue_le, urgent: true }, cree_le: iso(maintenant) });
+            jour(a.commerce_id, "AVIS_SANS_MESSAGE_48H", { avis: a.id, sensible: !!a.sensible, retenue_le: a.retenue_le }); }
+          return; }
+        const avant = a.retenue_le, l = retenuesDe(a), ouverte = l.find(x => !x.liberee_le); a.retenue_le = null; a.liberee_le = iso(maintenant); a.alerte_delai_le = null;
+        if (ouverte) ouverte.liberee_le = a.liberee_le; a.retenues = l; a.statut = "a_publier_main"; a.a_publier_le = iso(maintenant);
+        liste("alertes_exploitant").filter(x => x.type === "AVIS_RETENU" && x.commerce_id === a.commerce_id && (x.detail || {}).avis === a.id && !x.vue_le).forEach(x => { x.vue_le = iso(maintenant); });
+        jour(a.commerce_id, "AVIS_PUBLIE_48H_SANS_MESSAGE", { avis: a.id, retenue_le: avant }); });
       // Garantie des délais : alertes avant dépassement, manquements après.
       assurerDelaisDemo(); const k = CONDITIONS.garantie_delais, ha = k.avis_traite_heures * MS_H;
       E.garantie_delais.forEach(g => { const c = E.commerces[g.commerce_id], dep = c ? departDelais(g, offreDe(g.commerce_id)) : null; if (!c || c.en_pause || dep == null) return;
@@ -1900,8 +1940,10 @@
         if (offreDe(g.commerce_id).reseaux_sociaux) { const e = delaisEtat(g).premier_contenu, ec = Date.parse(e.echeance);
           if (e.etat === "manque") noterManquement(g.commerce_id, "premier_contenu_72h", null, ec, l.delais.manquements);
           else if (!e.fait_le && !g.alerte_contenu_le && maintenant > ec - k.alerte_contenu_avant_heures * MS_H) { g.alerte_contenu_le = iso(maintenant); liste("alertes_exploitant").unshift({ id: uid(), type: "DELAI_CONTENU_BIENTOT", commerce_id: g.commerce_id, detail: { echeance: iso(ec) }, cree_le: iso(maintenant) }); l.delais.alertes.push("DELAI_CONTENU_BIENTOT"); } }
-        E.avis.filter(a => a.commerce_id === g.commerce_id && Date.parse(a.cree_le) >= dep && !a.retenue_le).forEach(a => { const ech = echeanceAvis(a.cree_le, retenuesDe(a)), tr = a.traite_le ? Date.parse(a.traite_le) : null;
-          if (ech == null || (tr != null && tr <= ech)) return;   // 15/11/2026 : « Appelez-moi avant de publier » suspend le délai (jamais de manquement pendant la retenue)
+        E.avis.filter(a => a.commerce_id === g.commerce_id && Date.parse(a.cree_le) >= dep).forEach(a => { const ech = echeanceAvis(a.cree_le, retenuesDe(a)), tr = a.traite_le ? Date.parse(a.traite_le) : null;
+          // 15/11/2026 : « Appelez-moi avant de publier » suspend le délai (échéance nulle pendant la retenue : jamais de manquement). Lot 8 (exploitant,
+          // tour 6) : une retenue posée APRÈS l'échéance ne suspend rien (echeanceAvis rend l'échéance d'origine) : le manquement est noté dès qu'elle passe.
+          if (ech == null || (tr != null && tr <= ech)) return;
           if ((tr != null ? tr : maintenant) > ech) noterManquement(g.commerce_id, "avis_24h", a.id, ech, l.delais.manquements);
           else if (tr == null && !a.alerte_delai_le && maintenant > ech - k.alerte_avis_avant_heures * MS_H) { a.alerte_delai_le = iso(maintenant); liste("alertes_exploitant").unshift({ id: uid(), type: "DELAI_AVIS_BIENTOT", commerce_id: g.commerce_id, detail: { avis: a.id, note: a.note, echeance: iso(ech) }, cree_le: iso(maintenant) }); l.delais.alertes.push("DELAI_AVIS_BIENTOT"); } });
       });
@@ -1980,7 +2022,7 @@
       const h = r.horaires && GEO_JOURS.every(j => Array.isArray(r.horaires[j])) ? GEO_JOURS.flatMap((j, i) => r.horaires[j].map(x => [i, x[0], x[1]])) : null;
       if (h) ld.openingHoursSpecification = h.map(([i, o, f]) => ({ "@type": "OpeningHoursSpecification", dayOfWeek: GEO_JOURS_SCHEMA[i], opens: o, closes: f })); else manquants.push("horaires (structurés, jour par jour)");
       const plats = (r.menu || []).filter(p => p && p.nom); let menu = "";
-      if (resto) { if (plats.length) menu = (nl ? "Menukaart" : "Menu") + "\n" + plats.map(p => p.nom + (p.prix ? ` (${String(p.prix).replace(".", ",")} €)` : "")).join("\n"); else manquants.push("menu (plats relevés)"); }
+      if (resto) { if (plats.length) menu = (nl ? "Menukaart" : "Menu") + "\n" + plats.map(p => p.nom + (p.prix ? ` (${String(p.prix).replace(".", ",")} €)` : "")).join("\n"); else manquants.push("menu (plats relevés)"); }
       const faq = [];
       if (h) faq.push({ q: nl ? `Wat zijn de openingsuren van ${nom}?` : `Quels sont les horaires de ${nom} ?`, r: GEO_JOURS.map((j, i) => `${j} : ${(r.horaires[j] || []).map(x => x.join("-")).join(", ") || (nl ? "gesloten" : "fermé")}`).join("; ") + "." });
       if (adr.streetAddress && ville) faq.push({ q: nl ? `Waar is ${nom} gelegen?` : `Où se trouve ${nom} ?`, r: `${adr.streetAddress}, ${adr.postalCode ? adr.postalCode + " " : ""}${ville}.` });
@@ -1997,7 +2039,12 @@
       const p = Object.values(E.commerces).find(c => c.offre_id === "premium"); if (!p) return;
       const d = liste("dossiers_geo").find(x => x.commerce_id === p.id), il = h => iso(Date.now() - h * 3600000);
       d.ouvert_le = il(96); d.etapes.declenchement.le = il(96); d.questions = geoQuestionsModeles(p); d.questions_source = "modele"; d.questions_proposees_le = il(90); d.questions_validees_le = il(72);
+      // Lot 8 (DA, tour 6 : « 30 novembre » au journal, « 27 novembre » partout ailleurs) : la ligne d'ouverture de la graine prend la date
+      // d'ouverture du dossier et son échéance d'alors ; une ligne « questions validées » note le changement d'échéance, comme en base.
+      const avant = echeanceOptionDemo("visibilite_ia", d.ouvert_le, null), jo = E.journal.find(j => j.type === "VISIBILITE_IA_OUVERTE" && j.detail && j.detail.dossier === d.id);
+      if (jo) { jo.cree_le = d.ouvert_le; jo.detail.livraison_prevue_le = avant; }
       d.livraison_prevue_le = echeanceOptionDemo("visibilite_ia", d.questions_validees_le, null);
+      E.journal.push({ id: uid(), commerce_id: p.id, type: "VISIBILITE_IA_QUESTIONS", detail: { dossier: d.id, nombre: d.questions.length, validees: true, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_avant: avant !== d.livraison_prevue_le ? avant : null }, cree_le: d.questions_validees_le });
       d.etapes.questions = { etat: "fait", le: il(72), par: "console" }; d.etapes.mesure_j0 = { etat: "fait", le: il(70), par: "robot" };
       d.etapes.captures = { etat: "fait", le: il(69), par: "console", note: "ChatGPT 10 h 02, Gemini 10 h 05, Perplexity 10 h 07 (question 1)" };
       d.etapes.coherence = { etat: "fait", le: il(48), par: "console", note: "Horaires du dimanche différents sur TripAdvisor" };
@@ -2039,7 +2086,10 @@
       },
       async adminAvisPublie(id, reponse, accord) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
-        if (a.retenue_le) throw new Error("Le commerçant attend votre appel avant toute publication : appelez-le, puis « Appel fait » pour pouvoir publier.");   // 01/11/2026
+        if (a.retenue_le) throw new Error("Le commerçant répond par message : lisez son message, puis « Message lu » pour pouvoir publier.");   // lot 8
+        if (a.sensible && !accord && !(a.decision_client === "approuve")) throw new Error("Avis sensible : jamais publié sans le OK écrit du commerçant. Cochez « Le commerçant a répondu OK par écrit ».");
+        if (a.publication_pas_avant && Date.parse(a.publication_pas_avant) > Date.now() && !accord && !a.version_client && !(a.decision_client === "approuve"))
+          throw new Error("Le commerçant a été prévenu de cet avis : publication possible à partir du " + new Date(a.publication_pas_avant).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + ", sauf s'il approuve la réponse.");
         const txt = texteReponse(reponse), espace = accordEspace(a);
         // 27/10/2026 (comme admin_avis_publie) : l'accord donné dans l'espace vaut accord, pour le texte approuvé exactement.
         if (espace && !accord && txt !== String(a.reponse_proposee || "").trim()) throw new Error("Le texte publié doit être celui que le commerçant a approuvé dans son espace.");
@@ -2049,6 +2099,12 @@
         jour(a.commerce_id, "AVIS_PUBLIE", { avis: a.id, par: "renomia", depuis, accord_client: !!accord, recu_le: a.cree_le, echeance: (e => e == null ? null : iso(e))(echeanceAvis(a.cree_le, retenuesDe(a))), dans_les_24h: (e => e == null || tr <= e)(echeanceAvis(a.cree_le, retenuesDe(a))) }); sauver();
       },
       // « Appelez-moi avant de publier » (01/11/2026) : mêmes règles que admin_liberer_avis (bloc « Créneaux réels »).
+      // Lot 8 : mêmes règles que admin_retenir_avis (le commerçant a demandé d'attendre sur WhatsApp).
+      async adminRetenirAvis(id) {
+        await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
+        if (a.retenue_le) return { id: a.id, retenue_le: a.retenue_le, deja: true };
+        a.retenue_le = iso(Date.now()); a.retenues = retenuesDe(a); jour(a.commerce_id, "AVIS_RETENU", { avis: a.id, mode: "message", par: "equipe" }); sauver(); return { id: a.id, retenue_le: a.retenue_le };
+      },
       async adminLibererAvis(id) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!a) throw new Error("Avis introuvable."); if (!a.retenue_le) return { id: a.id, retenue_le: null };
         const avant = a.retenue_le, l = retenuesDe(a), ouverte = l.find(x => !x.liberee_le); a.retenue_le = null; a.liberee_le = iso(Date.now()); a.alerte_delai_le = null;
@@ -2207,10 +2263,11 @@
         if (JSON.stringify(q) !== JSON.stringify(d.questions)) d.questions_source = "equipe";
         d.questions = q; d.questions_validees_le = valider ? iso(Date.now()) : null;
         if (valider) d.etapes.questions = { etat: "fait", le: iso(Date.now()), par: "console" }; else delete d.etapes.questions;
-        d.livraison_prevue_le = echeanceOptionDemo("visibilite_ia", geoDebut(d), valider ? d.questions_validees_le : null);
+        const avant = d.livraison_prevue_le; d.livraison_prevue_le = echeanceOptionDemo("visibilite_ia", geoDebut(d), valider ? d.questions_validees_le : null);
         const cmd = valider && liste("commandes_options").find(x => x.id === d.commande_id && x.statut === "a_livrer");
         if (cmd) { cmd.elements_recus_le = iso(Date.now()); cmd.livraison_prevue_le = echeanceOptionDemo(cmd.option_id, cmd.paye_le, cmd.elements_recus_le); }
-        jour(d.commerce_id, "VISIBILITE_IA_QUESTIONS", { dossier: d.id, nombre: q.length, validees: !!valider, livraison_prevue_le: d.livraison_prevue_le });
+        // Lot 8 (DA, tour 6) : la ligne trace le changement d'échéance (livraison_prevue_avant), comme admin_geo_questions en base.
+        jour(d.commerce_id, "VISIBILITE_IA_QUESTIONS", { dossier: d.id, nombre: q.length, validees: !!valider, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_avant: avant !== d.livraison_prevue_le ? avant : null });
         sauver(); return { id: d.id, questions: d.questions, questions_validees_le: d.questions_validees_le, livraison_prevue_le: d.livraison_prevue_le };
       },
       async adminGeoReference(id, r) {
@@ -2668,28 +2725,40 @@
         const o = OFFRES[c.offre_id] || {}, equipe = !a.sensible && a.statut === "escalade" && a.note <= 3 && !!(o.avis_equipe || o.delegation);   // 1 à 3 étoiles traités par l'équipe
         if (!(a.sensible && a.statut === "humain") && !equipe) throw new Error("Cet avis n'attend plus votre version."); const x = String(texte || "").trim();
         if (!x) throw new Error("Écrivez votre version en quelques mots."); if (x.length > 2000) throw new Error("Votre version est trop longue (2 000 caractères au plus).");
-        a.version_client = x; a.version_client_le = iso(Date.now()); jour(c.id, "AVIS_VERSION_CLIENT", { avis: a.id }); alerteDemo("AVIS_VERSION_CLIENT", c.id, { avis: a.id, note: a.note });
+        a.version_client = x; a.version_client_le = iso(Date.now()); jour(c.id, "AVIS_VERSION_CLIENT", { avis: a.id });
+        if (!a.retenue_le) { a.retenue_le = a.version_client_le; a.retenues = retenuesDe(a); }   /* lot 8 : rien n'est publié avant que l'équipe l'ait lu */ alerteDemo("AVIS_VERSION_CLIENT", c.id, { avis: a.id, note: a.note });
         sauver(); return { le: a.version_client_le };
       },
       // « Appelez-moi avant de publier » (01/11/2026) : mêmes règles que retenir_reponse_avis (bloc « Créneaux réels »), numéro et jour du rappel compris
       // (tour 6 Premium) : numéro mis au format du pays (vide : celui du commerce), jour « aujourdhui » ou « demain » (heure de Paris).
-      async retenirReponseAvis(id, telephone, jourRappel) {
+      // Lot 8 (décision du fondateur du 16/11/2026) : « Je réponds par message », mêmes règles que retenir_reponse_avis (bloc « Lot 8 ») : plus de
+      // numéro, de jour ni de créneau ; la publication attend le message du commerçant (rien d'office avant RETENUE_SANS_MESSAGE_HEURES).
+      async retenirReponseAvis(id) {
         await init(); const c = cur(); if (!c) throw new Error(PHOTOS.PHRASES.introuvable); const a = mine("avis").find(x => x.id === id); if (!a) throw new Error(MER.TEXTES.avis_introuvable);
         const o = OFFRES[c.offre_id] || {};
         if (!((a.sensible && a.statut === "humain") || (!a.sensible && a.statut === "escalade" && a.note <= 3)) || !(o.avis_equipe || o.delegation)) throw new Error("Cet avis n'attend plus de réponse de notre équipe.");
-        // Tour 7 Essentiel (01/11/2026) : sans saisie, seul un numéro VALIDE du commerce (WhatsApp, sinon contact) ; jamais le texte libre du contact.
-        const saisi = String(telephone || "").trim(), tel = saisi ? numeroWhatsapp(saisi, paysDe(c.pays)) : numeroWhatsapp(c.whatsapp_numero, paysDe(c.pays)) || numeroWhatsapp(c.contact, paysDe(c.pays)) || null;
-        if (saisi && !tel) MER.telephone(saisi, paysDe(c.pays));   // lève l'erreur du pays (exemple +32 470… ou +33 6…)
-        if (!tel) throw new Error("Indiquez votre numéro.");
-        const v = String(jourRappel || "").trim() || "aujourdhui", cr = /_15_17$/.test(v) ? "15-17" : "9-18", jb = v.replace(/_15_17$/, "");
-        const jr = joursRappelA(Date.now(), c.pays), j = jb === "aujourdhui" ? jr.aujourdhui : jb === "demain" ? jr.demain : null;   // ni samedi, ni dimanche, ni férié ; après 17 h, à partir de demain (jours_rappel)
-        if (!j) throw new Error("Choisissez un des jours proposés.");
-        if (a.retenue_le) { a.retenue_telephone = tel; a.retenue_jour = j; a.retenue_creneau = cr; const al = liste("alertes_exploitant").find(x => x.type === "AVIS_RETENU" && x.commerce_id === c.id && (x.detail || {}).avis === a.id && !x.vue_le);
-          if (al) al.detail = Object.assign({}, al.detail, { telephone: tel, jour: j, creneau: cr }); sauver(); return { le: a.retenue_le, deja: true, telephone: tel, jour: j, creneau: cr }; }
-        a.retenue_le = iso(Date.now()); a.retenue_telephone = tel; a.retenue_jour = j; a.retenue_creneau = cr; jour(c.id, "AVIS_RETENU", { avis: a.id });
-        a.retenues = retenuesDe(a);   // 15/11/2026 : historique des retenues (avis_retenues)
-        alerteDemo("AVIS_RETENU", c.id, { avis: a.id, note: a.note, jour: j, creneau: cr, telephone: tel });
-        sauver(); return { le: a.retenue_le, deja: false, telephone: tel, jour: j, creneau: cr };
+        if (a.retenue_le) return { le: a.retenue_le, deja: true };
+        a.retenue_le = iso(Date.now()); a.retenue_telephone = null; a.retenue_jour = null; a.retenue_creneau = null; jour(c.id, "AVIS_RETENU", { avis: a.id, mode: "message" });
+        a.retenues = retenuesDe(a);
+        alerteDemo("AVIS_RETENU", c.id, { avis: a.id, note: a.note, mode: "message" });
+        sauver(); return { le: a.retenue_le, deja: false };
+      },
+      // Lot 8 : boutons de l'espace, MÊME effet qu'une réponse WhatsApp (avis_message_commercant) : « ok » = accord écrit (la retenue est levée,
+      // tâche « à publier » au cockpit) ; « faux » = avis non reconnu (rien n'est publié, tâche urgente) ; « attends » = retenirReponseAvis.
+      async repondreAvisCommercant(id, choix) {
+        await init(); const c = cur(); if (!c) throw new Error(PHOTOS.PHRASES.introuvable); const a = mine("avis").find(x => x.id === id); if (!a) throw new Error(MER.TEXTES.avis_introuvable);
+        if (!["escalade", "humain"].includes(a.statut) || a.traite_le) return { etat: "plus_en_attente" };
+        if (!["ok", "attends", "faux"].includes(choix)) throw new Error("Choix inconnu.");
+        if (choix === "ok" && !String(a.reponse_proposee || "").trim()) choix = "attends";
+        const t = iso(Date.now());
+        if (choix === "attends") return this.retenirReponseAvis(id);
+        if (choix === "ok") { a.decision_client = "approuve"; a.decision_client_le = t; if (!a.propose_le) a.propose_le = a.cree_le;
+          a.retenues = retenuesDe(a); a.retenues.forEach(r => { if (!r.liberee_le) r.liberee_le = t; }); if (a.retenue_le) a.liberee_le = t; a.retenue_le = null;
+          alerteDemo("AVIS_ACCORD_A_PUBLIER", c.id, { avis: a.id, note: a.note, canal: "espace", urgent: true }); }
+        else { a.faux_signale_le = t; if (!a.retenue_le) { a.retenue_le = t; a.retenues = retenuesDe(a); }
+          alerteDemo("AVIS_FAUX_SIGNALE", c.id, { avis: a.id, note: a.note, canal: "espace", urgent: true }); }
+        jour(c.id, "AVIS_MESSAGE_COMMERCANT", { avis: a.id, choix, canal: "espace" });
+        sauver(); return { etat: "ok", choix, avis: a.id };
       },
       // Votre contact (31/10/2026) : mêmes règles que mon_contact, admin_contact, admin_regler_contact (bloc « Créneaux réels »).
       // Rien de réglé (01/11/2026) : PJ et le numéro officiel, sans photo (comme mon_contact).
@@ -3701,7 +3770,8 @@
       async refuserAutorisationPhotos() { const r = ok(await sb.rpc("refuser_autorisation_photos", {})); cache = null; return r; },
       async deciderAvisSensible(id, decision) { return ok(await sb.rpc("decider_avis_sensible", { p_avis: id, p_decision: decision })); },
       async donnerVersionAvis(id, texte) { return ok(await sb.rpc("donner_version_avis", { p_avis: id, p_texte: texte })); },
-      async retenirReponseAvis(id, telephone, jour) { return ok(await sb.rpc("retenir_reponse_avis", { p_avis: id, p_telephone: String(telephone || "").trim() || null, p_jour: jour || null })); },
+      async retenirReponseAvis(id) { return ok(await sb.rpc("retenir_reponse_avis", { p_avis: id })); },
+      async repondreAvisCommercant(id, choix) { return ok(await sb.rpc("repondre_avis_commercant", { p_avis: id, p_choix: choix })); },
       // Votre contact : sans le bloc SQL (fonction absente), null (l'espace affiche l'équipe et le numéro officiel).
       async monContact() { const r = await sb.rpc("mon_contact"); return r.error ? null : r.data; },
       async adminContact(cid) { return ok(await sb.rpc("admin_contact", { p_commerce: cid || null })); },
@@ -3873,6 +3943,7 @@
         const r = ok(await sb.storage.from("contenus").createSignedUrl(x.chemin, 3600, { download: nom })); return r.signedUrl;
       },
       async adminLibererAvis(id) { return ok(await sb.rpc("admin_liberer_avis", { p_avis: id })); },
+      async adminRetenirAvis(id) { return ok(await sb.rpc("admin_retenir_avis", { p_avis: id })); },
       async adminAvisPublie(id, reponse, accord) { ok(await sb.rpc("admin_avis_publie", { p_id: id, p_reponse: reponse, p_accord_client: !!accord })); },
       async adminAvisProposer(id, reponse) { return ok(await sb.rpc("admin_avis_proposer", { p_id: id, p_reponse: reponse })); },
       async adminGarantieDelais() { return ok(await sb.rpc("admin_garantie_delais", {})) || []; },
@@ -3967,6 +4038,6 @@
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)
-  window.RENOM_ECHEANCE_AVIS = echeanceAvis; window.RENOM_ECHEANCE_APPEL = echeanceAppel;
+  window.RENOM_ECHEANCE_AVIS = echeanceAvis; window.RENOM_ECHEANCE_APPEL = echeanceAppel; window.RENOM_RETENUE_SANS_MESSAGE_HEURES = RETENUE_SANS_MESSAGE_HEURES;
   window.RENOM_SECOURS = { ALERTE_HEURES: SECOURS_ALERTE_HEURES };
 })();
