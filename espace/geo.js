@@ -11,12 +11,22 @@
   const date = d => d ? I.date(d) : "";
   const jour = d => d ? I.dateLongue(String(d).slice(0, 10)) : "";
   const qui = l => (l || []).map(x => t("con.pa.qui." + x)).join(" + ");
-  const AUTO = ["declenchement", "mesure_j0", "mesure_j90"];
+  const AUTO = ["declenchement", "mesure_j0", "mesure_j7", "mesure_j30", "mesure_j90"];
 
-  // ---------------- Échéance : livraison prévue (14 jours, options.json), livrée, prochaine mesure (J+90, Premium tous les 90 jours).
-  const echeance = d => d.livre_le ? t("con.geo.livre", { d: date(d.livre_le) })
-    : d.en_retard ? t("con.geo.retard", { d: jour(d.livraison_prevue_le) }) : t("con.geo.echeance", { d: jour(d.livraison_prevue_le) });
-  const prochaine = d => d.prochaine_mesure_le ? `<p class="note" data-geo-prochaine>${t(d.offre === "premium" ? "con.geo.prochaine.premium" : "con.geo.prochaine", { d: jour(d.prochaine_mesure_le) })}</p>` : "";
+  // ---------------- Échéance (lot 9, 16/11/2026) : garantie de 7 jours après la réunion du paiement, de l'accès Google et des 10 questions validées
+  // (options.json, livraison_jours) ; objectif interne de 72 heures ouvrées (objectif_heures_ouvrees) ; dossiers ouverts avant : 14 jours.
+  // Prochaine mesure : J+7 (jamais avant la livraison), J+30, J+90 depuis J0, Premium tous les 90 jours.
+  const heureEch = d => d ? I.heure(d) : "";
+  const echeance = d => { if (d.livre_le) return t("con.geo.livre", { d: date(d.livre_le) }) + (d.delai_respecte === true ? " " + t("con.geo.delai.tenu", { n: I.nombre(d.heures_ouvrees_livraison ?? 0, 1) }) : d.delai_respecte === false ? " " + t("con.geo.delai.depasse") : "")
+      + (d.objectif_tenu === true ? " " + t("con.geo.objectif.tenu") : d.objectif_tenu === false ? " " + t("con.geo.objectif.rate") : "") + (d.garantie ? " " + t("con.geo.garantie." + d.garantie) : "");
+    if (d.regle_delai === "14_jours") return (d.en_retard ? t("con.geo.retard", { d: jour(d.livraison_prevue_le) }) : t("con.geo.echeance", { d: jour(d.livraison_prevue_le) })) + " " + t("con.geo.regle14");
+    if (!d.chrono_demarre) return t("con.geo.chrono.attend", { l: [d.acces_google_le ? "" : t("con.geo.attend.acces"), d.questions_validees_le ? "" : t("con.geo.attend.questions")].filter(Boolean).join(" + "), d: jour(d.livraison_prevue_le) });
+    if (d.en_retard) return t("con.geo.retard.heure", { d: jour(d.livraison_prevue_le), h: heureEch(d.livraison_prevue_a) });
+    return t("con.geo.echeance.heure", { d: jour(d.livraison_prevue_le), h: heureEch(d.livraison_prevue_a), h0: date(d.depart_le) }) + " "
+      + (d.objectif_manque ? t("con.geo.objectif.manque") : t("con.geo.objectif", { d: jour(d.objectif_a), h: heureEch(d.objectif_a), n: I.nombre(d.heures_ouvrees_restantes ?? 0, 1) })); };
+  const prochaine = d => d.prochaine_mesure_type === "j7" && !d.prochaine_mesure_le ? `<p class="note" data-geo-prochaine>${t("con.geo.prochaine.j7.livraison")}</p>`
+    : d.prochaine_mesure_le ? `<p class="note" data-geo-prochaine>${d.prochaine_mesure_type === "trimestrielle" ? t("con.geo.prochaine.premium", { d: jour(d.prochaine_mesure_le) })
+    : t("con.geo.prochaine", { d: jour(d.prochaine_mesure_le), t: t("con.geo.mesure.libelle." + (d.prochaine_mesure_type || "j90")) })}</p>` : "";
 
   // ---------------- Étapes : case à cocher (sauf les étapes du robot, les questions et une livraison notée), qui agit, mode, date, note.
   const NOTE = ["captures", "coherence", "fiche_google", "contenus_site", "rapport"];
@@ -46,6 +56,16 @@
       ${syn.length ? `<table class="geo-syn"><thead><tr><th>${t("con.geo.m.question")}</th>${MOTEURS.map(k => `<th>${t("geo.moteur." + k)}</th>`).join("")}</tr></thead><tbody>
         ${syn.map(s => `<tr><td>${t("con.geo.m.q", { n: s.question_index + 1 })}</td>${MOTEURS.map(k => caseSyn((s.par_moteur || {})[k])).join("")}</tr>`).join("")}</tbody></table>` : ""}
       ${m.rapport ? `<div class="actions"><button type="button" class="bouton second petit" data-geo-rapport="${e(m.id)}">${t("con.geo.m.rapport")}</button></div>` : ""}</div>`; };
+
+  // ---------------- Import Bing Places (lot 9, décision du fondateur) : fait par l'équipe avec l'accès gestionnaire Google ; une date par état ;
+  // le dépôt est exigé avant le rapport de livraison, il ne bouge pas le chrono des 72 h (admin_geo_bing).
+  const ETATS_BING = ["a_faire", "depose", "publie", "bloque"];
+  const blocBing = d => { const b = d.bing || {};
+    if (!b.etat) return `<h3 id="geo-bing-titre">${t("con.geo.bing.titre")}</h3><p class="note" data-geo-bing-attente>${t("con.geo.bing.attente")}</p>`;
+    return `<h3 id="geo-bing-titre">${t("con.geo.bing.titre")}</h3><p class="note">${t("con.geo.bing.chapo")}</p>
+      <div class="champs deux" data-geo-bing-ligne data-etat="${e(b.etat)}"><div class="f"><label for="geo-bing-etat">${t("con.geo.bing.etat")}</label><select id="geo-bing-etat" data-geo-bing>${ETATS_BING.map(s => `<option value="${s}"${b.etat === s ? " selected" : ""}>${t("con.geo.bing.e." + s)}</option>`).join("")}</select></div>
+      <div class="f"><label for="geo-bing-note">${t("con.geo.bing.note")}</label><input id="geo-bing-note" type="text" maxlength="500" value="${e(b.note || "")}"></div></div>
+      <p class="note" data-geo-bing-dates>${ETATS_BING.filter(s => b[s + "_le"]).map(s => `${t("con.geo.bing.e." + s)} : ${date(b[s + "_le"])}, ${heureEch(b[s + "_le"])}`).join(" · ")}</p>`; };
 
   // ---------------- Plateformes : France ou Belgique (geo_plateformes_def) ; « code attendu » s'affiche dans l'espace du client.
   const blocPlateformes = d => `<h3>${t("con.geo.pf.titre")}</h3><p class="note">${t("con.geo.pf.chapo")}</p><ul class="geo-plateformes">${(d.plateformes || []).map(p => `<li data-geo-pf-ligne="${p.cle}" data-etat="${p.etat}">
@@ -94,7 +114,9 @@
     const mesures = [...(d.mesures || [])].reverse();
     // « Lancer la mesure » : départ dès les 10 questions validées ; ensuite seulement à partir de 7 jours avant la prochaine mesure (même règle que la base).
     const j0 = (d.mesures || []).some(m => m.type === "j0" && m.statut === "faite"), auj = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
-    const due = !j0 || (d.prochaine_mesure_le && auj >= new Date(Date.parse(d.prochaine_mesure_le) - 7 * 864e5).toISOString().slice(0, 10));
+    // Lot 9 : à la main à partir de 1 jour (J+7), 3 jours (J+30) ou 7 jours (J+90, trimestrielle) avant la date (geo_demander).
+    const tol = { j7: 1, j30: 3 }[d.prochaine_mesure_type] || 7;
+    const due = !j0 || (d.prochaine_mesure_le && auj >= new Date(Date.parse(d.prochaine_mesure_le) - tol * 864e5).toISOString().slice(0, 10));
     const enAttente = (d.mesures || []).some(m => m.statut === "demandee");
     return `<section class="carte geo" id="client-geo" data-geo="${e(d.id)}" aria-labelledby="geo-titre"><div class="carte-tete"><h2 id="geo-titre">${t("geo.titre")}</h2><span class="note" data-geo-n>${t("con.dos.n", { a: d.faites, b: d.total })}</span></div>
       <p class="note">${t("con.geo.origine." + d.origine)}</p>
@@ -108,6 +130,7 @@
       ${echec && !enCours.length ? `<p class="note" data-geo-echec>${t("con.geo.d.echec", { e: e(ph(echec.erreur || "")) })}</p>` : ""}
       ${mesures.length ? mesures.map(blocMesure).join("") : `<p class="note">${t("con.geo.m.aucune")}</p>`}
       ${blocContenus(d)}
+      ${blocBing(d)}
       ${blocPlateformes(d)}
       ${blocReference(d)}</section>`;
   }
@@ -137,6 +160,7 @@
     sur("[data-geo-q-valider]", b => faire(b, () => { const q = questions(); if (q.length !== 10) throw new Error(t("con.geo.q.dix", { n: q.length })); return D.adminGeoQuestions(d.id, q, true); },
       r => t("con.geo.q.valide.ok", { d: jour(r && r.livraison_prevue_le) })));
     sur("[data-geo-demander]", b => faire(b, () => D.adminGeoDemander(d.id, b.dataset.geoDemander), r => t(r && r.webhook === false ? "con.geo.d.ok.sans" : "con.geo.d.ok." + b.dataset.geoDemander)));
+    sur("[data-geo-bing]", s => faire(s, () => D.adminGeoBing(d.id, s.value, (z.querySelector("#geo-bing-note") || {}).value || null), t("con.geo.bing.ok", { e: t("con.geo.bing.e." + s.value) })));
     sur("[data-geo-pf]", s => faire(s, () => D.adminGeoPlateforme(d.id, s.dataset.geoPf, s.value, null), r => t("con.geo.pf.ok", { p: t("geo.pf." + s.dataset.geoPf), e: t("geo.pf.etat." + s.value) })));
     const f = z.querySelector("#f-geo-ref"); if (f) f.onsubmit = ev => { ev.preventDefault(); faire(ev.submitter || f.querySelector("[type=submit]"), () => D.adminGeoReference(d.id, lireReference(f)), t("con.geo.ref.ok")); };
     sur("[data-geo-rapport]", async b => { b.disabled = true;

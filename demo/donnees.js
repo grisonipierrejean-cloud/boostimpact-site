@@ -5,18 +5,18 @@
 (function () {
   const cfg = window.RENOM_CONFIG || {};
   // Offres (moteur/offres.json et moteur/offres_retirees.json, égalité testée par moteur/tests/test_commentaires.js). Trois offres en vente depuis le 16/10/2026 :
-  // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (16 contenus dont 4 vidéos, mode délégation). Unité : contenus originaux par mois
+  // Essentiel (fiche Google seule), Standard (réseaux retenus), Premium (20 contenus dont 8 vidéos depuis le lot 9 du 16/11/2026, mode délégation). Unité : contenus originaux par mois
   // (publications + vidéos). Croissance et Signature : retirées (retiree: true), gardées pour un ancien commerce ; jamais proposées. Aucun plafond de commentaires.
   const OFFRES = {
     essentiel: { nom: "Essentiel", nom_nl: "Essentieel", nom_en: "Essential", contenus: 4, publications: 4, videos: 0, reseaux_sociaux: false, commentaires: false, commentaires_disponible: false, tiktok: false, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: false, prix_ht: 79, prix_annuel_ht: 948, prix_mensuel_ht: 95 },
     standard: { nom: "Croissance", nom_nl: "Groei", nom_en: "Growth", contenus: 8, publications: 8, videos: 0, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: false, avis_equipe: true, frais_mise_en_route: true, prix_ht: 190, prix_annuel_ht: 2280, prix_mensuel_ht: 228 },
-    premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 16, publications: 12, videos: 4, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
+    premium: { nom: "Premium", nom_nl: "Premium", nom_en: "Premium", contenus: 20, publications: 12, videos: 8, reseaux_sociaux: true, commentaires: true, commentaires_disponible: false, tiktok: true, avis_auto: true, delegation: true, avis_equipe: true, frais_mise_en_route: true, prix_ht: 390, prix_annuel_ht: 4680, prix_mensuel_ht: 468 },
     croissance: { nom: "Croissance (ancienne offre)", contenus: 20, publications: 16, videos: 4, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true },
     signature: { nom: "Signature", contenus: 32, publications: 24, videos: 8, reseaux_sociaux: true, commentaires: true, tiktok: true, avis_auto: true, delegation: false, avis_equipe: false, retiree: true } };
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
   // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "16 novembre 2026";   // 16/11/2026 : CGV du lot 8 (alerte WhatsApp, OK écrit, retouches, droit du pays du Client) ;   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
+  const VERSION_CGV = "16 novembre 2026, version 2";   // 16/11/2026, version 2 : lot 9 et musique (Visibilité IA en 7 jours, Premium 12 + 8, vidéos sur Instagram et TikTok) ; 16/11/2026 : CGV du lot 8 (alerte WhatsApp, OK écrit, retouches, droit du pays du Client) ;   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -60,7 +60,8 @@
   // Modèle hybride (décision de PJ du 15/11/2026, CGV du 15 novembre 2026, article 3 bis) : la Visibilité IA est COMPRISE dans la mise en route de
   // Croissance (standard) et Premium, mesure refaite tous les 90 jours en Premium (remesure_jours_premium).
   // 15/11/2026, 12 h 29 (décision de PJ) : comprise SEULEMENT en paiement annuel (inclus_annuel) ; au mois, option pour toutes les offres.
-  const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 14, second_test_jours: 90,
+  const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 7, objectif_heures_ouvrees: 72,
+      mesures_jours: [7, 30, 90], second_test_jours: 90,
       inclus_annuel: ["standard", "premium"], achetable_par: ["essentiel", "standard", "premium"], remesure_jours_premium: 90 },
     site_restaurant: { nom: "Site du restaurant", nom_en: "Restaurant website", nom_nl: "Website van het restaurant", prix_ht: 990, livraison_jours: 14, second_test_jours: null } };
   // Une option s'achète-t-elle pour cette offre, à ce rythme de paiement ? Non quand l'offre la comprend déjà (Visibilité IA en Croissance et Premium
@@ -365,6 +366,27 @@
   // de schema.sql). joursRappel() : les deux jours proposés à partir d'un jour donné (« aujourdhui » et « demain » au sens de retenir_reponse_avis).
   const jourOuvre = (jour, pays) => { const d = new Date(jour + "T12:00:00Z"); let j = jour;
     for (let i = 0; i < 14; i++, d.setUTCDate(d.getUTCDate() + 1)) { j = d.toISOString().slice(0, 10); if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6 && !estFerie(j, pays)) return j; } return j; };
+  // Lot 9 (16/11/2026) : 72 heures ouvrées de la Visibilité IA. Mêmes règles que heures_ouvrees_ajouter et heures_ouvrees_entre (bloc « Lot 9 » de
+  // schema.sql) et que moteur/geo.py : seules les heures des jours ouvrés (lundi au vendredi, hors fériés du pays) comptent, à l'heure locale (horloge
+  // murale, comme le type timestamp de la base) ; départ un samedi, un dimanche ou un férié : jour ouvré suivant à 0 h. Cas communs :
+  // moteur/tests/heures_ouvrees_cas.json (espace/test/lot9.test.mjs).
+  const fuseauDe = pays => paysDe(pays) === "BE" ? "Europe/Brussels" : "Europe/Paris";
+  const decalageTz = (t, tz) => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(t)).map(x => [x.type, x.value]));
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - Math.floor(t / 1000) * 1000; };
+  const versMur = (t, tz) => t + decalageTz(t, tz);
+  const depuisMur = (w, tz) => { let t = w - decalageTz(w, tz); t = w - decalageTz(t, tz); return t; };
+  const ouvreGeo = (j, pays) => { const d = new Date(j + "T12:00:00Z").getUTCDay(); return d !== 0 && d !== 6 && !estFerie(j, pays); };
+  const heuresOuvreesAjouter = (debut, heures, pays) => { if (!debut) return null; const tz = fuseauDe(pays); let w = versMur(Date.parse(debut), tz), reste = heures * 3600e3;
+    for (let i = 0; i < 4000; i++) { const j = new Date(w).toISOString().slice(0, 10), fin = Date.parse(j + "T00:00:00Z") + 864e5;
+      if (ouvreGeo(j, pays)) { if (w + reste <= fin) return new Date(depuisMur(w + reste, tz)).toISOString(); reste -= fin - w; } w = fin; }
+    throw new Error("heures ouvrées : calcul hors limites"); };
+  const heuresOuvreesEntre = (a, b, pays) => { if (!a || !b) return null; if (Date.parse(b) < Date.parse(a)) return -heuresOuvreesEntre(b, a, pays);
+    const tz = fuseauDe(pays); let w = versMur(Date.parse(a), tz), s = 0; const f = versMur(Date.parse(b), tz);
+    while (w < f) { const j = new Date(w).toISOString().slice(0, 10), fin = Date.parse(j + "T00:00:00Z") + 864e5; if (ouvreGeo(j, pays)) s += Math.min(fin, f) - w; w = fin; }
+    return Math.round(s / 36e3) / 100; };
+  // Jour affiché d'une échéance (une échéance à 0 h pile compte pour la veille), comme geo_jour_echeance.
+  const jourEcheance = (a, pays) => new Intl.DateTimeFormat("en-CA", { timeZone: fuseauDe(pays), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.parse(a) - 1));
   const lendemain = j => { const d = new Date(j + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
   const joursRappel = (auj, pays) => { const a = jourOuvre(auj, pays); return { aujourdhui: a, demain: jourOuvre(lendemain(a), pays) }; };
   // Les deux jours proposés à l'instant t (tour 11, v37) : à partir d'aujourd'hui (heure de Paris), ou de demain à 17 h et après ; donc toujours deux
@@ -743,7 +765,7 @@
     POINTS: [
       { point: "compte", titre: "Activer votre compte", aide: "C'est fait dès votre première visite dans l'espace." },
       { point: "google", titre: "Donner à BoostImpact l'accès administrateur à votre fiche Google", aide: "Sur Google, connecté au compte de votre fiche, cherchez le nom de votre établissement, menu ⋮ du panneau « Votre établissement sur Google », Paramètres de la fiche d'établissement, Utilisateurs et accès, Ajouter, l'adresse team@boostimpact.agency, rôle Administrateur, Inviter. Vous restez propriétaire.", declarable: true },
-      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Nous créons votre espace dans notre outil de programmation. Pendant l'appel de démarrage, l'équipe vous envoie le lien de connexion par WhatsApp. Il est valable 71 heures (un peu moins de 3 jours) : ouvrez-le et connectez vos réseaux. S'il a expiré, demandez-en un nouveau à l'équipe sur WhatsApp.", declarable: true },
+      { point: "metricool", titre: "Connecter vos réseaux à notre outil de programmation", aide: "Nous créons votre espace dans notre outil de programmation. Au démarrage, l'équipe vous envoie le lien de connexion par WhatsApp. Il est valable 71 heures (un peu moins de 3 jours) : ouvrez-le et connectez vos réseaux. S'il a expiré, demandez-en un nouveau à l'équipe sur WhatsApp.", declarable: true },
       { point: "demarrage", titre: "Répondre aux 5 questions de démarrage", aide: "Cinq questions courtes pour que BoostImpact écrive comme vous. Chacune peut être passée." },
     ],
     ETATS: { a_faire: "À faire", declare: "Fait selon vous, BoostImpact vérifie", fait: "Fait" },
@@ -793,7 +815,7 @@
     // Frais de mise en route offerts après la Visibilité IA payée (15/11/2026, bloc SQL du même nom) : montée de l'Essentiel faite, facture à vérifier
     FRAIS_OFFERTS_A_VERIFIER: "Frais de mise en route offerts : facture à vérifier",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
-    RAPPEL_DEMANDE: "Rappel demandé par le commerçant", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
+    RAPPEL_DEMANDE: "Demande du commerçant : lui écrire sur WhatsApp", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
     FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis : le commerçant a répondu OK, réponse à publier",
     AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis : message du commerçant à lire avant de publier",
     AVIS_RETENU: "Avis : le commerçant répond par message, rien n'est publié avant de l'avoir lu",
@@ -809,7 +831,13 @@
     STRIPE_A_METTRE_A_JOUR: "Mettre Stripe à jour", PUBLICATIONS_A_RETIRER: "Publications à retirer de Metricool", OFFRE_CHANGEE: "Offre changée par Stripe",
     ANCIEN_ABONNEMENT_A_ARRETER: "Arrêter l'ancien abonnement", OFFRE_INFERIEURE_PAYEE: "Offre plus basse payée",
     // Test IA de l'audit gratuit (15/11/2026, moteur/audit/assistants_ia.py) : moteur en erreur, réponse vide ou retiré pour plafond ; une par jour au plus
-    TEST_IA_ERREUR: "Test IA de l'audit : moteur en erreur" };
+    TEST_IA_ERREUR: "Test IA de l'audit : moteur en erreur",
+    // Lot 9 (16/11/2026, geo_controle_echeances, n8n chaque heure) : échéance de 72 h ouvrées de la Visibilité IA
+    BING_A_IMPORTER: "Import Bing Places (Visibilité IA)",
+    VISIBILITE_IA_OBJECTIF_MANQUE: "Visibilité IA : objectif interne de 72 h ouvrées dépassé", VISIBILITE_IA_ECHEANCE_PROCHE: "Visibilité IA : échéance garantie (7 jours) dans moins de 24 h",
+    VISIBILITE_IA_EN_RETARD: "Visibilité IA : échéance garantie (7 jours) dépassée", VISIBILITE_IA_GARANTIE: "Visibilité IA livrée en retard : garantie à appliquer",
+    // Musique tendance (16/11/2026, publication_envoyee et musique_relancer de schema.sql) : aucune musique après le nouvel essai, vidéo non publiée sur ce réseau
+    MUSIQUE_INTROUVABLE: "Vidéo non publiée : aucune musique autorisée trouvée" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
   // Titre d'une alerte (28/10/2026) : les tâches de la fiche Google portent le nom du commerce (« Identifier la fiche Google de <commerce> »,
   // « Accompagner la création de la fiche Google de <commerce> »).
@@ -828,7 +856,7 @@
   const POINTS_MER = { compte: "Compte", google: "Accès Google", metricool: "Réseaux", demarrage: "5 questions" };
   const texteAlerte = a => { const d = a.detail || {};
     if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer par message (WhatsApp au ${telLisible(d.telephone) || "numéro du commerçant"}, ou email), jamais par appel (lot 8), puis changer l'abonnement dans Stripe (prorata), sans second paiement.${d.frais_offerts_option ? " Visibilité IA déjà payée : NE PAS ajouter les frais de mise en route (offerts, CGV art. 3 bis et 4)." : ""}`;
-    if (a.type === "RAPPEL_DEMANDE") return `Rappeler au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
+    if (a.type === "RAPPEL_DEMANDE") return `Écrire sur WhatsApp (aucun appel promis) au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
     if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
     if (a.type === "FICHE_GOOGLE_A_IDENTIFIER") return `Recherche automatique sans résultat sûr (${MOTIFS_FICHE[d.motif] || d.motif || "motif inconnu"}). Lien collé par le commerçant : ${d.lien || "aucun"}.${(d.candidats || []).length ? " Fiches proches : " + d.candidats.join(", ") + "." : ""} Ouvrir le lien, trouver la fiche, puis coller son identifiant (place_id) dans la fiche du client, Comptes.`;
@@ -844,6 +872,15 @@
     if (a.type === "AVIS_SANS_MESSAGE_48H") return `${d.note || "?"} étoile(s)${d.sensible ? ", avis sensible" : ""} : le commerçant a demandé d'attendre et n'a pas écrit depuis 48 h. ${d.sensible ? "Jamais publié sans son OK écrit : le relancer par WhatsApp et décider avec lui." : "Réponse proposée absente : la rédiger, puis relancer le commerçant."}`;
     if (a.type === "ALERTE_WHATSAPP_ECHEC") return `L'alerte WhatsApp ${d.type ? "« " + d.type + " » " : ""}n'a pas été délivrée${d.erreur ? " (" + d.erreur + ")" : ""}. Rien n'est publié d'office : vérifier le numéro du commerçant et WaSender, puis le prévenir à la main.`;
     if (a.type === "ALERTE_AVIS_SANS_WHATSAPP") return `Avis de ${d.note || "?"} étoile(s) arrivé alors que le commerce n'a pas de numéro WhatsApp : l'alerte garantie n'a pas pu partir. Obtenir le numéro (fiche du client, Comptes), puis prévenir le commerçant.`;
+    if (a.type === "BING_A_IMPORTER") return `${d.commerce || "Ce commerce"} : importer la fiche Google dans Bing Places (bing.com/forbusiness, avec l'accès gestionnaire Google). État : ${({ a_faire: "à faire", depose: "déposé", publie: "publié", bloque: "bloqué" })[d.etat] || "à faire"}${d.note ? " (" + d.note + ")" : ""}. Le noter dans la fiche du client, bloc Visibilité IA ; le dépôt est exigé avant le rapport de livraison.`;
+    const dateGeo = x => x ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", dateStyle: "full", timeStyle: "short" }).format(new Date(x)) : "date inconnue";
+    const garantieGeo = g => g === "remboursement" ? "rembourser l'option (490 € HT)" : g === "mois_offert" ? "offrir un mois d'abonnement" : "voir la garantie";
+    if (a.type === "VISIBILITE_IA_OBJECTIF_MANQUE") return `${d.commerce || "Ce commerce"} : objectif interne de 72 h ouvrées dépassé (${dateGeo(d.echeance)}). Échéance garantie : ${dateGeo(d.echeance_garantie)}. Étape à faire : ${d.etape_vous || "voir le dossier"}.`;
+    if (a.type === "VISIBILITE_IA_ECHEANCE_PROCHE" || a.type === "VISIBILITE_IA_EN_RETARD")
+      return `${d.commerce || "Ce commerce"} : livraison garantie de la Visibilité IA due le ${dateGeo(d.echeance)}${a.type === "VISIBILITE_IA_EN_RETARD" ? `, échéance dépassée : à la livraison, ${garantieGeo(d.garantie)}` : `, il reste ${String(d.heures_restantes ?? "?").replace(".", ",")} heure(s)`}. Étape à faire : ${d.etape_vous || "voir le dossier"}. Finir le travail, puis « Rapport de livraison remis ».`;
+    if (a.type === "VISIBILITE_IA_GARANTIE") return `${d.commerce || "Ce commerce"} : Visibilité IA livrée le ${dateGeo(d.livre_le)}, après l'échéance garantie du ${dateGeo(d.echeance)}. Garantie à appliquer : ${garantieGeo(d.garantie)}.`;
+    if (a.type === "MUSIQUE_INTROUVABLE") { const rs = (d.reseaux || []).map(r => ({ instagram: "Instagram", tiktok: "TikTok" })[r] || r).join(" et ") || "un réseau";
+      return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} n'est pas partie sur ${rs}, faute de musique tendance autorisée après un nouvel essai (${Object.values(d.raisons || {}).join(" ; ") || "raison inconnue"}). Jamais publiée sans son : vérifier les catalogues musicaux dans Metricool (compte TikTok Business, Instagram relié par Facebook), puis reprogrammer la vidéo.`; }
     if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
     if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié : vérifier l'avis, le signaler à Google si besoin, répondre au commerçant.`;
     if (a.type === "WHATSAPP_RECU") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}sans avis en attente : le lire dans WhatsApp et répondre à la main (le texte n'est pas gardé).`;
@@ -1973,9 +2010,12 @@
     // ---- Visibilité IA (15/11/2026) : mêmes règles que le bloc « Visibilité IA : dossier de livraison » de schema.sql (étapes, plateformes,
     // échéance de 14 jours, questions figées après la mesure de départ, J+90, trimestrielle en Premium). Le ROBOT est faux ici : questions modèles,
     // mesure aux résultats FICTIFS dits tels (aucun moteur interrogé), contenus du site tirés de la référence comme moteur/geo.py (rien d'inventé).
-    const GEO_ETAPES = [["declenchement", ["robot"], "auto"], ["questions", ["robot", "vous", "client"], "semi"], ["mesure_j0", ["robot"], "auto"], ["captures", ["vous"], "manuel"],
-      ["coherence", ["vous"], "manuel"], ["fiche_google", ["vous"], "manuel"], ["plateformes", ["vous", "client"], "manuel"], ["contenus_site", ["robot", "vous"], "semi"],
-      ["rapport", ["vous"], "manuel"], ["mesure_j90", ["robot"], "auto"]];
+    // Lot 9 (16/11/2026) : 13 étapes (accès Google avant les questions ; J+7 et J+30), chrono de 72 h ouvrées à la réunion du paiement, de l'accès
+    // Google et des questions validées (geo_calcul_echeance), mesures comptées depuis J0 (geo_mesure_suivante), respect du délai à la livraison.
+    const GEO_ETAPES = [["declenchement", ["robot"], "auto"], ["acces_google", ["client", "vous"], "semi"], ["questions", ["robot", "vous", "client"], "semi"], ["mesure_j0", ["robot"], "auto"],
+      ["captures", ["vous"], "manuel"], ["coherence", ["vous"], "manuel"], ["fiche_google", ["vous"], "manuel"], ["plateformes", ["vous", "client"], "manuel"], ["contenus_site", ["robot", "vous"], "semi"],
+      ["rapport", ["vous"], "manuel"], ["mesure_j7", ["robot"], "auto"], ["mesure_j30", ["robot"], "auto"], ["mesure_j90", ["robot"], "auto"]];
+    const GEO_AUTO = ["declenchement", "mesure_j0", "mesure_j7", "mesure_j30", "mesure_j90"];
     const geoPf = pays => ["google", "apple", "tripadvisor", "yelp", "bing", "thefork", pays === "BE" ? "pagesdor" : "pagesjaunes", "facebook"];
     const geoAuj = () => jourParisDemo(Date.now());
     const geoDebut = d => { const k = d.commande_id && liste("commandes_options").find(x => x.id === d.commande_id); return k ? k.paye_le : d.ouvert_le; };
@@ -1985,14 +2025,61 @@
       etape_vous: (GEO_ETAPES.find(([k, q]) => !geoFait(d, k) && q.includes("vous")) || [null])[0] });
     const geoMesures = d => liste("mesures_geo").filter(m => m.dossier_id === d.id);
     const geoFigees = d => geoMesures(d).some(m => m.type === "j0" && ["demandee", "faite"].includes(m.statut));
+    const geoPays = d => (E.commerces[d.commerce_id] || {}).pays || "FR";
+    const geoCalcul = d => { const c = E.commerces[d.commerce_id] || {};
+      if (!d.acces_google_le && c.google_location_id) { d.acces_google_le = iso(Date.now()); d.etapes.acces_google = { etat: "fait", le: iso(Date.now()), par: "robot" }; }
+      if (d.acces_google_le && !d.bing_etat && ((d.plateformes || {}).bing || {}).etat !== "sans_objet") {   // tâche « Import Bing Places » (geo_tache_bing)
+        d.bing_etat = "a_faire"; d.bing_a_faire_le = iso(Date.now()); alerteDemo("BING_A_IMPORTER", d.commerce_id, { dossier: d.id, commerce: c.nom, etat: "a_faire", a_faire_le: d.bing_a_faire_le }); }
+      if (d.livre_le) return d;
+      const debut = geoDebut(d), pays = geoPays(d), max = (...l) => iso(Math.max(...l.filter(Boolean).map(Date.parse)));
+      if (d.regle_delai === "14_jours") { d.depart_le = d.questions_validees_le ? max(debut, d.questions_validees_le) : null;
+        d.livraison_prevue_le = plusJoursDemo(jourParisDemo(Date.parse(max(debut, d.questions_validees_le))), 14); d.livraison_prevue_a = null; d.objectif_a = null; }
+      else { d.depart_le = d.acces_google_le && d.questions_validees_le ? max(debut, d.acces_google_le, d.questions_validees_le) : null;
+        const h0 = d.depart_le || max(debut, d.acces_google_le, d.questions_validees_le);
+        d.livraison_prevue_a = iso(Date.parse(h0) + (OPTIONS.visibilite_ia.livraison_jours || 7) * 864e5);            // garanti : 7 jours calendaires
+        d.objectif_a = heuresOuvreesAjouter(h0, OPTIONS.visibilite_ia.objectif_heures_ouvrees || 72, pays);           // objectif interne : 72 h ouvrées
+        d.livraison_prevue_le = jourParisDemo(Date.parse(d.livraison_prevue_a)); }
+      const cmd = d.commande_id && liste("commandes_options").find(x => x.id === d.commande_id && x.statut === "a_livrer");
+      if (cmd) { cmd.livraison_prevue_le = d.livraison_prevue_le; if (d.depart_le) cmd.elements_recus_le = max(d.acces_google_le, d.questions_validees_le); }
+      return d; };
+    const geoJ0 = d => { const m = geoMesures(d).filter(x => x.type === "j0" && x.statut === "faite").map(x => x.faite_le).sort()[0]; return m ? jourParisDemo(Date.parse(m)) : null; };
+    const geoSuivante = d => { const j0 = geoJ0(d), auj = geoAuj(), plan = OPTIONS.visibilite_ia.mesures_jours || [7, 30, 90], rem = OPTIONS.visibilite_ia.remesure_jours_premium || 90;
+      if (!j0) return { type: "j0", le: null };
+      const faite = t => geoMesures(d).some(x => x.type === t && x.statut === "faite");
+      for (let i = 0; i < plan.length; i++) { const t = "j" + plan[i]; if (faite(t)) continue; if (plan[i + 1] != null && auj >= plusJoursDemo(j0, plan[i + 1])) continue;
+        // J+7 jamais avant la livraison : en attente du rapport remis, puis au plus tôt le lendemain de la livraison (geo_mesure_suivante).
+        if (i === 0 && !d.livre_le) return { type: t, le: null, attend_livraison: true };
+        if (i === 0) { const l1 = plusJoursDemo(jourParisDemo(Date.parse(d.livre_le)), 1), l7 = plusJoursDemo(j0, plan[0]); return { type: t, le: l1 > l7 ? l1 : l7 }; }
+        return { type: t, le: plusJoursDemo(j0, plan[i]) }; }
+      const n = plan[plan.length - 1], der = geoMesures(d).filter(x => ["j90", "trimestrielle"].includes(x.type) && x.statut === "faite").map(x => jourParisDemo(Date.parse(x.faite_le))).sort().slice(-1)[0];
+      const ecart = der ? Math.round((Date.parse(der) - Date.parse(plusJoursDemo(j0, n))) / 864e5) : 0, k = Math.max(1, Math.floor(ecart / rem) + 1), c = E.commerces[d.commerce_id] || {};
+      return { type: "trimestrielle", le: plusJoursDemo(j0, n + rem * k), comprise: c.offre_id === "premium" }; };
+    const geoMajProchaine = d => { const s = geoSuivante(d), sans = s.type === "j0" || (s.type === "trimestrielle" && !s.comprise);
+      d.prochaine_mesure_type = sans ? null : s.type; d.prochaine_mesure_le = sans ? null : s.le; return s; };
+    const geoComplements = d => { const j0 = geoJ0(d), auj = geoAuj(), pays = geoPays(d), plan = OPTIONS.visibilite_ia.mesures_jours || [7, 30, 90];
+      const prevues = j0 ? [{ type: "j0", le: j0, etat: "faite" }, ...plan.map(n => { const t = "j" + n, f = geoMesures(d).filter(x => x.type === t && x.statut === "faite").map(x => x.faite_le).sort().slice(-1)[0] || null;
+        const enAttente = t === "j7" && !f && d.prochaine_mesure_type === "j7";
+        return { type: t, le: enAttente ? d.prochaine_mesure_le : plusJoursDemo(j0, n), etat: f ? "faite" : enAttente && !d.prochaine_mesure_le ? "apres_livraison"
+          : d.prochaine_mesure_type !== t && auj > plusJoursDemo(j0, n) ? "sautee" : "prevue", faite_le: f }; })] : [];
+      const ech = d.livraison_prevue_a || (d.livraison_prevue_le ? iso(Date.parse(plusJoursDemo(d.livraison_prevue_le, 1) + "T00:00:00+01:00")) : null);
+      return { regle_delai: d.regle_delai || "7_jours", acces_google_le: d.acces_google_le || null, depart_le: d.depart_le || null, chrono_demarre: !!d.depart_le, livraison_prevue_a: ech,
+        livraison_jours: d.regle_delai === "14_jours" ? 14 : OPTIONS.visibilite_ia.livraison_jours || 7, objectif_a: d.objectif_a || null,
+        objectif_heures_ouvrees: d.objectif_a ? OPTIONS.visibilite_ia.objectif_heures_ouvrees || 72 : null,
+        heures_ouvrees_restantes: !d.livre_le && d.depart_le && d.objectif_a ? heuresOuvreesEntre(iso(Date.now()), d.objectif_a, pays) : null,
+        objectif_manque: !d.livre_le && !!d.depart_le && !!d.objectif_a && Date.now() > Date.parse(d.objectif_a),
+        en_retard: !d.livre_le && (!!d.depart_le || d.regle_delai === "14_jours") && Date.now() > Date.parse(ech), delai_respecte: d.delai_respecte ?? null,
+        objectif_tenu: d.objectif_tenu ?? null, garantie: d.garantie || null,
+        heures_ouvrees_livraison: d.heures_ouvrees_livraison ?? null, j0_le: d.j0_le || null, prochaine_mesure_type: d.prochaine_mesure_type || null, mesures_prevues: prevues,
+        bing: { etat: d.bing_etat || null, a_faire_le: d.bing_a_faire_le || null, depose_le: d.bing_depose_le || null, publie_le: d.bing_publie_le || null, bloque_le: d.bing_bloque_le || null, note: d.bing_note || null } }; };
     const geoOuvrir = (cid, origine, commande) => {
       const c = E.commerces[cid], deja = liste("dossiers_geo").find(x => x.commerce_id === cid);
       if (deja) { if (commande && !deja.commande_id) deja.commande_id = commande; return deja; }
       const k = commande && liste("commandes_options").find(x => x.id === commande), debut = k ? k.paye_le : iso(Date.now());
       const d = { id: uid(), commerce_id: cid, origine, commande_id: commande || null, ouvert_le: iso(Date.now()), etapes: { declenchement: { etat: "fait", le: iso(Date.now()), par: "robot" } },
         plateformes: Object.fromEntries(geoPf(c.pays).map(x => [x, { etat: "a_faire" }])), reference: {}, questions: [], questions_source: null, questions_proposees_le: null,
-        questions_validees_le: null, contenus_site: null, contenus_le: null, livraison_prevue_le: echeanceOptionDemo("visibilite_ia", debut, null), livre_le: null, prochaine_mesure_le: null };
-      liste("dossiers_geo").push(d); jour(cid, "VISIBILITE_IA_OUVERTE", { dossier: d.id, origine, commande: commande || null, livraison_prevue_le: d.livraison_prevue_le }); return d;
+        questions_validees_le: null, contenus_site: null, contenus_le: null, livraison_prevue_le: echeanceOptionDemo("visibilite_ia", debut, null), livre_le: null, prochaine_mesure_le: null,
+        regle_delai: "7_jours", acces_google_le: null, depart_le: null, livraison_prevue_a: null, j0_le: null, prochaine_mesure_type: null, delai_respecte: null, heures_ouvrees_livraison: null };
+      liste("dossiers_geo").push(d); geoCalcul(d); jour(cid, "VISIBILITE_IA_OUVERTE", { dossier: d.id, origine, commande: commande || null, livraison_prevue_le: d.livraison_prevue_le }); return d;
     };
     const geoVille = c => (c.ville || "").trim() || "votre ville";
     const geoQuestionsModeles = c => { const v = geoVille(c);
@@ -2046,7 +2133,7 @@
       // d'ouverture du dossier et son échéance d'alors ; une ligne « questions validées » note le changement d'échéance, comme en base.
       const avant = echeanceOptionDemo("visibilite_ia", d.ouvert_le, null), jo = E.journal.find(j => j.type === "VISIBILITE_IA_OUVERTE" && j.detail && j.detail.dossier === d.id);
       if (jo) { jo.cree_le = d.ouvert_le; jo.detail.livraison_prevue_le = avant; }
-      d.livraison_prevue_le = echeanceOptionDemo("visibilite_ia", d.questions_validees_le, null);
+      d.acces_google_le = il(80); d.etapes.acces_google = { etat: "fait", le: il(80), par: "robot" }; geoCalcul(d);
       E.journal.push({ id: uid(), commerce_id: p.id, type: "VISIBILITE_IA_QUESTIONS", detail: { dossier: d.id, nombre: d.questions.length, validees: true, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_avant: avant !== d.livraison_prevue_le ? avant : null }, cree_le: d.questions_validees_le });
       d.etapes.questions = { etat: "fait", le: il(72), par: "console" }; d.etapes.mesure_j0 = { etat: "fait", le: il(70), par: "robot" };
       d.etapes.captures = { etat: "fait", le: il(69), par: "console", note: "ChatGPT 10 h 02, Gemini 10 h 05, Perplexity 10 h 07 (question 1)" };
@@ -2054,7 +2141,7 @@
       d.plateformes.google = { etat: "fait", le: il(47) }; d.plateformes.apple = { etat: "code_attendu", le: il(46), note: "code par appel" };
       d.reference = { nom: p.nom, ville: p.ville || "", cuisine: ["bistronomique"], menu_url: "" };
       const r = geoMesureFictive(d, p, "j0"), m = { id: uid(), dossier_id: d.id, commerce_id: p.id, type: "j0", statut: "faite", demandee_le: il(70.2), faite_le: il(70), resultats: r, synthese: r.synthese, cout_usd: 0, erreur: null };
-      m.rapport_html = geoRapportDemo(p, m, null); liste("mesures_geo").push(m); };
+      m.rapport_html = geoRapportDemo(p, m, null); liste("mesures_geo").push(m); d.j0_le = m.faite_le; geoMajProchaine(d); };
     const geoLecture = d => { const c = E.commerces[d.commerce_id] || {}, g = (E.garantie_delais || []).find(x => x.commerce_id === d.commerce_id) || {}, auj = geoAuj();
       return { id: d.id, commerce_id: d.commerce_id, commerce: c.nom, pays: c.pays || "FR", langue: c.langue || "fr", offre: c.offre_id, origine: d.origine, commande_id: d.commande_id, ouvert_le: d.ouvert_le,
         livraison_prevue_le: d.livraison_prevue_le, livre_le: d.livre_le, prochaine_mesure_le: d.prochaine_mesure_le, en_retard: !d.livre_le && auj > d.livraison_prevue_le,
@@ -2064,7 +2151,7 @@
         questions_figees: geoFigees(d), contenus_site: d.contenus_site, contenus_le: d.contenus_le, site_web: c.site_web || null, coherence_garantie_le: g.coherence_verifiee_le || null, fiche_optimisee_le: g.fiche_optimisee_le || null,
         mesures: geoMesures(d).map(m => ({ id: m.id, type: m.type, statut: m.statut, demandee_le: m.demandee_le, faite_le: m.faite_le, synthese: m.synthese || null, moteurs: (m.resultats || {}).moteurs || null,
           avertissement: (m.resultats || {}).avertissement || null, cout_usd: m.cout_usd, erreur: m.erreur, rapport: !!m.rapport_html })),
-        demandes: liste("demandes_geo").filter(q => q.dossier_id === d.id).slice(-10).reverse(), ...geoEtat(d) }; };
+        demandes: liste("demandes_geo").filter(q => q.dossier_id === d.id).slice(-10).reverse(), ...geoEtat(d), ...geoComplements(d) }; };
     const garantiesDemo = {
       async maGarantieDelais() { await init(); passageServeurDemo(); const g = E.garantie_delais.find(x => x.commerce_id === cur().id); return g ? delaisEtat(g) : null; },
       async adminFileAvis() {
@@ -2230,7 +2317,7 @@
             en_retard: !d.livre_le && auj > d.livraison_prevue_le, jours_restants: Math.round((Date.parse(d.livraison_prevue_le) - Date.parse(auj)) / 864e5), prochaine_mesure_le: d.prochaine_mesure_le,
             mesure_due: !!d.prochaine_mesure_le && d.prochaine_mesure_le <= plusJoursDemo(auj, 3) && !geoMesures(d).some(m => m.statut === "demandee"),
             codes_attendus: Object.keys(d.plateformes).filter(k => d.plateformes[k].etat === "code_attendu").sort(), demande_en_cours: liste("demandes_geo").some(q => q.dossier_id === d.id && q.statut === "a_traiter"),
-            derniere_erreur: (geoMesures(d).slice(-1)[0] || {}).erreur || null, ...geoEtat(d) }; }).sort((a, b) => String(a.livre_le ? a.prochaine_mesure_le : a.livraison_prevue_le).localeCompare(String(b.livre_le ? b.prochaine_mesure_le : b.livraison_prevue_le)));
+            derniere_erreur: (geoMesures(d).slice(-1)[0] || {}).erreur || null, ...geoEtat(d), ...geoComplements(d) }; }).sort((a, b) => String(a.livre_le ? a.prochaine_mesure_le : a.livraison_prevue_le).localeCompare(String(b.livre_le ? b.prochaine_mesure_le : b.livraison_prevue_le)));
       },
       async adminDossierGeo(cid) { await init(); admin(); assurerGeoDemo(); const d = liste("dossiers_geo").find(x => x.commerce_id === cid); sauver(); return d ? geoLecture(d) : null; },
       async adminGeoOuvrir(cid) {
@@ -2242,18 +2329,27 @@
       async adminGeoEtape(id, k, fait, note) {
         await init(); admin(); const d = geoTrouver(id), n = String(note || "").trim() || null, auj = geoAuj();
         if (!GEO_ETAPES.some(([x]) => x === k)) throw new Error(`Étape inconnue : ${k}.`);
-        if (["declenchement", "mesure_j0", "mesure_j90"].includes(k)) throw new Error("Cette étape se coche seule (robot).");
+        if (GEO_AUTO.includes(k)) throw new Error("Cette étape se coche seule (robot).");
         if (k === "questions") throw new Error("Les questions se valident avec « Valider les 10 questions ».");
         if (n && n.length > 1000) throw new Error("Note trop longue (1 000 caractères au plus).");
         if (k === "rapport" && !fait && d.livre_le) throw new Error("Livraison notée : elle ne s'annule pas ici.");
         if (k === "rapport" && fait && !geoMesures(d).some(m => m.type === "j0" && m.statut === "faite")) throw new Error("La mesure de départ doit être faite avant le rapport de livraison.");
+        if (k === "rapport" && fait && !d.livre_le && ((d.plateformes || {}).bing || {}).etat !== "sans_objet" && (d.bing_etat || "a_faire") === "a_faire")
+          throw new Error("Import Bing Places pas encore déposé : il fait partie du travail à livrer (ou passez Bing en « sans objet »).");
+        if (k === "acces_google" && !fait && ((E.commerces[d.commerce_id] || {}).google_location_id || d.livre_le)) throw new Error("Accès Google constaté (fiche reliée) ou livraison notée : il ne se retire pas ici.");
         if (fait) d.etapes[k] = { etat: "fait", le: iso(Date.now()), par: "console", note: n }; else delete d.etapes[k];
-        if (k === "rapport" && fait && !d.livre_le) { d.livre_le = iso(Date.now()); d.prochaine_mesure_le = plusJoursDemo(auj, OPTIONS.visibilite_ia.second_test_jours || 90);
-          jour(d.commerce_id, "VISIBILITE_IA_LIVREE", { dossier: d.id, livraison_prevue_le: d.livraison_prevue_le, en_retard: auj > d.livraison_prevue_le, prochaine_mesure_le: d.prochaine_mesure_le });
-          const cmd = liste("commandes_options").find(x => x.id === d.commande_id && x.statut === "a_livrer");
-          if (cmd) { cmd.statut = "livree"; cmd.livree_le = iso(Date.now()); cmd.second_test_prevu_le = d.prochaine_mesure_le;
-            jour(d.commerce_id, "OPTION_LIVREE", { option: cmd.option_id, commande: cmd.id, livraison_prevue_le: cmd.livraison_prevue_le, en_retard: auj > cmd.livraison_prevue_le, second_test_prevu_le: d.prochaine_mesure_le, par: "visibilite_ia" }); } }
-        else jour(d.commerce_id, "VISIBILITE_IA_ETAPE", { dossier: d.id, etape: k, fait: !!fait, par: "console" });
+        if (k === "acces_google") d.acces_google_le = fait ? d.acces_google_le || iso(Date.now()) : null;
+        geoCalcul(d);
+        if (k === "rapport" && fait && !d.livre_le) { const x = geoComplements(d); d.livre_le = iso(Date.now()); d.delai_respecte = Date.now() <= Date.parse(x.livraison_prevue_a);
+          d.objectif_tenu = d.objectif_a ? Date.now() <= Date.parse(d.objectif_a) : null; d.garantie = d.delai_respecte ? null : d.origine === "option" ? "remboursement" : "mois_offert"; geoMajProchaine(d);
+          if (d.garantie) alerteDemo("VISIBILITE_IA_GARANTIE", d.commerce_id, { dossier: d.id, commerce: (E.commerces[d.commerce_id] || {}).nom, garantie: d.garantie, echeance: x.livraison_prevue_a, livre_le: d.livre_le, urgent: true });
+          d.heures_ouvrees_livraison = d.depart_le ? heuresOuvreesEntre(d.depart_le, d.livre_le, geoPays(d)) : null;
+          jour(d.commerce_id, "VISIBILITE_IA_LIVREE", { dossier: d.id, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_a: x.livraison_prevue_a, regle_delai: x.regle_delai,
+            en_retard: !d.delai_respecte, delai_respecte: d.delai_respecte, objectif_a: d.objectif_a || null, objectif_tenu: d.objectif_tenu, garantie: d.garantie, heures_ouvrees: d.heures_ouvrees_livraison, prochaine_mesure_le: d.prochaine_mesure_le });
+          const cmd = liste("commandes_options").find(x => x.id === d.commande_id && x.statut === "a_livrer"), st = plusJoursDemo(geoJ0(d), OPTIONS.visibilite_ia.second_test_jours || 90);
+          if (cmd) { cmd.statut = "livree"; cmd.livree_le = iso(Date.now()); cmd.second_test_prevu_le = st;
+            jour(d.commerce_id, "OPTION_LIVREE", { option: cmd.option_id, commande: cmd.id, livraison_prevue_le: cmd.livraison_prevue_le, en_retard: !d.delai_respecte, second_test_prevu_le: st, par: "visibilite_ia" }); } }
+        else jour(d.commerce_id, k === "acces_google" ? "VISIBILITE_IA_ACCES_GOOGLE" : "VISIBILITE_IA_ETAPE", { dossier: d.id, etape: k, fait: !!fait, par: "console", livraison_prevue_a: d.livraison_prevue_a });
         sauver(); return { id: d.id, etape: k, fait: !!fait, livre_le: d.livre_le, prochaine_mesure_le: d.prochaine_mesure_le };
       },
       async adminGeoQuestions(id, qs, valider) {
@@ -2266,12 +2362,11 @@
         if (JSON.stringify(q) !== JSON.stringify(d.questions)) d.questions_source = "equipe";
         d.questions = q; d.questions_validees_le = valider ? iso(Date.now()) : null;
         if (valider) d.etapes.questions = { etat: "fait", le: iso(Date.now()), par: "console" }; else delete d.etapes.questions;
-        const avant = d.livraison_prevue_le; d.livraison_prevue_le = echeanceOptionDemo("visibilite_ia", geoDebut(d), valider ? d.questions_validees_le : null);
-        const cmd = valider && liste("commandes_options").find(x => x.id === d.commande_id && x.statut === "a_livrer");
-        if (cmd) { cmd.elements_recus_le = iso(Date.now()); cmd.livraison_prevue_le = echeanceOptionDemo(cmd.option_id, cmd.paye_le, cmd.elements_recus_le); }
+        const avant = d.livraison_prevue_le; geoCalcul(d);
         // Lot 8 (DA, tour 6) : la ligne trace le changement d'échéance (livraison_prevue_avant), comme admin_geo_questions en base.
-        jour(d.commerce_id, "VISIBILITE_IA_QUESTIONS", { dossier: d.id, nombre: q.length, validees: !!valider, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_avant: avant !== d.livraison_prevue_le ? avant : null });
-        sauver(); return { id: d.id, questions: d.questions, questions_validees_le: d.questions_validees_le, livraison_prevue_le: d.livraison_prevue_le };
+        jour(d.commerce_id, "VISIBILITE_IA_QUESTIONS", { dossier: d.id, nombre: q.length, validees: !!valider, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_a: d.livraison_prevue_a,
+          chrono_demarre: !!d.depart_le, livraison_prevue_avant: avant !== d.livraison_prevue_le ? avant : null });
+        sauver(); return { id: d.id, questions: d.questions, questions_validees_le: d.questions_validees_le, livraison_prevue_le: d.livraison_prevue_le, livraison_prevue_a: d.livraison_prevue_a, chrono_demarre: !!d.depart_le };
       },
       async adminGeoReference(id, r) {
         await init(); admin(); const d = geoTrouver(id), out = {};
@@ -2280,6 +2375,19 @@
           if (!["nom", "adresse", "code_postal", "ville", "region", "telephone", "site", "menu_url", "cuisine", "horaires", "menu"].includes(k)) throw new Error(`Champ de référence inconnu : ${k}.`);
           if (typeof v === "string" && v.trim()) out[k] = v.trim(); else if (v && typeof v === "object") out[k] = v; }
         d.reference = out; jour(d.commerce_id, "VISIBILITE_IA_REFERENCE", { dossier: d.id, champs: Object.keys(out) }); sauver(); return { id: d.id, reference: out };
+      },
+      async adminGeoBing(id, etat, note) {
+        await init(); admin(); const d = geoTrouver(id), n = String(note || "").trim() || null;
+        if (!["a_faire", "depose", "publie", "bloque"].includes(etat)) throw new Error("État de l'import Bing inconnu.");
+        if (!d.acces_google_le) throw new Error("Import Bing : il faut d'abord l'accès gestionnaire à la fiche Google.");
+        if (etat === "bloque" && !n) throw new Error("Import Bing bloqué : écrivez pourquoi (note).");
+        if (n && n.length > 500) throw new Error("Note trop longue (500 caractères au plus).");
+        d.bing_etat = etat; if (n) d.bing_note = n; d["bing_" + etat + "_le"] = iso(Date.now());
+        if (etat === "publie") d.plateformes.bing = { etat: "fait", le: iso(Date.now()), note: n || "Import depuis Google publié" };
+        liste("alertes_exploitant").filter(a => a.type === "BING_A_IMPORTER" && (a.detail || {}).dossier === d.id).forEach(a => {
+          a.vue_le = ["depose", "publie"].includes(etat) ? a.vue_le || iso(Date.now()) : null; a.detail = Object.assign({}, a.detail, { etat, le: iso(Date.now()), note: d.bing_note || null }); });
+        jour(d.commerce_id, "VISIBILITE_IA_BING", { dossier: d.id, etat }); sauver();
+        return { id: d.id, bing_etat: d.bing_etat, bing_a_faire_le: d.bing_a_faire_le || null, bing_depose_le: d.bing_depose_le || null, bing_publie_le: d.bing_publie_le || null, bing_bloque_le: d.bing_bloque_le || null, bing_note: d.bing_note || null };
       },
       async adminGeoPlateforme(id, cle, etat, note) {
         await init(); admin(); const d = geoTrouver(id), c = E.commerces[d.commerce_id] || {}, n = String(note || "").trim() || null;
@@ -2297,10 +2405,11 @@
         if (type === "questions" && (d.questions_validees_le || geoFigees(d))) throw new Error("Les questions sont déjà validées.");
         if (type === "mesure") {
           if (!d.questions_validees_le || d.questions.length !== 10) throw new Error("Validez d'abord les 10 questions.");
-          mt = !geoMesures(d).some(x => x.type === "j0" && x.statut === "faite") ? "j0" : !geoMesures(d).some(x => x.type === "j90" && x.statut === "faite") ? "j90" : "trimestrielle";
-          if (mt !== "j0" && (!d.prochaine_mesure_le || auj < plusJoursDemo(d.prochaine_mesure_le, -7)))
-            throw new Error(`Prochaine mesure prévue le ${d.prochaine_mesure_le ? d.prochaine_mesure_le.split("-").reverse().join("/") : "après la livraison"} (rapport de livraison remis d'abord).`);
-          if (mt === "trimestrielle" && c.offre_id !== "premium") throw new Error("La mesure tous les 90 jours est comprise en Premium seulement.");
+          const su = geoSuivante(d); mt = su.type;
+          if (mt === "j7" && !su.le) throw new Error("Mesure J+7 : après la livraison (rapport de livraison remis d'abord).");
+          if (mt === "trimestrielle" && !su.comprise) throw new Error("La mesure tous les 90 jours est comprise en Premium payé à l'année seulement.");
+          if (mt !== "j0" && auj < plusJoursDemo(su.le, -({ j7: 1, j30: 3 }[mt] || 7)))
+            throw new Error(`Prochaine mesure (${mt === "trimestrielle" ? "tous les 90 jours" : "J+" + mt.slice(1)}) prévue le ${su.le.split("-").reverse().join("/")}.`);
         }
         const q = { id: uid(), commerce_id: d.commerce_id, dossier_id: d.id, type, mesure_id: null, statut: "traitee", erreur: null, cree_le: iso(Date.now()), traitee_le: iso(Date.now()) };
         // Faux robot : réponse immédiate.
@@ -2309,9 +2418,10 @@
         if (type === "mesure") { const r = geoMesureFictive(d, c, mt), depart = mt === "j0" ? null : geoMesures(d).find(x => x.type === "j0" && x.statut === "faite");
           m = { id: uid(), dossier_id: d.id, commerce_id: d.commerce_id, type: mt, statut: "faite", demandee_le: iso(Date.now()), faite_le: iso(Date.now()), resultats: r, synthese: r.synthese, cout_usd: 0, erreur: null };
           m.rapport_html = geoRapportDemo(c, m, depart); liste("mesures_geo").push(m); q.mesure_id = m.id;
-          if (mt === "j0") d.etapes.mesure_j0 = { etat: "fait", le: iso(Date.now()), par: "robot" };
-          else { if (mt === "j90") d.etapes.mesure_j90 = { etat: "fait", le: iso(Date.now()), par: "robot" };
-            d.prochaine_mesure_le = c.offre_id === "premium" ? plusJoursDemo(d.prochaine_mesure_le > auj ? d.prochaine_mesure_le : auj, OPTIONS.visibilite_ia.second_test_jours || 90) : null; } }
+          if (mt === "j0") { d.etapes.mesure_j0 = { etat: "fait", le: iso(Date.now()), par: "robot" }; d.j0_le = d.j0_le || m.faite_le;
+            const cmd = liste("commandes_options").find(x => x.id === d.commande_id && !x.second_test_fait_le); if (cmd) cmd.second_test_prevu_le = plusJoursDemo(geoJ0(d), OPTIONS.visibilite_ia.second_test_jours || 90); }
+          else if (["j7", "j30", "j90"].includes(mt)) d.etapes["mesure_" + mt] = { etat: "fait", le: iso(Date.now()), par: "robot" };
+          geoMajProchaine(d); }
         liste("demandes_geo").push(q); jour(d.commerce_id, "VISIBILITE_IA_DEMANDE", { dossier: d.id, demande: q.id, type, mesure: mt, par: "console" });
         sauver(); return { demande: q.id, type, mesure: m && m.id, mesure_type: mt, webhook: true };
       },
@@ -2320,7 +2430,9 @@
         await init(); assurerGeoDemo(); const c = cur(); if (!c) return null; const d = liste("dossiers_geo").find(x => x.commerce_id === c.id); if (!d) return null;
         return { origine: d.origine, ouvert_le: d.ouvert_le, livraison_prevue_le: d.livraison_prevue_le, livre_le: d.livre_le, prochaine_mesure_le: d.prochaine_mesure_le, questions_validees: !!d.questions_validees_le,
           etapes: GEO_ETAPES.map(([cle]) => ({ cle, fait: geoFait(d, cle) })), codes_attendus: Object.keys(d.plateformes).filter(k => d.plateformes[k].etat === "code_attendu").sort(),
-          mesures: geoMesures(d).filter(m => m.statut === "faite").map(m => ({ type: m.type, faite_le: m.faite_le })), faites: geoEtat(d).faites, total: GEO_ETAPES.length };
+          mesures: geoMesures(d).filter(m => m.statut === "faite").map(m => ({ type: m.type, faite_le: m.faite_le })), faites: geoEtat(d).faites, total: GEO_ETAPES.length,
+          acces_google: !!d.acces_google_le, chrono_demarre: !!d.depart_le, livraison_prevue_a: geoComplements(d).livraison_prevue_a,
+          prochaine_mesure_type: d.prochaine_mesure_type || null, mesures_prevues: geoComplements(d).mesures_prevues, regle_delai: d.regle_delai || "7_jours" };
       },
       async adminGarantieDelais() { await init(); admin(); passageServeurDemo(); return E.garantie_delais.map(delaisEtat).sort((a, b) => String(a.commerce).localeCompare(String(b.commerce))); },
       async adminDelais(cid, p) {
@@ -3158,7 +3270,7 @@
         return E.contenus.filter(x => x.commerce_id === cid).sort((a, b) => String(b.cree_le).localeCompare(String(a.cree_le))).slice(0, CONTENUS_VUS).map(x => {
           const p = E.publications.find(y => y.contenu_id === x.id && ["programme", "envoye", "publie"].includes(y.statut));
           return { id: x.id, type: x.type, format: x.format || "publication", statut: x.statut, legende: x.legende || "", fichier: x.fichier || null, cree_le: x.cree_le, photo_id: x.photo_id || null,
-            url: x.visuel_url || null, prevu_le: p ? p.prevu_le : null }; }); },
+            url: x.visuel_url || null, prevu_le: p ? p.prevu_le : null, musique: (x.musique && x.musique.plateforme) || null }; }); },
       // « C'est le logo » : mêmes règles que admin_logo_depuis_photo (kit verrouillé ou réglé à la main jamais écrasé ; sinon kit proposé depuis le
       // logo, NON verrouillé, choix déjà faits gardés). Démonstration : logo gardé dans ce navigateur, réduit à 512 px (comme logoDemo).
       async adminLogoDepuisPhoto(pid) {
@@ -3851,8 +3963,10 @@
       // adresse signée d'une heure : même fichier que la publication (cheminVisuel : story -> visuel-story.jpg, publication -> visuel-4x5.jpg, vidéo ->
       // son affiche visuel-4x5.jpg du dossier, jamais le MP4). prevu_le : programmation en cours ou passée (publications « programme », « envoye », « publie »).
       async adminContenusClient(cid) {
-        const l = ok(await sb.from("contenus").select("id,type,format,statut,legende,fichier,cree_le,photo_id").eq("commerce_id", cid).order("cree_le", { ascending: false }).limit(CONTENUS_VUS)) || [];
+        const l = ok(await sb.from("contenus").select("id,type,format,statut,legende,fichier,cree_le,photo_id,musique").eq("commerce_id", cid).order("cree_le", { ascending: false }).limit(CONTENUS_VUS)) || [];
         const pubs = l.length ? await sb.from("publications").select("contenu_id,prevu_le,statut").in("contenu_id", l.map(x => x.id)).in("statut", ["programme", "envoye", "publie"]).then(r => r.error ? [] : r.data || [], () => []) : [];
+        // Musique tendance posée à la publication (16/11/2026, contenus.musique.plateforme, écrit par publication_envoyee) : seulement les morceaux, pas le reste du champ.
+        l.forEach(x => { const m = x.musique; x.musique = m && typeof m === "object" && m.plateforme && typeof m.plateforme === "object" ? m.plateforme : null; });
         await Promise.all(l.map(async x => { const p = pubs.find(y => y.contenu_id === x.id); x.prevu_le = p ? p.prevu_le : null; x.url = null; const ch = cheminVisuel(x);
           if (ch) try { const r = await sb.storage.from("contenus").createSignedUrl(ch, 3600); x.url = (r.data && r.data.signedUrl) || null; } catch (e) {} }));
         return l;
@@ -3933,6 +4047,7 @@
       async adminGeoEtape(id, etape, fait, note) { return ok(await sb.rpc("admin_geo_etape", { p_dossier: id, p_etape: etape, p_fait: !!fait, p_note: note == null ? null : String(note) })); },
       async adminGeoQuestions(id, questions, valider) { return ok(await sb.rpc("admin_geo_questions", { p_dossier: id, p_questions: questions, p_valider: !!valider })); },
       async adminGeoReference(id, ref) { return ok(await sb.rpc("admin_geo_reference", { p_dossier: id, p_reference: ref })); },
+      async adminGeoBing(id, etat, note) { return ok(await sb.rpc("admin_geo_bing", { p_dossier: id, p_etat: etat, p_note: note == null ? null : String(note) })); },
       async adminGeoPlateforme(id, cle, etat, note) { return ok(await sb.rpc("admin_geo_plateforme", { p_dossier: id, p_cle: cle, p_etat: etat, p_note: note == null ? null : String(note) })); },
       async adminGeoDemander(id, type) { return ok(await sb.rpc("admin_geo_demander", { p_dossier: id, p_type: type })); },
       async adminGeoRapport(mid) { return ok(await sb.rpc("admin_geo_rapport", { p_mesure: mid })) || null; },
@@ -4037,7 +4152,7 @@
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
-  window.RENOM_MAJ = { contientTelephone, tauxReponseDe, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
+  window.RENOM_MAJ = { contientTelephone, tauxReponseDe, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, heuresOuvreesAjouter, heuresOuvreesEntre, jourEcheance, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
   window.RENOM_AUTO = { AUTO, lireCsvClients, MODELE_CSV, emailValide };
   // ---- Mode de secours des avis (20/10/2026) : délai avant l'alerte d'une réponse « à publier sur Google » (console)

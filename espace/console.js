@@ -1300,11 +1300,15 @@
       ${!Array.isArray(phs) ? `<p class="note">${t("con.phc.illisible")}</p>` : !phs.length ? `<p class="texte2" id="photos-vide">${parMetier(t("con.phc.vide"), metierFiche)}</p>`
       : `<p class="note" data-photos-n>${t("con.phc.n", { n: phs.length, u: photosUtilisables(phs) })}${phs.length > 20 ? " " + t("con.phc.plus", { n: phs.length }) : ""}</p><div class="galerie">${phs.slice(0, 20).map(cartePhoto).join("")}</div>`}</section>`;
   const ICONE_VIDEO = '<svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M10 9.5v5l4.5-2.5z"></path></svg>';
+  // Musique tendance posée par réseau (16/11/2026, contenus.musique.plateforme) : « Instagram : titre, artiste ».
+  const musiqueContenu = m => { if (!m || typeof m !== "object") return ""; const l = ["instagram", "tiktok"].filter(r => m[r] && m[r].titre)
+      .map(r => `${NOM_RESEAU[r] || r} : ${e(m[r].titre)}${m[r].artiste ? ", " + e(m[r].artiste) : ""}`);
+    return l.length ? `<p class="note" data-musique>${t("con.ctc.musique", { m: l.join(" · ") })}</p>` : ""; };
   const carteContenu = x => { const fmt = x.type === "video" ? "video" : x.format === "story" ? "story" : "publication", leg = String(x.legende || "").replace(/\s+/g, " ").trim();
     const date = x.prevu_le ? t(x.statut === "publie" ? "con.ctc.publie" : "con.ctc.prevu", { d: dh(x.prevu_le) }) : t("con.ctc.sans.date");
     return `<article data-contenu="${e(x.id)}" data-format="${fmt}"><div class="cadre ${fmt === "story" ? "c916" : "c45"}">${x.url ? `<a href="${e(x.url)}" target="_blank" rel="noopener"><img src="${e(x.url)}" alt="${e(t("con.ctc.alt." + fmt))}" loading="lazy" decoding="async" data-visuel></a>` : ""}<span class="icone-visuel"${x.url ? " hidden" : ""}>${fmt === "video" ? ICONE_VIDEO : `<span class="note">${t("con.phc.sans.apercu")}</span>`}</span></div>
       <div class="pile serre"><p class="etats-contenu"><span class="etat-dos${["approuve", "programme", "publie"].includes(x.statut) ? " etat-dos-fait" : ""}">${I.a("st.contenu." + x.statut) ? t("st.contenu." + x.statut) : e(x.statut)}</span>${x.ia ? ` <span class="etat-dos" data-badge-ia>${t("con.vic.badge")}</span>` : ""}</p>
-        <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${leg ? `<p class="legende-courte">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
+        <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${musiqueContenu(x.musique)}${leg ? `<p class="legende-courte">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
   const videContenus = phs => { const l = Array.isArray(phs) ? phs : [];
     return t(l.some(p => ["a_traiter", "en_cours"].includes(p.statut) && (p.controle_force || p.statut === "en_cours")) ? "con.ctc.vide.cours" : l.some(p => p.statut === "a_traiter") ? "con.ctc.vide.controle"
       : l.some(p => p.statut === "refusee" && p.refus_motif === "plafond") ? "con.ctc.vide.plafond" : "con.ctc.vide.photo"); };

@@ -29,6 +29,9 @@
   // onglet ; repli dessous : WhatsApp (wa.me/33699080539) avec le message prérempli d'avant. Lien seul, sans état « Point demandé le … » : la réservation
   // se fait chez Calendly, l'espace ne sait pas si elle a abouti.
   const AGENDA_POINT_MOIS = "https://calendly.com/team-boostimpact/30min";
+  // Lot 9 (16/11/2026, décision du fondateur) : « Je n'y arrive pas » de la mise en route ouvre WhatsApp (wa.me/33699080539) avec un message prérempli
+  // qui nomme le commerce ; plus de formulaire de rappel, plus d'appel promis, plus d'alerte RAPPEL_DEMANDE créée par ce bouton.
+  const lienAideMer = c => "https://wa.me/33699080539?text=" + encodeURIComponent(t("rappel.message", { nom: (c && c.nom) || "" }));
   const lienPointMois = c => "https://wa.me/33699080539?text=" + encodeURIComponent(t("point.mois.message", { nom: (c && c.nom) || "" }));
   const pointMoisInclus = c => !!(c && (window.RENOM_OFFRES || {})[c.offre_id] && window.RENOM_OFFRES[c.offre_id].delegation);
   const boutonPointMois = (c, id) => pointMoisInclus(c)
@@ -69,7 +72,7 @@
   const autorisationAJour = c => !!c.photos_autorisees_le && (sansReseaux(c) || c.photos_autorisees_perimetre !== "fiche_google");
   const pubGoogle = c => offreDe(c).publications || 2;
   // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : ses colonnes de commerces (nom_confirme_le…) disent que le
-  // bloc est appliqué. Sans elles (base pas encore à jour), les écrans restent ceux d'avant : ni écran du nom, ni « rappelez-moi », ni fiche à créer.
+  // bloc est appliqué. Sans elles (base pas encore à jour), les écrans restent ceux d'avant : ni écran du nom, ni fiche à créer.
   const merSql = c => !!c && "nom_confirme_le" in c;
   const nomAConfirmer = c => merSql(c) && !c.nom_confirme_le;
   const ficheDemandee = c => merSql(c) && !!c.fiche_google_demande_le && !c.fiche_google_verifiee_le;
@@ -1060,7 +1063,10 @@
   // plateformes). Rien sans dossier (Essentiel sans l'option). Aucune note de l'équipe ni résultat brut : le rapport lui est envoyé par l'équipe.
   const carteVisibiliteIa = g => { if (!g) return "";
     const etat = g.livre_le ? t("geo.cli.livre", { d: date(g.livre_le) }) + (g.prochaine_mesure_le ? " " + t("geo.cli.prochaine", { d: I.dateLongue(g.prochaine_mesure_le) }) : "")
-      : !g.questions_validees ? t("geo.cli.questions") : t("geo.cli.en.cours", { d: I.dateLongue(g.livraison_prevue_le) });
+      : !g.questions_validees ? t("geo.cli.questions")
+      // Lot 9 : questions validées, accès Administrateur pas encore donné : le délai de 7 jours n'est pas parti, aucune date n'est promise.
+      : g.regle_delai !== "14_jours" && g.acces_google === false && !g.chrono_demarre ? t("geo.cli.acces")
+      : t("geo.cli.en.cours", { d: I.dateLongue(g.livraison_prevue_le) });
     return `<section class="carte" id="geo-client" aria-labelledby="geo-client-titre"><div class="carte-tete"><h2 id="geo-client-titre">${t("geo.titre")}</h2><span class="note">${t("geo.cli.n", { a: g.faites, b: g.total })}</span></div>
       <p class="texte2" data-geo-cli-etat>${etat}</p>
       ${(g.codes_attendus || []).length ? `<p class="fort" data-geo-cli-codes>${t("geo.cli.codes", { l: I.liste(g.codes_attendus.map(k => t("geo.pf." + k))) })}</p><p class="note">${t("geo.cli.codes.comment")}</p>` : ""}
@@ -2169,7 +2175,7 @@
 
   // ---------------- Comptes connectés
   const AIDE = I.carte("compte.aide", ["google", "facebook", "instagram", "tiktok"]);
-  // TikTok (31/10/2026) : pas de lien de connexion en libre-service. La demande est enregistrée dans l'espace par le circuit « rappelez-moi »
+  // TikTok (31/10/2026) : pas de lien de connexion en libre-service. La demande est enregistrée dans l'espace par le circuit des demandes (demander_rappel ; depuis le lot 8, échange par message)
   // (demander_rappel, sujet « reseaux » : alerte RAPPEL_DEMANDE pour l'équipe, avec le numéro). Son état est lu côté serveur (D.demandeRappel,
   // fonction ma_demande_rappel du bloc SQL « Créneaux réels » ; test client Premium : la demande n'était retenue que sur l'appareil) pour l'afficher
   // dans Comptes et retirer la tâche de l'accueil sur tout appareil ; base sans cette fonction : la date retenue sur l'appareil, en secours.
@@ -2314,7 +2320,7 @@
   // ailleurs, le jour ouvré qui suit la demande (après 17 h : le suivant), même calcul que joursRappel.
   const cleChgOffre = c => "renom-chg-offre:" + ((c && c.id) || "");
   const minJour = s_ => I.langue === "en" ? s_ : s_.charAt(0).toLowerCase() + s_.slice(1);
-  // Jour ouvré du rappel d'une demande faite à l'instant d (tour 10, v36 : partagé par le changement d'offre, « Je n'y arrive pas : rappelez-moi »
+  // Jour ouvré du rappel d'une demande faite à l'instant d (tour 10, v36 : partagé par le changement d'offre, « Je n'y arrive pas » jusqu'au lot 9
   // et TikTok) : M.joursRappel (jamais un dimanche ni un férié du pays), et après 17 h (heure de Paris) le jour ouvré suivant.
   // Tour 11 (v37) : le premier des deux jours proposés à l'instant de la demande (M.joursRappelA : ni samedi, ni dimanche, ni férié ; après 17 h, à partir de demain).
   function jourRappelDe(c, d) { return M.joursRappelA(Date.parse(d), c && c.pays).aujourdhui; }
@@ -2955,9 +2961,9 @@
   // ---------------- Mise en route (27/10/2026, audit du parcours, constats 1 et 3 ; décisions de PJ) : un seul mot, « Mise en route », et dans cet ordre :
   //   1. « Le nom de votre commerce » (prérempli, modifiable, Confirmer) tant qu'il n'est pas confirmé : il part dans les demandes d'avis à ses clients ;
   //   2. « Pour démarrer, 2 choses » (3 en Croissance et Premium) : l'accès à la fiche Google en étapes numérotées (ou « je n'ai pas de fiche »),
-  //      les photos, et la connexion des réseaux selon l'état réel de l'étape ; « Je n'y arrive pas : rappelez-moi » ;
+  //      les photos, et la connexion des réseaux selon l'état réel de l'étape ; « Je n'y arrive pas » (lot 9 : lien WhatsApp) ;
   //   3. les 5 questions ; 4. à la fin, l'autorisation photos et les alertes WhatsApp, repliées (facultatives).
-  // Sans le bloc SQL (colonnes absentes) : ni écran du nom, ni « rappelez-moi », ni fiche à créer ; le reste est inchangé.
+  // Sans le bloc SQL (colonnes absentes) : ni écran du nom, ni fiche à créer ; le reste est inchangé.
   const PAS_GOOGLE = [1, 2, 3, 4, 5, 6];
   function etapeTete(n, titre, etat, id) {
     return `<div class="etape-tete"><span class="app-num" aria-hidden="true">${n}</span><h2 id="${id}">${titre}</h2>${etat ? `<span class="etat${etat === "fait" ? " actif" : ""}">${etat === "demande" ? t("mer2.demande.etat") : etat === "facultatif" ? t("mer2.facultatif") : ETATS_MR[etat] || e(etat)}</span>` : ""}</div>`;
@@ -3007,10 +3013,8 @@
           <div class="actions"><a class="bouton second" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div></li>
         ${reseaux}
       </ol>
-      ${merSql(c) ? `<section class="carte rappel" id="rappel" aria-labelledby="rappel-titre"><h2 id="rappel-titre" class="vh">${t("rappel.bouton")}</h2>
-        <button type="button" class="bouton second" id="rappel-ouvrir" aria-expanded="false" aria-controls="rappel-f">${t("rappel.bouton")}</button>
-        <form id="rappel-f" class="pile serre" novalidate hidden><div class="f"><label for="rappel-tel">${t("rappel.tel")}</label><input id="rappel-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel)}" placeholder="${e(exNum(c))}" aria-describedby="rappel-aide"><p class="aide" id="rappel-aide">${t("rappel.aide", numParams(c))}</p></div>
-          <div class="actions"><button class="bouton" type="submit" id="rappel-envoyer">${t("rappel.envoyer")}</button></div></form><p class="msg" id="rappel-msg" role="status"></p></section>` : ""}
+      <section class="carte rappel" id="rappel" aria-labelledby="rappel-titre"><h2 id="rappel-titre" class="vh">${t("rappel.bouton")}</h2>
+        <a class="bouton second" id="rappel-whatsapp" href="${e(lienAideMer(c))}" target="_blank" rel="noopener">${t("rappel.bouton")}</a></section>
       <div class="actions pied-mer">${c.demarrage_fini ? `<a class="bouton" href="#/accueil" id="mer-accueil">${t("dem5.accueil")}</a>` : `<button type="button" class="bouton" id="mer-continuer">${t("mer2.continuer")}</button>`}
         ${c.demarrage_fini ? "" : `<button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button>`}</div>`;
     vue.querySelectorAll("[data-declarer]").forEach(b => b.onclick = async () => { b.disabled = true; try { await D.declarerMiseEnRoute(b.dataset.declarer); await ecranEssentiel(await D.commerce()); msg(t("mer.merci")); majCompteurs(); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
@@ -3019,11 +3023,6 @@
       try { await D.demanderFicheGoogle(x ? x.value : "pas_de_fiche"); await ecranEssentiel(await D.commerce()); msg(t(x && x.value === "pas_a_mon_nom" ? "mer2.fiche.merci.nom" : "mer2.fiche.merci")); } catch (er) { msg(ph(er.message)); } };
     brancherFiche("fiche-lien", async () => ecranEssentiel(await D.commerce()));
     if ($("fiche-annuler")) $("fiche-annuler").onclick = async () => { try { await D.demanderFicheGoogle("annuler"); await ecranEssentiel(await D.commerce()); } catch (er) { msg(ph(er.message)); } };
-    if ($("rappel-ouvrir")) $("rappel-ouvrir").onclick = () => { const f_ = $("rappel-f"), o = f_.hidden; f_.hidden = !o; $("rappel-ouvrir").setAttribute("aria-expanded", String(o)); if (o) $("rappel-tel").focus(); };
-    if ($("rappel-f")) $("rappel-f").onsubmit = async ev => { ev.preventDefault(); const m = $("rappel-msg");
-      try { const r = await D.demanderRappel("mise_en_route", $("rappel-tel").value); $("rappel-f").hidden = true; $("rappel-ouvrir").setAttribute("aria-expanded", "false");
-        const n_ = window.RENOM_WHATSAPP.numero($("rappel-tel").value, c.pays);
-        m.textContent = t(r && r.deja ? "rappel.deja" : "rappel.merci", { tel: (n_ ? window.RENOM_WHATSAPP.lisible(n_) : $("rappel-tel").value.trim()).replace(/\s+/g, "\u00a0"), quand: quandJour(jourRappelDe(c, (r && r.cree_le) || new Date().toISOString())) }); } catch (er) { m.textContent = ph(er.message); } };
     if ($("mer-continuer")) $("mer-continuer").onclick = async () => { dem.vue = "questions"; await demarrage(); const q = vue.querySelector("#dem-champ, input[name=dem-choix]"); if (q) q.focus(); };
     if ($("dem-plus-tard")) $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
