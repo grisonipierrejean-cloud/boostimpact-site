@@ -1022,8 +1022,7 @@ html:not([lang="fr"]) #haut h1{font-size:clamp(1.9rem,8vw,2.4rem);max-width:18ch
 @media (max-width:759px){
   .preuves{align-items:stretch}
   .preuve>.preuve-bouton,.preuve>.preuve-statut:last-child{margin-top:auto}
-  .fiches{align-items:stretch}
-  .fiche .maq-gm{flex:1 1 auto}
+  /* 16/11/2026 (lot 9c) : la fiche « Avant » garde sa hauteur (plus de grand vide sous l'avis) : voir .fiches plus bas. */
   .posts{align-items:stretch}
   .post>.maq{flex:1 1 auto}
   .preuves-repere{display:block;margin:0 0 8px;text-align:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--texte);font-variant-numeric:tabular-nums}
@@ -1184,3 +1183,33 @@ sup{font-size:max(13px,.7em)}
 /* 16/11/2026 : démonstration de l'espace client visible dès le haut de page, en second bouton discret (contour, jamais
    vert) ; au téléphone, plus bas et plus léger que l'audit pour ne pas lui faire concurrence. */
 @media (max-width:759px){#haut .btn-demo{min-height:48px;padding:8px 20px;font-weight:var(--graisse-moyenne);border-color:rgba(255,255,255,.6)}}
+
+/* 16/11/2026 (lot 9c, visiteur neuf) : tableau des offres des CGV empilé au téléphone, comme le comparatif de la page (.compare) :
+   une ligne = un bloc, le nom de l'offre devant chaque valeur. Plus de colonne Premium coupée de 320 à 430 px. */
+@media (max-width:759px){
+  .tableau-legal:has(.offres-legales){overflow:visible}
+  .offres-legales,.offres-legales tbody{display:block}
+  .offres-legales thead{display:none}
+  .offres-legales tr{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 0;padding:16px;border-top:1px solid var(--trait)}
+  .offres-legales tbody tr:first-child{border-top:0}
+  .offres-legales th,.offres-legales td,.offres-legales th:first-child{display:block;border-top:0;padding:0}
+  .offres-legales{font-size:var(--t-2);line-height:var(--i-2);hyphens:manual}
+  .offres-legales tbody th{font-weight:var(--graisse-forte);font-size:var(--t-corps);margin-bottom:4px}
+  .offres-legales td{display:grid;grid-template-columns:96px minmax(0,1fr);column-gap:8px;color:var(--texte)}
+  .offres-legales td::before{display:block;font-size:var(--t-meta);font-weight:var(--graisse-moyenne);color:var(--texte-discret)}
+  /* Nom de l'offre devant chaque valeur, dans la langue de la page (mêmes noms que l'en-tête du tableau, masqué ici). */
+  .offres-legales td:nth-of-type(3)::before{content:"Premium"}
+  :lang(fr) .offres-legales td:nth-of-type(1)::before{content:"Essentiel"}
+  :lang(fr) .offres-legales td:nth-of-type(2)::before{content:"Croissance"}
+  :lang(en) .offres-legales td:nth-of-type(1)::before{content:"Essential"}
+  :lang(en) .offres-legales td:nth-of-type(2)::before{content:"Growth"}
+  :lang(nl) .offres-legales td:nth-of-type(1)::before{content:"Essentieel"}
+  :lang(nl) .offres-legales td:nth-of-type(2)::before{content:"Groei"}
+}
+
+/* 16/11/2026 (lot 9c, visiteur neuf) : fiche « Avant » à sa hauteur réelle au téléphone, sans s'étirer à celle de « Après ». */
+@media (max-width:759px){.fiches{align-items:flex-start}.fiche .maq-gm{flex:none}}
+/* 16/11/2026 (lot 9c) : boutons de la fiche Google resserrés au téléphone : les trois boutons tiennent dans la maquette dès 320 px, sans coupure. */
+@media (max-width:759px){.fiche .gm-boutons{gap:6px;padding:12px}.fiche .gm-bouton{padding:0 10px;gap:4px}}
+@media (max-width:349px){.fiche .gm-boutons{gap:4px;padding:12px 10px}.fiche .gm-bouton{padding:0 8px;font-size:13px}}
+@media (max-width:399px){.offres-legales tr{padding:12px}.offres-legales td{grid-template-columns:84px minmax(0,1fr)}}
