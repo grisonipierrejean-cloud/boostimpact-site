@@ -967,7 +967,7 @@
     // La langue est relue à chaque ouverture : changer de langue sur l'écran d'entrée recharge la bonne graine (init remise à zéro).
     const familleGraine = () => PUBLIQUE && ["en", "nl"].includes((window.RENOM_I18N || {}).langue) ? "-be" : "";
     let famille = familleGraine();
-    const cle = () => "renom-demo-v17" + (PUBLIQUE ? "-public" + famille : "");
+    const cle = () => "renom-demo-v18" + (PUBLIQUE ? "-public" + famille : "");
     let K = cle();   // v16 (16/11/2026, lot 7) : légendes de l'entrée sans « l'heure du déjeuner » (programmée le soir). v15 : visuels au nom de chaque commerce.
     let E = null, session = null, aChoisir = false, pret = null, TF = null;   // aChoisir : session ouverte par un lien, mot de passe à choisir (acces.js)
     let aal2 = false;   // double authentification de l'administrateur (18/10/2026) : code vérifié dans cette session (comme aal2 de Supabase)
@@ -1699,9 +1699,12 @@
       tables.forEach(k => { E[k].push(...E[k].filter(x => x && x.commerce_id === src.id).map(copie)); });
       // Lot 8 (Sophie, tour 6 : les mêmes clients dans les trois commerces de démonstration) : chaque copie a ses auteurs d'avis
       // (demo_maj.comptes_offres.<compte>.auteurs : « Prénom I. » d'origine -> nouveau), dans l'avis et dans la réponse (prénom seul).
-      if (def.auteurs) (E.avis || []).filter(a => a.commerce_id === id).forEach(a => Object.entries(def.auteurs).forEach(([de, vers]) => {
+      if (def.auteurs) (E.avis || []).filter(a => a.commerce_id === id).forEach(a => Object.entries(def.auteurs).filter(([de]) => a.auteur === de).forEach(([de, vers]) => {   // seulement l'avis de cet auteur
         const p0 = de.split(" ")[0], p1 = vers.split(" ")[0];
-        ["auteur", "texte", "reponse", "reponse_proposee"].forEach(k => { if (typeof a[k] === "string") a[k] = a[k].split(de).join(vers).split(p0 + " ").join(p1 + " ").split(p0 + ",").join(p1 + ",").split(p0 + " !").join(p1 + " !"); }); }));
+        // 16/11/2026 (contrôle sans contexte : « Hanne J. » recevait « Dank u, Sofie! ») : prénom seul remplacé comme mot entier, quelle que soit
+        // la ponctuation qui suit (« Sofie! », « Sofie, », « Sofie ! »).
+        const mot = new RegExp("(^|[^\\p{L}])" + p0.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\p{L}])", "gu");
+        ["auteur", "texte", "reponse", "reponse_proposee"].forEach(k => { if (typeof a[k] === "string") a[k] = a[k].split(de).join(vers).replace(mot, (m, avant) => avant + p1); }); }));
       ["comptes", "bases"].forEach(k => { if (E[k] && E[k][src.id]) E[k][id] = copie(E[k][src.id]); });
       const c = E.commerces[id] = Object.assign(copie(src), { id, nom: def.nom || src.nom, offre_id: def.offre, delegation_signee_le: null });
       const o = OFFRES[def.offre], du = k => (E[k] || []).filter(x => x.commerce_id === id);

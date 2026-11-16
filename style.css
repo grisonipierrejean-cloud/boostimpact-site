@@ -148,6 +148,9 @@ body.clair,.fond-blanc{--fond:var(--blanc);--surface:var(--gris-clair);--encart:
 .retour{order:3;white-space:nowrap;display:inline-flex;align-items:center;min-height:44px;font-size:var(--t-2);font-weight:var(--graisse-moyenne);color:var(--encre)}
 @media (max-width:480px){.entete-simple .wrap{gap:0 8px}.entete-simple .logo img{height:28px}}
 @media (max-width:400px){.entete-simple .logo img{height:26px}}
+/* 16/11/2026 (contrôle sans contexte, version publiée) : au téléphone, « Retour à l'accueil » débordait de 28 à 67 px (pages légales, merci,
+   simulateur) : il passe sous le logo et les langues, aligné à gauche ; le logo mène aussi à l'accueil. */
+@media (max-width:600px){.entete-simple .wrap{flex-wrap:wrap;padding-bottom:4px}.entete-simple .retour{flex:1 0 100%;white-space:normal}}
 /* Langues « FR / EN / NL » (bloc legal:langues, outils/legal.py) : la langue courante en graisse de titre, cibles de 44 px. */
 .langues{order:2;margin-left:auto;display:flex;align-items:center;font-size:var(--t-2);font-weight:var(--graisse-moyenne);line-height:var(--i-display);color:var(--gris)}
 .langues a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--gris);text-decoration:none}
@@ -424,7 +427,7 @@ div.chapo{display:flex;flex-direction:column;gap:4px}
 @media (max-width:759px){
   .compare,.compare tbody{display:block}
   .compare thead{display:none}
-  .compare tr{display:grid;grid-template-columns:minmax(0,1fr);gap:6px 0;padding:16px 16px 16px;border-top:1px solid var(--filet-clair)}
+  .compare tr{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 0;padding:16px 16px 16px;border-top:1px solid var(--filet-clair)}
   .compare tbody tr:first-child{border-top:0}
   .compare th,.compare td{display:block;border-top:0;padding:0;background:none}
   .compare tbody th{grid-column:1 / -1;font-weight:var(--graisse-forte);margin-bottom:8px;font-size:var(--t-corps)}

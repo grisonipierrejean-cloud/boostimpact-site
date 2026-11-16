@@ -98,6 +98,8 @@ details.tableau>summary{padding:14px 16px;font-weight:var(--graisse-forte)}
 .haut-note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Sous 420 px, l'offre (espace) ou « Console » ne tient plus qu'en « Offre Premi… » ou « C… » : masquée (24/10/2026). L'offre reste sur l'accueil et l'écran Offre. */
 @media (max-width:419px){.haut-note{display:none}.haut .logo-img{height:26px}}
+/* 16/11/2026 : de 420 à 539 px, « Formule Essentieel » était coupé (points de suspension) : la note de l'offre n'apparaît qu'à partir de 540 px. */
+@media (max-width:539px){.haut-note{display:none}}
 @media (max-width:419px){html[lang=nl] .haut .logo-img{height:22px}.haut .logo{min-width:0;flex:0 1 auto}}   /* « Instellingen » : plus aucun débordement à 390 px (30/10/2026) */
 .connexion-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:-6px -6px -6px 0}
 .lat-pied{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 6px 0 12px}

@@ -805,6 +805,8 @@
   const moisContenu = x => { const m = /^(\d{4})-(\d{2})/.exec(String((x.contenu && x.contenu.mois) || "")); return m ? { a: +m[1], m: +m[2] - 1 } : null; };
   // Mention d'une date (accueil, calendrier) : contenu compté sur un autre mois que celui de sa date, ou avis de la semaine (non compté).
   const mentionMois = x => { const d = new Date(x.prevu_le), mc = moisContenu(x);
+    // 16/11/2026 (contrôle sans contexte : « Instagram, Facebook » sans fiche Google) : une story le dit (elle ne se publie pas sur Google).
+    if (x.contenu && M.formatDe(x.contenu) === "story") return t("acc.pub.story");
     return x.contenu && x.contenu.hors_plafond ? t("acc.pub.avis.semaine") : mc && (mc.m !== d.getMonth() || mc.a !== d.getFullYear()) ? t("acc.pub.compte.en", { mois: MOIS[mc.m] }) : ""; };
   // prevu : les publications du mois sont toutes prévues (accueil, moisPrevu) ; alors pas de « Les suivantes viendront avec vos prochaines photos ».
   // Tour 16 (02/11/2026, audit UX Premium) : « Prochaine publication : mercredi 4 novembre, 18 h 30. » (heure de Paris, comme la liste « Prochaines
@@ -2184,22 +2186,15 @@
     const mail = `mailto:info@boostimpact.agency?subject=${encodeURIComponent(su)}&body=${encodeURIComponent(co)}`;
     // Confirmation (31/10/2026, test client Premium, tour 5) : numéro mis au format (+32 470 12 34 56), délai, « Modifier le numéro ».
     const telD = telTiktok(c), recente = d && Date.now() - Date.parse(d) < 24 * 3600000;
-    const qd = (() => { try { return JSON.parse(localStorage.getItem(cleTiktok(c) + ":quand") || "null"); } catch (er) { return null; } })();
     const telLu = telD ? `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(telD))}</span>` : "";
-    if (d && !modifTiktok) return `<div class="pile serre"><p class="texte2" id="tiktok-demande" role="status">${telD && recente && qd && qd.jour ? t("compte.tiktok.envoyee.le", { d: date(d) }) + " " + t(qd.creneau === "15-17" ? "avis.rappel.prevu.1517" : "avis.rappel.prevu", { tel: telLu, quand: quandRappel(String(qd.jour).slice(0, 10)) })
-      : telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: telLu, quand: recente ? t("compte.tiktok.quand", { j: quandJour(jourRappelDe(c, d)) }) : "" }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
+    // 16/11/2026 (coordinateur) : plus d'appel pour TikTok : notre équipe écrit sur WhatsApp, au numéro déjà connu.
+    if (d && !modifTiktok) return `<div class="pile serre"><p class="texte2" id="tiktok-demande" role="status">${telD ? t("compte.tiktok.envoyee.tel", { d: date(d), tel: telLu }) : t("compte.tiktok.envoyee", { d: date(d) })}</p>
       ${recente && merSql(c) ? `<p><button type="button" class="lien" id="tiktok-modifier">${t("compte.tiktok.modifier")}</button></p>` : ""}</div>`;
     if (!merSql(c)) return `<p class="actions"><a class="bouton second" id="activer-tiktok" href="${mail}">${t("compte.tiktok.demander")}</a></p>`;
     const tel = telTiktok(c) || telRetenue(c);   // même numéro préenregistré que le formulaire d'avis (01/11/2026, tour 7 Premium)
     // Jour et heure (01/11/2026, tour 7 Premium) : mêmes jours que le formulaire d'avis (M.joursRappel : jamais un dimanche ni un jour férié du pays)
     // et même choix d'heure (9 h-18 h, ou 15 h-17 h, « après le service » pour un restaurant) ; base : preciser_rappel.
-    const auj = jourParis(Date.now()), jr = M.joursRappelA(Date.now(), c.pays);
     return `<form id="tiktok-f" class="pile serre" novalidate><div class="f"><label for="tiktok-tel">${t("compte.tiktok.tel")}</label><input id="tiktok-tel" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" value="${e(tel ? window.RENOM_WHATSAPP.lisible(tel) : "")}" placeholder="${e(exNum(c))}" aria-describedby="tiktok-aide"><p class="aide" id="tiktok-aide">${t("rappel.aide", numParams(c))}</p></div>
-      ${D.preciserRappel ? `<fieldset><legend>${t("avis.rappel.quand")}</legend>
-        ${radiosJours("tiktok-jour", jr, auj)}</fieldset>
-      <fieldset><legend>${t("avis.rappel.heure")}</legend>
-        <label class="option"><input type="radio" name="tiktok-plage" value="" checked><span>${t("avis.rappel.plage.journee")}</span></label>
-        <label class="option"><input type="radio" name="tiktok-plage" value="_15_17"><span>${t(c.metier === "restaurant" ? "avis.rappel.plage.service" : "avis.rappel.plage.1517")}</span></label></fieldset>` : ""}
       <div class="actions"><button class="bouton" type="submit" id="activer-tiktok">${t("compte.tiktok.demander")}</button></div><p class="msg" id="tiktok-msg" role="status"></p>
       <p class="note">${t("compte.tiktok.ou")} <a href="${mail}" id="tiktok-mail">${t("compte.tiktok.email")}</a></p></form>`; };
   async function comptes() {
@@ -2212,8 +2207,7 @@
       <div class="cartes comptes">${l.map(x => `<article class="carte"${x.reseau === "google" ? ' id="compte-google"' : ""}><h2>${RES[x.reseau]} <span class="etat${x.etat === "connecte" ? " actif" : ""}">· ${tiktokEnAttente(x) ? t("etat.tiktok.demande") : ETAT[x.etat] || e(x.etat)}</span></h2>${x.reseau === "google" ? ficheReliee(c) : ""}${tiktokEnAttente(x) ? "" : `<p class="texte2">${AIDE[x.reseau]}</p>`}${x.detail ? `<p class="note pied">${e(ph(x.detail))}</p>` : ""}${x.reseau === "google" ? ficheLecture(c, "fiche-comptes") : ""}${x.reseau === "tiktok" && x.etat !== "connecte" ? activerTiktok(c) : ""}</article>`).join("")}</div>`;
     if ($("tiktok-f")) $("tiktok-f").onsubmit = async ev => { ev.preventDefault(); const b = $("activer-tiktok"); b.disabled = true;
       try { const r = await D.demanderRappel("reseaux", $("tiktok-tel").value), d = (r && r.cree_le) || new Date().toISOString(), n = (r && r.telephone) || window.RENOM_WHATSAPP.numero($("tiktok-tel").value, c.pays) || "";
-        const jv = (vue.querySelector("input[name=tiktok-jour]:checked") || {}).value, pv = (vue.querySelector("input[name=tiktok-plage]:checked") || {}).value || "";
-        const q = jv && D.preciserRappel ? await D.preciserRappel("reseaux", jv + pv).catch(() => null) : null;
+        const q = null;   // 16/11/2026 : échange par message, ni jour ni créneau
         try { localStorage.setItem(cleTiktok(c), d); if (n) localStorage.setItem(cleTiktok(c) + ":tel", n); if (q) localStorage.setItem(cleTiktok(c) + ":quand", JSON.stringify(q)); } catch (er) {} demandesTiktok[c.id] = d; modifTiktok = false;
         // Pas de toast : la confirmation complète est affichée (role=status) à la place du formulaire.
         await comptes(); majCompteurs(); const z = $("tiktok-demande"); if (z) z.scrollIntoView({ block: "center" }); } catch (er) { b.disabled = false; $("tiktok-msg").textContent = ph(er.message); } };
