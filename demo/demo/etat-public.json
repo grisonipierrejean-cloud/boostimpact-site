@@ -190,10 +190,10 @@
    "mois": "courant",
    "il_y_a_h": 2,
    "demo": true,
-   "legende": "L'entrée du jour est dressée. Passez la découvrir à l'heure du déjeuner.",
+   "legende": "L'entrée du jour est dressée. Passez la découvrir.",
    "legendes": {
-    "instagram": "L'entrée du jour est dressée. Passez la découvrir à l'heure du déjeuner.",
-    "facebook": "L'entrée du jour est dressée. Passez la découvrir à l'heure du déjeuner, nous gardons votre table.",
+    "instagram": "L'entrée du jour est dressée. Passez la découvrir.",
+    "facebook": "L'entrée du jour est dressée. Passez la découvrir, nous gardons votre table.",
     "tiktok": "L'entrée du jour, dressée à la minute. #cuisinedesaison"
    },
    "visuel_url": "demo/files/public/entree-marbre-visuel-9x16.jpg",
@@ -225,7 +225,7 @@
    "mois": "courant",
    "il_y_a_h": 50,
    "demo": true,
-   "legende": "Une entrée dressée à la minute, servie sur une table de marbre. Passez la découvrir à l'heure du déjeuner, nous gardons votre table.",
+   "legende": "Une entrée dressée à la minute, servie sur une table de marbre. Passez la découvrir, nous gardons votre table.",
    "visuel_url": "demo/files/public/entree-marbre-visuel-4x5.jpg",
    "visuel_9x16_url": "demo/files/public/entree-marbre-visuel-9x16.jpg",
    "note_modification": null

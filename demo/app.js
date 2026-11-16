@@ -2372,7 +2372,9 @@
         ${ab && ab.statut !== "resilie" && ab.rythme ? `<p class="note" id="offre-votre-rythme">${t("offre.votre.rythme." + (ab.rythme === "mensuel" ? "mensuel" : "annuel"))}</p>` : ""}
         ${/* Tour 9 : prix du haut au mois, l'annuel dit comme l'autre choix (« Ou 79 € HT par mois en paiement annuel, soit 948 € HT par an… »). */ ""}
         <p class="texte2 lecture" id="offre-annuel">${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? t("offre.annuel.ou", { prix: euros(o.prix_ht), total: euros(o.prix_annuel_ht), gain: euros(gainAn) }) : t("offre.annuel", { total: euros(o.prix_annuel_ht), gain: euros(gainAn) })}</p>
-        <p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>
+        ${/* Lot 7 (16/11/2026, revue DA : prix dit 3 fois au paiement mensuel) : le prix au mois est déjà en tête ; la ligne « Au mois » ne reste
+            que quand la tête montre le prix à l'année (c'est alors l'autre choix). */ ""}
+        ${window.RENOM_RYTHME_MONTEE(ab) === "mensuel" && o.prix_mensuel_ht ? "" : `<p class="texte2 lecture" id="offre-mensuel">${t("offre.mensuel", { prix: euros(o.prix_mensuel_ht) })}</p>`}
         ${/* Tour 11 (v37) : abonnement en cours (actif, ou impayé à régulariser) sur une offre qui comprend la mise en route : elle est faite, plus de
             « Frais de mise en route : 190 € HT » à un client qui paie déjà. */ ""}
         <p class="texte2 lecture" id="offre-frais">${!o.frais_mise_en_route ? t("offre.frais.aucun") : ab && ["actif", "impaye"].includes(ab.statut) ? t("offre.frais.deja.faite") : t("offre.frais.regle", { prix: euros(mer.prix_ht) })}</p>

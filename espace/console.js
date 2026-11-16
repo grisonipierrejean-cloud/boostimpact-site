@@ -571,6 +571,21 @@
           <div class="f"><label for="pm-${i}">${t("con.pm.legende", { res: NOM_RESEAU[x.reseau] || e(x.reseau) })}</label><textarea id="pm-${i}" readonly data-pm-legende translate="no" rows="${Math.min(12, Math.max(3, Math.ceil(String(x.legende || "").length / 34) + 1))}">${e(x.legende || "")}</textarea></div>
           ${(x.chemins || []).length > 1 ? `<p class="note fort" data-pm-carrousel>${t("con.pm.carrousel", { n: x.chemins.length })}</p>` : ""}
           <div class="actions"><button type="button" class="bouton second petit" data-pm-media>${(x.chemins || []).length > 1 ? t("con.pm.visuels", { n: x.chemins.length }) : t(x.type === "video" ? "con.pm.video" : "con.pm.visuel")}</button><button type="button" class="bouton second petit" data-pm-copier>${t("con.pm.copier")}</button><button type="button" class="bouton petit" data-pm-publiee>${t("con.pm.marquer")}</button></div></article>`;
+  // Lot 7 (16/11/2026, revue DA : 3 lignes « À publier » pour UNE publication sur 3 réseaux) : une seule tâche par publication, qui liste ses réseaux ;
+  // dedans, un bloc par réseau (son média, sa légende, son « Marquer comme publiée »), car chaque réseau se publie et se note à part.
+  const carteGroupePub = l => { const x = l[0][0], retard = l.some(([y]) => y.en_retard), prevu = l.map(([y]) => y.prevu_le).sort()[0];
+    return `<article class="carte${retard ? " attention" : ""}" data-pm-groupe="${e(x.id)}">
+          <div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="etat${retard ? "" : " actif"}">${t(retard ? "con.pm.retard" : "con.pm.prevue", { d: dh(prevu) })}</span></div>
+          <p class="note">${t("con.pm.titre")}</p>
+          <p class="fort" data-pm-reseaux>${l.map(([y]) => NOM_RESEAU[y.reseau] || e(y.reseau)).join(", ")} · ${t("con.pm.format." + (x.type === "video" ? "video" : x.format === "story" ? "story" : "publication"))}</p>
+          ${x.ia ? `<p class="etiquette-ia" data-ia>${t("con.pm.ia")}</p>` : ""}
+          ${(x.deja || []).length ? `<p class="note">${t("con.pm.deja", { res: x.deja.map(r => NOM_RESEAU[r] || e(r)).join(", ") })}</p>` : ""}
+          ${l.map(([y, i]) => `<div class="pm-reseau" data-pm="${e(y.id)}" data-pm-res="${e(y.reseau)}" data-pm-i="${i}">
+            <h3>${NOM_RESEAU[y.reseau] || e(y.reseau)}</h3>
+            ${y.son ? `<p class="note fort">${t("con.pm.son", { a: e(y.son.ambiance || "naturel") })}</p>` : ""}
+            <div class="f"><label for="pm-${i}">${t("con.pm.legende", { res: NOM_RESEAU[y.reseau] || e(y.reseau) })}</label><textarea id="pm-${i}" readonly data-pm-legende translate="no" rows="${Math.min(12, Math.max(3, Math.ceil(String(y.legende || "").length / 34) + 1))}">${e(y.legende || "")}</textarea></div>
+            ${(y.chemins || []).length > 1 ? `<p class="note fort" data-pm-carrousel>${t("con.pm.carrousel", { n: y.chemins.length })}</p>` : ""}
+            <div class="actions"><button type="button" class="bouton second petit" data-pm-media>${(y.chemins || []).length > 1 ? t("con.pm.visuels", { n: y.chemins.length }) : t(y.type === "video" ? "con.pm.video" : "con.pm.visuel")}</button><button type="button" class="bouton second petit" data-pm-copier>${t("con.pm.copier")}</button><button type="button" class="bouton petit" data-pm-publiee>${t("con.pm.marquer.sur", { res: NOM_RESEAU[y.reseau] || e(y.reseau) })}</button></div></div>`).join("")}</article>`; };
   const carteCommentaireAPublier = x => `<article class="carte" data-id="${e(x.id)}" data-cm-pub><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${t("con.validee.le", { res: RESEAUX_CM[x.reseau] || e(x.reseau), d: dh(x.decide_le || x.cree_le) })}</span></div>
           <p class="note">${t("con.cm.titre")}</p>
           ${x.texte ? `<p class="note">${t("con.commentaire.de", { de: x.auteur ? t("con.de", { a: e(x.auteur) }) : "", x: `<span translate="no">${e(x.texte)}</span>` })}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}
@@ -820,7 +835,10 @@
     (alertes || []).filter(a => !(a.code === "AVIS_SENSIBLE" && sensibles.has(a.avis_id)) && !(a.code === "AVIS_RETENU" && retenus.has(String((a.detail_alerte || {}).avis || "")))).forEach(a => { const ech = echeanceAlerte(a);
       const cle = a.id != null ? "alerte:" + a.id : a.avis_id ? "avis:" + a.avis_id : a.commentaire_id ? "commentaire:" + a.commentaire_id : a.publication_id ? "publication:" + a.publication_id : null;
       ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle, cid: a.commerce_id }); });
-    (pubs || []).forEach((x, i) => ajout("apublier", cartePublication(x, i), x.en_retard, T_(x.prevu_le), NaN, { cle: "publication:" + x.id + ":" + x.reseau, cid: x.commerce_id }));
+    // Lot 7 : une tâche par publication (ses réseaux regroupés), l'index de chaque réseau dans la liste gardé pour les boutons (afCtx.pubs).
+    const parPub = new Map(); (pubs || []).forEach((x, i) => { const k = String(x.id); if (!parPub.has(k)) parPub.set(k, []); parPub.get(k).push([x, i]); });
+    parPub.forEach(l => { const x = l[0][0], retard = l.some(([y]) => y.en_retard), quand = Math.min(...l.map(([y]) => T_(y.prevu_le)));
+      ajout("apublier", l.length > 1 ? carteGroupePub(l) : cartePublication(x, l[0][1]), retard, quand, NaN, { cle: l.length > 1 ? "publication:" + x.id : "publication:" + x.id + ":" + x.reseau, cid: x.commerce_id }); });
     (avisG || []).forEach(x => ajout("apublier", carteAvisGoogle(x), x.en_retard, T_(x.echeance), T_(x.a_publier_le), { cle: "avis:" + x.id, cid: x.commerce_id }));
     (cmPub || []).forEach(x => ajout("apublier", carteCommentaireAPublier(x), false, NaN, T_(x.decide_le || x.cree_le), { cle: "commentaire:" + x.id, cid: x.commerce_id }));
     (sons || []).forEach(x => ajout("apublier", carteSon(x), false, T_(x.prevu_le), NaN, { cle: "son:" + x.id, cid: x.commerce_id }));
@@ -837,7 +855,14 @@
     const jls = Object.fromEntries(await Promise.all(cs.filter(c => c.metier === "autre" && D.adminJournalClient).map(async c => [c.id, await D.adminJournalClient(c.id).catch(() => null)])));
     cs.forEach(c => { const tk = tachesAdmin(c, jls[c.id]), bloque = merBloquee(c);
       if (bloque || tk.length) ajout("miseenroute", carteMiseEnRoute(c, tk), (bloque && (ageJours(c) ?? 0) >= 5) || tk.includes("whatsapp"), NaN, T_(c.cree_le), { cle: "mer:" + c.id, cid: c.id }); });
-    (opts || []).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
+    // Lot 7 (16/11/2026, revue exploitant : « Visibilité IA » ET « Options commandées · Visibilité IA » pour la même commande) : VRAI doublon du code,
+    // pas de la graine. Une commande de Visibilité IA payée ouvre (ou complète) le dossier du client (geo_ouvrir_dossier, déclencheur
+    // geo_dossier_option) et reste « à livrer » jusqu'à « Rapport remis » dans ce dossier : admin_commandes_options ET admin_dossiers_geo la
+    // rendaient toutes deux, d'où deux tâches. La tâche vient désormais du dossier seul ; la carte d'option ne reste que sans dossier lisible
+    // (commande sans commerce à rattacher, ou lecture des dossiers en échec). Le bloc « Options commandées » de la fiche client est inchangé.
+    const dossierGeo = new Set((geos || []).flatMap(d => [d.commerce_id && "c:" + d.commerce_id, d.commande_id && "k:" + d.commande_id]).filter(Boolean));
+    const viaDossier = x => x.option === "visibilite_ia" && (dossierGeo.has("k:" + x.id) || (x.commerce_id && dossierGeo.has("c:" + x.commerce_id)));
+    (opts || []).filter(x => !viaDossier(x)).forEach(x => ajout("options", carteOption(x, [...cs].sort((a, b) => a.nom.localeCompare(b.nom))), x.en_retard, T_(x.echeance), NaN, { cle: "option:" + x.id, cid: x.commerce_id }));
     // Visibilité IA (15/11/2026) : un dossier dont une étape VOUS attend, dont l'échéance tombe sous 3 jours, dont une mesure est due ou a échoué.
     (geos || []).filter(G.aFaire).forEach(x => ajout("visibilite", G.carte(x), x.en_retard, T_(x.livre_le ? x.prochaine_mesure_le : x.livraison_prevue_le), T_(x.ouvert_le), { cle: "geo:" + x.id, cid: x.commerce_id }));
     // Lot 3 (15/11/2026, revue exploitant : « les rappels de prospects n'entrent toujours pas dans À faire ») : les rappels de la tournée dus
@@ -954,8 +979,8 @@
     // À publier à la main
     sur("[data-copier]", b => copier(b.closest("article").querySelector("[data-rep]"), "con.copiee"));
     sur("[data-publie]", b => agir(() => D.adminCommentairePublie(b.closest("article").dataset.id), t("con.publiee.equipe"), b));
-    const pm = b => afCtx.pubs[+b.closest("article").dataset.pmI];
-    sur("[data-pm-copier]", b => copier(b.closest("article").querySelector("[data-pm-legende]"), "con.pm.copiee"));
+    const pm = b => afCtx.pubs[+b.closest("[data-pm-i]").dataset.pmI];   // lot 7 : le bloc du réseau (carte seule ou carte groupée)
+    sur("[data-pm-copier]", b => copier(b.closest("[data-pm-i]").querySelector("[data-pm-legende]"), "con.pm.copiee"));
     // Carrousel TikTok (02/11/2026, admin_publications_a_publier : « chemins ») : une image après l'autre, numérotées dans l'ordre de l'envoi.
     sur("[data-pm-media]", async b => { b.disabled = true;
       try { const x = pm(b), liste = (x.chemins || []).length > 1 ? x.chemins.map((c, i) => Object.assign({}, x, { chemin: c, rang: i + 1 })) : [x];
@@ -1597,22 +1622,26 @@
   const GLYPHE = { ok: '<path d="M5 12.5l4.5 4.5L19 7.5"></path>', alerte: '<path d="M12 6v8"></path><path d="M12 18h.01"></path>', a_verifier: '<circle cx="12" cy="12" r="7.5"></circle><path d="M12 9v4"></path><path d="M12 15.8h.01"></path>', inconnu: '<path d="M7 12h10"></path>' };
   const glyphe = k => `<svg class="ck-glyphe" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${GLYPHE[k] || GLYPHE.inconnu}</svg>`;
 
-  function verdictTexte(r) { const v = r.verdict;
-    if (r.niveau === "rouge") { const parts = [v.retard ? t("con.ck.v.retard", { n: v.retard }) : "", v.depasses ? t("con.ck.v.depasses", { n: v.depasses }) : "",
+  // Lot 7 (16/11/2026, revue DA : au téléphone, les retards dits 3 fois : la phrase, la liste du jour, la tuile) : sansRetard = la phrase sans le
+  // compte des retards, montrée au téléphone quand « À sortir aujourd'hui » liste déjà chaque tâche en retard (8 tâches au plus) ; la tuile
+  // « En retard » est repliée avec les autres indicateurs. Les retards ne sont donc dits qu'une fois : dans la liste, ligne par ligne.
+  function verdictTexte(r, sansRetard) { const v = r.verdict;
+    if (r.niveau === "rouge") { const parts = [v.retard && !sansRetard ? t("con.ck.v.retard", { n: v.retard }) : "", v.depasses ? t("con.ck.v.depasses", { n: v.depasses }) : "",
         v.a_appliquer ? t("con.ck.v.appliquer", { n: v.a_appliquer }) : "", v.systeme ? t("con.ck.v.systeme", { n: v.systeme }) : ""].filter(Boolean);
+      if (!parts.length) return t("con.ck.v.liste");
       const s = I.liste(parts); return s.charAt(0).toUpperCase() + s.slice(1) + "."; }
     if (r.niveau === "or") return v.risques ? t("con.ck.v.risques", { n: v.risques }) : v.attente_longue ? t("con.ck.v.attente", { n: v.attente_longue }) : t("con.ck.v.verifier", { n: r.controles.filter(c => c.etat === "a_verifier").length });
     return t(r.niveau === "vide" ? "con.ck.v.vide" : "con.ck.v.calme"); }
 
   const kpi = (k, lien, val, det, o = {}) => `<a class="kpi${o.alerte ? " kpi-alerte" : ""}${o.vide ? " kpi-vide" : ""}" href="${lien}" data-kpi="${k}"><span class="kpi-lib">${t("con.ck.k." + k)}${o.sous ? `<span class="kpi-sous">${o.sous}</span>` : ""}</span><span class="kpi-val">${val}</span><span class="kpi-det">${det}</span></a>`;
   function blocKpi(r) { const k = r.kpi, per = t("con.ck.per." + r.periode);
-    return `<section class="kpis" id="kpis" aria-label="${t("con.ck.kpis")}">
+    return `<details class="ck-pli ck-pli-kpis" id="kpis-pli" data-pli-tel><summary><span class="fort">${t("con.ck.kpis")}</span><span class="note ck-pli-resume">${t("con.ck.kpis.resume")}</span></summary><section class="kpis" id="kpis" aria-label="${t("con.ck.kpis")}">
       ${kpi("retard", "#/afaire", I.nombre(k.retard.n), k.retard.n ? (k.retard.garanties ? t("con.ck.k.retard.gar", { n: k.retard.garanties }) : t("con.ck.k.retard.det")) : k.retard.total ? t("con.ck.k.retard.aucun", { n: k.retard.total }) : t("con.ck.k.retard.vide"), { alerte: k.retard.n > 0 })}
       ${kpi("clients", "#/clients", k.clients.n ? I.nombre(k.clients.n) : t("con.ck.aucun"), k.clients.n ? [k.clients.mise_en_route ? t("con.ck.k.clients.mer", { n: k.clients.mise_en_route }) : t("con.ck.k.clients.servis"), k.clients.pause ? t("con.ck.k.clients.pause", { n: k.clients.pause }) : ""].filter(Boolean).join(", ") : t("con.ck.k.clients.vide"), { vide: !k.clients.n })}
       ${kpi("mrr", "#/clients", k.mrr.n ? euros(k.mrr.total) : t("con.ck.pas.encore"), k.mrr.n ? t("con.ck.k.mrr.det", { n: k.mrr.n }) + (k.mrr.estime ? " " + t("con.ck.k.mrr.estime") : "") + (k.mrr.impayes ? " " + t("con.ck.k.mrr.impayes", { n: k.mrr.impayes }) : "") + (k.mrr.remplaces ? " " + t("con.ck.k.mrr.remplaces", { n: k.mrr.remplaces }) : "") : t("con.ck.k.mrr.vide"), { vide: !k.mrr.n, alerte: k.mrr.impayes > 0 })}
       ${kpi("audits", "#/prospects", k.audits.n ? I.nombre(k.audits.n) : t("con.ck.aucun"), k.audits.n ? (k.audits.a_envoyer ? t("con.ck.k.audits.envoyer", { n: k.audits.a_envoyer }) : t("con.ck.k.audits.envoyes")) : t("con.ck.k.audits.vide"), { vide: !k.audits.n })}
       ${kpi("avis", "#/afaire/avis", k.avis.n ? I.nombre(k.avis.n) : t("con.ck.aucun"), (k.avis.n ? t("con.ck.k.avis.det", { a: k.avis.dans24, b: k.avis.n }) : t("con.ck.k.avis.vide")) + ", " + per, { vide: !k.avis.n })}
-    </section>`; }
+    </section></details>`; }
 
   // Lot 3 (15/11/2026, revue exploitant : « qui est en retard » à 4,4 écrans sous la phrase, aucun « à sortir aujourd'hui ») : juste sous la
   // phrase en tête, le nombre de tâches à sortir avant minuit (retards compris) et leur liste (8 au plus), puis les retards par client.
@@ -1649,8 +1678,9 @@
     const att = g.attente.length ? `<h3>${t("con.ck.g.attente.titre")}</h3><ul class="ck-liste" id="delais-attente">${g.attente.map(a => `<li class="ck-g ck-attente${a.long ? " ck-long" : ""}" data-client="${e(a.cid)}">
         <div class="ck-g-tete"><p class="fort">${lienClient(a.cid, a.nom)}</p>${a.jours != null ? `<p class="ck-g-etat">${t("con.ck.g.attente.depuis", { n: a.jours })}</p>` : ""}</div>
         <p class="note">${I.liste(a.raisons.map(x => t("con.ck.g.raison." + x, { f: a.refuses || 0 })))}${a.long ? ". " + t("con.ck.g.attente.long") : "."}</p></li>`).join("")}</ul>` : "";
-    return `<section class="carte ck-bloc" id="garanties"><h2>${t("con.ck.g.titre")}</h2><p class="note ck-chapo">${t("con.ck.g.chapo")}</p>
-      ${g.danger.length ? `<ul class="ck-liste" id="garanties-danger">${g.danger.map(ligne).join("")}</ul>` : vide}${hors}${appl}${att}</section>`; }
+    const resume = g.danger.length ? t("con.ck.g.resume.danger", { n: g.danger.length }) : g.a_appliquer.length ? t("con.ck.g.resume.appliquer", { n: g.a_appliquer.length }) : t("con.ck.g.resume.calme");
+    return `<section class="carte ck-bloc" id="garanties"><details class="ck-pli repliable" id="garanties-pli" data-pli-tel><summary><h2>${t("con.ck.g.titre")}</h2><span class="note ck-pli-resume">${resume}</span></summary><div class="pile ck-pli-corps"><p class="note ck-chapo">${t("con.ck.g.chapo")}</p>
+      ${g.danger.length ? `<ul class="ck-liste" id="garanties-danger">${g.danger.map(ligne).join("")}</ul>` : vide}${hors}${appl}${att}</div></details></section>`; }
 
   const ligneControle = (c, x) => { const qui = x.nom ? lienClient(x.cid, x.nom) : "", q = x.quand ? dh(x.quand) : "";
     const k = I.a("con.ck.c.i." + c.k + "." + x.cle) ? "con.ck.c.i." + c.k + "." + x.cle : "con.ck.c.i." + c.k + ".defaut";
@@ -1706,9 +1736,9 @@
     return s0.toLowerCase().replace(/[\p{L}]+/gu, (m, i) => i > 0 && PETITS.has(m) ? m : m.charAt(0).toUpperCase() + m.slice(1)).replace(/\b([dl])'(\p{L})/gu, (m, a, b) => a + "'" + b.toUpperCase()); };
   function blocPipeline(r) { const total = r.pipeline.reduce((s, x) => s + x.n, 0);
     const det = x => x.k === "relance" && r.rdv ? t("con.ck.p.rdv", { n: r.rdv }) : x.k === "actif" && r.pauses ? t("con.ck.p.pause", { n: r.pauses }) : x.k === "perdu" ? t("con.ck.per." + r.periode) : "";
-    return `<section class="carte ck-bloc" id="pipeline"><h2>${t("con.ck.p.titre")}</h2><p class="note ck-chapo">${t("con.ck.p.chapo")}</p>
+    return `<section class="carte ck-bloc" id="pipeline"><details class="ck-pli repliable" id="pipeline-pli" data-pli-tel><summary><h2>${t("con.ck.p.titre")}</h2><span class="note ck-pli-resume">${t("con.ck.p.resume", { n: total })}</span></summary><div class="pile ck-pli-corps"><p class="note ck-chapo">${t("con.ck.p.chapo")}</p>
       <ol class="ck-etapes">${r.pipeline.map(x => `<li class="ck-etape${x.n ? "" : " ck-zero"}${x.k === "perdu" ? " ck-perdu" : ""}" data-etape="${x.k}" data-n="${x.n}"><span class="ck-etape-n">${I.nombre(x.n)}</span><span class="ck-etape-lib">${t("con.ck.p." + x.k)}</span>${det(x) ? `<span class="note">${det(x)}</span>` : ""}${x.noms.filter(Boolean).length ? `<span class="note ck-noms">${e(x.noms.filter(Boolean).map(nomLisible).join(", "))}${x.n > x.noms.length ? "…" : ""}</span>` : ""}</li>`).join("")}</ol>
-      ${total ? "" : `<p class="texte2 ck-vide">${t("con.ck.p.vide")}</p>`}</section>`; }
+      ${total ? "" : `<p class="texte2 ck-vide">${t("con.ck.p.vide")}</p>`}</div></details></section>`; }
 
   function blocFile(r) {
     const qui = g => !g.cle || !prises ? "" : blocPrise(g.cle);
@@ -1722,8 +1752,8 @@
   function blocProvenance(r) { const p = r.provenance, ligne = (k, n, max) => `<li data-source="${k}"><span class="ck-src-lib">${t("con.ck.s." + k)}</span><span class="ck-src-n">${I.nombre(n)}</span><span class="ck-src-barre"><span style="width:${max ? Math.round(n / max * 100) : 0}%"></span></span></li>`;
     const gr = (titre, o) => { const max = Math.max(0, ...Object.values(o)); return `<h3>${titre}</h3><ul class="ck-sources">${Object.entries(o).map(([k, n]) => ligne(k, n, max)).join("")}</ul>`; };
     const rien = !Object.values(p.prospects).some(Boolean) && !Object.values(p.clients).some(Boolean);
-    return `<section class="carte ck-bloc" id="provenance"><h2>${t("con.ck.s.titre")}</h2><p class="note ck-chapo">${t("con.ck.per.long." + r.periode)}</p>
-      ${rien ? `<p class="texte2 ck-vide">${t("con.ck.s.vide")}</p>` : gr(t("con.ck.s.prospects"), p.prospects) + gr(t("con.ck.s.clients"), p.clients)}</section>`; }
+    return `<section class="carte ck-bloc" id="provenance"><details class="ck-pli repliable" id="provenance-pli" data-pli-tel><summary><h2>${t("con.ck.s.titre")}</h2><span class="note ck-pli-resume">${t("con.ck.per.long." + r.periode)}</span></summary><div class="pile ck-pli-corps"><p class="note ck-chapo">${t("con.ck.per.long." + r.periode)}</p>
+      ${rien ? `<p class="texte2 ck-vide">${t("con.ck.s.vide")}</p>` : gr(t("con.ck.s.prospects"), p.prospects) + gr(t("con.ck.s.clients"), p.clients)}</div></details></section>`; }
 
   async function cockpit(periodeDemandee) {
     const periode = CK.periodeValide(periodeDemandee), sur = p => p.catch(() => null), maintenant = Date.now();
@@ -1736,7 +1766,8 @@
     afCtx = { pubs: [], dl: col.dl || [], cs: col.cs };
     vue.innerHTML = `<div class="entete ck-entete"><h1>${t("con.entree.cockpit")}</h1>
         <nav class="filtres ck-periode" id="periode" aria-label="${t("con.ck.periode")}">${Object.keys(CK.PERIODES).map(k => `<a href="#/cockpit/${k}" data-periode="${k}"${k === periode ? ' aria-current="page"' : ""}>${t("con.ck.per.bouton." + k)}</a>`).join("")}</nav></div>
-      <p class="ck-verdict ck-verdict-${r.niveau}" id="verdict" data-niveau="${r.niveau}">${e(verdictTexte(r))}</p>
+      ${(() => { const plein = verdictTexte(r), dejaListes = (r.aujourdhui || {}).n != null && r.aujourdhui.n <= 8, court = dejaListes ? verdictTexte(r, true) : plein;
+        return `<p class="ck-verdict ck-verdict-${r.niveau}" id="verdict" data-niveau="${r.niveau}">${court === plein ? e(plein) : `<span class="ck-v-large">${e(plein)}</span><span class="ck-v-tel">${e(court)}</span>`}</p>`; })()}
       ${blocJour(r)}
       <p class="note ck-lu" id="lu">${t("con.ck.lu", { h: I.heure(maintenant) })} <button type="button" class="lien" id="relire">${t("con.ck.relire")}</button> · <a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
       ${blocKpi(r)}
@@ -1745,6 +1776,7 @@
       <div class="ck-grille"><div class="pile ck-col">${blocGaranties(r)}${blocFile(r)}</div><div class="pile ck-col">${blocControles(r)}${blocProvenance(r)}</div></div>
       ${blocPipeline(r)}
       <section class="carte ck-bloc" id="equipe-whatsapp">${formEquipeWa(equipeWa)}<p class="msg" id="msg-eqwa" role="status"></p></section>`;
+    vue.querySelectorAll("[data-pli-tel]").forEach(d => { d.open = large.matches; });
     $("relire").onclick = () => cockpit(periode);
     // WhatsApp de l'équipe (lot 6 B) : la liste entière est renvoyée (lignes vides ignorées par la base), puis le cockpit est relu.
     const fe = $("equipe-wa"); if (fe) fe.onsubmit = async ev => { ev.preventDefault(); const b = fe.querySelector("[type=submit]"); b.disabled = true;
@@ -1808,5 +1840,7 @@
   document.addEventListener("click", ev => { const a = ev.target.closest && ev.target.closest("[data-ouvrir-tache]"); if (a) tachesOuvertes.add(a.dataset.ouvrirTache); });
   document.addEventListener("click", async ev => { if (ev.target.closest("#sortir")) { await D.quitter(); location.hash = ""; rendre(); } });
   large.addEventListener("change", dessinerNav);
+  // Lot 7 : volets du cockpit ouverts au bureau, repliés au téléphone (indicateurs, garanties, provenance, pipeline), recalés quand la largeur change.
+  large.addEventListener("change", () => document.querySelectorAll("[data-pli-tel]").forEach(d => { d.open = large.matches; }));
   window.addEventListener("hashchange", rendre); rendre();
 })();

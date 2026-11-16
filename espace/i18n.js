@@ -245,6 +245,13 @@
     "con.ck.v.vide": ["Aucun client pour l'instant. Ce tableau se remplit seul dès le premier audit demandé ou le premier paiement.", "No clients yet. This page fills itself in as soon as the first audit is requested or the first payment comes in.", "Nog geen klanten. Deze pagina vult zich vanzelf zodra de eerste audit wordt aangevraagd of de eerste betaling binnenkomt."],
     // Indicateurs
     "con.ck.kpis": ["Indicateurs", "Key figures", "Kerncijfers"],
+    // Lot 7 (16/11/2026) : cockpit au téléphone, volets repliés (une ligne chacun) et phrase d'état sans le compte des retards (déjà listés).
+    "con.ck.kpis.resume": ["Clients actifs, revenu mensuel, audits, avis traités", "Active clients, monthly revenue, audits, reviews handled", "Actieve klanten, maandelijkse omzet, audits, behandelde reviews"],
+    "con.ck.v.liste": ["À traiter d'abord : la liste ci-dessous.", "Deal with these first: the list below.", "Eerst af te handelen: de lijst hieronder."],
+    "con.ck.g.resume.danger": [v => `${v.n} en danger`, v => `${v.n} at risk`, v => `${v.n} in gevaar`],
+    "con.ck.g.resume.appliquer": [v => `${v.n} ${pl(v.n, "mois offert à appliquer", "mois offerts à appliquer")}`, v => `${v.n} free ${en1(v.n, "month", "months")} to apply`, v => `${v.n} ${v.n === 1 ? "gratis maand" : "gratis maanden"} toe te passen`],
+    "con.ck.g.resume.calme": ["Rien en danger", "Nothing at risk", "Niets in gevaar"],
+    "con.ck.p.resume": [v => `${v.n} ${pl(v.n, "commerce suivi", "commerces suivis")}`, v => `${v.n} ${en1(v.n, "business", "businesses")} tracked`, v => `${v.n} ${v.n === 1 ? "zaak" : "zaken"} gevolgd`],
     "con.ck.k.retard": ["En retard", "Overdue", "Te laat"], "con.ck.k.clients": ["Clients actifs", "Active clients", "Actieve klanten"], "con.ck.k.mrr": ["Revenu mensuel", "Monthly revenue", "Maandelijkse omzet"],
     "con.ck.k.audits": ["Audits en cours", "Audits in progress", "Lopende audits"], "con.ck.k.avis": ["Avis traités", "Reviews handled", "Behandelde reviews"],
     "con.ck.k.retard.det": ["Ouvrir la file pour les traiter", "Open the queue to handle them", "Open de lijst om ze te behandelen"],
@@ -1768,6 +1775,7 @@
     "con.pm.visuel": ["Télécharger le visuel", "Download the image", "Afbeelding downloaden"], "con.pm.video": ["Télécharger la vidéo", "Download the video", "Video downloaden"],
     "con.pm.copier": ["Copier la légende", "Copy the caption", "Bijschrift kopiëren"], "con.pm.copiee": ["Légende copiée.", "Caption copied.", "Bijschrift gekopieerd."],
     "con.pm.marquer": ["Marquer comme publiée", "Mark as published", "Als gepubliceerd markeren"],
+    "con.pm.marquer.sur": ["Marquer comme publiée sur {res}", "Mark as published on {res}", "Als gepubliceerd markeren op {res}"],
     "con.pm.notee": ["Notée comme publiée sur {res} le {h}.", "Recorded as published on {res} on {h}.", "Genoteerd als gepubliceerd op {res} op {h}."],
     "con.pm.telechargement": ["Téléchargement lancé.", "Download started.", "Download gestart."],
     "con.pm.sans.media": ["Média introuvable : vérifiez ce contenu dans l'espace du client.", "Media not found: check this content in the client's account.", "Media niet gevonden: controleer deze post in de klantenzone van de klant."],
@@ -1885,7 +1893,7 @@
     "ecran.publications": ["Vos publications", "Your posts", "Uw posts"],
     "reg.publications": ["Vos publications", "Your posts", "Uw posts"],
     "reg.publications.texte": ["Voir vos publications, le texte sur vos photos, vos couleurs et votre logo.", "See your posts, text on your photos, your colours and your logo.", "Uw posts bekijken, tekst op uw foto's, uw kleuren en uw logo."],
-    "acc.pub.titre": ["Voir vos publications en 30 secondes", "See your posts in 30 seconds", "Bekijk uw posts in 30 seconden"],
+    "acc.pub.titre": ["Voyez vos publications avant qu'elles paraissent", "See your posts before they go out", "Bekijk uw posts voordat ze verschijnen"],   // lot 7 : plus de « 30 secondes »
     "acc.pub.texte": ["Votre Instagram avec vos photos, tel qu'il va sortir. Un coup d'œil, et vous validez votre style.", "Your Instagram with your photos, as it will look. One look, and you approve your style.", "Uw Instagram met uw foto's, zoals het eruit zal zien. Eén blik, en u keurt uw stijl goed."],   // tour 11 (v37) : « votre style », la carte suit « Tout est à jour »
     "acc.pub.bouton": ["Voir mes publications", "See my posts", "Mijn posts bekijken"],
     "acc.pub.lien": ["Vos publications : changer le texte ou les couleurs", "Your posts: change the text or the colours", "Uw posts: tekst of kleuren wijzigen"],
@@ -2153,7 +2161,7 @@
       v => v.n > 1 ? `${v.n} foto's opgeladen: de posts komen in de klantenzone van de klant, om goed te keuren.` : "1 foto opgeladen: de post komt in de klantenzone van de klant, om goed te keuren."],
     "con.ph.retirer": ["Noter le retrait de l'autorisation (demandé par email)", "Record the withdrawal of the authorisation (requested by email)", "Intrekking van de toestemming noteren (per e-mail gevraagd)"],
     "con.ph.retire": ["Retrait noté : le dépôt est fermé pour ce client.", "Withdrawal recorded: uploading is closed for this client.", "Intrekking genoteerd: opladen is gesloten voor deze klant."],
-    "con.sty.retour": ["Retour aux commerces", "Back to businesses", "Terug naar de zaken"],
+    "con.sty.retour": ["Retour aux clients", "Back to clients", "Terug naar de klanten"],   // lot 7 : comme le menu « Clients »
     "con.sty.chapo": ["BoostImpact crée ici l'identité visuelle du commerce : proposition depuis son logo, sinon depuis ses photos, puis réglage et validation. Le commerçant la voit dans « Votre style » ; il peut dire qu'elle lui plaît ou demander un changement.", "BoostImpact creates the business's visual identity here: suggested from its logo, otherwise from its photos, then adjusted and approved. The business sees it in “Your style”; it can say it likes it or ask for a change.", "BoostImpact maakt hier de huisstijl van de zaak: voorstel op basis van haar logo, anders op basis van haar foto's, daarna aanpassing en goedkeuring. De handelaar ziet hem onder “Uw stijl”; hij kan zeggen dat hij hem bevalt of een wijziging vragen."],
     "con.sty.etat.valide.commercant": ["Validé par le commerçant le {d}", "Approved by the business on {d}", "Goedgekeurd door de handelaar op {d}"],
     "con.sty.etat.valide.renom": ["Validé par BoostImpact le {d}", "Approved by BoostImpact on {d}", "Goedgekeurd door BoostImpact op {d}"],
@@ -2521,7 +2529,7 @@
     "offre.premium.delegation.sortir": ["Pour en sortir, écrivez à info@boostimpact.agency.", "To leave it, write to info@boostimpact.agency.", "Om eruit te stappen, schrijft u naar info@boostimpact.agency."],
     "offre.dessus.titre": ["Ce que l'offre {nom} ajoute", "What the {nom} plan adds", "Wat de formule {nom} toevoegt"],
     // Lot 3 (15/11/2026) : TikTok compris en Croissance (moteur/offres.json, tiktok: true), comme sur le site ; un seul mot, « publications ».
-    "offre.dessus.std.1": [v => `Vos photos deviennent aussi des publications Instagram, Facebook et TikTok : ${v.n} publications par mois.`, v => `Your photos also become Instagram, Facebook and TikTok posts: ${v.n} posts a month.`, v => `Uw foto's worden ook posts op Instagram, Facebook en TikTok: ${v.n} posts per maand.`],
+    "offre.dessus.std.1": [v => `Vos photos deviennent aussi des publications sur les réseaux de votre choix (Instagram, Facebook, TikTok, ou les trois) : ${v.n} publications par mois.`, v => `Your photos also become posts on the social accounts you choose (Instagram, Facebook, TikTok, or all three): ${v.n} posts a month.`, v => `Uw foto's worden ook posts op de netwerken van uw keuze (Instagram, Facebook, TikTok, of alle drie): ${v.n} posts per maand.`],
     "offre.dessus.std.2": ["Un bilan du mois avec nos conseils, et votre première publication proposée sous 72\u00a0h.", "A monthly report with our advice, and your first post proposed within 72\u00a0hours.", "Een maandrapport met ons advies, en uw eerste post binnen 72\u00a0uur voorgesteld."],
     "offre.dessus.prem.1": [v => `${v.n} publications par mois, dont ${v.v} vidéos.`, v => `${v.n} posts a month, including ${v.v} videos.`, v => `${v.n} posts per maand, waarvan ${v.v} video's.`],
     "offre.dessus.prem.2": ["Le bilan commenté et un point de 30 minutes avec l'équipe chaque mois.", "A commented summary and a 30-minute call with the team every month.", "Een rapport met toelichting en elke maand een gesprek van 30 minuten met het team."],
@@ -2757,8 +2765,8 @@
     "plafond.phrase": [v => `${v.n} sur ${v.n} : la prochaine photo servira en ${mois("fr")[v.mois]}.`, v => `${v.n} of ${v.n}: the next photo will be used in ${mois("en")[v.mois]}.`, v => `${v.n} van ${v.n}: de volgende foto wordt gebruikt in ${mois("nl")[v.mois]}.`],
     "photo.attente.mois": [v => `En attente (${mois("fr")[v.mois]})`, v => `On hold (${mois("en")[v.mois]})`, v => `In wacht (${mois("nl")[v.mois]})`],
     "offre.ht.mois.mensuel": ["HT par mois, paiement mensuel", "excl. VAT a month, paid monthly", "excl. btw per maand, maandelijks betaald"],
-    "offre.votre.rythme.mensuel": ["C'est ce que vous payez : paiement mensuel.", "This is what you pay: monthly payment.", "Dit betaalt u: maandelijkse betaling."],
-    "offre.votre.rythme.annuel": ["C'est ce que vous payez : paiement annuel.", "This is what you pay: annual payment.", "Dit betaalt u: jaarlijkse betaling."],
+    "offre.votre.rythme.mensuel": ["C'est ce que vous payez aujourd'hui, sans engagement.", "This is what you pay today, with no commitment.", "Dit betaalt u vandaag, zonder verbintenis."],
+    "offre.votre.rythme.annuel": ["C'est ce que vous payez aujourd'hui.", "This is what you pay today.", "Dit betaalt u vandaag."],
     "offre.dessus.ligne": [v => `L'offre au-dessus\u00a0: ${v.nom}, ${v.n} publications par mois, ${v.prix} HT par mois`, v => `The plan above: ${v.nom}, ${v.n} posts a month, ${v.prix} excl. VAT a month`, v => `De formule erboven: ${v.nom}, ${v.n} posts per maand, ${v.prix} excl. btw per maand`],
     "abo.sans.lien": ["Pour arrêter ou recevoir vos factures : info@boostimpact.agency", "To stop or get your invoices: info@boostimpact.agency", "Om te stoppen of uw facturen te ontvangen: info@boostimpact.agency"],
     "res.reseaux.titre": ["Vos réseaux ce mois-ci", "Your networks this month", "Uw netwerken deze maand"], "res.reseaux.titre.google": ["Votre fiche Google ce mois-ci", "Your Google profile this month", "Uw Google-profiel deze maand"],

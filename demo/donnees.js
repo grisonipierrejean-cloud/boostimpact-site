@@ -950,7 +950,7 @@
     // Deux graines : celle du parcours (demo/etat.json, générée par demo/parcours.py) et la graine PUBLIQUE, entièrement fictive
     // (demo/etat-public.json), choisie par window.RENOM_GRAINE = "public" dans config.js. Chacune a son propre stockage.
     const PUBLIQUE = window.RENOM_GRAINE === "public";
-    const K = "renom-demo-v15" + (PUBLIQUE ? "-public" : "");   // v15 (15/11/2026, lot 6 B) : visuels au nom de chaque commerce, historique de démo revu.
+    const K = "renom-demo-v16" + (PUBLIQUE ? "-public" : "");   // v16 (16/11/2026, lot 7) : légendes de l'entrée sans « l'heure du déjeuner » (programmée le soir). v15 : visuels au nom de chaque commerce.
     let E = null, session = null, aChoisir = false, pret = null, TF = null;   // aChoisir : session ouverte par un lien, mot de passe à choisir (acces.js)
     let aal2 = false;   // double authentification de l'administrateur (18/10/2026) : code vérifié dans cette session (comme aal2 de Supabase)
     // Interrupteur de la double authentification (acces.js, DOUBLE_AUTH_ADMIN ; false depuis le 22/10/2026) : sans lui, ni code, ni facteur.
