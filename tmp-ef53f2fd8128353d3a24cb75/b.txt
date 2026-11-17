@@ -1,0 +1,116 @@
+-- RENOM, webhooks de base de données vers n8n, version SANS secret dans le SQL (16/10/2026). Remplace webhooks.sql.
+-- Le secret partagé (en-tête X-Renom-Secret, le même que l'identifiant n8n « secret des webhooks ») est rangé dans le coffre de Supabase
+-- (Vault, chiffré) sous le nom renom_webhook_secret ; ce fichier ne le contient pas et peut donc être collé tel quel, et rejoué.
+-- Adresse n8n : peejay.app.n8n.cloud (à changer ici seulement si l'instance change).
+-- Corps envoyé : même forme que les webhooks de base de données de Supabase (type, table, schema, record, old_record), lue par les workflows n8n.
+-- Envoi par pg_net (asynchrone) : un n8n en panne ne bloque jamais l'écriture dans la base. Sans secret dans le coffre : aucun envoi.
+create extension if not exists pg_net with schema extensions;
+
+create or replace function public.renom_hook() returns trigger
+language plpgsql security definer set search_path = public, extensions, vault as $$
+declare s text;
+begin
+  select decrypted_secret into s from vault.decrypted_secrets where name = 'renom_webhook_secret' limit 1;
+  if s is null or s = '' then return null; end if;
+  perform net.http_post(
+    url := 'https://peejay.app.n8n.cloud/webhook/' || tg_argv[0],
+    body := jsonb_build_object('type', tg_op, 'table', tg_table_name, 'schema', tg_table_schema,
+                               'record', case when tg_op = 'DELETE' then null else to_jsonb(new) end,
+                               'old_record', case when tg_op = 'INSERT' then null else to_jsonb(old) end),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'X-Renom-Secret', s),
+    timeout_milliseconds := 5000);
+  return null;
+end $$;
+revoke all on function public.renom_hook() from public, anon, authenticated;
+
+drop trigger if exists hook_photo on photos;
+create trigger hook_photo after insert on photos for each row execute function renom_hook('renom-photo');
+-- Photo gardée au-delà de la limite du mois et reprise le 1er du mois suivant (31/10/2026, reprendre_photos_plafond, bloc « Créneaux réels ») :
+-- même workflow que la photo déposée (renom-creation.json accepte INSERT et cette reprise).
+drop trigger if exists hook_photo_reprise on photos;
+create trigger hook_photo_reprise after update on photos for each row
+  when (old.refus_motif = 'plafond' and new.refus_motif is null and new.statut = 'a_traiter') execute function renom_hook('renom-photo');
+-- Photo refusée par le contrôle (doute, hors sujet) et acceptée quand même par l'équipe (13/11/2026, console, admin_accepter_photo, bloc
+-- « Console : photos et contenus d'un client » de schema.sql, qui crée aussi ce déclencheur) : même workflow ; le moteur saute le contrôle.
+-- Suppose la colonne photos.controle_force (coller ce bloc de schema.sql AVANT ce fichier).
+drop trigger if exists hook_photo_forcee on photos;
+create trigger hook_photo_forcee after update on photos for each row
+  when (old.statut = 'refusee' and old.refus_motif in ('doute', 'hors_sujet') and new.statut = 'a_traiter' and new.controle_force) execute function renom_hook('renom-photo');
+-- « Refaire » de la relecture par l'équipe (14/11/2026, console, admin_refaire_contenu, bloc « Relecture par l'équipe avant le client » de
+-- schema.sql, qui crée aussi ce déclencheur) : la photo « traitee » repasse « a_traiter », même workflow (renom-creation.json, à réimporter).
+drop trigger if exists hook_photo_refaire on photos;
+create trigger hook_photo_refaire after update on photos for each row
+  when (old.statut = 'traitee' and new.statut = 'a_traiter') execute function renom_hook('renom-photo');
+drop trigger if exists hook_programmation on publications;
+create trigger hook_programmation after insert on publications for each row execute function renom_hook('renom-programmation');
+-- Nouvel essai de musique (16/11/2026, bloc « Musique tendance, aucune vidéo muette » de schema.sql, qui crée aussi ce déclencheur) : musique_relancer
+-- change publications.musique_relance_le ; la publication repart dans le même workflow, qui ne traite que les réseaux en attente (musique_attente).
+-- Suppose la colonne publications.musique_relance_le (coller ce bloc de schema.sql AVANT ce fichier).
+drop trigger if exists hook_musique_relance on publications;
+create trigger hook_musique_relance after update on publications for each row
+  when (new.musique_relance_le is distinct from old.musique_relance_le and new.musique_relance_le is not null) execute function renom_hook('renom-programmation');
+drop trigger if exists hook_annulation on publications;
+create trigger hook_annulation after update on publications for each row
+  when (new.statut = 'annule' and old.statut <> 'annule' and new.metricool_id is not null) execute function renom_hook('renom-annulation');
+drop trigger if exists hook_validation_avis on avis;
+create trigger hook_validation_avis after update on avis for each row
+  when (new.statut = 'valide' and old.statut = 'a_valider') execute function renom_hook('renom-validation-avis');
+drop trigger if exists hook_idees on idees_demandes;
+create trigger hook_idees after insert on idees_demandes for each row execute function renom_hook('renom-idees');
+drop trigger if exists hook_invitation on invitations;
+create trigger hook_invitation after insert on invitations for each row execute function renom_hook('renom-invitation');
+drop trigger if exists hook_video_avis on videos_avis_demandes;
+create trigger hook_video_avis after insert on videos_avis_demandes for each row execute function renom_hook('renom-video-avis');
+-- 27/10/2026 : plus d'email par jeton ; « N éléments à valider » part une fois par jour à 18 h (workflow planifié, notifications_validation_du_soir).
+drop trigger if exists hook_notification_validation on jetons_validation;
+drop trigger if exists hook_action_fiche on actions_fiche;
+create trigger hook_action_fiche after update on actions_fiche for each row
+  when (new.statut = 'a_publier' and old.statut is distinct from 'a_publier') execute function renom_hook('renom-actions-fiche');
+drop trigger if exists hook_commentaire_valide on commentaires;
+create trigger hook_commentaire_valide after update on commentaires for each row
+  when (new.statut = 'valide' and old.statut is distinct from 'valide') execute function renom_hook('renom-commentaires-publication');
+drop trigger if exists hook_commentaire_auto on commentaires;
+create trigger hook_commentaire_auto after insert on commentaires for each row
+  when (new.statut = 'valide') execute function renom_hook('renom-commentaires-publication');
+drop trigger if exists hook_depot_video on depots_video;
+create trigger hook_depot_video after update on depots_video for each row
+  when ((new.statut = 'envoye' and (old.statut is distinct from 'envoye' or new.essais <> old.essais)) or (new.statut = 'en_montage' and old.statut = 'a_valider'))
+  execute function renom_hook('renom-depot-video');
+drop trigger if exists hook_rushes_effacement on depots_video;
+create trigger hook_rushes_effacement after update on depots_video for each row
+  when (new.effacement_demande_le is not null and old.effacement_demande_le is null) execute function renom_hook('renom-rushes-effacement');
+-- Effacement automatique (18/10/2026, bloc « Effacement automatique » de schema.sql) : une demande d'effacement de fichiers (photos 30 jours après
+-- la fin du contrat, tout le commerce 5 ans après) -> n8n les efface par l'API de stockage (n8n/renom-effacement-stockage.json). Une exécution par demande.
+drop trigger if exists hook_effacement_stockage on effacements_stockage;
+create trigger hook_effacement_stockage after insert on effacements_stockage for each row execute function renom_hook('renom-effacement-stockage');
+-- Mode de secours des avis (20/10/2026, bloc « Mode de secours des avis » de schema.sql) : un avis relevé par l'API Places (releve_avis_places,
+-- statut « nouveau », source « places ») -> n8n le rédige avec les mêmes règles (n8n/renom-reponse-avis-secours.json). Une exécution par avis relevé.
+drop trigger if exists hook_avis_releve on avis;
+create trigger hook_avis_releve after insert on avis for each row
+  when (new.statut = 'nouveau' and new.source = 'places') execute function renom_hook('renom-avis-releve');
+-- Lot 11 (17/11/2026, bloc « Lot 11 » de schema.sql, qui crée aussi ces déclencheurs) : publication d'une réponse d'avis par l'API Google, demandée
+-- par la base (OK du commerçant, heure annoncée passée : avis.api_demande_le) -> n8n « RENOM, réponses d'avis : publication par l'API Google »
+-- (n8n/renom-avis-publication-api.json) ; correction du commerçant (avis.version_client_le) -> n8n « RENOM, avis : correction du commerçant
+-- (Claude réécrit) » (n8n/renom-avis-correction.json). Une exécution par avis publié, une par correction. Suppose les colonnes du bloc Lot 11.
+drop trigger if exists hook_avis_publier on avis;
+create trigger hook_avis_publier after update of api_demande_le on avis for each row
+  when (new.api_demande_le is not null and new.api_demande_le is distinct from old.api_demande_le) execute function renom_hook('renom-avis-publier');
+drop trigger if exists hook_avis_correction on avis;
+create trigger hook_avis_correction after update of version_client_le on avis for each row
+  when (new.version_client_le is not null and new.version_client_le is distinct from old.version_client_le and new.statut in ('escalade','humain'))
+  execute function renom_hook('renom-avis-correction');
+-- Alertes WhatsApp au commerçant (22/10/2026, bloc « Alertes WhatsApp » de schema.sql) : une alerte mise en file -> n8n l'envoie tout de suite
+-- (n8n/renom-whatsapp.json ; il repasse aussi toutes les 30 minutes pour les alertes reportées). Une exécution par alerte.
+drop trigger if exists hook_alerte_whatsapp on alertes_whatsapp;
+create trigger hook_alerte_whatsapp after insert on alertes_whatsapp for each row execute function renom_hook('renom-alerte-whatsapp');
+-- Fiche Google du client venu du site (28/10/2026, bloc « Fiche Google du client venu du site et photos hors sujet » de schema.sql) : un lien de
+-- fiche collé sans identifiant de lieu (lien court) -> n8n lance la recherche automatique (n8n/renom-fiche-google.json, GitHub Actions, type de
+-- travail « fiche_google »). Une exécution par lien collé ; rien quand la base efface la colonne (résultat rendu, ou console).
+drop trigger if exists hook_fiche_google on commerces;
+create trigger hook_fiche_google after update of fiche_google_a_resoudre_le on commerces for each row
+  when (new.fiche_google_a_resoudre_le is not null and new.fiche_google_a_resoudre_le is distinct from old.fiche_google_a_resoudre_le)
+  execute function renom_hook('renom-fiche-google');
+-- Visibilité IA (15/11/2026, bloc « Visibilité IA : dossier de livraison » de schema.sql) : une demande au robot (questions, mesure, contenus du
+-- site) -> n8n lance GitHub Actions (n8n/renom-geo.json, types de travail « geo_questions », « geo_mesure », « geo_contenus »). Une exécution par demande.
+drop trigger if exists hook_geo on demandes_geo;
+create trigger hook_geo after insert on demandes_geo for each row execute function renom_hook('renom-geo');
