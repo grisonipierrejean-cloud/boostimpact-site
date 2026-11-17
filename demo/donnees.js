@@ -109,6 +109,12 @@
   // Belgique, mobile = +324 et 8 chiffres ; France, mobile = +336 ou +337 ; autre pays : jamais compté comme fixe. WhatsApp ne reçoit pas un fixe.
   const numeroFixe = n => { n = String(n || ""); return n.startsWith("+32") ? !/^\+324\d{8}$/.test(n) : n.startsWith("+33") ? !/^\+33[67]\d{8}$/.test(n) : false; };
   const PHRASE_FIXE = "Ce numéro ressemble à un fixe : WhatsApp ne le recevra pas.";
+  // Lot 10 (17/11/2026) : numéro de TVA FACULTATIF, demandé à la mise en route s'il est absent, jamais bloquant. Même règle que regler_numero_tva
+  // (bloc « Lot 10 » de schema.sql) : lettres en capitales, espaces, points et tirets retirés ; un numéro belge à 10 chiffres reçoit « BE », un
+  // SIREN français ne suffit pas (le numéro de TVA commence par FR et 2 caractères de clé) ; code pays de 2 lettres, puis 8 à 13 caractères.
+  const PHRASE_TVA = "Numéro de TVA illisible : écrivez-le avec le code du pays, par exemple FR12345678901 ou BE0123456789.";
+  const numeroTva = (x, pays) => { let v = String(x || "").toUpperCase().replace(/[\s.\-\/]/g, ""); if (/^[01]\d{9}$/.test(v) && pays === "BE") v = "BE" + v;
+    return /^(FR[0-9A-Z]{2}\d{9}|BE[01]\d{9}|(?!FR|BE)[A-Z]{2}[0-9A-Z]{8,13})$/.test(v) ? v : null; };
   // Numéro tel qu'enregistré, mis en forme pour la lecture : +32 472 12 34 56, +33 6 12 34 56 78 ; un autre numéro reste tel quel.
   const numeroLisible = n => { n = String(n || ""); let m = n.match(/^\+32(4\d{2})(\d{2})(\d{2})(\d{2})$/); if (m) return "+32 " + m.slice(1).join(" ");
     m = n.match(/^\+32(\d)(\d{3})(\d{2})(\d{2})$/); if (m) return "+32 " + m.slice(1).join(" ");
@@ -825,7 +831,7 @@
     // Frais de mise en route offerts après la Visibilité IA payée (15/11/2026, bloc SQL du même nom) : montée de l'Essentiel faite, facture à vérifier
     FRAIS_OFFERTS_A_VERIFIER: "Frais de mise en route offerts : facture à vérifier",
     // Mise en route claire (27/10/2026, bloc SQL « Mise en route claire et travail visible ») : demandes du commerçant depuis son espace
-    RAPPEL_DEMANDE: "Demande du commerçant : lui écrire sur WhatsApp", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
+    RAPPEL_DEMANDE: "Demande du commerçant : lui écrire sur WhatsApp", TVA_A_REPORTER: "Numéro de TVA à reporter dans Stripe", FICHE_GOOGLE_A_CREER: "Fiche Google à créer ou récupérer", FICHE_GOOGLE_A_IDENTIFIER: "Identifier la fiche Google",
     FICHE_GOOGLE_RECHERCHE_BLOQUEE: "Identifier la fiche Google", AVIS_ACCORD_A_PUBLIER: "Avis : le commerçant a répondu OK, réponse à publier",
     AVIS_EN_PARLER: "Avis sensible : le commerçant veut en parler", AVIS_VERSION_CLIENT: "Avis : message du commerçant à lire avant de publier",
     AVIS_RETENU: "Avis : le commerçant répond par message, rien n'est publié avant de l'avoir lu",
@@ -898,7 +904,9 @@
     if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
     if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié : vérifier l'avis, le signaler à Google si besoin, répondre au commerçant.`;
     if (a.type === "WHATSAPP_RECU") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}sans avis en attente : le lire dans WhatsApp et répondre à la main (le texte n'est pas gardé).`;
-    if (a.type === "AVIS_EN_PARLER") return `Appeler le commerçant${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
+    // Lot 10 (doctrine « zéro appel ») : on écrit au commerçant sur WhatsApp, on ne l'appelle jamais.
+    if (a.type === "AVIS_EN_PARLER") return `Écrire au commerçant sur WhatsApp${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
+    if (a.type === "TVA_A_REPORTER") return `Le commerçant a donné son numéro de TVA (${d.numero || "?"}) : l'ajouter à son client dans Stripe (fiche du client, Numéros fiscaux) pour ses prochaines factures.`;
     // Changement d'offre (27/10/2026) : ce qu'il reste à faire à la main, avec les noms des offres (moteur/offres.json) et les clés de prix du catalogue.
     const nomO = k => (OFFRES[k] || {}).nom || k || "offre inconnue";
     if (a.type === "STRIPE_A_METTRE_A_JOUR") return `Offre changée dans la console : ${nomO(d.offre)}. Dans Stripe, l'abonnement ${d.abonnement || ""}${d.client_stripe ? " (client " + d.client_stripe + ")" : ""} est encore en ${nomO(d.offre_stripe)} : « Mettre à jour l'abonnement », remplacer le prix par boost_${d.offre}_mois ou boost_${d.offre}_an (même rythme), enregistrer. La tâche se ferme seule quand Stripe confirme.`;
@@ -907,12 +915,12 @@
     // Montée payée par le lien de l'offre du dessus : l'ancien abonnement reste actif dans Stripe tant qu'il n'est pas arrêté (n8n le fait si la clé existe).
     if (a.type === "ANCIEN_ABONNEMENT_A_ARRETER") { const j = d.depuis ? String(d.depuis).slice(0, 10).split("-").reverse().join("/") : "date inconnue";
       return `${nomO(d.offre)}, souscrit le ${j} : abonnement ${d.abonnement || ""}${d.client_stripe ? " (client " + d.client_stripe + ")" : ""}, remplacé par ${d.nouveau || "le nouvel abonnement"} (${nomO(d.nouvelle_offre)}). Dans Stripe : l'annuler tout de suite, au prorata, puis rembourser le crédit de l'ancien client. La tâche se ferme seule quand Stripe confirme l'arrêt.${d.test ? " (mode test)" : ""}`; }
-    if (a.type === "OFFRE_INFERIEURE_PAYEE") return `Lien de l'offre ${nomO(d.offre)} payé alors que le commerce est en ${nomO(d.offre_commerce)} avec un abonnement en cours : rien n'a changé. Appeler le commerçant ; une baisse se fait par la console, à la fin de la période payée.${d.test ? " (mode test)" : ""}`;
+    if (a.type === "OFFRE_INFERIEURE_PAYEE") return `Lien de l'offre ${nomO(d.offre)} payé alors que le commerce est en ${nomO(d.offre_commerce)} avec un abonnement en cours : rien n'a changé. Écrire au commerçant sur WhatsApp ; une baisse se fait par la console, à la fin de la période payée.${d.test ? " (mode test)" : ""}`;
     if (a.type === "TEST_IA_ERREUR") return `Test IA : ${d.nom || d.moteur || "moteur"} ${({ erreur: "en erreur", vide: "réponse vide", plafond: "retiré pour plafond" })[d.cas] || "en erreur"} (${d.motif || "motif inconnu"}). Audit de ${d.commerce || "?"}${d.ville ? ", " + d.ville : ""}. Les suivants du jour (même moteur, même cas) ne sont pas répétés ; le reste de l'audit est parti normalement.`;
     if (a.type === "ERREUR_WORKFLOW") return `${d.workflow || "Workflow inconnu"}, nœud ${d.noeud || "inconnu"} : ${d.message || ""}`;
     // Libellés lisibles (26/10/2026, audit du parcours, constat 32) : « Accès Google, Réseaux » au lieu de « google, metricool ».
     if (a.type === "MISE_EN_ROUTE_BLOQUEE") return `${d.jours} jours après la création, il reste : ${(d.restants || []).map(r => POINTS_MER[r.point] || r.point).join(", ")}.`;
-    if (a.type === "PAIEMENT_REFUSE") return `Abonnement ${d.abonnement || ""} : appeler le commerçant sous 24 h.${d.test ? " (mode test)" : ""}`;
+    if (a.type === "PAIEMENT_REFUSE") return `Abonnement ${d.abonnement || ""} : écrire au commerçant sur WhatsApp sous 24 h.${d.test ? " (mode test)" : ""}`;
     if (a.type === "ABONNEMENT_SANS_COMMERCE") return `Abonnement ${d.abonnement || ""} payé sans commerce rattaché : le rattacher dans l'éditeur SQL.${d.test ? " (mode test)" : ""}`;
     // Client en ligne (21/10/2026, client_en_ligne de schema.sql) : information seulement, ou cas d'une adresse déjà connue à vérifier.
     if (a.type === "NOUVEAU_CLIENT_EN_LIGNE") return `Abonnement ${d.abonnement || ""} (${d.offre || "offre inconnue"}) : commerce créé et invitation lancée automatiquement. Information, rien à faire.${d.test ? " (mode test)" : ""}`;
@@ -2187,7 +2195,12 @@
       async adminAvisProposer(id, reponse) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
         a.reponse_proposee = texteReponse(reponse); a.propose_le = iso(Date.now()); a.traite_le = a.traite_le || a.propose_le;
-        jour(a.commerce_id, "AVIS_PROPOSE", { avis: a.id, sensible: !!a.sensible }); sauver(); return { id: a.id, propose_le: a.propose_le, email_client: (E.commerces[a.commerce_id] || {}).email_validation || null };
+        // Lot 10 (mêmes règles que admin_avis_proposer) : la réponse part au commerçant sur WhatsApp (démonstration : rien ne part, elle est notée
+        // comme reçue) ; 1 à 3 étoiles : nouvelle heure de publication annoncée, 1 h au moins après l'envoi ; avis sensible : jamais sans OK écrit.
+        const k = E.commerces[a.commerce_id] || {}, wa = whatsappActifDe(k), pa = !a.sensible && wa ? iso(Math.max(Date.parse(a.publication_pas_avant || 0) || 0, Date.now() + 3 * 36e5)) : null;
+        if (wa) { a.reponse_annoncee = a.reponse_proposee; a.reponse_annoncee_le = a.propose_le; if (pa) a.publication_pas_avant = pa; }
+        jour(a.commerce_id, "AVIS_PROPOSE", { avis: a.id, sensible: !!a.sensible, whatsapp: wa }); sauver();
+        return { id: a.id, propose_le: a.propose_le, email_client: k.email_validation || null, whatsapp: wa, sensible: !!a.sensible, pas_avant: pa };
       },
       async adminAvisPublie(id, reponse, accord) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
@@ -2196,6 +2209,9 @@
         if (a.publication_pas_avant && Date.parse(a.publication_pas_avant) > Date.now() && !accord && !a.version_client && !(a.decision_client === "approuve"))
           throw new Error("Le commerçant a été prévenu de cet avis : publication possible à partir du " + new Date(a.publication_pas_avant).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + ", sauf s'il approuve la réponse.");
         const txt = texteReponse(reponse), espace = accordEspace(a);
+        // Lot 10 (comme admin_avis_publie) : le texte publié est celui que le commerçant a reçu sur WhatsApp, sauf accord écrit ou message de sa part.
+        if (a.reponse_annoncee && !accord && !a.version_client && !espace && txt !== String(a.reponse_annoncee).trim())
+          throw new Error("Le texte a changé depuis l'envoi au commerçant : envoyez-lui la nouvelle réponse (« Envoyer au commerçant »), puis publiez à l'heure annoncée.");
         // 27/10/2026 (comme admin_avis_publie) : l'accord donné dans l'espace vaut accord, pour le texte approuvé exactement.
         if (espace && !accord && txt !== String(a.reponse_proposee || "").trim()) throw new Error("Le texte publié doit être celui que le commerçant a approuvé dans son espace.");
         accord = accord || espace;
@@ -3001,7 +3017,14 @@
       async ouvrirLien(e) { await init(); ouvrir(e, false, true); },   // visite directe de la démonstration (boutons de l'écran de connexion)
       async quitter() { session = null; aChoisir = false; aal2 = false; try { localStorage.removeItem(K + ":session"); localStorage.removeItem(K + ":choisir"); localStorage.removeItem(K + ":aal2"); } catch (x) {} },
       async estAdmin() { await init(); return !!session && !aChoisir && E.users[session].role === "administrateur"; },
-      async commerce() { await init(); return cur(); },
+      async commerce() { await init(); const c = cur(); if (c && !("numero_tva" in c)) c.numero_tva = null; return c; },   // lot 10 : colonne numero_tva (facultative)
+      // ---- Lot 10 : numéro de TVA facultatif (mêmes règles que regler_numero_tva). Démonstration : noté dans ce navigateur.
+      async reglerNumeroTva(numero, ignorer) {
+        await init(); const c = cur(); if (!c) throw new Error(PHOTOS.PHRASES.introuvable);
+        if (ignorer) { c.tva_ignoree_le = iso(Date.now()); jour(c.id, "TVA_IGNOREE", {}); sauver(); return { numero_tva: c.numero_tva || null, ignoree: true }; }
+        const n = numeroTva(numero, paysDe(c.pays)); if (!n) throw new Error(PHRASE_TVA);
+        c.numero_tva = n; jour(c.id, "TVA_RENSEIGNEE", {}); alerteDemo("TVA_A_REPORTER", c.id, { numero: n }); sauver(); return { numero_tva: n, ignoree: false };
+      },
       async enregistrer(ch) { await init(); const c = cur(); if ("reglage_avis" in ch && ch.reglage_avis !== "auto_des_4_etoiles") throw new Error("Ce réglage n'existe plus : rien n'est publié sans votre validation, sauf ce que prévoit votre offre.");
         FICHE.forEach(k => { if (k in ch) c[k] = ch[k]; }); sauver(); },
       // 15/11/2026 (retour de PJ) : photo « traitee » dont aucun contenu n'est encore visible (tous « a_relire ») -> en_relecture (affichée « En préparation »).
@@ -3696,6 +3719,11 @@
       // autorisation), puis admin_deposer_photos (mêmes contrôles que deposer_photos, source « equipe »).
       async autoriserPhotos() { const c = await self.commerce(), r = await sb.rpc("autoriser_photos", { p_commerce: c.id }); if (r.error) throw new Error(phrasePhotos(r.error.message)); cache = null; return r.data; },
       // ---- Alertes WhatsApp (22/10/2026) : la case du commerçant (regler_whatsapp : numéro E.164, heure de l'accord, journal WHATSAPP_ACCORD).
+      // ---- Lot 10 : numéro de TVA facultatif (regler_numero_tva) ; « Je n'en ai pas… » le note pour ne plus le demander.
+      async reglerNumeroTva(numero, ignorer) {
+        const c = await self.commerce(), n = ignorer ? null : numeroTva(numero, paysDe(c.pays)); if (!ignorer && !n) throw new Error(PHRASE_TVA);
+        const r = await sb.rpc("regler_numero_tva", { p_numero: n, p_ignorer: !!ignorer }); if (r.error) throw new Error(r.error.message); cache = null; return r.data;
+      },
       async reglerWhatsapp(numero, accord) {
         const c = await self.commerce(), n = accord ? numeroWhatsapp(numero, paysDe(c.pays)) : null; if (accord && !n) throw new Error(phraseWhatsapp(paysDe(c.pays))); if (accord && numeroFixe(n)) throw new Error(PHRASE_FIXE);
         const r = await sb.rpc("regler_whatsapp", { p_commerce: c.id, p_numero: n, p_accord: !!accord });

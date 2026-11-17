@@ -190,7 +190,7 @@
   // lui demandaient une vérification inutile). Le robot n8n « RENOM, fiches Google : invitations et liens » (toutes les 30 min) accepte l'invitation
   // reçue par team@boostimpact.agency, relie la fiche (rapprocher_fiches_google) et coche l'étape seul. La fiche dit donc : ce qu'on attend du client,
   // le dernier passage du robot (passages_robots ; plus de 2 h : « robot muet »), ce qui l'empêcherait de relier seul (ni place_id ni lien de fiche,
-  // alerte « Fiche Google à relier » de ce client, fiches reçues sans client trouvé) et, passé le délai, d'appeler le client. Le délai : 24 h après
+  // alerte « Fiche Google à relier » de ce client, fiches reçues sans client trouvé) et, passé le délai, d'écrire au client sur WhatsApp. Le délai : 24 h après
   // l'invitation annoncée par le client ; sans annonce, sa date d'appel (création + J_APPEL jours), comme la bannière « Prochaine action ».
   // robotsFiche est lu par client() avant le dessin (adminPassagesRobots, adminAlertesClient) ; undefined : lecture impossible, rien n'est inventé.
   let robotsFiche = { passage: undefined, alertes: [] };
@@ -264,8 +264,10 @@
   // sait pas dire si ça a été géré »). Sous « Prochaine action », un tableau d'UNE ligne par point : Accès Google, Autorisation photos, Photos (x sur 5
   // recommandées, 1 suffit depuis la v51), WhatsApp, Réponses (x sur 6), Réseaux sociaux (offres avec réseaux). Pour chaque ligne : l'état en clair
   // (Fait, En attente du client, À faire par vous, Vérification automatique), une phrase qui dit quoi faire, et « Voir » qui descend au bon bloc.
-  // Décisions (expert onboarding, validées par PJ) : appel de démarrage obligatoire sous 48 h, où le gérant remplit tout pour le client ; relances
-  // J+2 et J+5, appel à J+7. Les relances ne partent PAS seules (canal WhatsApp non vérifié) : la ligne « Relances » les donne comme tâches VOUS.
+  // Décisions (expert onboarding, validées par PJ) : relances J+2 et J+5, WhatsApp à J+7. Les relances ne partent PAS seules : la ligne « Relances »
+  // les donne comme tâches VOUS. Lot 10 (doctrine « zéro appel » du fondateur, 17/11/2026) : on n'appelle jamais le client. Plus d'appel de démarrage
+  // ni de trame : le WhatsApp est demandé en premier, le message de démarrage part sur WhatsApp sous 48 h, le client remplit son espace lui-même
+  // (l'équipe ne reporte que ce qu'il lui écrit).
   // « Copier le message au client » : message court, dans la langue du client, qui ne liste que ce qui lui manque, avec l'adresse de son espace.
   // v51 (13/11/2026, décision de PJ) : 5 photos recommandées, 1 suffit pour démarrer. La ligne « Photos » n'est « En attente du client » qu'à 0 photo
   // utilisable ; dès 1, « Fait » avec la note « 5 recommandées ». Fichier reçu mais refusé : la ligne le dit (« 1 fichier reçu, refusé »).
@@ -284,6 +286,9 @@
     const gg = pts.google, r = robotGoogle();
     // Lot 3 : mêmes lignes que la carte de l'espace (window.RENOM_ETAPES.etapes) : le compte ouvert en tête, chaque point de la base une fois.
     if (pts.compte) l.push({ k: "compte", st: pts.compte.etat === "fait" ? "fait" : "client", x: t(pts.compte.etat === "fait" ? "con.dos.compte.fait" : "con.dos.compte.client"), cible: "client-comptes", manque: null });
+    // Lot 10 (doctrine « zéro appel ») : le numéro WhatsApp est demandé EN PREMIER : tout passe ensuite par lui (message de démarrage, liens, relances).
+    l.push(waActif(c) ? { k: "whatsapp", st: "fait", x: t("con.dos.wa.fait", { n: e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero) }), cible: "wa-client-num" }
+      : { k: "whatsapp", st: "vous", x: t("con.dos.wa.vous"), cible: "wa-client-num", manque: "whatsapp" });
     // Lot 4 B (revue design : « Accès Google : Fait » dans le dossier, « aucune fiche Google » au cockpit) : point fait mais aucun identifiant de
     // fiche reconnu (même règle que le cockpit) : la ligne le dit, « à vous », au lieu de « Fait ».
     const ficheReconnue = /^[A-Za-z0-9_-]{10,255}$/.test(c.google_place_id || "");
@@ -296,10 +301,8 @@
     l.push(n == null ? { k: "photos", st: "client", x: parMetier(t("con.dos.photos.inconnu"), c.metier), n: "?", cible: "client-photos-ligne" }   // v52 : « Voir » mène au bloc Photos
       : n >= PHOTOS_DEMARRAGE ? { k: "photos", st: "fait", x: parMetier(t("con.dos.photos.fait", { n }), c.metier), n, cible: "client-photos" }
       : { k: "photos", st: "client", x: parMetier(nref ? t("con.dos.photos.refusees", { f: nref }) : t("con.dos.photos.client"), c.metier), n, cible: phs.length ? "client-photos" : "client-photos-ligne", manque: "photos", refuses: nref });
-    l.push(waActif(c) ? { k: "whatsapp", st: "fait", x: t("con.dos.wa.fait", { n: e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(c.whatsapp_numero) : c.whatsapp_numero) }), cible: "wa-client-num" }
-      : { k: "whatsapp", st: "vous", x: t("con.dos.wa.vous"), cible: "wa-client-num", manque: "whatsapp" });
     const nr = nbReponses(c), qFait = pts.demarrage ? pts.demarrage.etat === "fait" : nr >= NB_Q;
-    l.push({ k: "reponses", st: qFait ? "fait" : "vous", x: t(nr >= NB_Q ? "con.dos.rep.fait" : qFait ? "con.dos.rep.fini" : "con.dos.rep.vous", { n: nr, t: NB_Q }), n: nr, cible: "mer-reponses", manque: qFait ? null : "reponses" });
+    l.push({ k: "reponses", st: qFait ? "fait" : "client", x: t(nr >= NB_Q ? "con.dos.rep.fait" : qFait ? "con.dos.rep.fini" : "con.dos.rep.vous", { n: nr, t: NB_Q }), n: nr, cible: "mer-reponses", manque: qFait ? null : "reponses" });
     const rr = pts.metricool;
     if (o.reseaux_sociaux && rr) { const li = lienMetricool(rr);
       const st = rr.etat === "fait" ? "fait" : instagramProAFaire(c) || rr.etat === "declare" || !c.metricool_blog_id || !li || li.expire ? "vous" : "client";
@@ -308,7 +311,7 @@
       l.push({ k: "reseaux", st, x, cible: "mer-pt-metricool", manque: st === "client" ? "reseaux" : instagramProAFaire(c) ? "instagram_pro" : null, fin: li && li.fin }); }
     return l;
   }
-  // Relances (décision du 12/11/2026) : J+2 et J+5 « Relancer le client », J+7 « Appelez le client », comptés depuis la création du commerce, tant
+  // Relances (décision du 12/11/2026) : J+2 et J+5 « Relancer le client », J+7 « Écrivez au client sur WhatsApp », comptés depuis la création du commerce, tant
   // qu'il manque quelque chose au dossier. Rien n'est envoyé seul.
   const relancesDossier = (c, l) => { if (c.en_pause || !c.cree_le || l.every(x => x.st === "fait" || x.st === "robot")) return null;
     const d0 = Date.parse(c.cree_le), j = n => d0 + n * 864e5, now = Date.now(), d = { j2: I.date(j(2)), j5: I.date(j(5)), j7: I.date(j(7)) };
@@ -329,10 +332,11 @@
   const ETATS_DOS = { fait: "con.dos.st.fait", client: "con.dos.st.client", vous: "con.dos.st.vous", robot: "con.dos.st.robot" };
   function blocDossier(c, phs, contacts) {
     const l = lignesDossier(c, phs), rel = relancesDossier(c, l), msg_ = messageDossier(c, l), faits = l.filter(x => x.st === "fait").length;
-    // Appel de démarrage : tant que le dossier n'est pas complet, pendant la première semaine (ensuite, la ligne des relances dit « Appelez le client »).
-    const lim = c.cree_le ? Date.parse(c.cree_le) + H48 : null, appel = faits < l.length && lim != null && Date.now() < Date.parse(c.cree_le) + 7 * 864e5;
+    // Lot 10 (doctrine « zéro appel », 17/11/2026) : plus d'appel de démarrage ni de trame. Tant que le dossier n'est pas complet, pendant la première
+    // semaine : le message de démarrage à envoyer sur WhatsApp sous 48 h (ensuite, la ligne des relances dit « Écrivez au client sur WhatsApp »).
+    const lim = c.cree_le ? Date.parse(c.cree_le) + H48 : null, demarrage = faits < l.length && lim != null && Date.now() < Date.parse(c.cree_le) + 7 * 864e5;
     return `<section class="carte dossier" id="dossier-demarrage" aria-labelledby="dossier-titre"><div class="carte-tete"><h2 id="dossier-titre">${t("con.dos.titre")}</h2><span class="note" data-dossier-n>${t("con.dos.n", { a: faits, b: l.length })}</span></div>
-      ${appel ? `<p class="note${Date.now() > lim ? " fort" : ""}" data-appel-demarrage>${t(Date.now() > lim ? "con.dos.appel.passe" : "con.dos.appel", { d: dh(lim) })}</p>` : ""}
+      ${demarrage ? `<p class="note${Date.now() > lim ? " fort" : ""}" data-demarrage-whatsapp>${t(Date.now() > lim ? "con.dos.demarrage.passe" : "con.dos.demarrage", { d: dh(lim) })}</p>` : ""}
       <table class="dossier-tab"><thead><tr><th>${t("con.dos.col.point")}</th><th>${t("con.dos.col.etat")}</th><th>${t("con.dos.col.quoi")}</th><th><span class="vh">${t("con.dos.voir")}</span></th></tr></thead><tbody>
         ${l.map(x => `<tr data-dossier="${x.k}" data-st="${x.st}"><td data-l="${t("con.dos.col.point")}" class="fort">${t("con.dos.k." + x.k, { n: x.n, t: NB_Q, m: PHOTOS_RECO })}</td>
           <td data-l="${t("con.dos.col.etat")}"><span class="etat-dos etat-dos-${x.st}">${t(ETATS_DOS[x.st])}</span></td><td data-l="${t("con.dos.col.quoi")}" class="note">${x.x}</td>
@@ -340,16 +344,8 @@
       ${rel ? `<p class="note${rel.vous ? " fort" : ""}" data-relance="${rel.k}">${rel.vous ? `<span class="pastille">${t("con.pa.qui.vous")}</span> ` : ""}${rel.x}</p>` : ""}
       ${msg_ ? `<div class="pile serre" id="dossier-message-zone"><label for="dossier-message" class="note">${t("con.dos.message.lib", { l: t("con.dos.langue." + (["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr")) })}</label>
         <textarea id="dossier-message" readonly rows="8" class="note" lang="${["fr", "en", "nl"].includes(c.langue) ? c.langue : "fr"}">${e(msg_)}</textarea>
-        <div class="actions"><button type="button" class="bouton second petit" data-dossier-copier>${t("con.coh.copier")}</button></div></div>` : `<p class="note" data-dossier-complet>${t("con.dos.rien.client")}</p>`}
-      <p><button type="button" class="lien" id="trame-ouvrir" aria-expanded="false" aria-controls="trame-appel">${t("con.trame.lien")}</button></p>
-      ${trameAppel(c, contacts)}</section>`;
+        <div class="actions"><button type="button" class="bouton second petit" data-dossier-copier>${t("con.coh.copier")}</button></div></div>` : `<p class="note" data-dossier-complet>${t("con.dos.rien.client")}</p>`}</section>`;
   }
-  // Trame de l'appel de démarrage (v49) : format téléprompteur, une phrase par ligne, relances écrites « Si besoin : », dans l'ordre du dossier.
-  const TRAME = ["presenter", "google", "whatsapp", "autorisation", "reponses", "reseaux", "photos", "conclure"];
-  const trameAppel = (c, contacts) => { const k = contacts && contacts.commerce && contacts.commerce.prenom ? contacts.commerce : contacts && contacts.global && contacts.global.prenom ? contacts.global : null, p = k ? k.prenom : "Pierre-Jean";
-    return `<div class="trame" id="trame-appel" hidden><h3>${t("con.trame.titre")}</h3>${TRAME.map((s_, i) => `<section class="trame-partie" data-trame="${s_}"><h4>${i + 1}. ${t("con.trame." + s_ + ".titre")}</h4>
-      ${t("con.trame." + s_, { p: e(p) }).split("\n").map(x => `<p class="trame-ligne${/^(Si besoin|If needed|Indien nodig)/.test(x) ? " trame-relance" : ""}">${x}</p>`).join("")}</section>`).join("")}
-      <p><button type="button" class="lien" id="trame-fermer">${t("con.trame.fermer")}</button></p></div>`; };
   // Style du commerce (kit de marque) : qui l'a validé et quand, demandes de changement en attente, lien vers le panneau « Style du commerce ».
   const ligneStyle = c => { const m = c.marque, n = +c.demandes_style || 0;
     const etat = m && m.verrouille ? t("con.sty.ligne." + (m.valide_par === "renom" ? "renom" : "commercant"), { d: I.date(m.verrouille_le || m.maj) }) : t(m ? "con.sty.ligne.attente" : "con.sty.ligne.aucun");
@@ -630,7 +626,8 @@
   const retardAvis = a => a.retenue_le || a.suspendue ? false : a.sensible || a.mode === "equipe" ? a.echeance != null && Date.now() > Date.parse(a.echeance) : !!a.en_retard;
   // « Appelez-moi avant de publier » (01/11/2026, retenir_reponse_avis) : avis en tête, « Le commerçant attend votre appel », publication grisée avec la raison
   // (la base la refuse aussi : admin_avis_publie) ; « Appel fait » (admin_liberer_avis) lève la retenue. Aucune publication automatique de ces avis.
-  const retenueAvis = a => !a.retenue_le ? "" : `<div class="encart" data-retenue role="alert"><p class="fort">${t("con.file.retenue", { d: dh(a.retenue_le) })}</p>${a.telephone_client ? `<p class="note">${t("con.file.retenue.tel", { tel: `<a class="casse" href="tel:${e(a.telephone_client)}" translate="no">${e(window.RENOM_WHATSAPP ? window.RENOM_WHATSAPP.lisible(a.telephone_client) : a.telephone_client)}</a>` })}</p>` : ""}${a.rappel_jour ? `<p class="note" data-rappel-jour>${t(a.rappel_creneau === "15-17" ? "con.file.retenue.jour.1517" : "con.file.retenue.jour", { d: I.jourEtDate(a.rappel_jour + "T12:00:00").toLowerCase() })}</p>` : ""}</div>`;
+  // Lot 10 (doctrine « zéro appel », 17/11/2026) : plus de numéro « tel: » ni de jour de rappel (retenue_telephone et retenue_jour sont vides depuis le lot 8).
+  const retenueAvis = a => !a.retenue_le ? "" : `<div class="encart" data-retenue role="alert"><p class="fort">${t("con.file.retenue", { d: dh(a.retenue_le) })}</p></div>`;
   // Appel promis (lot 5 B, 15/11/2026, revue exploitant) : un avis retenu est dû au commerçant le jour du rappel qu'il a choisi, avant 18 h (17 h pour
   // « 15-17 »), heure de Paris (RENOM_ECHEANCE_APPEL, donnees.js). Tâche à part de la garantie des 24 h, qui reste suspendue : « Appel en retard »
   // passé l'heure, jamais un manquement ni un mois offert. Un avis déjà en retard AVANT la retenue (échéance gardée par echeance_avis) reste « En retard ».
@@ -660,7 +657,7 @@
           ${a.version_client ? `<div class="encart" data-version-client><p class="fort">${t("con.file.version", { d: dh(a.version_client_le) })}</p><p class="texte2 casse" translate="no">${e(a.version_client)}</p></div>` : ""}
           ${a.propose_le ? `<p class="note">${t("con.file.proposee", { d: dh(a.propose_le) })}</p>` : ""}${a.accord_espace ? `<p class="fort" data-accord-espace>${t("con.file.accord.espace", { d: dh(a.decision_client_le) })}</p>` : a.decision_client === "en_parler" ? `<p class="fort">${t("con.file.en.parler", { d: dh(a.decision_client_le) })}</p>` : ""}<label class="option"><input type="checkbox" data-accord${a.accord_espace ? " checked" : ""}><span>${t("con.file.accord")}</span></label>`}
           ${ouvrir || google ? `<div class="actions">${ouvrir}${google}</div>` : ""}
-          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis${vide ? " disabled" : ""}>${t("con.copier")}</button>${a.mode === "equipe" ? "" : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}${a.retenue_le ? `<button type="button" class="bouton petit" data-avis-liberer>${t("con.file.liberer")}</button>` : ""}<button type="button" class="bouton petit${a.retenue_le ? " second" : ""}" data-avis-publie${a.retenue_le ? ` disabled aria-describedby="retenue-raison-${e(a.id)}"` : ""}>${t(sens ? "con.file.traite.publiee" : "con.file.publiee")}</button></div>
+          <div class="actions"><button type="button" class="bouton second petit" data-copier-avis${vide ? " disabled" : ""}>${t("con.copier")}</button>${a.mode === "equipe" ? (a.retenue_le ? "" : `<button type="button" class="bouton second petit" data-avis-envoyer>${t("con.file.envoyer")}</button>`) : `<button type="button" class="bouton second petit" data-avis-proposer>${t("con.file.proposer")}</button>`}${a.retenue_le ? `<button type="button" class="bouton petit" data-avis-liberer>${t("con.file.liberer")}</button>` : ""}<button type="button" class="bouton petit${a.retenue_le ? " second" : ""}" data-avis-publie${a.retenue_le ? ` disabled aria-describedby="retenue-raison-${e(a.id)}"` : ""}>${t(sens ? "con.file.traite.publiee" : "con.file.publiee")}</button></div>
           ${a.retenue_le ? `<p class="note" id="retenue-raison-${e(a.id)}" data-retenue-raison>${t("con.file.retenue.raison")}</p>` : ""}</article>`; };
   const carteCommentaireEquipe = x => `<article class="carte" data-cm="${e(x.id)}"><div class="carte-tete"><h2>${e(x.commerce || "")}</h2><span class="note">${NOM_RES[x.reseau] || e(x.reseau)}</span></div>
           <p class="note">${t("con.cm.equipe.titre")}</p>
@@ -830,6 +827,10 @@
     const geos = G && D.adminDossiersGeo ? await sur(D.adminDossiersGeo()) : [];
     const prospectsL = D.adminProspects ? await sur(D.adminProspects()) : [];
     const T_ = x => x ? Date.parse(x) : NaN, items = [];
+    // Lot 10 (17/11/2026) : une vidéo ne part jamais sur Facebook (CGV version 2, art. 3). La base l'écarte déjà à l'envoi ; la file « À publier à la
+    // main » ne la montre plus non plus, vidéos programmées avant le lot 9d et graine de démonstration comprises (affichage seulement).
+    const pubsAff = (pubs || []).filter(x => !(x.type === "video" && x.reseau === "facebook"));
+    (sons || []).forEach(x => { const m = x.musique_a_poser; if (m && Array.isArray(m.reseaux)) m.reseaux = m.reseaux.filter(r => r !== "facebook"); });
     // Lot 4 B : chaque tâche garde un titre court (le titre de sa carte), repris par le cockpit (« À sortir aujourd'hui » dit quelle tâche).
     const titreCarte = html => { const m = String(html || "").match(/<h2[^>]*>([\s\S]*?)<\/h2>/); return m ? m[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : ""; };
     const ajout = (type, html, retard, quand, date, o = {}) => items.push({ type, titre: o.titre || titreCarte(html), types: o.types || [type], prio: !!o.prio, tete: !!o.tete, cle: o.cle || null, cid: o.cid || null, html: avecPrise(html, o.cle), retard: !!retard, quand: isNaN(quand) ? Infinity : quand, date: isNaN(date) ? 0 : date, ordre: o.ordre ?? null });
@@ -843,7 +844,7 @@
       const cle = a.id != null ? "alerte:" + a.id : a.avis_id ? "avis:" + a.avis_id : a.commentaire_id ? "commentaire:" + a.commentaire_id : a.publication_id ? "publication:" + a.publication_id : null;
       ajout("alertes", carteAlerte(a), ech != null && Date.now() > ech, ech == null ? NaN : ech, T_(a.date), { prio: ech != null, cle, cid: a.commerce_id }); });
     // Lot 7 : une tâche par publication (ses réseaux regroupés), l'index de chaque réseau dans la liste gardé pour les boutons (afCtx.pubs).
-    const parPub = new Map(); (pubs || []).forEach((x, i) => { const k = String(x.id); if (!parPub.has(k)) parPub.set(k, []); parPub.get(k).push([x, i]); });
+    const parPub = new Map(); pubsAff.forEach((x, i) => { const k = String(x.id); if (!parPub.has(k)) parPub.set(k, []); parPub.get(k).push([x, i]); });
     parPub.forEach(l => { const x = l[0][0], retard = l.some(([y]) => y.en_retard), quand = Math.min(...l.map(([y]) => T_(y.prevu_le)));
       // Lot 8 (exploitant et DA, tour 6 : deux lignes identiques « À publier · <commerce> » au cockpit) : le titre dit les réseaux et l'heure.
       ajout("apublier", l.length > 1 ? carteGroupePub(l) : cartePublication(x, l[0][1]), retard, quand, NaN, { titre: l.map(([y]) => NOM_RESEAU[y.reseau] || y.reseau).join(", ") + (isNaN(quand) ? "" : " · " + t("con.pm.prevue", { d: dh(new Date(quand).toISOString()) })), cle: l.length > 1 ? "publication:" + x.id : "publication:" + x.id + ":" + x.reseau, cid: x.commerce_id }); });
@@ -877,7 +878,7 @@
     // aujourd'hui (ou passés) et les rapports d'audit à envoyer, filtre « Prospects ». Les relances par email du site partent seules : pas ici.
     (prospectsL || []).forEach(p => { const r = rappelProspect(p); if (r) ajout("prospects", carteProspect(p, r), r.retard, r.quand, T_(p.audit_le || p.cree_le), { cle: "prospect:" + p.id }); });
     items.sort((a, b) => (a.tete ? 0 : 1) - (b.tete ? 0 : 1) || (a.prio ? 0 : 1) - (b.prio ? 0 : 1) || (a.retard ? 0 : 1) - (b.retard ? 0 : 1) || a.quand - b.quand || b.date - a.date);
-    return { items, alertes, pubs, dl, cs, relire: relire || [], erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, relire].some(x => x === null) };
+    return { items, alertes, pubs: pubsAff, dl, cs, relire: relire || [], erreurs: [alertes, pubs, avisG, cmPub, sons, file, cmEq, depots, dl, relire].some(x => x === null) };
   }
   // Alerte « À relire » en haut de « À faire » (14/11/2026) : contenus dont l'échéance de la garantie des 72 h tombe dans moins de 12 h, ou est passée.
   const alerteRelire = l => { const u = (l || []).filter(x => x.urgent || x.en_retard); if (!u.length) return "";
@@ -913,7 +914,7 @@
     const de = k => k === "moi" ? items.filter(x => aMoi(x.cle)) : items.filter(x => x.types.includes(k));
     const n = Object.fromEntries(TYPES.map(k => [k, de(k).length])), f = TYPES.includes(filtreType) ? filtreType : "";
     const visibles = f === "arelire" ? de(f).sort((a, b) => a.ordre - b.ordre) : f ? de(f) : items;
-    afCtx = { pubs: pubs || [], dl: dl || [], cs };
+    afCtx = { pubs: pubs || [], dl: dl || [], cs };   // lot 10 : pubs = liste affichée (vidéos sans Facebook), mêmes index que les cartes
     // Charge du jour (constat 7) : toutes les actions de la file ; « en retard » et « avant <heure> » (échéance aujourd'hui, l'heure de la plus tardive).
     const finJour = new Date(); finJour.setHours(23, 59, 59, 999);
     const enRetard = items.filter(x => x.retard).length, duJour = items.filter(x => !x.retard && x.quand !== Infinity && x.quand <= finJour.getTime());
@@ -1027,7 +1028,11 @@
     sur("[data-copier-avis]", b => copier(b.closest("article").querySelector("[data-rep-avis]"), "con.copiee"));
     // Lot 6 B : « Copier la réponse » grisé tant que la réponse est vide ; il s'ouvre dès qu'elle est écrite.
     vue.querySelectorAll("[data-rep-avis]").forEach(ta => ta.addEventListener("input", () => { const b = ta.closest("article").querySelector("[data-copier-avis]"); if (b) b.disabled = !ta.value.trim(); }));
-    sur("[data-avis-proposer]", b => { const a = b.closest("article"); agir(() => D.adminAvisProposer(a.dataset.avis, a.querySelector("[data-rep-avis]").value), t("con.file.proposee.msg")); });
+    // Lot 10 : proposer = envoyer la réponse au commerçant sur WhatsApp (admin_avis_proposer met l'alerte « avis_reponse » en file, avec l'avis complet,
+    // sa date, la réponse et, pour 1 à 3 étoiles, l'heure de publication annoncée). Un avis sensible ne part ensuite qu'avec son OK écrit.
+    const envoyerAvis = b => { const a = b.closest("article"); agir(async () => { const r = await D.adminAvisProposer(a.dataset.avis, a.querySelector("[data-rep-avis]").value);
+      return r && r.whatsapp === false ? t("con.file.envoyee.sans.wa") : r && r.sensible ? t("con.file.envoyee.sensible") : r && r.pas_avant ? t("con.file.envoyee", { d: dh(r.pas_avant) }) : t("con.file.proposee.msg"); }, null, b); };
+    sur("[data-avis-proposer]", envoyerAvis); sur("[data-avis-envoyer]", envoyerAvis);
     // Lot 6 B (revue exploitant : un appui de trop au téléphone relance les 24 h) : « Appel fait » demande confirmation.
     // Lot 8 : le commerçant a répondu « ATTENDS » (ou une correction) sur WhatsApp : l'équipe met la publication en attente de son message.
     sur("[data-avis-retenir]", b => { if (!window.confirm(t("con.file.retenir.confirmer"))) return; agir(() => D.adminRetenirAvis(b.closest("article").dataset.avis), t("con.file.retenu"), b); });
@@ -1205,7 +1210,7 @@
   // fiche, le responsable d'abord (VOUS, CLIENT, ROBOT), au plus un bouton. Les règles de l'équipe passent dans l'ordre de PRIORITE ci-dessous (la
   // première qui s'applique gagne). Sinon, ce qu'on attend du client ou du robot, avec la date avant laquelle il n'y a rien à faire : pour le client, sa
   // date d'appel, création + J_APPEL jours (même seuil que la carte « Mise en route » de À faire et que l'alerte MISE_EN_ROUTE_BLOQUEE), ou lien
-  // Metricool + 72 h (il expire à 71 h) ; pour le robot des fiches Google, accès déclaré + 24 h. Date passée : la tâche du client devient « appelez-le ».
+  // Metricool + 72 h (il expire à 71 h) ; pour le robot des fiches Google, accès déclaré + 24 h. Date passée : la tâche du client devient « écrivez-lui sur WhatsApp ».
   const J_APPEL = 5, H72 = 72 * 3600000;
   function prochaineAction(c, g, jl, avis = [], phs = null) {
     const m = c.sante && c.sante.mise_en_route, pts = Object.fromEntries(((m && m.points) || []).map(x => [x.point, x])), o = OFFRES[c.offre_id] || {};
@@ -1232,7 +1237,7 @@
       ["whatsapp", () => !c.en_pause && c.demarrage_fini && !waActif(c) && { texte: t("con.pa.wa"), bouton: aller("wa-client-num", "wa") }],
       // Accès Google (v48) : tant que la fiche n'est pas arrivée, CLIENT ou ROBOT (attentes ci-dessus) ; VOUS seulement si le robot ne peut pas faire
       // son travail (muet depuis plus de 2 h, alerte « Fiche Google à relier » de ce client, invitation annoncée sans identifiant ni lien de fiche),
-      // ou, passé le délai, pour appeler le client (google_24h, appeler).
+      // ou, passé le délai, pour écrire au client sur WhatsApp (google_24h, appeler).
       ["google_robot", () => gg && gg.etat !== "fait" && robotGoogle().muet && { texte: t("con.pa.google.muet", { h: dh(robotGoogle().ms) }), bouton: aller("mer-google-auto", "mer") }],
       ["google_alerte", () => gg && gg.etat !== "fait" && alertesGoogle(c).propres.length > 0 && { texte: t("con.pa.google.alerte"), bouton: aller("fg-id", "fg") }],
       ["google_sans_id", () => gg && gg.etat === "declare" && sansIdGoogle(c) && { texte: t("con.pa.google.sans.id"), bouton: aller("fg-id", "fg") }],
@@ -1519,12 +1524,9 @@
     if ($("rq-fermer")) $("rq-fermer").onclick = () => { $("f-reponses").hidden = true; };
     envoi("f-reponses", async () => { const ch = lireReponses(c); if (!Object.keys(ch).length) return { etat: "rien" }; return D.adminReponsesDemarrage(cid, ch); },
       r => r && r.etat === "rien" ? t("con.rep.ok.rien") : t(r && r.fini && !c.demarrage_fini ? "con.rep.ok.fini" : "con.rep.ok", { n: nbReponses({ demarrage: r && r.demarrage }), t: NB_Q }));
-    // Dossier de démarrage (v49) : « Copier le message au client » ; trame de l'appel de démarrage, ouverte et fermée sur place.
+    // Dossier de démarrage (v49) : « Copier le message au client » (lot 10 : à envoyer sur WhatsApp ; plus de trame d'appel).
     const dc = vue.querySelector("[data-dossier-copier]"); if (dc) dc.onclick = async () => { const m = $("dossier-message"), rep = repereBouton(dc);
       try { await navigator.clipboard.writeText(m.value); msg(t("con.dos.copie")); msgPres(rep, t("con.dos.copie")); } catch (er) { m.select(); msg(t("con.selectionnee")); msgPres(rep, t("con.selectionnee")); } };
-    const trame = (ouvrir) => { const z = $("trame-appel"), b = $("trame-ouvrir"); if (!z) return; z.hidden = !ouvrir; b.setAttribute("aria-expanded", String(ouvrir)); if (ouvrir) z.scrollIntoView({ block: "start" }); else b.focus(); };
-    if ($("trame-ouvrir")) $("trame-ouvrir").onclick = () => trame($("trame-appel").hidden);
-    if ($("trame-fermer")) $("trame-fermer").onclick = () => trame(false);
     // « Voir les 5 réponses » (v48) : ouvre le volet des réponses et y descend. « Voir tout l'historique » : affiche ou masque le reste du journal.
     vue.querySelectorAll("[data-voir-reponses]").forEach(b => b.onclick = () => { const d = $("mer-reponses"); if (!d) return; d.open = true; d.scrollIntoView({ block: "start" }); });
     const vt = $("historique-voir-tout"); if (vt) vt.onclick = () => { const o = $("historique-tout"), ouvrir = o.hidden; o.hidden = !ouvrir; vt.setAttribute("aria-expanded", String(ouvrir));

@@ -654,9 +654,10 @@
   // Lot 3 (15/11/2026) : réponses aux 5 questions, comptées comme dans la console (window.RENOM_ETAPES, donnees.js) ; la 6e, facultative, n'y entre pas.
   const nbReponsesClient = c => window.RENOM_ETAPES.nbReponses(c.demarrage);
   const dossierClient = (c, p) => { const n = photosUtilisables(p), r = photosRefusees(p), wa = whatsappActif(c);
-    return [{ k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
-      { k: "photos", fait: n >= PHOTOS_DEMARRAGE, href: "#/photos", v: { n, m: PHOTOS_RECO }, court: r ? t("photos.refusee.etape", { n: r }) : "" },
-      { k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/demarrage" }]; };
+    // Lot 10 (doctrine « zéro appel », 17/11/2026) : le WhatsApp d'abord, c'est par lui que tout passe ensuite (aucun appel).
+    return [{ k: "whatsapp", fait: wa, href: c.demarrage_fini ? "#/notifications" : "#/miseenroute" },
+      { k: "autorisation", fait: !!c.photos_autorisees_le, href: "#/photos" },
+      { k: "photos", fait: n >= PHOTOS_DEMARRAGE, href: "#/photos", v: { n, m: PHOTOS_RECO }, court: r ? t("photos.refusee.etape", { n: r }) : "" }]; };
   // Lot 5 B (revue design : « 3 choses à faire maintenant » au-dessus de 5 lignes « À faire », puis un 2e bloc « À faire maintenant ») : nombre de
   // lignes « À faire » de la carte de mise en route (points de la base, sauf la fiche Google demandée, et lignes du dossier).
   const nAFaireMer = (mr, c, p) => ((mr && mr.points) || []).filter(x => x.etat === "a_faire" && !(x.point === "google" && ficheDemandee(c))).length
@@ -971,6 +972,10 @@
       ${/* Lot 4 B (revue design : « carte de 350 px dans une page vide » au bureau) : deux colonnes à partir de 1100 px, ce qui attend le
          commerçant à gauche, ce qui va sortir et le détail du mois à droite ; une seule colonne au téléphone, même ordre. */ ""}
       <div class="accueil-grille"><div class="pile accueil-col">
+      ${/* Lot 10 (17/11/2026) : « Envoyer une photo » en tête de la colonne, visible sans défiler au téléphone (390 x 844) ; avant, il venait après
+         « À faire maintenant », le style et l'offre, sous le pli. */ ""}
+      <div class="gestes-accueil"><a class="bouton grand second" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
+        ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
       ${merVisible ? blocMiseEnRoute(mr, c, p, { afaire: true, extra: (actions.length ? ulActions() : "") + (humains.length && !sensibleEnTete ? ligneSensible() : "") }) : ""}
       ${/* Tour 9 (01/11/2026) : « À faire maintenant » disparaît quand il n'y a rien à faire (avant : la carte restait, avec seulement « notre équipe
          s'en charge, vous n'avez rien à faire ») ; la ligne de l'avis sensible pris en charge reste alors seule, sous l'en-tête. */ ""}
@@ -981,8 +986,6 @@
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       ${ligneChgOffre(c, dChg)}
-      <div class="gestes-accueil"><a class="bouton grand second" id="envoyer-photo" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a>
-        ${+k.videos_plafond > 0 && !sansReseaux(c) && !c.en_pause ? `<a class="bouton second grand" id="creer-video" href="#/photos?video">${CAMERA}<span>${t("acc.creer.video")}</span></a>` : ""}</div>
       ${moisPlein && !c.en_pause ? `<p class="texte2" id="acc-mois-complet">${t("acc.mois.complet", { mois: (new Date().getMonth() + 1) % 12 })}</p>` : ""}
       ${lienPublications(c)}
       ${ligneContact(contact, "contact-accueil")}</div><div class="pile accueil-col">
@@ -3001,25 +3004,48 @@
           <div class="pile serre" id="sans-fiche-choix" hidden><p class="texte2">${t("mer2.sans.fiche.texte")}</p>
             <fieldset><legend class="vh">${t("mer2.sans.fiche")}</legend>${["pas_de_fiche", "pas_a_mon_nom"].map((k, i) => `<label class="option"><input type="radio" name="fiche-cas" value="${k}"${i ? "" : " checked"}><span>${t("mer2.cas." + k)}</span></label>`).join("")}</fieldset>
             <div class="actions"><button type="button" class="bouton second" id="fiche-demander">${t("mer2.fiche.demander")}</button></div></div></div>` : ""}`;
-    const reseaux = !avecReseaux ? "" : `<li class="carte etape-mer" id="mer-reseaux" data-etat="${e(pts.metricool)}">${etapeTete(3, t("mer2.reseaux.titre"), pts.metricool, "mer-reseaux-titre")}
+    // Lot 10 (doctrine « zéro appel », 17/11/2026) : le numéro WhatsApp est demandé EN PREMIER (étape 1) ; toute l'aide passe ensuite par WhatsApp.
+    // Déjà réglé : l'étape reste en tête, faite, pour garder la même numérotation. Les autres étapes sont décalées d'un rang.
+    const wa = whatsappActif(c), ewa = wa ? "fait" : "a_faire";
+    const etapeWa = `<li class="carte etape-mer" id="mer-whatsapp" data-etat="${ewa}">${etapeTete(1, t("mer2.wa.titre"), ewa, "mer-wa-titre")}
+        ${wa ? `<p class="texte2">${t("mer2.wa.fait", { n: `<span class="casse" translate="no">${e(window.RENOM_WHATSAPP.lisible(c.whatsapp_numero))}</span>` })}</p>`
+          : `<p class="texte2">${t("mer2.wa.texte")}</p><form id="awa-f" novalidate>${champsWhatsapp(c, true)}<div class="actions"><button type="submit" class="bouton" id="awa-ok">${t("awa.manquant.bouton")}</button></div></form>`}</li>`;
+    // Lot 10 : numéro de TVA FACULTATIF (jamais bloquant). Demandé ici tant qu'il est absent, sauf si le commerçant a dit qu'il n'en a pas ou qu'il l'a
+    // donné au paiement (Stripe le garde sur ses factures ; la base ne le lit pas). Colonne absente (bloc SQL du lot 10 pas encore collé) : rien.
+    const carteTva = !("numero_tva" in c) || c.numero_tva || c.tva_ignoree_le ? "" : `<section class="carte" id="mer-tva" aria-labelledby="mer-tva-titre"><h2 id="mer-tva-titre">${t("tva.titre")}</h2>
+        <p class="texte2">${t("tva.texte")}</p><form id="tva-f" novalidate><div class="f"><label for="tva-numero">${t("tva.lib")}</label><input id="tva-numero" type="text" maxlength="20" autocomplete="off" spellcheck="false" translate="no" placeholder="${M.paysDe(c.pays) === "BE" ? "BE0123456789" : "FR12345678901"}" aria-describedby="tva-aide"><p class="aide" id="tva-aide">${t("tva.aide")}</p></div>
+        <div class="actions"><button type="submit" class="bouton second" id="tva-ok">${t("tva.enregistrer")}</button><button type="button" class="lien" id="tva-ignorer">${t("tva.ignorer")}</button></div><p class="msg" id="tva-msg" role="status"></p></form></section>`;
+    const reseaux = !avecReseaux ? "" : `<li class="carte etape-mer" id="mer-reseaux" data-etat="${e(pts.metricool)}">${etapeTete(4, t("mer2.reseaux.titre"), pts.metricool, "mer-reseaux-titre")}
         <p class="texte2">${t("mer2.reseaux." + (pts.metricool === "fait" ? "fait" : pts.metricool === "declare" ? "declare" : attenteLien ? "attente" : "a_faire"))}</p>
         ${pts.metricool === "a_faire" && !attenteLien ? `<div class="actions"><button type="button" class="bouton second" data-declarer="metricool">${t("mer2.reseaux.fait.bouton")}</button></div>` : ""}</li>`;
-    vue.innerHTML = `${entete(t("ecran.demarrage"), e(c.nom), t(avecReseaux ? "mer2.chapo.req.2" : "mer2.chapo.req.1"))}
+    vue.innerHTML = `${entete(t("ecran.demarrage"), e(c.nom), t(wa ? (avecReseaux ? "mer2.chapo.req.2" : "mer2.chapo.req.1") : (avecReseaux ? "mer2.chapo.wa.3" : "mer2.chapo.wa.2")))}
       <p class="msg" id="msg" role="status"></p>
       <ol class="etapes-mer" id="pour-demarrer">
-        <li class="carte etape-mer" id="mer-google" data-etat="${e(eg)}">${etapeTete(1, t("mer2.google.titre"), eg, "mer-google-titre")}${google}</li>
-        <li class="carte etape-mer" id="mer-photos" data-etat="${eph}">${etapeTete(2, t(g ? "mer2.photos.titre.google" : "mer2.photos.titre"), eph === "fait" ? "fait" : "facultatif", "mer-photos-titre")}
+        ${etapeWa}
+        <li class="carte etape-mer" id="mer-google" data-etat="${e(eg)}">${etapeTete(2, t("mer2.google.titre"), eg, "mer-google-titre")}${google}</li>
+        <li class="carte etape-mer" id="mer-photos" data-etat="${eph}">${etapeTete(3, t(g ? "mer2.photos.titre.google" : "mer2.photos.titre"), eph === "fait" ? "fait" : "facultatif", "mer-photos-titre")}
           <p class="texte2" data-photos-compteur>${nph ? t("mer2.photos.fait", { n: nph, m: PHOTOS_RECO }) : t(g ? "mer2.photos.google" : "mer2.photos.texte")}</p>
           ${nref ? `<p class="note" data-photos-refusees>${t("photos.refusee.etape", { n: nref })}</p>` : ""}
           ${g && pubGoogle(c) < PHOTOS_RECO ? `<p class="note" data-photos-essentiel>${t("mer2.photos.essentiel", { n: pubGoogle(c) })}</p>` : ""}
           <div class="actions"><a class="bouton second" href="#/photos">${APPAREIL}<span>${t("acc.envoyer.photo")}</span></a></div></li>
         ${reseaux}
       </ol>
+      ${carteTva}
       <section class="carte rappel" id="rappel" aria-labelledby="rappel-titre"><h2 id="rappel-titre" class="vh">${t("rappel.bouton")}</h2>
         <a class="bouton second" id="rappel-whatsapp" href="${e(lienAideMer(c))}" target="_blank" rel="noopener">${t("rappel.bouton")}</a></section>
       <div class="actions pied-mer">${c.demarrage_fini ? `<a class="bouton" href="#/accueil" id="mer-accueil">${t("dem5.accueil")}</a>` : `<button type="button" class="bouton" id="mer-continuer">${t("mer2.continuer")}</button>`}
         ${c.demarrage_fini ? "" : `<button type="button" class="lien" id="dem-plus-tard">${t("dem5.plus.tard")}</button>`}</div>`;
     vue.querySelectorAll("[data-declarer]").forEach(b => b.onclick = async () => { b.disabled = true; try { await D.declarerMiseEnRoute(b.dataset.declarer); await ecranEssentiel(await D.commerce()); msg(t("mer.merci")); majCompteurs(); } catch (er) { b.disabled = false; msg(ph(er.message)); } });
+    // Lot 10 : étape WhatsApp (mêmes contrôles que la carte de l'accueil : numéro et case d'accord obligatoires, regler_whatsapp).
+    if (!wa && $("awa-f")) { const ctl = brancherWhatsappOblig(c);
+      $("awa-f").onsubmit = async ev => { ev.preventDefault(); if (!ctl.verifier()) return; $("awa-ok").disabled = true;
+        try { await D.reglerWhatsapp($("awa-numero").value.trim(), true); await ecranEssentiel(await D.commerce()); msg(t("awa.manquant.merci")); majCompteurs(); }
+        catch (er) { $("awa-ok").disabled = false; ctl.erreur(ph(er.message)); } }; }
+    // Lot 10 : numéro de TVA facultatif (regler_numero_tva). « Je n'en ai pas… » : on ne le redemande plus.
+    if ($("tva-f")) { const fin = async m => { await ecranEssentiel(await D.commerce()); msg(m); };
+      $("tva-f").onsubmit = async ev => { ev.preventDefault(); const b = $("tva-ok"); b.disabled = true;
+        try { await D.reglerNumeroTva($("tva-numero").value, false); await fin(t("tva.merci")); } catch (er) { b.disabled = false; $("tva-msg").textContent = ph(er.message); $("tva-numero").focus(); } };
+      $("tva-ignorer").onclick = async () => { try { await D.reglerNumeroTva(null, true); await fin(t("tva.ignore.merci")); } catch (er) { $("tva-msg").textContent = ph(er.message); } }; }
     if ($("sans-fiche")) $("sans-fiche").onchange = () => { $("sans-fiche-choix").hidden = !$("sans-fiche").checked; };
     if ($("fiche-demander")) $("fiche-demander").onclick = async () => { const x = document.querySelector("input[name=fiche-cas]:checked");
       try { await D.demanderFicheGoogle(x ? x.value : "pas_de_fiche"); await ecranEssentiel(await D.commerce()); msg(t(x && x.value === "pas_a_mon_nom" ? "mer2.fiche.merci.nom" : "mer2.fiche.merci")); } catch (er) { msg(ph(er.message)); } };
