@@ -60,7 +60,7 @@ Aucune image générée par IA. Les personnes et le lieu ne sont pas des clients
 |---|---|---|---|---|
 | img/hero-table.webp | https://unsplash.com/photos/cH5IPjaAYyo (retouchée comme dit plus haut), 1920 x 1280, WebP 80 | Louis Hansel | Unsplash | premier écran, ordinateur et tablette (préchargée) |
 | img/hero-table-portrait.webp | même photo, recadrage vertical sur l'assiette et les verres, 1000 x 1200 | Louis Hansel | Unsplash | premier écran, téléphone (préchargée) |
-| img/partage.jpg | même photo, assombrie, nom du site ajouté par outils/image_partage.py | Louis Hansel | Unsplash | image de partage (og:image, twitter:image), 1200 x 630 |
+| img/partage-2026.jpg | même photo, à droite ; à gauche fond blanc et logo en ligne (17/11/2026, outils/image_partage.py) | Louis Hansel | Unsplash | image de partage (og:image, twitter:image), 1200 x 630 |
 | img/resto-brasserie.webp | voir la table du 28/10/2026 plus bas | Lukas Blazek | Pexels | exemple Instagram et fiche « après » (vignette) |
 | img/resto-dressage.webp | voir plus bas | Luis Becerra | Pexels | exemple Facebook et fiche « après » (vignette) |
 | img/resto-assiette.webp | voir plus bas | Nadin Sh | Pexels | démonstration, exemple de fiche Google, fiche « après » (vignette) |
@@ -87,7 +87,7 @@ Licences, lues le 28/10/2026 :
 | Fichier | Photo d'origine | Auteur | Licence | Usage |
 |---|---|---|---|---|
 | img/resto-brasserie.webp | https://www.pexels.com/photo/grilled-beef-with-fries-and-sauce-on-black-ceramic-plate-1352264/ | Lukas Blazek | Pexels | premier écran, première photo (préchargée) |
-| img/partage.jpg | même photo que resto-brasserie.webp (Lukas Blazek, Pexels 1352264), assombrie, nom du site ajouté par outils/image_partage.py | Lukas Blazek | Pexels | image de partage (og:image, twitter:image), 1200 x 630 |
+| img/partage.jpg (ancienne) | même photo que resto-brasserie.webp (Lukas Blazek, Pexels 1352264), assombrie, nom du site ajouté par outils/image_partage.py | Lukas Blazek | Pexels | image de partage (og:image, twitter:image), 1200 x 630 |
 | img/resto-service.webp | https://www.pexels.com/photo/a-waiter-holding-plates-with-salad-25809274/ | Matheus Bertelli | Pexels | premier écran, carrousel (clients de dos ou flous au fond) |
 | img/resto-dressage.webp | https://www.pexels.com/photo/hand-with-kitchen-spoon-over-plates-with-food-15671409/ | Luis Becerra | Pexels | premier écran, carrousel |
 | img/resto-bistrot.webp | https://unsplash.com/photos/a-cozy-restaurant-interior-with-string-lights-Wzo_34cS5bA | Raymond Yeung | Unsplash | premier écran, carrousel |
