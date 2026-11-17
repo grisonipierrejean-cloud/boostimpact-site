@@ -175,12 +175,13 @@
     const rs = RSC.normaliser({ instagram: v("rs-instagram"), instagram_pro: v("rs-instagram_pro"), facebook: v("rs-facebook"), facebook_page: v("rs-facebook_page"), tiktok: v("rs-tiktok") });
     if (JSON.stringify(Object.entries(rs).sort()) !== JSON.stringify(Object.entries(RSC.normaliser(r.reseaux)).sort())) out.reseaux = rs;
     return out; };
+  const langueDe = c => ["fr", "en", "nl"].includes((c || {}).langue) ? c.langue : "fr";   // lot 9d : langue des textes du commerce
   const reponsesDemarrage = c => { const r = demarrageDe(c), vide = `<span class="mer-rep-vide" data-rep-vide>${t("con.mer.rep.vide")}</span>`, modif = !!D.adminReponsesDemarrage;
     const val = k => { const v = r ? r[k] : null;
       if (k === "ton") return TONS[v === "enjoué" ? "enjoue" : v] || (v ? e(v) : vide);
       if (k === "action") { const a = ACTIONS[v] || (v ? e(v) : ""), d = r && typeof r.action_detail === "string" ? r.action_detail.trim() : ""; return a || d ? [a, d ? lierUrls(d) : ""].filter(Boolean).join(t("deux.points")) : vide; }
       if (k === "reseaux") { const x = resumeReseaux(v); return x ? `<span class="mer-rep-texte">${e(x)}</span>${RSC.repondu(v) ? "" : " " + vide}` : vide; }
-      const s_ = texteRep(v); return s_.trim() ? `<span class="mer-rep-texte">${lierUrls(s_.trim())}</span>` : vide; };
+      const s_ = texteRep(v); return s_.trim() ? `<span class="mer-rep-texte" lang="${langueDe(c)}" translate="no">${lierUrls(s_.trim())}</span>` : vide; };   // lot 9d : langue du commerce
     return `<details class="repliable mer-reponses" id="mer-reponses"${nbReponses(c) < NB_Q ? " open" : ""}><summary><h3>${t("con.mer.rep.titre")}, <span data-reponses-n>${t("con.mer.rep.n", { n: nbReponses(c), t: NB_Q })}</span></h3></summary>
       ${r ? "" : `<p class="note">${t("con.mer.rep.aucune")}</p>`}${modif ? `<div class="actions"><button type="button" class="bouton second petit" data-rep-remplir>${t(r ? "con.rep.corriger" : "con.rep.remplir")}</button></div>` : ""}
       <dl class="mer-rep">${QUESTIONS.map((k, i) => `<div data-q="${k}"><dt>${i + 1}. ${titreQ(k)}</dt><dd>${val(k)}${modif ? ` <button type="button" class="lien" data-rep-modifier="${k}">${t("con.rep.modifier")}</button>` : ""}</dd></div>`).join("")}</dl>
@@ -1304,11 +1305,14 @@
   const musiqueContenu = m => { if (!m || typeof m !== "object") return ""; const l = ["instagram", "tiktok"].filter(r => m[r] && m[r].titre)
       .map(r => `${NOM_RESEAU[r] || r} : ${e(m[r].titre)}${m[r].artiste ? ", " + e(m[r].artiste) : ""}`);
     return l.length ? `<p class="note" data-musique>${t("con.ctc.musique", { m: l.join(" · ") })}</p>` : ""; };
+  // Lot 9d : les textes du commerce (légendes, réponses du démarrage) gardent sa langue ; l'attribut lang le dit (lecteurs d'écran, traduction),
+  // comme valider.html et l'espace. ficheLangue : langue du commerce de la fiche ouverte (posée à son affichage).
+  let ficheLangue = "fr";
   const carteContenu = x => { const fmt = x.type === "video" ? "video" : x.format === "story" ? "story" : "publication", leg = String(x.legende || "").replace(/\s+/g, " ").trim();
     const date = x.prevu_le ? t(x.statut === "publie" ? "con.ctc.publie" : "con.ctc.prevu", { d: dh(x.prevu_le) }) : t("con.ctc.sans.date");
     return `<article data-contenu="${e(x.id)}" data-format="${fmt}"><div class="cadre ${fmt === "story" ? "c916" : "c45"}">${x.url ? `<a href="${e(x.url)}" target="_blank" rel="noopener"><img src="${e(x.url)}" alt="${e(t("con.ctc.alt." + fmt))}" loading="lazy" decoding="async" data-visuel></a>` : ""}<span class="icone-visuel"${x.url ? " hidden" : ""}>${fmt === "video" ? ICONE_VIDEO : `<span class="note">${t("con.phc.sans.apercu")}</span>`}</span></div>
       <div class="pile serre"><p class="etats-contenu"><span class="etat-dos${["approuve", "programme", "publie"].includes(x.statut) ? " etat-dos-fait" : ""}">${I.a("st.contenu." + x.statut) ? t("st.contenu." + x.statut) : e(x.statut)}</span>${x.ia ? ` <span class="etat-dos" data-badge-ia>${t("con.vic.badge")}</span>` : ""}</p>
-        <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${musiqueContenu(x.musique)}${leg ? `<p class="legende-courte">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
+        <p class="note">${t("con.ctc.format." + fmt)} · ${date}</p>${musiqueContenu(x.musique)}${leg ? `<p class="legende-courte" lang="${ficheLangue}" translate="no">${e(leg.length > 110 ? leg.slice(0, 107).trimEnd() + "…" : leg)}</p>` : ""}</div></article>`; };
   const videContenus = phs => { const l = Array.isArray(phs) ? phs : [];
     return t(l.some(p => ["a_traiter", "en_cours"].includes(p.statut) && (p.controle_force || p.statut === "en_cours")) ? "con.ctc.vide.cours" : l.some(p => p.statut === "a_traiter") ? "con.ctc.vide.controle"
       : l.some(p => p.statut === "refusee" && p.refus_motif === "plafond") ? "con.ctc.vide.plafond" : "con.ctc.vide.photo"); };
@@ -1411,7 +1415,7 @@
     const photosIa = new Set(videosIaDe(journalClient).filter(j => j.detail.video_ia.etat === "faite").map(j => String(j.detail.photo)));
     if (Array.isArray(cts)) cts.forEach(x => { if (x.type === "video" && photosIa.has(String(x.photo_id))) x.ia = true; });
     const mesAvis = (fileAvis || []).filter(a => a.commerce_id === cid).sort((a, b) => (b.retenue_le ? 1 : 0) - (a.retenue_le ? 1 : 0) || (b.sensible ? 1 : 0) - (a.sensible ? 1 : 0) || String(a.recu_le).localeCompare(String(b.recu_le)));
-    afCtx = { pubs: [], dl: dl || [], cs };
+    afCtx = { pubs: [], dl: dl || [], cs }; ficheLangue = langueDe(c);
     vue.innerHTML = `<div class="entete"><h1>${e(c.nom)}</h1><p class="chapo">${e(METIERS[c.metier] || "")}${c.ville ? ", " + e(c.ville) : ""} · ${e(I.offre(c.offre_id))}</p></div>
       <p class="retour-liste"><a href="#/clients">${t("con.sty.retour")}</a><br><a class="lien-guide" href="#/guide" data-lien-guide>${t("con.guide.lien")}</a></p><p class="msg" id="msg" role="status"></p>
       ${mesRelire.length ? `<section class="carte" id="client-a-relire" data-client-relire="${mesRelire.length}"><h2>${t("con.rl.client.titre", { n: mesRelire.length })}</h2><p class="note">${t("con.rl.client.texte")}</p></section><div class="pile" id="client-relire-file">${mesRelire.map(carteRelire).join("")}</div>` : ""}

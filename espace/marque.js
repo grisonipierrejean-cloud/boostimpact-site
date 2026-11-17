@@ -577,6 +577,7 @@
         <figcaption>${avecChoix ? `<label class="option"><input type="radio" name="sty-gab" value="${g}"${k.gabarit_prefere === g ? " checked" : ""}><span>${t("sty.gab.prefere", { g: STY_GAB[g] })}</span></label>` : `<span class="note">${STY_GAB[g]}</span>`}</figcaption></figure>`).join("");
     const carteLogo = k => `<section class="carte" aria-labelledby="sty-logo-titre"><h2 id="sty-logo-titre">${tx("sty.logo")}</h2>
         <div class="sty-logo" id="sty-logo">${sty.logoUrl ? `<img src="${e(sty.logoUrl)}" alt="${tx("sty.logo.alt")}">` : `<p class="texte2">${t("sty.logo.aucun")}</p>`}</div>
+        ${sty.logoDemande && sty.kit.logo === sty.logoDemande.chemin ? `<p class="note" id="sty-logo-demande">${t("con.sty.logo.demande", { d: I.date(sty.logoDemande.cree_le) })}</p>` : ""}
         <div class="actions"><span class="depot-choix"><input id="sty-logo-fichier" class="vh" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp"><label for="sty-logo-fichier" class="bouton second">${tx(sty.logoUrl ? "sty.logo.changer" : "sty.logo.deposer")}</label></span>
           ${k.logo ? `<button type="button" class="lien" id="sty-logo-retirer">${t("sty.logo.retirer")}</button>` : ""}</div>
         <p class="aide">${tx("sty.logo.aide")}</p></section>`;
@@ -633,7 +634,8 @@
       const x = cv.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(grande, 0, 0, cv.width, cv.height);
     }
     const reglageVu = () => sty.reglage || (sty.brut && TEXTE_PHOTOS.includes(sty.brut.texte_photos) ? sty.brut.texte_photos : TEXTE_PHOTOS_DEFAUT);
-    const valide = () => !!(sty.brut && sty.brut.verrouille && sty.brut.texte_photos);
+    // Lot 9d : un style validé par BoostImpact attend encore le OK du commerçant (bouton « C'est parfait »), comme la carte de l'accueil (app.js).
+    const valide = () => !!(sty.brut && sty.brut.verrouille && sty.brut.texte_photos && sty.brut.valide_par !== "renom");
     const compte = c => String(c.nom || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 24);
     const avatar = c => { const k = sty.kit, enc = css(encreSur(rgb(k.couleurs.principale), { texte: k.couleurs.texte, fond: k.couleurs.fond }));
       return `<span class="post-avatar" aria-hidden="true" style="background:${e(k.couleurs.principale)};color:${enc}">${sty.logoUrl ? `<img src="${e(sty.logoUrl)}" alt="">` : e(String(c.nom || "?").trim().charAt(0).toUpperCase())}</span>`; };
@@ -780,6 +782,15 @@
         // Pas encore de kit : proposition calculée ici depuis la première photo (même calcul que le moteur), sinon les couleurs actuelles.
         sty.kit = m.kit || (sty.images.length ? { ...garderCouleurs(proposer({ photos: [pixels(sty.images[0])], metier: c.metier, ton: c.ton || "", cat }), c.couleurs), version: 0 }
           : normaliser(null, c.couleurs, c.metier, c.ton || "", cat));
+        // Lot 9d : logo joint par le client à sa demande de changement (« Vos publications ») : la console le reprend dans le panneau (kit en cours,
+        // couleurs inchangées ; « Proposer » les tire ensuite du logo). Rien n'est enregistré avant « Enregistrer ». Avant : la console ne voyait
+        // que le chemin du fichier dans le texte de la demande.
+        sty.logoDemande = null;
+        if (renom && m.logo_demande && m.logo_demande.chemin !== sty.kit.logo) {
+          const img = await chargerImage(m.logo_demande.url).catch(() => null);
+          if (img) { const p = proposer({ logo: pixels(img), metier: c.metier, ton: c.ton || "", logoChemin: m.logo_demande.chemin, cat });
+            sty.kit = { ...sty.kit, logo: m.logo_demande.chemin, logo_fond: p.logo_fond }; sty.logoUrl = m.logo_demande.url; sty.logoImg = img; sty.logo = preparerLogo(img); sty.logoDemande = m.logo_demande; }
+        }
       }
       sty.c = c;
       if (!renom) return publications(c);

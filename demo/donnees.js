@@ -52,6 +52,13 @@
     return null;
   }
   // Retenues d'un avis de la démonstration : son historique (a.retenues), plus une retenue en cours posée avant cet historique.
+  // Lot 9d : logo joint à la dernière demande de changement non traitée (« Nouveau logo : <commerce>/marque/… », écrit par « Vos publications »).
+  // Seul un chemin du dossier marque du commerce est repris ; la console le montre et le reprend dans le panneau, sans rien enregistrer.
+  function logoDemande(c, demandes) {
+    const d = (demandes || []).find(x => !x.traitee_le && /Nouveau logo : /.test(x.texte || "")); if (!d) return null;
+    const m = /Nouveau logo : (\S+)/.exec(d.texte), ch = m && m[1];
+    return ch && ch.startsWith(c.id + "/marque/") && !/\.\./.test(ch) ? { chemin: ch, cree_le: d.cree_le } : null;
+  }
   const RETENUE_SANS_MESSAGE_HEURES = 48;   // lot 8 : même valeur que retenue_sans_message_heures() (schema.sql)
   const RETOUCHE_DELAI_HEURES = 48;   // lot 8 : CGV art. 3, nouvelle proposition sous 48 h après une demande de retouche
   const retenuesDe = a => { const l = Array.isArray(a.retenues) ? a.retenues.slice() : []; if (a.retenue_le && !l.some(x => x.retenue_le === a.retenue_le)) l.push({ retenue_le: a.retenue_le, liberee_le: null }); return l; };
@@ -232,7 +239,10 @@
   // Une vidéo ou une story ne se publie pas sur la fiche Google.
   // Story : Instagram et Facebook seulement (même règle que reseaux_tacites() et verifier_programmation de schema.sql, 31/10/2026 : l'aperçu
   // montrait un onglet TikTok pour une story qui n'y part jamais).
-  const reseauxPour = c => formatDe(c) === "publication" ? RESEAUX.slice() : formatDe(c) === "story" ? ["facebook", "instagram"] : RESEAUX.filter(r => r !== "google");
+  // Lot 9d (16/11/2026, CGV version 2, article 3) : une vidéo part sur Instagram et TikTok seulement, jamais sur Facebook (ni sur la fiche Google) ;
+  // même règle que reseaux_tacites() et verifier_programmation de schema.sql (bloc « Lot 9d : aucune vidéo programmée vers Facebook »)
+  // et que metricool_api.RESEAUX_SANS_VIDEO. Avant : la case Facebook était proposée, puis la vidéo était écartée en silence à la publication.
+  const reseauxPour = c => formatDe(c) === "publication" ? RESEAUX.slice() : formatDe(c) === "story" ? ["facebook", "instagram"] : RESEAUX.filter(r => r !== "google" && r !== "facebook");
   // Réseaux où CE contenu part pour CE commerce (30/10/2026, bug vu par PJ : un Essentiel voyait Instagram, Facebook et TikTok à la validation) :
   // ceux du format (reseauxPour) ET ceux de l'offre et retenus (autorises : reseauxAutorises du commerce, ou « reseaux » rendu par objet_par_jeton).
   // autorises absent (lien d'avant le bloc SQL) : le format seul, comme avant.
@@ -837,7 +847,9 @@
     VISIBILITE_IA_OBJECTIF_MANQUE: "Visibilité IA : objectif interne de 72 h ouvrées dépassé", VISIBILITE_IA_ECHEANCE_PROCHE: "Visibilité IA : échéance garantie (7 jours) dans moins de 24 h",
     VISIBILITE_IA_EN_RETARD: "Visibilité IA : échéance garantie (7 jours) dépassée", VISIBILITE_IA_GARANTIE: "Visibilité IA livrée en retard : garantie à appliquer",
     // Musique tendance (16/11/2026, publication_envoyee et musique_relancer de schema.sql) : aucune musique après le nouvel essai, vidéo non publiée sur ce réseau
-    MUSIQUE_INTROUVABLE: "Vidéo non publiée : aucune musique autorisée trouvée" };
+    MUSIQUE_INTROUVABLE: "Vidéo non publiée : aucune musique autorisée trouvée",
+    // Lot 9d (16/11/2026, relances_whatsapp_photos de schema.sql, CGV version 2 art. 3) : Premium sans photo ni vidéo depuis 7 puis 14 jours ; l'équipe écrit.
+    RELANCE_WHATSAPP_PHOTOS: "Premium sans photo ni vidéo : relance WhatsApp à envoyer" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
   // Titre d'une alerte (28/10/2026) : les tâches de la fiche Google portent le nom du commerce (« Identifier la fiche Google de <commerce> »,
   // « Accompagner la création de la fiche Google de <commerce> »).
@@ -857,7 +869,7 @@
   const texteAlerte = a => { const d = a.detail || {};
     if (a.type === "RAPPEL_DEMANDE" && d.sujet === "changement_offre") return `Changement d'offre demandé : ${(OFFRES[d.offre_actuelle] || {}).nom || d.offre_actuelle || "offre actuelle"} vers ${(OFFRES[d.offre] || {}).nom || d.offre || "?"}. Confirmer par message (WhatsApp au ${telLisible(d.telephone) || "numéro du commerçant"}, ou email), jamais par appel (lot 8), puis changer l'abonnement dans Stripe (prorata), sans second paiement.${d.frais_offerts_option ? " Visibilité IA déjà payée : NE PAS ajouter les frais de mise en route (offerts, CGV art. 3 bis et 4)." : ""}`;
     if (a.type === "RAPPEL_DEMANDE") return `Écrire sur WhatsApp (aucun appel promis) au ${telLisible(d.telephone) || "numéro inconnu"} (sujet : ${({ mise_en_route: "mise en route", google: "accès à la fiche Google", reseaux: "connexion des réseaux", avis_sensible: "avis sensible" })[d.sujet] || d.sujet || "mise en route"}).`;
-    if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : appeler le commerçant et demander l'accès avec lui" : "Pas de fiche : appeler le commerçant et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
+    if (a.type === "FICHE_GOOGLE_A_CREER") return `${d.cas === "pas_a_mon_nom" ? "Fiche existante, pas au nom du commerçant : écrire au commerçant sur WhatsApp (aucun appel promis, lot 9d) et demander l'accès avec lui" : "Pas de fiche : écrire au commerçant sur WhatsApp (aucun appel promis, lot 9d) et la créer avec lui (Google vérifie ensuite lui-même le commerce)"}, puis noter sa vérification par Google (la garantie démarre à cette date).`;
     // Fiche Google du client venu du site (28/10/2026) : lien collé, motif, identifiants proches ; l'identifiant se pose dans la fiche du client.
     if (a.type === "FICHE_GOOGLE_A_IDENTIFIER") return `Recherche automatique sans résultat sûr (${MOTIFS_FICHE[d.motif] || d.motif || "motif inconnu"}). Lien collé par le commerçant : ${d.lien || "aucun"}.${(d.candidats || []).length ? " Fiches proches : " + d.candidats.join(", ") + "." : ""} Ouvrir le lien, trouver la fiche, puis coller son identifiant (place_id) dans la fiche du client, Comptes.`;
     // Fiche Google à relier (02/11/2026) : jamais reliée par le nom ; le place_id posé dans la fiche du bon client la relie au passage suivant.
@@ -879,6 +891,8 @@
     if (a.type === "VISIBILITE_IA_ECHEANCE_PROCHE" || a.type === "VISIBILITE_IA_EN_RETARD")
       return `${d.commerce || "Ce commerce"} : livraison garantie de la Visibilité IA due le ${dateGeo(d.echeance)}${a.type === "VISIBILITE_IA_EN_RETARD" ? `, échéance dépassée : à la livraison, ${garantieGeo(d.garantie)}` : `, il reste ${String(d.heures_restantes ?? "?").replace(".", ",")} heure(s)`}. Étape à faire : ${d.etape_vous || "voir le dossier"}. Finir le travail, puis « Rapport de livraison remis ».`;
     if (a.type === "VISIBILITE_IA_GARANTIE") return `${d.commerce || "Ce commerce"} : Visibilité IA livrée le ${dateGeo(d.livre_le)}, après l'échéance garantie du ${dateGeo(d.echeance)}. Garantie à appliquer : ${garantieGeo(d.garantie)}.`;
+    // Lot 9d : relance WhatsApp promise par les CGV (Premium, 7 puis 14 jours sans envoi) ; rien n'est envoyé d'office, l'équipe écrit puis marque vue.
+    if (a.type === "RELANCE_WHATSAPP_PHOTOS") return `Relance WhatsApp de J+${d.palier || "?"} promise par les CGV (Premium) : aucune photo ni vidéo depuis ${d.jours != null ? d.jours + " jours" : "le début du mois"}. Écrire au commerçant sur WhatsApp au ${telLisible(d.telephone) || "numéro inconnu (le demander par email)"} pour lui demander ses photos et vidéos du mois, puis marquer comme vue.`;
     if (a.type === "MUSIQUE_INTROUVABLE") { const rs = (d.reseaux || []).map(r => ({ instagram: "Instagram", tiktok: "TikTok" })[r] || r).join(" et ") || "un réseau";
       return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} n'est pas partie sur ${rs}, faute de musique tendance autorisée après un nouvel essai (${Object.values(d.raisons || {}).join(" ; ") || "raison inconnue"}). Jamais publiée sans son : vérifier les catalogues musicaux dans Metricool (compte TikTok Business, Instagram relié par Facebook), puis reprogrammer la vidéo.`; }
     if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
@@ -1130,7 +1144,8 @@
       const src = ((c.marque && c.marque.source && c.marque.source.photos) || []).filter(u => /^demo\//.test(u)).map(u => ({ url: u, nom: u.split("/").pop() }));
       const photos = [...E.photos.filter(p => p.commerce_id === c.id && (p.statut !== "refusee" || p.refus_motif === "plafond") && /^data:image\//.test(p.url || "")).map(p => ({ url: p.url, nom: p.nom_fichier })), ...src].slice(0, 9); // photos refusées exclues de la grille (31/10/2026), sauf celles gardées pour le mois suivant (plafond), 9 au plus
       return { kit: c.marque ? MQ.normaliser(c.marque, c.couleurs, c.metier, c.ton || "", cat) : null, brut: c.marque || null, photos,
-        logo: c.marque && c.marque.logo ? ((E.logos || {})[c.marque.logo] || null) : null, demandes: demandesStyleDemo(c) };
+        logo: c.marque && c.marque.logo ? ((E.logos || {})[c.marque.logo] || null) : null, demandes: demandesStyleDemo(c),
+        logo_demande: (() => { const d = logoDemande(c, demandesStyleDemo(c)); return d && (E.logos || {})[d.chemin] ? { ...d, url: E.logos[d.chemin] } : null; })() };
     }
     const demandesStyleDemo = c => liste("demandes_style").filter(x => x.commerce_id === c.id).sort((a, b) => b.cree_le.localeCompare(a.cree_le)).slice(0, 20);
     async function logoDemo(c, f) {
@@ -1495,7 +1510,7 @@
         await init(); const c = cur(); pasEnPause(c); const ct = mine("contenus").find(x => x.id === id);
         if (!ct || ct.statut !== "approuve") throw new Error(REGLES.programme);
         reseaux = (reseaux || []).filter(r => RESEAUX.includes(r)); if (!reseaux.length) throw new Error("Choisissez où publier.");
-        for (const r of reseaux) { horsOffre(c, r); if ((E.comptes[c.id][r] || {}).etat !== "connecte") throw new Error("Réseau non connecté : " + r + "."); if (!reseauxPour(ct).includes(r)) throw new Error("Une vidéo ou une story ne se programme pas sur la fiche Google."); }
+        for (const r of reseaux) { horsOffre(c, r); if ((E.comptes[c.id][r] || {}).etat !== "connecte") throw new Error("Réseau non connecté : " + r + "."); if (!reseauxPour(ct).includes(r)) throw new Error(ct.type === "video" ? "Une vidéo part sur Instagram et TikTok seulement : ni sur Facebook, ni sur la fiche Google." : "Une vidéo ou une story ne se programme pas sur la fiche Google."); }
         const pris = mine("publications").filter(p => ["programme", "envoye", "publie"].includes(p.statut)).map(p => new Date(p.prevu_le).getTime());
         // Lot (« Programmer tout ») : au plus tôt le jour jourLot(rang, nombre), comme programmer_auto_lot en service.
         if (lot && duJour(ct)) lot = null;   // story ou contenu du jour : premier créneau libre, comme programmer_auto_lot (bloc « Tour 8 »)
@@ -3038,7 +3053,7 @@
         if (!(new Date(prevu_le) > new Date())) throw new Error(REGLES.futur);
         if (!reseaux.length) throw new Error("Choisissez où publier.");
         for (const r of reseaux) { horsOffre(c, r); if ((E.comptes[c.id][r] || {}).etat !== "connecte") throw new Error("Réseau non connecté : " + r + "."); }
-        if (reseaux.some(r => !reseauxPour(ct).includes(r))) throw new Error(ct.type === "video" ? "Une vidéo ne se programme pas sur la fiche Google." : "Une story (format vertical 24 h) ne se programme pas sur la fiche Google.");
+        if (reseaux.some(r => !reseauxPour(ct).includes(r))) throw new Error(ct.type === "video" ? "Une vidéo part sur Instagram et TikTok seulement : ni sur Facebook, ni sur la fiche Google." : "Une story (format vertical 24 h) ne se programme pas sur la fiche Google.");
         const son = sonPlateforme(ct, reseaux), pid = uid();
         E.publications.push({ id: pid, commerce_id: c.id, contenu_id, reseaux, prevu_le: new Date(prevu_le).toISOString(), statut: "programme", cree_le: new Date().toISOString(), musique_a_poser: son, musique_posee_le: null });
         ct.statut = "programme"; jour(c.id, "PROGRAMME", { contenu: contenu_id, reseaux }); if (son) jour(c.id, son.code, { publication: pid, reseaux: son.reseaux, simule: true }); suivreDepot(ct); sauver();
@@ -3543,6 +3558,10 @@
         photos: ph.map((p, i) => ({ url: urls[i], nom: p.nom_fichier })).filter(p => p.url), logo: c.marque && c.marque.logo ? await signe(c.marque.logo) : null,
         demandes: ok(await sb.from("demandes_style").select("id,texte,cree_le,traitee_le").eq("commerce_id", c.id).order("cree_le", { ascending: false }).limit(20)) };
     }
+    async function marqueDeAvecLogo(c) {   // lot 9d : plus le logo joint à la dernière demande non traitée (voir logoDemande)
+      const m = await marqueDe(c), d = logoDemande(c, m.demandes), url = d ? await signe(d.chemin).catch(() => null) : null;
+      return { ...m, logo_demande: d && url ? { ...d, url } : null };
+    }
     // Logo : seau « photos », <commerce>/marque/logo-<aléa>.<ext> (règles de stockage : storage.sql pour le commerçant, schema.sql pour BoostImpact). Un SVG est converti en PNG.
     async function logoDe(c, f) {
       const MQ = window.RENOM_MARQUE, e = MQ.controlerLogo(f); if (e) throw Object.assign(new Error("logo " + e), { code: "sty.logo." + e });
@@ -3708,7 +3727,7 @@
       async reglerMaMarque(p, valider) { const r = ok(await sb.rpc("regler_ma_marque", { p: p || {}, p_valider: valider == null ? null : !!valider })); cache = null; return r; },
       async demanderChangementStyle(texte) { return ok(await sb.rpc("demander_changement_style", { p_texte: String(texte || "") })); },
       // ---- Style du commerce réglé par BoostImpact (console) : fonction admin_regler_marque (n'écrit que commerces.marque ; auteur « renom » posé par la base)
-      async adminMarque(cid) { const c = ok(await sb.from("commerces").select("*").eq("id", cid).single()); return { commerce: c, ...(await marqueDe(c)) }; },
+      async adminMarque(cid) { const c = ok(await sb.from("commerces").select("*").eq("id", cid).single()); return { commerce: c, ...(await marqueDeAvecLogo(c)) }; },
       async adminDeposerLogo(cid, f) { return logoDe({ id: cid }, f); },
       async adminEnregistrerMarque(cid, kit, valider) {
         const m = await kitControle({ ...kit, verrouille: !!valider, auto: false }, cid); delete m.valide_par;

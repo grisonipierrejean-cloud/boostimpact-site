@@ -34,7 +34,7 @@
       st = fait ? "fait" : x.qui.includes("vous") ? "vous" : x.qui.includes("client") ? "client" : "robot";
     return `<li data-geo-etape="${x.cle}" data-st="${st}"><label class="option"><input type="checkbox" data-geo-cocher="${x.cle}"${fait ? " checked" : ""}${bloque ? " disabled" : ""}><span class="fort">${i + 1}. ${t("geo.e." + x.cle)}</span></label>
       <p class="note geo-qui"><span class="etat-dos etat-dos-${st}">${fait ? t("con.dos.st.fait") : qui(x.qui)}</span> ${fait ? qui(x.qui) + " · " : ""}${t("con.geo.mode." + x.mode)}${fait && x.le ? " · " + t(x.par === "robot" ? "con.geo.fait.robot" : "con.geo.fait.le", { d: date(x.le) }) : ""}</p>
-      ${x.note ? `<p class="note casse" data-geo-note-lue>${e(x.note)}</p>` : ""}
+      ${x.note ? `<p class="note casse" data-geo-note-lue lang="fr" translate="no">${e(x.note)}</p>` : ""}
       ${!fait && !bloque && NOTE.includes(x.cle) ? `<div class="f"><label for="geo-note-${x.cle}" class="note">${t("con.geo.note." + (x.cle === "captures" ? "captures" : x.cle === "coherence" ? "coherence" : "autre"))}</label><input id="geo-note-${x.cle}" type="text" maxlength="1000" data-geo-note="${x.cle}"></div>` : ""}
       ${(x.cle === "coherence" && d.coherence_garantie_le && !fait) ? `<p class="note" data-geo-garantie>${t("con.geo.coherence.garantie", { d: date(d.coherence_garantie_le) })}</p>` : ""}
       ${(x.cle === "fiche_google" && d.fiche_optimisee_le && !fait) ? `<p class="note" data-geo-garantie>${t("con.geo.fiche.garantie", { d: date(d.fiche_optimisee_le) })}</p>` : ""}</li>`; };
@@ -51,7 +51,7 @@
     : `<td class="${s.cite ? "fort" : ""}">${t(s.cite ? "con.geo.m.cite" : "con.geo.m.absent", { a: s.cite, b: s.sur })}${s.position_moyenne ? `<br><span class="note">${t("con.geo.m.rang", { n: I.nombre(s.position_moyenne, Number.isInteger(+s.position_moyenne) ? 0 : 1) })}</span>` : ""}</td>`;
   const blocMesure = m => { const non = Object.entries(m.moteurs || {}).filter(([, v]) => v.etat !== "mesure"), syn = Array.isArray(m.synthese) ? m.synthese : [];
     return `<div class="geo-mesure" data-geo-mesure="${e(m.id)}" data-statut="${e(m.statut)}"><p class="fort">${t("con.geo.m.type." + m.type)} · ${t("con.geo.m.st." + m.statut, { d: date(m.faite_le || m.demandee_le) })}${m.cout_usd != null && m.statut === "faite" ? " · " + t("con.geo.m.cout", { n: I.nombre(m.cout_usd, 2) }) : ""}</p>
-      ${m.erreur ? `<p class="note fort" data-geo-erreur>${e(ph(m.erreur))}</p>` : ""}${m.avertissement ? `<p class="note">${e(m.avertissement)}</p>` : ""}
+      ${m.erreur ? `<p class="note fort" data-geo-erreur>${e(ph(m.erreur))}</p>` : ""}${m.avertissement ? `<p class="note" lang="fr" translate="no">${e(m.avertissement)}</p>` : ""}
       ${non.length ? `<p class="note" data-geo-non-mesure>${non.map(([k, v]) => t("con.geo.m.non.mesure", { m: t("geo.moteur." + k), r: e(v.raison || "") })).join(" · ")}</p>` : ""}
       ${syn.length ? `<table class="geo-syn"><thead><tr><th>${t("con.geo.m.question")}</th>${MOTEURS.map(k => `<th>${t("geo.moteur." + k)}</th>`).join("")}</tr></thead><tbody>
         ${syn.map(s => `<tr><td>${t("con.geo.m.q", { n: s.question_index + 1 })}</td>${MOTEURS.map(k => caseSyn((s.par_moteur || {})[k])).join("")}</tr>`).join("")}</tbody></table>` : ""}

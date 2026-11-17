@@ -1719,7 +1719,7 @@
           ${proposes.length === 1 ? `<div class="f" data-dest-unique><p class="fort">${t(proposes[0] === "google" ? "cal.sur.google" : "cal.sur.reseau", { r: RES[proposes[0]] })}${connectes.includes(proposes[0]) ? "" : nonConnecte(proposes[0])}</p><input type="hidden" name="res" value="${proposes[0]}" data-unique>
           <p class="aide">${t("cal.plafond.aide")}</p></div>`
           : `<fieldset><legend>${t("cal.choisir.ou")}</legend>${proposes.map(r => `<label class="option" data-res-lib="${r}"><input type="checkbox" name="res" value="${r}"${connectes.includes(r) ? "" : " disabled"}><span>${RES[r]}${connectes.includes(r) ? "" : nonConnecte(r)}</span></label>`).join("")}
-          <p class="aide">${t("cal.plafond.aide")}</p></fieldset>`}
+          ${proposes.includes("facebook") ? `<p class="aide" data-video-reseaux hidden>${t("cal.video.reseaux")}</p>` : ""}<p class="aide">${t("cal.plafond.aide")}</p></fieldset>`}
           <div class="confirmer-refus" id="f-alerte" data-zone-alerte hidden role="alert"><p class="fort" data-alerte-texte></p><div class="actions"><button type="button" class="bouton" data-a="programmer-conseil"></button><button type="button" class="bouton second" data-a="programmer-force">${t("cal.programmer.quand.meme")}</button></div></div>
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
           <button class="bouton" type="submit" id="cal-programmer">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : bloque ? "cal.aucun.pret.bloque" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
@@ -1768,7 +1768,9 @@
     const grilleM = vue.querySelector(".cal");
     if (grilleM) { ajusterGrille(grilleM); if (!cal.ecouteGrille) { cal.ecouteGrille = true; addEventListener("resize", () => ajusterGrille(document.querySelector("#vue .cal"))); } }
     vue.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { const n = +b.dataset.n, d = new Date(cal.ref); if (cal.mode === "mois") { d.setDate(1); d.setMonth(d.getMonth() + n); } else d.setDate(d.getDate() + 7 * n); cal.ref = d; calendrier(); });
+    // Lot 9d : une vidéo ne se programme plus vers Facebook (case masquée par reseauxDuContenu) ; une ligne dit pourquoi (data-video-reseaux).
     const majDestinations = () => { const x = prets.find(y => y.id === ($("contenu") || {}).value); if (!x) return; const ok = M.reseauxDuContenu(x, autorises);
+      const lv = vue.querySelector("[data-video-reseaux]"); if (lv) lv.hidden = M.formatDe(x) !== "video";
       vue.querySelectorAll("[data-res-lib]").forEach(lb => { const i = lb.querySelector("input"), dedans = ok.includes(lb.dataset.resLib); lb.hidden = !dedans; if (!dedans) i.checked = false; });
       // Les réseaux où ce contenu part réellement (connectés et compatibles avec son format) sont cochés d'office.
       vue.querySelectorAll("[data-res-lib]:not([hidden]) input:not(:disabled)").forEach(i => { i.checked = true; }); };
@@ -3362,9 +3364,13 @@
   // Entrée « Vos publications » : sur l'accueil (juste sous « À faire maintenant ») et dans Réglages tant que le commerçant n'a pas validé son
   // réglage « Texte sur vos photos » (marque.texte_photos posé et kit validé) ; ensuite une ligne discrète sur l'accueil (lienPublications)
   // et l'entrée de la liste des Réglages, pour modifier.
-  const publicationsVues = c => !!(c.marque && c.marque.verrouille && c.marque.texte_photos);
+  // Lot 9d : un style validé par BoostImpact (valide_par « renom ») ne compte pas comme vu par le commerçant : la console pose texte_photos (valeur
+  // par défaut du kit) et la carte disparaissait sans que le client ait rien regardé. La carte reste, titrée « Votre style est prêt : jetez un œil »,
+  // jusqu'à sa propre validation dans « Vos publications ».
+  const styleParRenom = c => !!(c.marque && c.marque.verrouille && c.marque.valide_par === "renom");
+  const publicationsVues = c => !!(c.marque && c.marque.verrouille && c.marque.texte_photos) && !styleParRenom(c);
   const carteStyle = (c, secondaire) => publicationsVues(c) ? "" : `<section class="carte style-accueil" id="carte-style" aria-labelledby="carte-style-titre"><div class="style-accueil-corps">
-      <div><h2 id="carte-style-titre">${t("acc.pub.titre")}</h2><p class="texte2">${t(sansReseaux(c) ? "acc.pub.texte.google" : "acc.pub.texte")}</p></div></div>
+      <div><h2 id="carte-style-titre">${t(styleParRenom(c) ? "acc.style.pret.titre" : "acc.pub.titre")}</h2><p class="texte2">${t(styleParRenom(c) ? "acc.style.pret.texte" : sansReseaux(c) ? "acc.pub.texte.google" : "acc.pub.texte")}</p></div></div>
       <p class="pied"><a class="bouton${secondaire ? " second" : ""}" href="#/publications" id="voir-publications">${t("acc.pub.bouton")}</a></p></section>`;
   const lienPublications = c => publicationsVues(c) ? `<p class="lien-accueil"><a class="lien-seul" href="#/publications" id="lien-publications">${t("acc.pub.lien")}</a></p>` : "";
   const style = () => styleEcran.rendre();
