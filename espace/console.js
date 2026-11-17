@@ -643,6 +643,28 @@
   const auteurCourt = n => { const m = String(n || "").trim().split(/\s+/).filter(Boolean); if (!m.length || /^(un )?utilisateur google$|^(a )?google user$/i.test(String(n).trim())) return "";
     const i = m[1] && (m[1].match(/[A-Za-zÀ-ÿ]/) || [""])[0]; return m[0] + (i ? " " + i.toUpperCase() + "." : ""); };
   const titreSensible = a => [t("con.al.avis.sensible"), a.note ? etoiles(a.note) : "", auteurCourt(a.auteur)].filter(Boolean).join(" · ");
+  // Lot 11 (17/11/2026) : où en est la publication automatique (admin_file_avis, publication_auto) ; brouillon de Claude d'un avis sensible.
+  // Revue du 17/11/2026 : référence courte de l'avis (celle des alertes WhatsApp) ; FAUX bloque tout jusqu'à « Débloquer » (équipe seule, journalisé) ;
+  // réponse corrigée en attente qu'une alerte précédente finisse de partir.
+  const etatAuto = a => { const p = a.publication_auto || {}, l = [];
+    if (p.ref) l.push(`<p class="note" data-ref-avis>${t("con.file.ref", { r: `<span class="casse" translate="no">${e(p.ref)}</span>` })}</p>`);
+    if (p.faux_signale_le) { l.push(`<p class="note fort" data-faux>${t("con.file.faux", { d: dh(p.faux_signale_le) })}</p>${D.adminDebloquerFaux ? `<p><button type="button" class="bouton second petit" data-avis-debloquer>${t("con.file.debloquer")}</button></p>` : ""}`); return l.join(""); }
+    // Contre-revue du 17/11/2026 : dans le doute, on ne publie pas ; avis débloqué : nouvelle réponse à envoyer.
+    if (p.a_renvoyer) l.push(`<p class="note fort" data-a-renvoyer>${t("con.file.a.renvoyer")}</p>`);
+    if (p.suspendue) l.push(`<p class="note fort" data-suspendue>${t("con.file.suspendue", { d: dh(p.suspendu_le) })}</p>`);
+    // Contre-revue n°2 : sur un avis suspendu ou en attente, l'équipe applique la réponse du commerçant en son nom (journalisé).
+    // Contre-revue n°3 : « Appliquer OK » publie le texte EXACT que le commerçant a reçu (affiché) ; jamais reçu : bouton désactivé (la base refuse aussi).
+    if ((p.suspendue || a.retenue_le) && !p.faux_signale_le && D.adminAppliquerReponse) l.push(`${p.ok_possible && p.reponse_recue
+      ? `<p class="note" data-texte-ok>${t("con.file.appliquer.texte")}</p><p class="texte2 casse" translate="no" data-texte-recu>${e(p.reponse_recue)}</p>`
+      : `<p class="note" data-texte-ok>${t("con.file.appliquer.jamais.recu")}</p>`}<div class="actions" data-appliquer>${["ok", "attends", "faux"].map(c =>
+      `<button type="button" class="bouton second petit" data-appliquer-choix="${c}"${c === "ok" && !(p.ok_possible && p.reponse_recue) ? " disabled" : ""}>${t("con.file.appliquer." + c)}</button>`).join("")}</div>`);
+    if (p.renvoi_attendu_le) l.push(`<p class="note" data-renvoi>${t("con.file.renvoi", { d: dh(p.renvoi_attendu_le) })}</p>`);
+    if (a.sensible && !a.propose_le && String(a.reponse_proposee || "").trim()) l.push(`<p class="note fort" data-brouillon-claude>${t("con.file.brouillon")}</p>`);
+    if (p.correction_redigee_le) l.push(`<p class="note" data-reecrite>${t("con.file.reecrite", { d: dh(p.correction_redigee_le) })}</p>`);
+    if (p.api === false && !a.sensible) l.push(`<p class="note" data-auto-main>${t("con.file.auto.main")}</p>`);
+    else if (p.demandee_le && !a.retenue_le) l.push(`<p class="note fort" data-auto-encours>${t("con.file.auto.encours", { d: dh(p.demandee_le) })}</p>`);
+    else if (p.prevue_le) l.push(`<p class="note fort" data-auto-prevue>${t("con.file.auto.prevue", { d: dh(p.prevue_le) })}</p>`);
+    return l.join(""); };
   const carteAvisFile = (a, o = {}) => { const r = a.retenue_le ? retardRetenue(a) : retardAvis(a), sens = !!a.sensible, vide = !String(a.reponse_proposee || "").trim();
     // Version restée 48 h sans reprise (01/11/2026, tour 6 Premium) : « En retard », relance (admin_file_avis : relance_version).
     const etat = a.retenue_le ? etatRetenue(a) : a.relance_version ? t("con.file.version.relance", { d: dh(a.version_client_le) }) : a.suspendue ? t("con.file.version.reprendre") : sens ? t(r ? "con.al.retard" : "con.file.avant", { d: dh(a.echeance) }) : a.traite_le && a.mode !== "equipe" ? t("con.file.traite", { d: dh(a.traite_le) }) : t(r ? "con.file.retard" : "con.file.avant", { d: dh(a.echeance) });
@@ -651,7 +673,7 @@
     return `<article class="carte${r ? " attention" : ""}" data-avis="${e(a.id)}" data-mode="${e(a.mode)}"${sens ? " data-sensible" : ""}><div class="carte-tete"><h2>${sens ? e(titreSensible(a)) : e(a.commerce || "")}</h2><span class="etat${r ? (sens ? " retard" : "") : " actif"}">${etat}</span></div>
           ${retenueAvis(a)}${!a.retenue_le && a.liberee_le && a.echeance ? `<p class="note fort" data-liberee>${t("con.file.liberee.le", { d: dh(a.liberee_le), e: dh(a.echeance) })}</p>` : ""}${sens ? `<p class="fort">${e(a.commerce || "")}</p>` : ""}<p class="note">${t("con.file.titre")}</p>
           <p class="fort">${etoiles(a.note)} · ${e(I.offre(a.offre || ""))}${a.sensible ? " · " + t("con.file.sensible", { r: e((a.raisons || []).join(", ")) }) : " · " + t("con.file.equipe")}</p>
-          ${a.texte ? `<p class="texte2 casse" translate="no">${e(a.texte)}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}<p class="note">${t("con.file.recu", { d: dh(a.recu_le) })}</p>
+          ${a.texte ? `<p class="texte2 casse" translate="no">${e(a.texte)}</p>` : `<p class="note">${t("con.texte.efface")}</p>`}<p class="note">${t("con.file.recu", { d: dh(a.recu_le) })}</p>${etatAuto(a)}
           <div class="f"><label for="rep-av-${e(a.id)}">${t(a.mode === "equipe" ? (vide ? "con.file.reponse.ecrire" : "con.file.reponse") : "con.file.reponse.proposer")}</label><textarea id="rep-av-${e(a.id)}" data-rep-avis maxlength="2000" translate="no">${e(a.reponse_proposee || "")}</textarea></div>
           ${a.mode === "equipe" ? `<p class="note">${t(a.retenue_le ? "con.file.mode.retenue" : "con.file.mode.equipe")}</p><label class="option"><input type="checkbox" data-accord><span>${t("con.file.ok.whatsapp")}</span></label>${a.retenue_le || !D.adminRetenirAvis ? "" : `<p><button type="button" class="lien" data-avis-retenir>${t("con.file.retenir")}</button></p>`}` : `<p class="note">${t("con.file.mode.proposer", { email: a.email_client ? `<span class="casse">${e(a.email_client)}</span>` : t("con.file.sans.email") })}</p>
           ${a.version_client ? `<div class="encart" data-version-client><p class="fort">${t("con.file.version", { d: dh(a.version_client_le) })}</p><p class="texte2 casse" translate="no">${e(a.version_client)}</p></div>` : ""}
@@ -1036,6 +1058,10 @@
     // Lot 6 B (revue exploitant : un appui de trop au téléphone relance les 24 h) : « Appel fait » demande confirmation.
     // Lot 8 : le commerçant a répondu « ATTENDS » (ou une correction) sur WhatsApp : l'équipe met la publication en attente de son message.
     sur("[data-avis-retenir]", b => { if (!window.confirm(t("con.file.retenir.confirmer"))) return; agir(() => D.adminRetenirAvis(b.closest("article").dataset.avis), t("con.file.retenu"), b); });
+    // Revue du 17/11/2026 : seule l'équipe lève un FAUX (admin_debloquer_faux, journal AVIS_FAUX_DEBLOQUE) ; rien n'est publié par ce geste.
+    sur("[data-appliquer-choix]", b => { const c = b.dataset.appliquerChoix; if (!window.confirm(t("con.file.appliquer.confirmer." + c))) return;
+      agir(() => D.adminAppliquerReponse(b.closest("article").dataset.avis, c), t("con.file.applique"), b); });
+    sur("[data-avis-debloquer]", b => { if (!window.confirm(t("con.file.debloquer.confirmer"))) return; agir(() => D.adminDebloquerFaux(b.closest("article").dataset.avis), t("con.file.debloque"), b); });
     sur("[data-avis-liberer]", b => { if (!window.confirm(t("con.file.liberer.confirmer"))) return; agir(() => D.adminLibererAvis(b.closest("article").dataset.avis), t("con.file.liberee"), b); });
     // Lot 3 (15/11/2026, revue exploitant : la confirmation venait avant le refus d'une réponse vide) : réponse vide refusée d'abord, puis la question.
     sur("[data-avis-publie]", b => { const a = b.closest("article"), acc = a.querySelector("[data-accord]"), z = a.querySelector("[data-rep-avis]"); if (z && !z.value.trim()) { msg(ph("Écrivez la réponse publiée.")); z.focus(); return; } if (!window.confirm(t("con.reponse.publiee.confirmer"))) return; agir(() => D.adminAvisPublie(a.dataset.avis, a.querySelector("[data-rep-avis]").value, acc ? acc.checked : false), t("con.file.notee")); });

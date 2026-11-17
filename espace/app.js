@@ -24,7 +24,8 @@
   const ligneContact = (x, id) => { const k = contactDe(x), tel = window.RENOM_WHATSAPP.lisible(k.telephone).replace(/ /g, "\u00a0");
     return `<p class="contact-ligne" id="${id}">${k.photo ? `<img class="contact-photo" src="${e(k.photo)}" alt="" width="40" height="40" loading="lazy">` : ""}<span>${t("contact.votre", { p: e(k.prenom || ""), tel: `<a href="${e(lienWa(k.telephone))}" target="_blank" rel="noopener">${e(tel)}</a>` })}</span></p>`; };
   const monContact = () => (D.monContact ? D.monContact().catch(() => null) : Promise.resolve(null));
-  // Point mensuel Premium de 30 min (décision de PJ du 01/11/2026) : « Réserver mon point du mois ». 02/11/2026 : le bouton ouvre la page de réservation
+  // Lot 11 (17/11/2026) : Premium = bilan écrit et conseils, puis échange sur WhatsApp ou en visio, au choix du client (plus de « point de 30 min »).
+  // Avant : point mensuel Premium de 30 min (décision de PJ du 01/11/2026) : « Réserver mon point du mois ». 02/11/2026 : le bouton ouvre la page de réservation
   // Calendly de l'équipe (AGENDA_POINT_MOIS, « Monthly Meeting - 30mins - BoostImpact Team » ; avant : page Google Agenda de PJ), dans un nouvel
   // onglet ; repli dessous : WhatsApp (wa.me/33699080539) avec le message prérempli d'avant. Lien seul, sans état « Point demandé le … » : la réservation
   // se fait chez Calendly, l'espace ne sait pas si elle a abouti.
@@ -1952,12 +1953,16 @@
   const boutonsReponse = x => { if (!D.repondreAvisCommercant) return { fait: "", ok: "", faux: "" };
     if (accordDonne(x)) return { fait: `<p class="note" data-repondu="ok">${t("avis.repondre.ok.fait", { d: date(x.decision_client_le) })}</p>`, ok: "", faux: "" };
     if (x.faux_signale_le) return { fait: `<p class="note" data-repondu="faux">${t("avis.repondre.faux.fait", { d: date(x.faux_signale_le) })}</p>`, ok: "", faux: "" };
-    return { fait: "", ok: String(x.reponse_proposee || "").trim() ? `<button type="button" class="bouton" data-repondre="ok" data-id="${e(x.id)}">${t("avis.repondre.ok")}</button>` : "",
+    // Lot 11 : avis sensible, OK seulement sur la réponse envoyée par l'équipe (propose_le) : le brouillon de Claude n'est pas encore relu.
+    return { fait: "", ok: String(x.reponse_proposee || "").trim() && (!x.sensible || !!x.propose_le) ? `<button type="button" class="bouton" data-repondre="ok" data-id="${e(x.id)}">${t("avis.repondre.ok")}</button>` : "",
       faux: `<button type="button" class="lien" data-repondre="faux" data-id="${e(x.id)}">${t("avis.repondre.faux")}</button>` }; };
+  // Revue du 17/11/2026 : 1 à 3 étoiles, ATTENDS = publication 48 h après la demande sauf nouveau message (retenues_sans_message) ; avis sensible
+  // ou signalé FAUX : rien n'est publié d'office, le texte d'avant reste juste.
+  const d48 = x => !x.sensible && x.statut !== "humain" && !x.faux_signale_le ? ".48h" : "";
   const blocRetenue = (x, contact, c) => { if (!D.retenirReponseAvis) return ""; const r = boutonsReponse(x);
-    if (x.retenue_le) return `<div class="encart" data-retenue><p class="fort" data-retenue-delai>${t("avis.retenue.fait")}</p>${r.fait}${r.ok || r.faux ? `<div class="actions">${r.ok}${r.faux}</div>` : ""}</div>`;
+    if (x.retenue_le) return `<div class="encart" data-retenue><p class="fort" data-retenue-delai>${t("avis.retenue.fait" + d48(x))}</p>${r.fait}${r.ok || r.faux ? `<div class="actions">${r.ok}${r.faux}</div>` : ""}</div>`;
     if (!peutRetenir(x)) return r.fait;
-    return `<div class="pile serre">${r.fait}<div class="actions">${r.ok}<button type="button" class="bouton second" data-retenir="${e(x.id)}" aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button>${r.faux}</div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide")}</p></div>`; };
+    return `<div class="pile serre">${r.fait}<div class="actions">${r.ok}<button type="button" class="bouton second" data-retenir="${e(x.id)}"${d48(x) ? " data-retenir-48h" : ""} aria-describedby="retenir-aide-${e(x.id)}">${t("avis.retenir")}</button>${r.faux}</div><p class="aide" id="retenir-aide-${e(x.id)}">${t("avis.retenir.aide" + d48(x))}</p></div>`; };
   const relectureSensible = (x, c, contact) => !(equipeRepond(c) && x.sensible && x.statut === "humain") ? "" : `<div class="sensible-reponse" data-relecture>
       ${x.propose_le && String(x.reponse_proposee || "").trim() ? `<p class="fort">${t("avis.sensible.proposee.equipe")}</p><p class="reponse"${lc()}>${e(x.reponse_proposee)}</p>
         ${x.retenue_le && D.retenirReponseAvis ? "" : x.version_client ? `<p class="note" id="publication-suspendue-${e(x.id)}">${t("avis.version.reprise")}</p>` : `<p class="note" id="publication-prevue-${e(x.id)}">${(echeanceAvisEspace(x) || 0) > Date.now() ? t("avis.sensible.publication", { d: I.dateHeureDans(new Date(echeanceAvisEspace(x)).toISOString()), retenir: !!D.retenirReponseAvis }) : t("avis.sensible.publication.passee", { retenir: !!D.retenirReponseAvis })}</p>`}` : ""}
@@ -2009,7 +2014,8 @@
       try { await D.donnerVersionAvis(id, f.querySelector("textarea").value); await avis(); toast(t("avis.version.merci")); }   // le toast seul (role=status) : plus de 2e phrase en clair sous la liste
       catch (er) { b.disabled = false; msg(ph(er.message)); } });
     vue.querySelectorAll("[data-retenir]").forEach(b => b.onclick = async () => { const id = b.dataset.retenir; b.disabled = true; fermerToast();
-      try { await D.retenirReponseAvis(id); await avis(); toast(t("avis.retenue.toast"));
+      const h48 = b.hasAttribute("data-retenir-48h");
+      try { await D.retenirReponseAvis(id); await avis(); toast(t(h48 ? "avis.retenue.toast.48h" : "avis.retenue.toast"));
         const z = vue.querySelector(`[data-version="${CSS.escape(id)}"] textarea`); if (z) { z.scrollIntoView({ block: "center" }); z.focus({ preventScroll: true }); } }
       catch (er) { b.disabled = false; toast(ph(er.message)); } });
     vue.querySelectorAll("[data-repondre]").forEach(b => b.onclick = async () => { const id = b.dataset.id, ch = b.dataset.repondre; b.disabled = true; fermerToast();
@@ -2251,7 +2257,7 @@
   const nomOption = k => { const o = (window.RENOM_OPTIONS || {})[k] || {}; return (I.langue === "en" ? o.nom_en : I.langue === "nl" ? o.nom_nl : o.nom) || o.nom || k; };
   const etatOption = x => x.statut === "livree"
     ? (x.second_test_prevu_le && !x.second_test_fait_le ? t("opt.livree.second", { d: I.dateLongue(jourParis(x.livree_le)), s: I.dateLongue(x.second_test_prevu_le) }) : t("opt.livree", { d: I.dateLongue(jourParis(x.livree_le)) }))
-    : x.elements_recus_le ? t("opt.en.cours.date", { d: I.dateLongue(x.livraison_prevue_le) }) : t("opt.en.cours.elements", { n: ((window.RENOM_OPTIONS || {})[x.option_id] || {}).livraison_jours || 14 });
+    : x.elements_recus_le ? t("opt.en.cours.date", { d: I.dateLongue(x.livraison_prevue_le) }) : t(x.option_id === "visibilite_ia" ? "opt.en.cours.elements.ouvres" : "opt.en.cours.elements", { n: ((window.RENOM_OPTIONS || {})[x.option_id] || {}).livraison_jours || 14 });   // lot 11 : Visibilité IA en jours ouvrés
   const optionsCommandees = l => (l || []).length ? `<section class="carte" id="offre-options"><h2>${t("opt.titre")}</h2>${l.map(x => `<p class="texte2 lecture" data-option="${e(x.option_id)}"><span class="fort">${e(nomOption(x.option_id))}</span>${t("deux.points")}${etatOption(x)}</p>`).join("")}</section>` : "";
   // Offre du dessus et Premium (27/10/2026, constats 6, 21 et 22 ; décisions de PJ du 27/10/2026). Offre du dessus : ce qu'elle ajoute, son prix
   // (chiffres de moteur/offres.json : window.RENOM_OFFRES) et le bouton « Passer à <offre> », qui ouvre le portail client de Stripe (abonnement en

@@ -16,7 +16,7 @@
   const OFFRES_EN_VENTE = Object.keys(OFFRES).filter(k => !OFFRES[k].retiree);
   // Version des CGV notée avec un accord donné dans l'espace (mode délégation, 27/10/2026) : documents.version de site/legal.json, comme regler_delegation
   // (schema.sql, bloc « Carrousels TikTok, paiement depuis l'espace et CGV du 2 novembre 2026, version 2 ») ; égalité testée par espace/test_ecrans.py.
-  const VERSION_CGV = "16 novembre 2026, version 2";   // 16/11/2026, version 2 : lot 9 et musique (Visibilité IA en 7 jours, Premium 12 + 8, vidéos sur Instagram et TikTok) ; 16/11/2026 : CGV du lot 8 (alerte WhatsApp, OK écrit, retouches, droit du pays du Client) ;   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
+  const VERSION_CGV = "17 novembre 2026, version 3";   // 17/11/2026, version 3 : lot 11 (avis de 1 à 3 étoiles vérifiés par nos règles, Visibilité IA en 7 jours ouvrés, Premium : bilan écrit puis échange sur WhatsApp ou en visio) ; 16/11/2026, version 2 : lot 9 et musique (Visibilité IA en 7 jours, Premium 12 + 8, vidéos sur Instagram et TikTok) ; 16/11/2026 : CGV du lot 8 (alerte WhatsApp, OK écrit, retouches, droit du pays du Client) ;   // 15/11/2026 : bloc « Visibilité IA comprise dans Croissance et Premium » (regler_delegation, même version) ; avant : 14 novembre 2026
   const MSG_OFFRES = "Offres en vente : " + OFFRES_EN_VENTE.map(k => OFFRES[k].nom).join(", ") + ".";   // même phrase que schema.sql
   // Chiffres de la garantie des délais, des relances, de la délégation et du paiement (moteur/conditions_offre.json, conditions_offre() de schema.sql)
   // et frais de mise en route (site/legal.json : Standard et Premium seulement).
@@ -164,7 +164,7 @@
   window.RENOM_WHATSAPP = { numero: numeroWhatsapp, exemple: exempleNumero, fixe: numeroFixe, lisible: numeroLisible, actif: whatsappActifDe, PHRASE_FIXE, PHRASE_WA_MANQUANT };
   const JOURNAL_INTERNE = window.RENOM_JOURNAL_INTERNE = { types: ["GARANTIE_DELAIS_SAISIE", "MANQUEMENT_ECARTE", "MOIS_OFFERT_A_APPLIQUER",
     "VALIDATION_TACITE_A_PROGRAMMER", "MISE_EN_ROUTE_BLOQUEE", "ERREUR_WORKFLOW", "ECHEC_RELANCE_PROSPECT", "RELEVE_ECHEC", "AVIS_SENSIBLE_A_EFFACER",
-    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE", "METRICOOL_MARQUE_NOTEE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
+    "COMMENTAIRE_SENSIBLE_A_EFFACER", "PAIEMENT_REFUSE", "ABONNEMENT_SANS_COMMERCE", "REMISE_LANCEMENT_DEJA_UTILISEE", "ALERTE_PAR_EMAIL", "ALERTE_EMAIL_ECHEC", "ALERTE_SANS_CANAL", "EFFACEMENT_AUTOMATIQUE", "CONTACT_REGLE", "LIEN_AVIS_REGLE", "AVIS_VERSION_CLIENT", "AVIS_RETENU", "AVIS_LIBERE", "METRICOOL_MARQUE_NOTEE", "AVIS_PUBLICATION_API_DEMANDEE", "AVIS_CORRECTION_REDIGEE", "AVIS_CORRECTION_REFUSEE", "AVIS_CORRECTION_A_RELIRE", "AVIS_CORRECTION_PERIMEE", "AVIS_FAUX_EXPLICATION", "AVIS_FAUX_DEBLOQUE", "AVIS_REPONSE_APPLIQUEE"], prefixes: ["OBJECTIF_PILOTE_", "GARANTIE_AVIS_", "DELAI_", "EMAIL_ALERTE_", "SECOURS_", "PUBLICATION_A_LA_MAIN_", "WHATSAPP_"] };   // SECOURS_ : mode de secours des avis (20/10/2026) ; PUBLICATION_A_LA_MAIN_ : publication sans Metricool (22/10/2026) ; WHATSAPP_ et ALERTE_ : alertes WhatsApp au commerçant (22/10/2026)
   const journalInterne = t => JOURNAL_INTERNE.types.includes(t) || JOURNAL_INTERNE.prefixes.some(p => String(t || "").startsWith(p));
   const journalCommercant = l => (l || []).filter(j => !journalInterne(j.type));
   // Contrôle d'une photo : RENOM_ENVOI.controler (espace/web/envoi.js, type annoncé ou extension, 50 Mo), règles de l'envoi : PHOTOS plus bas.
@@ -838,7 +838,11 @@
     // Lot 8 (16/11/2026, décision du fondateur) : alerte WhatsApp garantie, réponses du commerçant par message, surveillance de WaSender
     AVIS_SANS_MESSAGE_48H: "Avis : 48 h sans message du commerçant, décision à prendre", ALERTE_WHATSAPP_ECHEC: "Alerte WhatsApp non délivrée : publication bloquée",
     ALERTE_AVIS_SANS_WHATSAPP: "Commerce sans numéro WhatsApp : alerte d'avis impossible", WASENDER_EN_PANNE: "WhatsApp (WaSender) en panne",
-    AVIS_FAUX_SIGNALE: "Avis signalé « pas un client » par le commerçant", WHATSAPP_RECU: "Message WhatsApp reçu sans avis en attente",
+    AVIS_FAUX_SIGNALE: "Avis signalé « pas un client » par le commerçant : à signaler à Google", AVIS_CORRECTION_A_RELIRE: "Avis sensible : réponse réécrite par Claude, à relire puis envoyer", WHATSAPP_RECU: "Message WhatsApp reçu sans avis en attente",
+    // Lot 11, revue du 17/11/2026 : message sans référence quand plusieurs avis attendent (ou numéro partagé) : rien n'est appliqué.
+    WHATSAPP_A_RATTACHER: "Message WhatsApp à rattacher : rien n'a été appliqué",
+    // Contre-revue du 17/11/2026 : dans le doute, on ne publie pas (tous les avis du commerce suspendus tant que la tâche est ouverte).
+    WHATSAPP_A_LIRE: "Message WhatsApp à lire : rien n'a été appliqué, avis suspendu", AVIS_SUSPENDU_12H: "Avis suspendu depuis plus de 12 h : message du commerçant à traiter", AVIS_A_RENVOYER: "Avis débloqué après FAUX : nouvelle réponse à envoyer au commerçant",
     // Fiches Google reliées automatiquement (02/11/2026, rapprocher_fiches_google de schema.sql) : une fiche du compte Google sans commerce sûr
     FICHE_A_RELIER: "Fiche Google à relier",
     // Carrousel TikTok (02/11/2026, reprendre_carrousel_tiktok de schema.sql) : la publication qui portait le carrousel est annulée ou en échec.
@@ -850,8 +854,8 @@
     TEST_IA_ERREUR: "Test IA de l'audit : moteur en erreur",
     // Lot 9 (16/11/2026, geo_controle_echeances, n8n chaque heure) : échéance de 72 h ouvrées de la Visibilité IA
     BING_A_IMPORTER: "Import Bing Places (Visibilité IA)",
-    VISIBILITE_IA_OBJECTIF_MANQUE: "Visibilité IA : objectif interne de 72 h ouvrées dépassé", VISIBILITE_IA_ECHEANCE_PROCHE: "Visibilité IA : échéance garantie (7 jours) dans moins de 24 h",
-    VISIBILITE_IA_EN_RETARD: "Visibilité IA : échéance garantie (7 jours) dépassée", VISIBILITE_IA_GARANTIE: "Visibilité IA livrée en retard : garantie à appliquer",
+    VISIBILITE_IA_OBJECTIF_MANQUE: "Visibilité IA : objectif interne de 72 h ouvrées dépassé", VISIBILITE_IA_ECHEANCE_PROCHE: "Visibilité IA : échéance (7 jours ; 7 jours ouvrés garantis au client) dans moins de 24 h",
+    VISIBILITE_IA_EN_RETARD: "Visibilité IA : échéance (7 jours ; 7 jours ouvrés garantis au client) dépassée", VISIBILITE_IA_GARANTIE: "Visibilité IA livrée en retard : garantie à appliquer",
     // Musique tendance (16/11/2026, publication_envoyee et musique_relancer de schema.sql) : aucune musique après le nouvel essai, vidéo non publiée sur ce réseau
     MUSIQUE_INTROUVABLE: "Vidéo non publiée : aucune musique autorisée trouvée",
     // Lot 9d (16/11/2026, relances_whatsapp_photos de schema.sql, CGV version 2 art. 3) : Premium sans photo ni vidéo depuis 7 puis 14 jours ; l'équipe écrit.
@@ -902,8 +906,15 @@
     if (a.type === "MUSIQUE_INTROUVABLE") { const rs = (d.reseaux || []).map(r => ({ instagram: "Instagram", tiktok: "TikTok" })[r] || r).join(" et ") || "un réseau";
       return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} n'est pas partie sur ${rs}, faute de musique tendance autorisée après un nouvel essai (${Object.values(d.raisons || {}).join(" ; ") || "raison inconnue"}). Jamais publiée sans son : vérifier les catalogues musicaux dans Metricool (compte TikTok Business, Instagram relié par Facebook), puis reprogrammer la vidéo.`; }
     if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
-    if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié : vérifier l'avis, le signaler à Google si besoin, répondre au commerçant.`;
-    if (a.type === "WHATSAPP_RECU") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}sans avis en attente : le lire dans WhatsApp et répondre à la main (le texte n'est pas gardé).`;
+    // Lot 11 : la marche à suivre pour signaler l'avis à Google (Profil d'établissement, menu de l'avis, « Signaler comme inapproprié »).
+    if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié. 1. Vérifier l'avis (date, détails) avec ce que dit le commerçant. 2. Le signaler à Google : Profil d'établissement du commerce (compte qui gère la fiche), Avis, l'avis, les trois points, « Signaler comme inapproprié », choisir le motif qui correspond, Envoyer. 3. Prévenir le commerçant sur WhatsApp : Google examine le signalement, sans délai garanti. L'avis reste bloqué : rien n'est publié, ni seul ni à la main, et ses messages suivants s'ajoutent ici. 4. Pour répondre quand même (Google garde l'avis, ou le commerçant se ravise) : « Débloquer » sur l'avis dans la file, écrire une réponse prudente, puis « Envoyer au commerçant ».${(d.messages || []).length ? " Messages du commerçant : " + d.messages.map(m => "« " + String(m.texte || "") + " »" + (m.le ? " (" + String(m.le).slice(0, 16).replace("T", " ") + " UTC)" : "")).join(" ; ") + "." : ""}`;
+    if (a.type === "WHATSAPP_A_RATTACHER") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}sans référence d'avis${d.commerces > 1 ? ", d'un numéro partagé par " + d.commerces + " commerces" : ""} : rien n'a été appliqué. Le commerçant a reçu la liste des avis en attente et doit répondre avec la référence (« OK A7K »). Message : « ${d.texte || ""} ». Avis en attente : ${(d.avis || []).map(x => (x.ref || "?") + " (" + [x.auteur, x.debut].filter(Boolean).join(", ") + ")").join(" ; ") || "aucun"}. Ces avis sont suspendus (rien n'est publié, leur délai de 24 h est suspendu). Lire le message dans WhatsApp, puis, dans la file des avis (À faire, Avis), sur l'avis concerné : « Appliquer OK », « Appliquer ATTENDS » ou « Appliquer FAUX » selon ce qu'il veut, ou écrire une nouvelle réponse et « Envoyer au commerçant ». Seuls ces boutons lèvent la suspension : marquer cette tâche comme vue ou « Message lu » ne publient rien. S'il ne précise pas, lui écrire sur WhatsApp.`;
+    if (a.type === "WHATSAPP_A_LIRE") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}${d.vide ? "sans texte (photo, vocal, document), avec des avis en cours" : "sur l'avis " + (d.ref ? d.ref + " " : "") + "de " + (d.note || "?") + " étoile(s), avec un refus ou un mot-clé et un autre texte"} : rien n'a été appliqué.${d.texte ? " Message : « " + d.texte + " »." : ""} L'avis est suspendu (rien n'est publié, son délai de 24 h est suspendu). Lire le message dans WhatsApp, puis, dans la file des avis (À faire, Avis), sur l'avis concerné : « Appliquer OK », « Appliquer ATTENDS » ou « Appliquer FAUX » selon ce qu'il veut, ou écrire une nouvelle réponse et « Envoyer au commerçant ». Seuls ces boutons lèvent la suspension : marquer cette tâche comme vue ou « Message lu » ne publient rien.`;
+    if (a.type === "AVIS_SUSPENDU_12H") return `Avis de ${d.note || "?"} étoile(s) suspendu depuis plus de 12 h (${d.suspendu_le ? String(d.suspendu_le).slice(0, 16).replace("T", " ") + " UTC" : "?"}) : un message du commerçant attend toujours. Lire le message dans WhatsApp, puis, dans la file des avis (À faire, Avis), sur l'avis concerné : « Appliquer OK », « Appliquer ATTENDS » ou « Appliquer FAUX » selon ce qu'il veut, ou écrire une nouvelle réponse et « Envoyer au commerçant ». Seuls ces boutons lèvent la suspension : marquer cette tâche comme vue ou « Message lu » ne publient rien.`;
+    if (a.type === "AVIS_A_RENVOYER") return `Avis de ${d.note || "?"} étoile(s) débloqué après « FAUX »${d.ref ? " (nouvelle référence " + d.ref + ")" : ""} : l'ancienne réponse ne repart jamais. Écrire une réponse prudente dans la file, puis « Envoyer au commerçant » : nouvelle alerte, nouvelle heure ; la tâche se ferme à l'envoi.`;
+    if (a.type === "AVIS_CORRECTION_A_RELIRE") return `Avis sensible de ${d.note || "?"} étoile(s) : la réponse a été réécrite automatiquement avec le message du commerçant. La relire dans la file, puis « Envoyer au commerçant » ; elle n'est publiée qu'après son OK écrit.`;
+    if (a.type === "AVIS_VERSION_CLIENT" && d.reecriture) return `Avis de ${d.note || "?"} étoile(s) : message du commerçant ${d.reecriture === "refusee" ? "que la réécriture automatique n'a pas pu intégrer (" + (d.refus || []).join(" ; ") + ")" : d.reecriture === "sans_retour" ? "resté sans réécriture automatique (30 min)" : d.reecriture === "renvoi_bloque" ? "réécrit, mais la réponse corrigée attend depuis 30 min qu'une alerte WhatsApp précédente finisse de partir (vérifier WaSender)" : d.reecriture === "suspendu" || d.reecriture === "faux" ? "réécrit pendant que l'avis est " + (d.reecriture === "faux" ? "signalé FAUX" : "suspendu") + " : RIEN n'est parti au commerçant ; brouillon : « " + (d.brouillon || "") + " »" : "sans numéro WhatsApp actif"}. Le lire, écrire la réponse, puis « Envoyer au commerçant ».`;
+    if (a.type === "WHATSAPP_RECU") return `Message WhatsApp reçu ${d.recu_le ? "le " + String(d.recu_le).slice(0, 16).replace("T", " ") + " (UTC) " : ""}${d.vide ? "sans texte (photo, vocal, document)" : "sans mot-clé"}, alors qu'aucun avis n'attendait : information seulement, rien n'est suspendu. Le lire dans WhatsApp et répondre à la main si besoin (le texte n'est pas gardé), puis marquer comme vue.`;
     // Lot 10 (doctrine « zéro appel ») : on écrit au commerçant sur WhatsApp, on ne l'appelle jamais.
     if (a.type === "AVIS_EN_PARLER") return `Écrire au commerçant sur WhatsApp${d.telephone ? " au " + telLisible(d.telephone) : ""} au sujet de la réponse proposée (avis ${d.note || "?"} étoile${d.note > 1 ? "s" : ""}).`;
     if (a.type === "TVA_A_REPORTER") return `Le commerçant a donné son numéro de TVA (${d.numero || "?"}) : l'ajouter à son client dans Stripe (fiche du client, Numéros fiscaux) pour ses prochaines factures.`;
@@ -2190,20 +2201,58 @@
           ...(v => ({ suspendue: !!a.version_client && !v, relance_version: v, relance_le: a.version_client_le ? iso(Date.parse(a.version_client_le) + 48 * 36e5) : null,
             en_retard: (!a.version_client && !a.traite_le && !a.retenue_le && (e => e != null && Date.now() > e)(echeanceAvis(a.cree_le, retenuesDe(a)))) || (v && !a.retenue_le) }))(relanceVersion(a)),
           echeance: (e => e == null ? null : iso(e))(echeanceAvis(a.cree_le, retenuesDe(a))), liberee_le: a.liberee_le || null, retenues: retenuesDe(a).length,
+          publication_auto: { faux_signale_le: a.faux_signale_le || null, ref: a.ref_courte || null,
+            a_renvoyer: liste("alertes_exploitant").some(x => x.type === "AVIS_A_RENVOYER" && (x.detail || {}).avis === a.id && !x.vue_le),
+            suspendue: !!a.suspendu_le, suspendu_le: a.suspendu_le || null, suspendu_motif: a.suspendu_motif || null,
+            reponse_recue: a.reponse_annoncee || null, ok_possible: !!a.reponse_annoncee && String(a.reponse_proposee || "").trim() === String(a.reponse_annoncee).trim() },
           lien: lienAvisFiche(a, E.commerces[a.commerce_id]), demo: !!a.demo }));
       },
       async adminAvisProposer(id, reponse) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
+        if (a.faux_signale_le) throw new Error("Avis signalé FAUX par le commerçant : rien n'est envoyé. « Débloquer » d'abord.");   // lot 11, revue
         a.reponse_proposee = texteReponse(reponse); a.propose_le = iso(Date.now()); a.traite_le = a.traite_le || a.propose_le;
         // Lot 10 (mêmes règles que admin_avis_proposer) : la réponse part au commerçant sur WhatsApp (démonstration : rien ne part, elle est notée
         // comme reçue) ; 1 à 3 étoiles : nouvelle heure de publication annoncée, 1 h au moins après l'envoi ; avis sensible : jamais sans OK écrit.
         const k = E.commerces[a.commerce_id] || {}, wa = whatsappActifDe(k), pa = !a.sensible && wa ? iso(Math.max(Date.parse(a.publication_pas_avant || 0) || 0, Date.now() + 3 * 36e5)) : null;
-        if (wa) { a.reponse_annoncee = a.reponse_proposee; a.reponse_annoncee_le = a.propose_le; if (pa) a.publication_pas_avant = pa; }
+        if (wa) { a.reponse_annoncee = a.reponse_proposee; a.reponse_annoncee_le = a.propose_le; if (pa) a.publication_pas_avant = pa;
+          // Contre-revue (comme admin_avis_proposer) : seul un nouvel envoi lève l'attente et ferme « à renvoyer ».
+          if (a.retenue_le) { const l = retenuesDe(a), o = l.find(x => !x.liberee_le); if (o) o.liberee_le = a.propose_le; a.retenues = l; a.retenue_le = null; a.liberee_le = a.propose_le; }
+          liste("alertes_exploitant").filter(x => ["AVIS_A_RENVOYER", "AVIS_RETENU"].includes(x.type) && (x.detail || {}).avis === a.id && !x.vue_le).forEach(x => { x.vue_le = a.propose_le; }); }
         jour(a.commerce_id, "AVIS_PROPOSE", { avis: a.id, sensible: !!a.sensible, whatsapp: wa }); sauver();
         return { id: a.id, propose_le: a.propose_le, email_client: k.email_validation || null, whatsapp: wa, sensible: !!a.sensible, pas_avant: pa };
       },
+      // Lot 11, revue du 17/11/2026 (mêmes règles que admin_debloquer_faux) : seule l'équipe lève un FAUX, geste noté au journal (interne).
+      async adminDebloquerFaux(id) {
+        await init(); admin(); const a = E.avis.find(x => x.id === id); if (!a || !a.faux_signale_le) throw new Error("Cet avis n'est pas signalé FAUX.");
+        const avant = a.faux_signale_le; a.faux_signale_le = null;
+        // Contre-revue (comme admin_debloquer_faux) : l'ancienne réponse ne repart jamais ; l'attente reste ; tâche « à renvoyer ».
+        a.reponse_annoncee = null; a.reponse_annoncee_le = null; a.publication_pas_avant = null; a.decision_client = null; a.decision_client_le = null;
+        if (!a.retenue_le) { a.retenue_le = iso(Date.now()); a.retenues = retenuesDe(a); }
+        alerteDemo("AVIS_A_RENVOYER", a.commerce_id, { avis: a.id, note: a.note, urgent: true });
+        liste("alertes_exploitant").filter(x => x.type === "AVIS_FAUX_SIGNALE" && (x.detail || {}).avis === a.id && !x.vue_le).forEach(x => { x.vue_le = iso(Date.now()); });
+        jour(a.commerce_id, "AVIS_FAUX_DEBLOQUE", { avis: a.id, par: "equipe", signale_le: avant }); sauver(); return { id: a.id, debloque: true };
+      },
+      // Contre-revue n°2 (mêmes règles que admin_appliquer_reponse) : l'équipe applique la réponse du commerçant en son nom ; seule levée d'une
+      // suspension avec un nouvel envoi ; geste journalisé (interne). La démonstration ne publie pas par l'API : un OK crée la tâche « à publier ».
+      async adminAppliquerReponse(id, choix) {
+        await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
+        if (!["ok", "attends", "faux"].includes(choix)) throw new Error("Choix inconnu.");
+        if (a.faux_signale_le) throw new Error("Avis signalé FAUX : « Débloquer » d'abord.");
+        if (choix === "ok" && !(a.reponse_annoncee && String(a.reponse_proposee || "").trim() === String(a.reponse_annoncee).trim()))   // contre-revue n°3
+          throw new Error("Le commerçant n'a jamais reçu ce texte : « Envoyer au commerçant » d'abord (rien n'est publié).");
+        const t = iso(Date.now()), avant = a.suspendu_le || null; a.suspendu_le = null; a.suspendu_motif = null;
+        const fermer = ty => liste("alertes_exploitant").filter(x => x.type === ty && (x.detail || {}).avis === a.id && !x.vue_le).forEach(x => { x.vue_le = t; });
+        if (choix === "ok" && String(a.reponse_proposee || "").trim() && (!(a.sensible || a.statut === "humain") || a.propose_le)) {
+          a.decision_client = "approuve"; a.decision_client_le = t; a.retenue_le = null; alerteDemo("AVIS_ACCORD_A_PUBLIER", a.commerce_id, { avis: a.id, note: a.note, canal: "equipe", urgent: true });
+        } else if (choix === "faux") { a.faux_signale_le = t; a.decision_client = null; if (!a.retenue_le) { a.retenue_le = t; a.retenues = retenuesDe(a); } fermer("AVIS_ACCORD_A_PUBLIER");
+          alerteDemo("AVIS_FAUX_SIGNALE", a.commerce_id, { avis: a.id, note: a.note, canal: "equipe", urgent: true });
+        } else { a.retenue_le = t; a.retenues = retenuesDe(a); if (a.decision_client === "approuve") a.decision_client = null; fermer("AVIS_ACCORD_A_PUBLIER"); }
+        jour(a.commerce_id, "AVIS_REPONSE_APPLIQUEE", { avis: a.id, choix, par: "equipe", le: t, suspendu_le: avant }); sauver(); return { etat: "ok", choix, avis: a.id };
+      },
       async adminAvisPublie(id, reponse, accord) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!dansFile(a)) throw new Error("Cet avis n'est pas dans la file de BoostImpact.");
+        if (a.suspendu_le) throw new Error("Avis suspendu (message du commerçant à lire) : « Appliquer OK », « Appliquer ATTENDS » ou « Appliquer FAUX » d'abord.");
+        if (a.faux_signale_le) throw new Error("Avis signalé FAUX par le commerçant : rien n'est publié. « Débloquer » d'abord.");
         if (a.retenue_le) throw new Error("Le commerçant répond par message : lisez son message, puis « Message lu » pour pouvoir publier.");   // lot 8
         if (a.sensible && !accord && !(a.decision_client === "approuve")) throw new Error("Avis sensible : jamais publié sans le OK écrit du commerçant. Cochez « Le commerçant a répondu OK par écrit ».");
         if (a.publication_pas_avant && Date.parse(a.publication_pas_avant) > Date.now() && !accord && !a.version_client && !(a.decision_client === "approuve"))
@@ -2228,6 +2277,8 @@
       },
       async adminLibererAvis(id) {
         await init(); admin(); const a = E.avis.find(x => x.id === id); if (!a) throw new Error("Avis introuvable."); if (!a.retenue_le) return { id: a.id, retenue_le: null };
+        if (liste("alertes_exploitant").some(x => x.type === "AVIS_A_RENVOYER" && (x.detail || {}).avis === a.id && !x.vue_le))   // contre-revue (comme admin_liberer_avis)
+          throw new Error("Avis débloqué après FAUX : écrivez une nouvelle réponse et « Envoyer au commerçant » (l'ancienne ne repart jamais).");
         const avant = a.retenue_le, l = retenuesDe(a), ouverte = l.find(x => !x.liberee_le); a.retenue_le = null; a.liberee_le = iso(Date.now()); a.alerte_delai_le = null;
         if (ouverte) ouverte.liberee_le = a.liberee_le; a.retenues = l;   // 15/11/2026 : historique gardé, le délai repart pour 24 h (CGV art. 10)
         liste("alertes_exploitant").filter(x => x.type === "AVIS_RETENU" && x.commerce_id === a.commerce_id && (x.detail || {}).avis === a.id && !x.vue_le).forEach(x => { x.vue_le = iso(Date.now()); });
@@ -2893,10 +2944,16 @@
       // tâche « à publier » au cockpit) ; « faux » = avis non reconnu (rien n'est publié, tâche urgente) ; « attends » = retenirReponseAvis.
       async repondreAvisCommercant(id, choix) {
         await init(); const c = cur(); if (!c) throw new Error(PHOTOS.PHRASES.introuvable); const a = mine("avis").find(x => x.id === id); if (!a) throw new Error(MER.TEXTES.avis_introuvable);
-        if (!["escalade", "humain"].includes(a.statut) || a.traite_le) return { etat: "plus_en_attente" };
+        // Lot 11 (même règle que avis_message_commercant) : un avis encore en file attend le commerçant même après l'envoi de l'équipe ; avis sensible :
+        // OK pris seulement sur une réponse envoyée par l'équipe (propose_le). La démonstration ne publie pas par l'API : tâche « à publier » au cockpit.
+        if (!["escalade", "humain"].includes(a.statut)) return { etat: "plus_en_attente" };
         if (!["ok", "attends", "faux"].includes(choix)) throw new Error("Choix inconnu.");
-        if (choix === "ok" && !String(a.reponse_proposee || "").trim()) choix = "attends";
         const t = iso(Date.now());
+        // Lot 11, revue (comme avis_message_commercant) : après FAUX, tout autre message est une explication pour l'équipe ; rien n'est publié.
+        if (a.faux_signale_le && choix !== "faux") { const e = liste("alertes_exploitant").find(x => x.type === "AVIS_FAUX_SIGNALE" && (x.detail || {}).avis === a.id && !x.vue_le);
+          if (e) e.detail.messages = [...(e.detail.messages || []), { le: t, texte: choix }]; else alerteDemo("AVIS_FAUX_SIGNALE", c.id, { avis: a.id, note: a.note, canal: "espace", urgent: true, messages: [{ le: t, texte: choix }] });
+          jour(c.id, "AVIS_FAUX_EXPLICATION", { avis: a.id, canal: "espace" }); sauver(); return { etat: "faux_explication", choix, avis: a.id }; }
+        if (choix === "ok" && (!String(a.reponse_proposee || "").trim() || ((a.sensible || a.statut === "humain") && !a.propose_le))) choix = "attends";
         if (choix === "attends") return this.retenirReponseAvis(id);
         if (choix === "ok") { a.decision_client = "approuve"; a.decision_client_le = t; if (!a.propose_le) a.propose_le = a.cree_le;
           a.retenues = retenuesDe(a); a.retenues.forEach(r => { if (!r.liberee_le) r.liberee_le = t; }); if (a.retenue_le) a.liberee_le = t; a.retenue_le = null;
@@ -4109,6 +4166,8 @@
       },
       async adminLibererAvis(id) { return ok(await sb.rpc("admin_liberer_avis", { p_avis: id })); },
       async adminRetenirAvis(id) { return ok(await sb.rpc("admin_retenir_avis", { p_avis: id })); },
+      async adminDebloquerFaux(id) { return ok(await sb.rpc("admin_debloquer_faux", { p_avis: id })); },
+      async adminAppliquerReponse(id, choix) { return ok(await sb.rpc("admin_appliquer_reponse", { p_avis: id, p_choix: choix })); },
       async adminAvisPublie(id, reponse, accord) { ok(await sb.rpc("admin_avis_publie", { p_id: id, p_reponse: reponse, p_accord_client: !!accord })); },
       async adminAvisProposer(id, reponse) { return ok(await sb.rpc("admin_avis_proposer", { p_id: id, p_reponse: reponse })); },
       async adminGarantieDelais() { return ok(await sb.rpc("admin_garantie_delais", {})) || []; },
