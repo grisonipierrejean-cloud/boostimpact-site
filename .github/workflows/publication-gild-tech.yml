@@ -4,7 +4,7 @@
 # Exclus : .git, .github, .gitignore, et tout fichier de plus de 25 Mio (limite par fichier de Cloudflare Pages ;
 # au 25/10, seul assets/villa-samui-01/reel-01-aerial.mp4 était concerné, il n'a jamais été en ligne).
 # Lancement : bouton « Run workflow » (onglet Actions), ou tout commit qui modifie ce fichier.
-# Dernière publication déclenchée par commit : 17/11/2026 (site Pascale, commit 74a6b73).
+# Dernière publication déclenchée par commit : 18/11/2026 (site Pascale, commit 5ba2c06).
 name: Publication gild-tech.com
 on:
   workflow_dispatch:
