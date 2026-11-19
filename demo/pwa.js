@@ -64,9 +64,11 @@
   }
   // Montré d'office une seule fois : sur un téléphone (iPhone ou Android), espace pas encore installé, client connecté, guide jamais vu sur cet
   // appareil, et seulement sur l'accueil (jamais par-dessus un lien précis : email « À valider », lien d'avis, démarrage en cours).
+  // Jamais en démonstration (19/11/2026) : le prospect qui ouvre /demo/ sur son téléphone arrive sur l'Accueil de l'offre choisie, pas sur
+  // « Installer l'application » (la démonstration ne s'installe pas : ni manifeste ni service worker). L'écran reste ouvert depuis Réglages.
   function guideAMontrer(o) {
     const x = o || {};
-    if (!x.connecte || x.dejaVu || x.route !== "accueil") return false;
+    if (!x.connecte || x.dejaVu || x.demo || x.route !== "accueil") return false;
     const p = plateforme(x.env || {});
     return (p === "ios" || p === "android") && !estInstallee(x.env || {});
   }

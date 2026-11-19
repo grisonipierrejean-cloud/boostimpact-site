@@ -202,6 +202,10 @@
   const url916 = x => M.photoPublication(x) ? urlSure(x, "tiktok") : Promise.resolve(null);
   const videoSure = async x => { try { return x && x.type === "video" ? await D.urlVideo(x) : null; } catch (er) { return null; } };
   $("demo").hidden = D.mode !== "demo";
+  // Démonstration publique (/demo/, RENOM_DEMO_ENTREE = "visite", 19/11/2026) : « Outils de démonstration » (avis fictif, rendus terminés d'un coup,
+  // heure des publications avancée, réinitialisation) sert à nos essais et à la recette, pas au prospect : retiré, sauf avec le paramètre réservé
+  // ?outils (/demo/?outils&offre=croissance). Démonstration locale (tests, recette) : inchangée.
+  if (D.mode === "demo" && window.RENOM_DEMO_ENTREE === "visite" && !/[?&]outils(=|&|$)/.test(location.search) && $("outils")) $("outils").remove();
   // Langue du commerce : les contenus écrits pour lui (légendes, avis, réponses, idées) gardent sa langue ; l'attribut lang le dit au navigateur.
   let langueCommerce = "fr";
   const lc = () => ` lang="${langueCommerce}"`;
@@ -3485,7 +3489,7 @@
     if (route === "publications" && derniere !== route) pubDepuis = derniere === "accueil" ? "accueil" : "reglages";
     // Application sur le téléphone (15/11/2026) : guide d'installation montré d'office une seule fois, à la première connexion sur un téléphone,
     // sur l'accueil seulement (jamais par-dessus un lien précis). Noté vu tout de suite : « Plus tard » ne le fait pas revenir ; Réglages le rouvre.
-    if (P.guideAMontrer({ connecte: true, route, dejaVu: guideVu(), env: envApp() })) { noterGuideVu(); history.replaceState(null, "", "#/application?premiere"); return rendre(); }
+    if (P.guideAMontrer({ connecte: true, route, dejaVu: guideVu(), env: envApp(), demo: D.mode === "demo" })) { noterGuideVu(); history.replaceState(null, "", "#/application?premiere"); return rendre(); }
     if (derniere !== route) noterOrigine(derniere, route, hashPrecedent);
     if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; if (route !== "videoavis") vaOuvert = false; if (derniere === "demarrage") { dem.vue = null; if (dem.fini) dem.pour = null; } } derniere = route;
     hashPrecedent = location.hash || "#/" + route; ecranCourant = ROUTES[route];
