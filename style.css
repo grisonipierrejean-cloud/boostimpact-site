@@ -1217,3 +1217,8 @@ sup{font-size:max(13px,.7em)}
 @media (max-width:759px){.fiche .gm-boutons{gap:6px;padding:12px}.fiche .gm-bouton{padding:0 10px;gap:4px}}
 @media (max-width:349px){.fiche .gm-boutons{gap:4px;padding:12px 10px}.fiche .gm-bouton{padding:0 8px;font-size:13px}}
 @media (max-width:399px){.offres-legales tr{padding:12px}.offres-legales td{grid-template-columns:84px minmax(0,1fr)}}
+
+/* 19/11/2026 : titre court, une phrase de soutien, un seul prix mis en avant. */
+#haut .haut-sous{margin:0 0 20px;max-width:34ch;font-size:1.0625rem;line-height:1.5;color:rgba(255,255,255,.88);text-shadow:0 1px 2px rgba(12,15,13,.6)}
+#haut .haut-prix{font-weight:var(--graisse-forte)}
+@media (min-width:1040px){#haut .haut-sous{max-width:44ch;font-size:var(--t-1)}}
