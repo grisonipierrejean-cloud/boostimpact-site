@@ -1186,7 +1186,7 @@ sup{font-size:max(13px,.7em)}
 
 /* 16/11/2026 : démonstration de l'espace client visible dès le haut de page, en second bouton discret (contour, jamais
    vert) ; au téléphone, plus bas et plus léger que l'audit pour ne pas lui faire concurrence. */
-@media (max-width:759px){#haut .btn-demo{min-height:48px;padding:8px 20px;font-weight:var(--graisse-moyenne);border-color:rgba(255,255,255,.6)}}
+@media (max-width:759px){#haut .btn-offres{min-height:48px;padding:8px 20px;font-weight:var(--graisse-moyenne);border-color:rgba(255,255,255,.6)}}
 
 /* 16/11/2026 (lot 9c, visiteur neuf) : tableau des offres des CGV empilé au téléphone, comme le comparatif de la page (.compare) :
    une ligne = un bloc, le nom de l'offre devant chaque valeur. Plus de colonne Premium coupée de 320 à 430 px. */
