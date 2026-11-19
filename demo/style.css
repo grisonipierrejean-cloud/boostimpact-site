@@ -348,6 +348,14 @@ legend{padding:0;margin-bottom:4px}
 #offre-reseaux>.fort,#offre-contenus>.fort,#offre-delais-suivi .liste li>span:first-child{flex:0 1 auto;min-width:0}
 #offre-delais-suivi .liste li>span:first-child .note{display:block}
 .liste li.avec-vignette{justify-content:flex-start;gap:14px}
+/* Les prochains temps forts (19/11/2026) : date, nom, ligne d'idée, puis « Préparer une publication » ; le bouton passe sous le texte au téléphone. */
+.tf-liste li{flex-wrap:wrap;align-items:flex-start;gap:8px 16px}
+.tf-liste .tf-corps{flex:1 1 240px;min-width:0}
+.tf-liste .tf-corps p{margin:0}
+.tf-liste .tf-nom{color:var(--encre)}
+.tf-liste .tf-corps .note{margin-top:2px;max-width:60ch}
+.tf-liste .tf-action{flex:0 0 auto;align-self:center}
+@media (max-width:599px){.tf-liste .tf-action{flex-basis:100%}}
 .liste.raisons li{flex-wrap:wrap}   /* console, délais : « Échéance des 24 h dépassée (date) » passe à la ligne à 390 px */
 .liste.raisons li>.fort{flex:0 1 auto;min-width:0;text-align:left}
 .vignette{width:52px;height:52px;flex:0 0 auto;object-fit:cover;border-radius:10px;background:var(--releve);display:block}

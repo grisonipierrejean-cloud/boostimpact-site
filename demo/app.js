@@ -698,8 +698,10 @@
   // forts, vendor/temps-forts.json, mêmes textes que le workflow du lundi) ; l'espace la montre dans la langue d'affichage grâce aux traductions
   // du même fichier (« en », « nl », « nom_en », « nom_nl »), motif recomposé (événement et date, saison, prévision météo). Idée inconnue du
   // fichier (demande d'idées, texte de l'équipe) : telle quelle, dans la langue du commerce.
-  let tfTrad = null;
-  const chargerTraductionsIdees = () => tfTrad || (tfTrad = fetch("vendor/temps-forts.json").then(r => r.ok ? r.json() : null).then(j => {
+  let tfTrad = null, tfBrut = null;
+  // Fichier du calendrier des temps forts, lu une fois (idée de la semaine traduite et bloc « Les prochains temps forts »).
+  const chargerTempsForts = () => tfBrut || (tfBrut = fetch("vendor/temps-forts.json").then(r => r.ok ? r.json() : null).catch(() => null));
+  const chargerTraductionsIdees = () => tfTrad || (tfTrad = chargerTempsForts().then(j => {
     if (!j) return null; const textes = new Map(), noms = new Map(), saisons = new Map();
     const ajouter = i => { if (i && i.en && i.nl) textes.set(i.titre + "\n" + i.texte, i); };
     (j.evenements || []).forEach(ev => { (ev.idee && ev.idee.par_metier ? Object.values(ev.idee.par_metier) : [ev.idee]).forEach(ajouter); if (ev.nom_en) noms.set(ev.nom, ev); });
@@ -736,6 +738,41 @@
       <div class="actions"><button type="button" class="bouton second" data-decider-idee="retenue"${ideeHoraires(x) ? ' data-vers-horaires="1"' : ""}>${t(ideeHoraires(x) ? "idee.horaires" : "idee.retenir")}</button><button type="button" class="lien" data-decider-idee="ecartee">${t("idee.ecarter")}</button></div>
       <p class="note">${t(ideeHoraires(x) ? "idee.note.horaires" : "idee.note")}</p></section>`;
   }
+  // ---------------- Les prochains temps forts (19/11/2026, décision du fondateur : le calendrier des temps forts ne servait qu'à l'idée de la semaine,
+  // aucun écran ne le listait et le testeur ne l'a pas trouvé). Sur l'accueil, juste sous les prochaines publications, et sur l'écran calendrier.
+  // Au plus 6 sur 12 semaines (RENOM_TEMPS_FORTS.prochains de donnees.js : tempsForts du calendrier, métier et pays du commerce, aucune date écrite
+  // à la main) ; l'accueil montre les 3 premiers et « Voir tout le calendrier », l'écran calendrier tous. Pour chacun : la date en toutes lettres,
+  // le nom, une ligne d'idée (première phrase de l'idée du calendrier, ou la ligne du jour férié) et « Préparer une publication », qui ouvre le dépôt
+  // de photos (#/photos, présent dans les trois offres) avec le champ « L'occasion ou le message » (#ph-occasion) prérempli du nom du temps fort.
+  // Commerce en pause (les photos sont refusées, trigger pause de schema.sql) : bouton désactivé.
+  // Rien dans la fenêtre : une phrase utile, jamais une liste vide. Calendrier illisible (fichier absent) : pas de bloc, rien d'inventé.
+  const premierePhrase = s => { const x = String(s || "").trim(), m = /^.*?\.(?=\s|$)/.exec(x); return m ? m[0] : x; };   // au point seulement : « Ouvert ou fermé le 1er janvier ? Dites… » reste entier
+  const nomTempsFort = x => I.a("tf.nom." + x.id) ? t("tf.nom." + x.id) : (I.langue !== "fr" && x["nom_" + I.langue]) || String(x.nom || "");
+  const occasionTempsFort = x => nomTempsFort(x).replace(/\s*\([^)]*\)$/, "").slice(0, 120);   // « Nouvel An (jour férié) » : « Nouvel An »
+  function ligneTempsFort(x) {
+    if (x.ferie) return { texte: t("tf.ferie"), lang: "" };
+    if (!x.idee) return null; const tr = I.langue !== "fr" && x.idee[I.langue];
+    return { texte: premierePhrase(tr ? tr.texte : x.idee.texte), lang: I.langue !== "fr" && !tr ? ' lang="fr"' : "" };
+  }
+  function blocTempsForts(c, TF, id, o = {}) {
+    const R = window.RENOM_TEMPS_FORTS, auj = M.aujourdhui(), tous = R && c ? R.prochains(TF, c, auj) : null;
+    if (!tous) return "";
+    const l = o.max ? tous.slice(0, o.max) : tous, semaines = Math.round(R.JOURS / 7);
+    const pause = !!c.en_pause;
+    const quand = x => { const j = I.jourEtDate(x.date + "T12:00:00"); return x.date === auj ? t("tf.aujourdhui") + ", " + (I.langue === "en" ? j : I.minusculeDebut(j)) : j; };
+    const bouton = x => { const aria = ` aria-label="${e(t("tf.preparer.aria", { nom: nomTempsFort(x) }))}"`;
+      return pause ? `<button type="button" class="bouton second petit" disabled${aria}>${t("tf.preparer")}</button>`
+        : `<a class="bouton second petit" href="#/photos" data-tf-preparer="${e(x.id)}" data-tf-occasion="${e(occasionTempsFort(x))}"${aria}>${t("tf.preparer")}</a>`; };
+    return `<section class="carte temps-forts" id="${id}" aria-labelledby="${id}-titre"><div class="carte-tete"><h2 id="${id}-titre">${t("tf.titre")}</h2></div>
+      <p class="note">${t("tf.chapo", { s: semaines })}</p>
+      ${l.length ? `<ul class="liste tf-liste">${l.map(x => { const li = ligneTempsFort(x);
+        return `<li data-tf="${e(x.id)}" data-date="${x.date}"${x.ferie ? " data-ferie" : ""}><div class="tf-corps"><p class="fort tf-date">${e(quand(x))}</p><p class="tf-nom">${e(nomTempsFort(x))}</p>${li ? `<p class="note"${li.lang}>${e(li.texte)}</p>` : ""}</div>
+          <div class="tf-action">${bouton(x)}</div></li>`; }).join("")}</ul>${pause ? `<p class="note" data-tf-pause>${t("tf.pause")}</p>` : ""}`
+      : `<p class="texte2" id="${id}-vide">${t("tf.vide", { s: semaines })}</p>`}
+      ${o.lienTout ? `<p class="pied"><a href="#/calendrier" id="${id}-tout">${t("tf.voir.tout")}</a></p>` : ""}</section>`;
+  }
+  // « Préparer une publication » : le dépôt de photos s'ouvre avec l'occasion préremplie (phEnvoi.occasion, valeur du champ #ph-occasion).
+  const brancherTempsForts = racine => racine.querySelectorAll("[data-tf-preparer]").forEach(a => a.addEventListener("click", () => { phEnvoi.occasion = a.dataset.tfOccasion || ""; }));
   function brancherAutomatisations(racine, apres) {
     racine.querySelectorAll("[data-declarer]").forEach(b => b.onclick = async () => { try { await D.declarerMiseEnRoute(b.dataset.declarer); await apres(); msg(t("mer.merci")); } catch (er) { msg(ph(er.message)); } });
     racine.querySelectorAll("[data-decider-idee]").forEach(b => b.onclick = async () => {
@@ -872,8 +909,8 @@
     if (nomAConfirmer(c0) || (!c0.demarrage_fini && !plusTard(c0.id))) return demarrage();
     const [c, k, p, ct, av, cal, mr, ids, cm0, bilanP] = await Promise.all([D.commerce(), D.compteur(), D.photos(), D.contenus(), D.avis(), D.calendrier(),
       D.miseEnRoute().catch(() => null), D.idees().catch(() => []), D.commentaires().catch(() => []), debutDeMoisCivil() ? D.bilanMois(moisPrecedentIso()).catch(() => null) : null]);
-    const [nonLus, cpt, tfT, , contact, dChg, geo] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
-      D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null, D.maVisibiliteIa ? D.maVisibiliteIa().catch(() => null) : null]);
+    const [nonLus, cpt, tfT, , contact, dChg, geo, tfD] = await Promise.all([retoursNonLus(), D.comptes().catch(() => null), chargerTraductionsIdees(), chargerDemandeTiktok(c0), monContact(),
+      D.demandeRappel ? D.demandeRappel("changement_offre").catch(() => null) : null, D.maVisibiliteIa ? D.maVisibiliteIa().catch(() => null) : null, chargerTempsForts()]);
     const ligneFiche = await ligneFicheAccueil(c0, mr);
     const cm = cmActifs(k, c) ? cm0 : [], cmValider = cm.filter(x => x.statut === "a_valider"), cmHumains = cm.filter(x => x.statut === "humain");
     const idee = ids.find(x => x.semaine && x.statut === "a_valider") || null;
@@ -997,6 +1034,7 @@
         ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><p class="note" id="acc-attendent-raison">${t("prog.raisons", { r: e(raisonsTxt.join(" ; ")) })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
         <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
       </section>
+      ${blocTempsForts(c, tfD, "temps-forts", { max: 3, lienTout: true })}
       ${/* Lot 4 B (revue design et Karim du 15/11/2026 : accueil de 3,8 écrans) : l'accueil tient en 2 écrans de téléphone ; les chiffres du mois,
          la Visibilité IA, le point du mois, la réutilisation des photos et l'idée de la semaine sont repliés sous « Votre mois en détail ». */ ""}
       <details class="carte accueil-plus" id="acc-plus"><summary><span class="fort">${t("acc.plus")}</span></summary><div class="pile">
@@ -1009,7 +1047,7 @@
       ${ligneAutorisation(c)}
       ${blocIdeeSemaine(idee, c, tfT)}</div></details></div></div>`;
     // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
-    brancherWaManquant(c);
+    brancherWaManquant(c); brancherTempsForts(vue);
     vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { const d_ = x.closest("details"); if (d_) d_.open = true; x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
     // Petit écran (tour 9, 01/11/2026 : sur iPhone SE, « Tout voir, 2 de plus » tombait sous la barre d'onglets) : tant que le lien passe sous la
@@ -1655,7 +1693,7 @@
     za.hidden = false; if (focus) (a.conseil ? bc : za.querySelector("[data-a=" + cle + "-force]")).focus({ preventScroll: true });
   }
   async function calendrier() {
-    const [c, l, ct, cpt, mr] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes(), D.miseEnRoute().catch(() => null)]);
+    const [c, l, ct, cpt, mr, tfD] = await Promise.all([D.commerce(), D.calendrier(), D.contenus(), D.comptes(), D.miseEnRoute().catch(() => null), chargerTempsForts()]);
     const connectes = cpt.filter(x => x.etat === "connecte").map(x => x.reseau), vign = await Promise.all(l.map(x => urlSure(x.contenu)));
     // Validés sans date (même liste que « Programmer tout » de l'accueil) : approuvés, sans programmation en cours.
     const aProgrammerCal = sansDateDe(ct, l, cpt, c);
@@ -1728,6 +1766,7 @@
           <div class="encart" id="cal-moment" hidden><p class="texte2" data-moment-texte></p><div class="actions"><button type="button" class="bouton second petit" id="cal-moment-prendre"></button></div></div>
           <button class="bouton" type="submit" id="cal-programmer">${t("cal.programmer")}</button><p class="msg" id="msg" role="status"></p></form>` : `<p class="texte2">${t(sansReseaux(c) ? "cal.aucun.pret.google" : bloque ? "cal.aucun.pret.bloque" : "cal.aucun.pret")}</p><p class="msg" id="msg" role="status"></p>`}</section>
       </div>
+      ${blocTempsForts(c, tfD, "cal-temps-forts")}
       <section class="carte" id="cal-vos"><div class="carte-tete"><h2>${t("cal.vos")}</h2>${(n_ => n_ ? `<span class="note" id="cal-vos-n">${t("cal.vos.a.venir", { n: n_ })}</span>` : "")(l.filter(x => x.statut === "programme" && Date.parse(x.prevu_le) >= Date.now()).length)}</div>
         ${aProgrammerCal.length ? `<div class="actions" id="cal-tout-zone"><button type="button" class="bouton second" id="cal-programmer-tout">${t("cal.programmer.tout", { n: aProgrammerCal.length })}</button></div>` : ""}${l.length ? `<ul class="liste programmations">${l.map((x, i) => `<li class="avec-vignette${x.statut === "programme" && horsOffreDe(x, autorises) ? " hors-offre" : ""}" data-id="${e(x.id)}">${vignette(vign[i])}<div class="prog">
         <p><span class="fort">${dateHeure(x.prevu_le)}</span>${mentionMois(x) ? `<span class="note" data-mention-mois>${mentionMois(x)}</span>` : ""} · ${destTexte(x, autorises)} · <span class="etat${x.statut === "programme" ? " actif" : ""}">${ST_PUB[x.statut] || e(x.statut)}</span></p>
@@ -1741,6 +1780,7 @@
     // À venir d'abord, passé replié (01/11/2026, tour 8) : les programmations à venir restent en tête, de la plus proche à la plus lointaine ; les
     // passées (publiées, en échec, envoyées, ou programmées dont l'heure est passée) vont sous « Passées, N (P publiées) », fermé par défaut, de la
     // plus récente à la plus ancienne ; puis les annulées.
+    brancherTempsForts(vue);
     const ulP = vue.querySelector("#cal-vos ul.programmations"), ann = l.filter(x => x.statut === "annule");
     const passees = l.filter(x => x.statut !== "annule" && !(x.statut === "programme" && Date.parse(x.prevu_le) >= Date.now())).sort((a, b) => Date.parse(b.prevu_le) - Date.parse(a.prevu_le));
     const replie = (id, cls, titre, liste_) => { const d_ = document.createElement("details"); d_.className = "repliable " + cls; d_.id = id;

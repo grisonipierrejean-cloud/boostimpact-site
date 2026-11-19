@@ -1710,6 +1710,22 @@
   // ---- Collecte : ce dont la page publique a besoin (aucune session, aucune bibliothèque), et la règle du lien d'avis pour l'espace
   window.RENOM_PUBLIC = cfg.supabaseUrl && cfg.publishableKey ? publicSupabase : window.RENOM_DATA;
   window.RENOM_LIEN_AVIS = lienAvisPublic; window.RENOM_RETOUR = RETOUR;
+  // ---- Les prochains temps forts (19/11/2026, décision du fondateur : le testeur ne trouvait aucun écran qui liste le calendrier) : bloc de l'accueil
+  // et de l'écran calendrier. Calculés par tempsForts (vendor/temps-forts.js, copie exacte de moteur/temps_forts/, même code que l'idée de la semaine)
+  // pour le métier et le pays du commerce : aucune date écrite à la main. TF : vendor/temps-forts.json ; auj : « AAAA-MM-JJ » (heure de Paris par
+  // défaut) ; o.n : nombre au plus (6), o.jours : longueur de la fenêtre à partir d'aujourd'hui compris (84, soit 12 semaines). null sans le calendrier.
+  const TEMPS_FORTS = { N: 6, JOURS: 84 };
+  function prochainsTempsForts(TF, c, auj, o = {}) {
+    if (!TF || !Array.isArray(TF.evenements) || typeof tempsForts !== "function") return null;
+    const n = o.n || TEMPS_FORTS.N, jours = o.jours || TEMPS_FORTS.JOURS, j0 = JOUR.test(auj || "") ? auj : aujourdhui();
+    const [a, m, j] = j0.split("-").map(Number), debut = new Date(Date.UTC(a, m - 1, j)), fin = new Date(debut.getTime() + (jours - 1) * 86400000);
+    const metier = (TF.metiers || []).includes(c && c.metier) ? c.metier : "autre";
+    return tempsForts(TF, metier, debut, fin, (c && c.pays) || "FR").slice(0, n).map(({ ev, date }) => {
+      const idee = ev.idee ? (typeof ideeDuMetier === "function" ? ideeDuMetier(ev.idee, metier) : ev.idee) : null;
+      return { id: ev.id, date: date.toISOString().slice(0, 10), ferie: !!ev.ferie, nom: ev.nom, nom_en: ev.nom_en || null, nom_nl: ev.nom_nl || null, idee };
+    });
+  }
+  window.RENOM_TEMPS_FORTS = { prochains: prochainsTempsForts, ...TEMPS_FORTS };
   // ---- Mise à jour de l'espace membre : règles partagées par les écrans et les pages publiques
   window.RENOM_MAJ = { contientTelephone, tauxReponseDe, jourLot, duJour, CRENEAUX, ESPACEMENT, momentLegende, texteDuContenu, creneauPour, LIMITE_GOOGLE, formatDe, reseauxPour, reseauxDuContenu, legendeDe, longueur, partiesParis, prochainCreneau, joursOuverts, feriesFr, feriesBe, estFerie, jourOuvre, joursRappel, joursRappelA, HEURE_RAPPEL_TARDIVE, ferieDe, paysDe, heuresOuvreesAjouter, heuresOuvreesEntre, jourEcheance, destinations, TYPES_ACTION, aujourdhui, photoPublication, cheminVisuel, MENTIONS_IA, estIA };
   // ---- Automatisations de service : règles partagées par les écrans
