@@ -101,7 +101,10 @@
   // Jour civil à Paris (« AAAA-MM-JJ ») et relance d'une version du commerçant restée 48 h sans reprise (01/11/2026, tour 6 Premium).
   const jourParisDemo = ms => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
   const relanceVersion = a => !!a.version_client && !!a.version_client_le && Date.now() > Date.parse(a.version_client_le) + 48 * 36e5 && !(a.propose_le && a.propose_le >= a.version_client_le);
-  const numeroWhatsapp = (v, pays) => { let n = String(v == null ? "" : v).replace(/[\s().-]/g, ""), ind = INDICATIFS[String(pays || "").toUpperCase()];
+  // 20/11/2026 (test de PJ, +44 refusé) : un numéro collé depuis les contacts de l'iPhone porte des caractères invisibles (marques de direction
+  // U+202A/U+202C, espaces fines) : on garde seulement les chiffres et le « + » de tête (forme NFKC : « ＋ » pleine largeur lu comme « + »). Tous pays.
+  const numeroWhatsapp = (v, pays) => { let n = String(v == null ? "" : v).normalize("NFKC").replace(/[^\d+]/g, ""), ind = INDICATIFS[String(pays || "").toUpperCase()];
+    n = n.charAt(0) + n.slice(1).replace(/\+/g, "");
     if (n.startsWith("00")) n = "+" + n.slice(2); else if (ind && /^0[1-9]/.test(n)) n = ind + n.slice(1); return /^\+[1-9]\d{7,14}$/.test(n) ? n : null; };
   // Exemple de numéro selon le pays du commerce (champs, aides, phrases d'erreur) : Belgique +32 470 12 34 56, sinon +33 6 12 34 56 78.
   const exempleNumero = pays => EXEMPLES_NUMERO[String(pays || "").toUpperCase() === "BE" ? "BE" : "FR"];
