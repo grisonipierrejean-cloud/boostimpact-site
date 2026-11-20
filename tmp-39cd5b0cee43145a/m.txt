@@ -1,0 +1,142 @@
+-- ================================================================ Musique : son d'origine après le nouvel essai, CGV version 4 (19/11/2026)
+-- Décision du fondateur (19/11/2026) : une vidéo n'est JAMAIS bloquée faute de musique (remplace « aucune vidéo muette » du 16/11/2026).
+--   1. publication_envoyee(p) : nouvelle clé p.sans_musique {réseau: raison} (moteur/metricool_api.py, bilan_publication ; n8n « Bilan des posts ») :
+--      réseaux publiés avec le son d'origine de la vidéo, parce qu'aucune musique autorisée n'a été trouvée au NOUVEL ESSAI (ou que le post a été
+--      refusé avec la musique), ou parce que c'est une story (aucune musique posable). Effet : publications.musique_attente à l'état « son_origine »,
+--      journal MUSIQUE_SON_ORIGINE, alerte d'INFORMATION MUSIQUE_INTROUVABLE (detail.son_origine = true ; une par publication). Statut inchangé
+--      (« envoye » : la vidéo est partie). Le premier essai sans musique reste en attente du créneau suivant, comme avant.
+--      Nouvel essai en erreur de publication (Metricool) : la vidéo n'est pas partie sur ces réseaux : alerte VIDEO_NON_PUBLIEE (plus « jamais sans son »).
+--   2. musique_relancer() : relance restée sans réponse 6 h (webhook perdu) : alerte VIDEO_NON_PUBLIEE (la vidéo n'est pas partie : à reprogrammer).
+--   3. CGV du 19 novembre 2026, version 4 (version notée avec les accords) : musique (article 3), article 8 (réponses aux avis de 1 à 3 étoiles),
+--      « 7 jours ouvrés » dans le résumé.
+-- REJOUABLE (create or replace, droits redonnés). À coller APRÈS le bloc « Lot 11 » (dépend de « Musique tendance, aucune vidéo muette » : colonnes
+-- musique_attente, musique_relance_le ; et des accords notés par le lot 11). Copie identique dans schema.sql, juste avant « Administrateur sans double
+-- authentification », qui reste le dernier. Aucun workflow n8n à créer ; « RENOM, publication (Metricool) » est à RÉIMPORTER (n8n/renom-publication.json).
+create or replace function publication_envoyee(p jsonb) returns jsonb language plpgsql security definer set search_path = public as $$
+declare x publications; ids text := nullif(btrim(coalesce(p->>'metricool_ids', '')), ''); reessai boolean := coalesce((p->>'reessai')::boolean, false);
+  att jsonb := case when jsonb_typeof(p->'attente') = 'object' then p->'attente' else '{}'::jsonb end;
+  ch jsonb := case when jsonb_typeof(p->'choix') = 'object' then p->'choix' else '{}'::jsonb end;
+  sm jsonb := case when jsonb_typeof(p->'sans_musique') = 'object' then p->'sans_musique' else '{}'::jsonb end;
+  rs text[]; rso text[]; def text[]; nom_c text; c jsonb := '{}'::jsonb; k text; v jsonb;
+begin
+  select * into x from publications where id = (p->>'publication')::uuid for update;
+  if x.id is null then raise exception 'Publication introuvable.' using errcode = 'P0003'; end if;
+  select coalesce(array_agg(key order by coalesce(array_position(x.reseaux, key), 99), key), '{}') into rs from jsonb_object_keys(att) key;   -- ordre des réseaux de la publication
+  select coalesce(array_agg(key order by coalesce(array_position(x.reseaux, key), 99), key), '{}') into rso from jsonb_object_keys(sm) key;
+  select coalesce(array_agg(value), '{}') into def from jsonb_array_elements_text(case when jsonb_typeof(p->'definitif') = 'array' then p->'definitif' else '[]'::jsonb end);
+  if ids is not null then
+    update publications set statut = 'envoye', erreur = null, metricool_blog_id = coalesce(nullif(p->>'blog', ''), metricool_blog_id),
+      metricool_id = case when reessai and nullif(metricool_id, '') is not null then metricool_id || ',' || ids else ids end
+      where id = x.id returning * into x;
+  end if;
+  if ch <> '{}'::jsonb then
+    for k, v in select * from jsonb_each(ch) loop c := c || jsonb_build_object(k, v || jsonb_build_object('choisi_le', now())); end loop;
+    update contenus set musique = coalesce(musique, '{}'::jsonb) || jsonb_build_object('plateforme', coalesce(musique->'plateforme', '{}'::jsonb) || c) where id = x.contenu_id;
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'MUSIQUE_CHOISIE', jsonb_build_object('publication', x.id, 'choix', ch));
+  end if;
+  -- Son d'origine (19/11/2026) : réseaux partis sans musique tendance. Information pour l'équipe, jamais un blocage.
+  if cardinality(rso) > 0 and ids is not null then
+    update publications set musique_attente = coalesce(musique_attente, '{}'::jsonb) || jsonb_build_object('etat', 'son_origine', 'reseaux_son_origine', to_jsonb(rso),
+      'raisons_son_origine', sm, 'son_origine_le', now()) where id = x.id returning * into x;
+    select nom into nom_c from commerces where id = x.commerce_id;
+    if not exists (select 1 from alertes_exploitant where type = 'MUSIQUE_INTROUVABLE' and detail->>'publication' = x.id::text) then
+      insert into alertes_exploitant (type, commerce_id, detail) values ('MUSIQUE_INTROUVABLE', x.commerce_id, jsonb_build_object('publication', x.id, 'contenu', x.contenu_id,
+        'commerce', nom_c, 'reseaux', to_jsonb(rso), 'raisons', sm, 'prevu_le', x.prevu_le, 'son_origine', true));
+    end if;
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'MUSIQUE_SON_ORIGINE', jsonb_build_object('publication', x.id, 'reseaux', to_jsonb(rso), 'raisons', sm));
+  end if;
+  if cardinality(rs) = 0 then
+    if reessai and x.musique_attente is not null and cardinality(rso) = 0 then
+      update publications set musique_attente = musique_attente || jsonb_build_object('etat', 'resolue', 'resolue_le', now()) where id = x.id returning * into x;
+      insert into journal (commerce_id, type, detail) values (x.commerce_id, 'MUSIQUE_TROUVEE', jsonb_build_object('publication', x.id, 'reseaux', x.musique_attente->'reseaux'));
+    end if;
+  elsif not reessai and not (rs && def) and coalesce(x.musique_attente->>'etat', 'son_origine') = 'son_origine' then
+    update publications set musique_attente = coalesce(musique_attente, '{}'::jsonb) || jsonb_build_object('etat', 'attente', 'reseaux', to_jsonb(rs), 'raisons', att, 'essais', 1,
+      'chercher_le', greatest(x.prevu_le, now()), 'cree_le', now()) where id = x.id returning * into x;
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'MUSIQUE_EN_ATTENTE', jsonb_build_object('publication', x.id, 'reseaux', to_jsonb(rs), 'raisons', att,
+      'chercher_le', x.musique_attente->'chercher_le'));
+  else
+    -- Réseaux restés NON publiés : nouvel essai en erreur de publication (Metricool), ou cas sans nouvel essai possible. Ce n'est plus un manque de
+    -- musique (19/11/2026 : faute de musique, la vidéo part avec son son d'origine) : la vidéo n'est pas partie sur ces réseaux, l'équipe agit.
+    update publications set musique_attente = coalesce(musique_attente, '{}'::jsonb) || jsonb_build_object('etat', 'alerte', 'reseaux', to_jsonb(rs), 'raisons', att,
+      'essais', coalesce((musique_attente->>'essais')::int, 0) + 1, 'alerte_le', now()) where id = x.id returning * into x;
+    select nom into nom_c from commerces where id = x.commerce_id;
+    if not exists (select 1 from alertes_exploitant where type = 'VIDEO_NON_PUBLIEE' and detail->>'publication' = x.id::text) then
+      insert into alertes_exploitant (type, commerce_id, detail) values ('VIDEO_NON_PUBLIEE', x.commerce_id, jsonb_build_object('publication', x.id, 'contenu', x.contenu_id,
+        'commerce', nom_c, 'reseaux', to_jsonb(rs), 'raisons', att, 'prevu_le', x.prevu_le));
+    end if;
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'VIDEO_NON_PUBLIEE', jsonb_build_object('publication', x.id, 'reseaux', to_jsonb(rs), 'raisons', att));
+    if nullif(x.metricool_id, '') is null then
+      update publications set statut = 'echec', erreur = 'Vidéo non publiée (' || array_to_string(rs, ', ') || ') : erreur de publication au nouvel essai.' where id = x.id returning * into x;
+    end if;
+  end if;
+  if jsonb_typeof(p->'sans_video') = 'array' and jsonb_array_length(p->'sans_video') > 0 then
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'VIDEO_SANS_FACEBOOK', jsonb_build_object('publication', x.id, 'reseaux', p->'sans_video'));
+  end if;
+  if ids is null and cardinality(rs) = 0 and not reessai and nullif(x.metricool_id, '') is null and x.statut = 'programme' then
+    update publications set statut = 'echec', erreur = 'Aucun réseau ne reçoit cette vidéo (Facebook ne reçoit que les publications photo).' where id = x.id returning * into x;
+  end if;
+  return jsonb_build_object('statut', x.statut, 'attente', x.musique_attente->>'etat');
+end $$;
+
+create or replace function musique_relancer() returns int language plpgsql security definer set search_path = public as $$
+declare x publications; n int := 0; t timestamptz; nom_c text;
+begin
+  -- Relance restée sans réponse (webhook perdu, n8n en panne) : la vidéo n'est pas partie sur ces réseaux ; alerte VIDEO_NON_PUBLIEE (à reprogrammer).
+  for x in select * from publications where musique_attente->>'etat' = 'relance' and (musique_attente->>'relance_le')::timestamptz < now() - interval '6 hours' and statut <> 'annule' for update loop
+    update publications set musique_attente = musique_attente || jsonb_build_object('etat', 'alerte', 'alerte_le', now(), 'raisons',
+      coalesce(musique_attente->'raisons', '{}'::jsonb) || jsonb_build_object('relance', 'nouvel essai sans réponse depuis 6 h')) where id = x.id;
+    select nom into nom_c from commerces where id = x.commerce_id;
+    if not exists (select 1 from alertes_exploitant where type = 'VIDEO_NON_PUBLIEE' and detail->>'publication' = x.id::text) then
+      insert into alertes_exploitant (type, commerce_id, detail) values ('VIDEO_NON_PUBLIEE', x.commerce_id, jsonb_build_object('publication', x.id, 'contenu', x.contenu_id,
+        'commerce', nom_c, 'reseaux', x.musique_attente->'reseaux', 'raisons', jsonb_build_object('relance', 'nouvel essai sans réponse depuis 6 h'), 'prevu_le', x.prevu_le));
+    end if;
+    if nullif(x.metricool_id, '') is null then
+      update publications set statut = 'echec', erreur = 'Nouvel essai sans réponse depuis 6 h : vidéo non publiée, à reprogrammer.' where id = x.id;
+    end if;
+  end loop;
+  for x in select * from publications where musique_attente->>'etat' = 'attente' and (musique_attente->>'chercher_le')::timestamptz <= now()
+      and statut in ('programme', 'envoye', 'publie') for update loop
+    t := creneau_suivant(x.commerce_id, greatest(x.prevu_le, now() + interval '1 hour'));
+    update publications set musique_relance_le = now(), musique_attente = musique_attente || jsonb_build_object('etat', 'relance', 'prevu_le', t, 'relance_le', now())
+      where id = x.id;
+    insert into journal (commerce_id, type, detail) values (x.commerce_id, 'MUSIQUE_NOUVEL_ESSAI', jsonb_build_object('publication', x.id, 'reseaux', x.musique_attente->'reseaux', 'prevu_le', t));
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+revoke all on function publication_envoyee(jsonb), musique_relancer() from public, anon, authenticated;
+grant execute on function publication_envoyee(jsonb), musique_relancer() to service_role;
+
+-- ---------------------------------------------------------------- CGV du 19 novembre 2026, version 4 (version notée avec les accords)
+do $v$
+declare f regprocedure; d text;
+begin
+  foreach f in array array['regler_delegation(uuid, boolean)'::regprocedure, 'regler_accord_video_ia(uuid, boolean)'::regprocedure,
+                           'admin_regler_accord_video_ia(uuid, boolean, boolean)'::regprocedure] loop
+    d := pg_get_functiondef(f);
+    if position('''17 novembre 2026, version 3''' in d) > 0 then execute replace(d, '''17 novembre 2026, version 3''', '''19 novembre 2026, version 4'''); end if;
+  end loop;
+end $v$;
+
+do $$
+declare src text;
+begin
+  assert (select prosecdef from pg_proc where proname = 'publication_envoyee' and pronamespace = 'public'::regnamespace), 'publication_envoyee sans security definer';
+  assert not has_function_privilege('authenticated', 'publication_envoyee(jsonb)', 'execute') and not has_function_privilege('anon', 'musique_relancer()', 'execute')
+     and has_function_privilege('service_role', 'musique_relancer()', 'execute'), 'droits des fonctions de musique';
+  assert position('sans_musique' in pg_get_functiondef('publication_envoyee(jsonb)'::regprocedure)) > 0
+     and position('jamais sans son' in pg_get_functiondef('publication_envoyee(jsonb)'::regprocedure)) = 0
+     and position('jamais sans son' in pg_get_functiondef('musique_relancer()'::regprocedure)) = 0, 'publication_envoyee encore à la règle « jamais sans son »';
+  select string_agg(p.prosrc, ' ') into src from pg_proc p join pg_namespace s on s.oid = p.pronamespace where s.nspname = 'public'
+    and p.proname in ('regler_delegation', 'regler_accord_video_ia', 'admin_regler_accord_video_ia');
+  assert src like '%''19 novembre 2026, version 4''%' and src not like '%''17 novembre 2026, version 3''%', 'accords sans la version « 19 novembre 2026, version 4 »';
+  raise notice 'Musique (son d''origine après le nouvel essai) et CGV version 4 : contrôle OK (% publication(s) en attente de musique)',
+    (select count(*) from publications where musique_attente->>'etat' in ('attente', 'relance'));
+end $$;
+-- Contrôle après application (éditeur SQL) :
+-- select (position('sans_musique' in pg_get_functiondef('publication_envoyee(jsonb)'::regprocedure)) > 0) son_origine,
+--        (select (regexp_match(prosrc, '''(\d+ novembre 2026[^'']*)'''))[1] from pg_proc where proname = 'regler_delegation') cgv;
+--   attendu : true, 19 novembre 2026, version 4
+-- ================================================================ fin du bloc Musique : son d'origine après le nouvel essai, CGV version 4
