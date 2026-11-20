@@ -2964,7 +2964,8 @@
     const i = $("awa-numero"), er = $("awa-erreur"), k = $("awa-case"), ke = $("awa-case-erreur");
     const montrer = (p, x, champ) => { p.textContent = x; p.hidden = !x; if (x) champ.setAttribute("aria-invalid", "true"); else champ.removeAttribute("aria-invalid"); };
     let touche = false;
-    i.addEventListener("input", () => { touche = true; if (!er.hidden && !erreurNumeroWa(i.value, c)) montrer(er, "", i); });
+    // 20/11/2026 (test de PJ) : l'ancienne erreur restait affichée pendant la frappe (« +44 » paraissait refusé) : effacée dès qu'on tape, revérifiée au départ du champ.
+    i.addEventListener("input", () => { touche = true; if (!er.hidden) montrer(er, "", i); });
     i.addEventListener("blur", () => { if (touche || i.value.trim()) montrer(er, erreurNumeroWa(i.value, c), i); });
     k.addEventListener("change", () => { if (k.checked) montrer(ke, "", k); });
     return {
