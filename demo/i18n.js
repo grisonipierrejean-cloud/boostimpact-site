@@ -174,6 +174,8 @@
     "reg.fiche.texte": ["Ce que BoostImpact peut dire de vous : spécialités, ton, horaires, contact.", "What BoostImpact can say about you: specialities, tone, opening hours, contact.", "Wat BoostImpact over u mag zeggen: specialiteiten, toon, openingsuren, contact."],
     "reg.fichegoogle": ["Publier sur votre fiche (horaires, offres…)", "Publish on your profile (hours, offers…)", "Publiceren op uw profiel (openingsuren, aanbiedingen…)"],
     "reg.fichegoogle.texte": ["Photos, offre, événement ou horaires exceptionnels à publier sur Google.", "Photos, an offer, an event or special opening hours to publish on Google.", "Foto's, een aanbieding, een evenement of uitzonderlijke openingsuren om op Google te publiceren."],
+    "reg.calendrier": ["Calendrier", "Calendar", "Kalender"],
+    "reg.calendrier.texte": ["Les dates de vos prochaines publications, mois par mois.", "The dates of your upcoming posts, month by month.", "De data van uw volgende posts, maand per maand."],
     "reg.demarrage": ["Mise en route", "Setup", "Opstart"],
     "reg.demarrage.texte": ["Les étapes pour démarrer et vos 5 réponses pour que BoostImpact écrive comme vous.", "The steps to get started and your 5 answers so BoostImpact writes the way you do.", "De stappen om te starten en uw 5 antwoorden zodat BoostImpact schrijft zoals u."],
     "acc.afaire.titre": ["À faire maintenant", "To do now", "Nu te doen"],

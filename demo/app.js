@@ -907,6 +907,28 @@
     try { if (!incitationVue && localStorage.getItem(k) === m) return false; localStorage.setItem(k, m); } catch (er) {}
     incitationVue = true; return true; };
   const ACTIONS_VISIBLES = 3;
+  // Carte « Prochaines publications » (23/11/2026, constat du fondateur en production : « Le calendrier, c'est important. C'est avec ça que le
+  // commerçant peut voir les dates. ») : la même sur l'accueil et pendant la mise en route (accès Google « Demande envoyée », parfois des semaines),
+  // avec « Ouvrir le calendrier ». o.sansDate / o.raisons : validées restées sans date (accueil seulement, où « Programmer tout » est branché).
+  async function carteProchaines(c, cal, o = {}) {
+    const sansDate = o.sansDate || [], aut = window.RENOM_RESEAUX_AUTORISES(c);
+    // Lot 4 B : 2 prochaines publications (le calendrier complet est à un clic) pour tenir en 2 écrans de téléphone.
+    const prochaines = (cal || []).filter(x => x.statut === "programme").slice(0, 2), vign = await Promise.all(prochaines.map(x => urlSure(x.contenu)));
+    return `<section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
+        <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
+        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, aut) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}<span class="note" data-mention-mois>${mentionMois(x)}</span></p><p class="note">${destTexte(x, aut)}</p></div></li>`).join("")}</ul>`
+        : sansDate.length ? "" : `<p class="texte2" id="acc-rien-programme">${t("acc.rien.programme")}</p>`}
+        ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><p class="note" id="acc-attendent-raison">${t("prog.raisons", { r: e((o.raisons || []).join(" ; ")) })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
+        <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
+      </section>`;
+  }
+  // Pendant la mise en route (questions, réseaux, WhatsApp) : la carte sous le formulaire, quand c'est l'accueil qui montre ces écrans (toujours=false),
+  // ajoutée seulement si l'écran rendu est encore celui-là (idEcran) et qu'elle n'y est pas déjà.
+  async function carteDemarrage(c, idEcran, toujours) {
+    if (!toujours && route !== "accueil") return;
+    const html = await carteProchaines(c, await D.calendrier().catch(() => []));
+    if ($(idEcran) && !$("prochaines")) vue.insertAdjacentHTML("beforeend", html);
+  }
   async function accueil() {
     const c0 = await D.commerce();
     // Nom du commerce à confirmer (27/10/2026) : toujours d'abord, même après « Faire plus tard » (aucune demande d'avis ne part sans lui).
@@ -924,8 +946,7 @@
     // Lot 2 : la programmation est automatique à la validation ; une validée sans date est un secours, dont la raison est dite (journal).
     const raisonsSD = sansDate.length ? await raisonsSansDate(sansDate.map(x => x.id)) : {}, raisonsTxt = [...new Set(sansDate.map(x => raisonsSD[x.id] || t("prog.raison.inconnue")))];
     const aValider = ct.filter(x => x.statut === "a_valider"), reponses = av.filter(x => x.statut === "a_valider" && !x.sensible), humains = av.filter(x => x.statut === "humain");
-    // Lot 4 B : 2 prochaines publications sur l'accueil (le calendrier complet est à un clic) pour tenir en 2 écrans de téléphone.
-    const prochaines = cal.filter(x => x.statut === "programme").slice(0, 2), vign = await Promise.all(prochaines.map(x => urlSure(x.contenu)));
+    const prochaines = await carteProchaines(c, cal, { sansDate, raisons: raisonsTxt });   // prochaines publications et « Ouvrir le calendrier »
     // Sous-titre : le nombre de validations (contenus, réponses aux avis, réponses aux commentaires) et leur durée (environ 40 secondes chacune).
     // Un avis sensible n'en fait pas partie (décision de PJ du 22/10/2026) : l'équipe s'en charge, le commerçant n'a rien à faire.
     const aDecider = av.filter(x => sensibleADecider(x, c));
@@ -1032,13 +1053,7 @@
       ${moisPlein && !c.en_pause ? `<p class="texte2" id="acc-mois-complet">${t("acc.mois.complet", { mois: (new Date().getMonth() + 1) % 12 })}</p>` : ""}
       ${lienPublications(c)}
       ${ligneContact(contact, "contact-accueil")}</div><div class="pile accueil-col">
-      <section class="carte" id="prochaines" aria-labelledby="prochaines-titre">
-        <div class="carte-tete"><h2 id="prochaines-titre">${t("acc.prochaines")}</h2></div>
-        ${prochaines.length ? `<ul class="liste">${prochaines.map((x, i) => `<li class="avec-vignette${horsOffreDe(x, window.RENOM_RESEAUX_AUTORISES(c)) ? " hors-offre" : ""}">${vignette(vign[i])}<div><p class="fort">${dateHeure(x.prevu_le)}<span class="note" data-mention-mois>${mentionMois(x)}</span></p><p class="note">${destTexte(x, window.RENOM_RESEAUX_AUTORISES(c))}</p></div></li>`).join("")}</ul>`
-        : sansDate.length ? "" : `<p class="texte2" id="acc-rien-programme">${t("acc.rien.programme")}</p>`}
-        ${sansDate.length ? `<div class="encart" id="acc-attendent"><p class="texte2">${t("acc.attendent", { n: sansDate.length })}</p><p class="note" id="acc-attendent-raison">${t("prog.raisons", { r: e(raisonsTxt.join(" ; ")) })}</p><div class="actions"><button type="button" class="bouton second" data-action="programmer">${t("acc.programmer.tout")}</button></div></div>` : ""}
-        <p class="pied"><a href="#/calendrier" id="ouvrir-calendrier">${t("acc.ouvrir.calendrier")}</a></p>
-      </section>
+      ${prochaines}
       ${blocTempsForts(c, tfD, "temps-forts", { max: 3, lienTout: true })}
       ${/* Lot 4 B (revue design et Karim du 15/11/2026 : accueil de 3,8 écrans) : l'accueil tient en 2 écrans de téléphone ; les chiffres du mois,
          la Visibilité IA, le point du mois, la réutilisation des photos et l'idée de la semaine sont repliés sous « Votre mois en détail ». */ ""}
@@ -1120,7 +1135,9 @@
       ${(g.mesures || []).length ? `<p class="note" data-geo-cli-mesures>${t("geo.cli.mesures", { d: date(g.mesures[g.mesures.length - 1].faite_le) })}</p>` : ""}</section>`; };
 
   // ---------------- Réglages (25/10/2026) : tout ce qui se règle une fois, rangé derrière un seul lien de l'en-tête. Chaque écran garde son adresse.
-  const ENTREES_REGLAGES = ["offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"];
+  // 23/11/2026 : « Calendrier » en tête (décision du fondateur : accès au calendrier quel que soit l'état, démarrage compris) ; l'écran reste rangé
+  // sous l'onglet Accueil (GROUPES), les 5 onglets ne changent pas.
+  const ENTREES_REGLAGES = ["calendrier", "offre", "comptes", "notifications", "publications", "fiche", "fichegoogle", "demarrage"];
   async function reglages() {
     // Une seule entrée vers « Vos publications » (audit Essentiel du 31/10/2026) : la carte tant que le style n'est pas validé, sinon la ligne de la liste.
     const c = await D.commerce(), carte = carteStyle(c);
@@ -3056,7 +3073,7 @@
       try { await D.confirmerNom($("nom-commerce").value); await demarrage(); msg(t("nom.merci")); majCompteurs(); } catch (er) { $("nom-ok").disabled = false; msg(ph(er.message)); } };
   }
   async function ecranEssentiel(c) {
-    const [mr, ph_] = await Promise.all([D.miseEnRoute().catch(() => null), D.photos().catch(() => [])]), pts = Object.fromEntries(((mr && mr.points) || []).map(x => [x.point, x.etat]));
+    const [mr, ph_, cal_] = await Promise.all([D.miseEnRoute().catch(() => null), D.photos().catch(() => []), D.calendrier().catch(() => [])]), pts = Object.fromEntries(((mr && mr.points) || []).map(x => [x.point, x.etat]));
     // Étape réseaux (bloc SQL « Emails au commerçant », 27/10/2026) : tant que l'équipe n'a pas envoyé le lien (lien_envoye_le vide), rien à faire.
     const ptRes = ((mr && mr.points) || []).find(x => x.point === "metricool"), attenteLien = !!ptRes && ptRes.etat === "a_faire" && "lien_envoye_le" in ptRes && !ptRes.lien_envoye_le;
     const g = sansReseaux(c), avecReseaux = "metricool" in pts, eg = ficheDemandee(c) ? "demande" : pts.google || "a_faire";
@@ -3085,6 +3102,7 @@
     const carteTva = !("numero_tva" in c) || c.numero_tva || c.tva_ignoree_le ? "" : `<section class="carte" id="mer-tva" aria-labelledby="mer-tva-titre"><h2 id="mer-tva-titre">${t("tva.titre")}</h2>
         <p class="texte2">${t("tva.texte")}</p><form id="tva-f" novalidate><div class="f"><label for="tva-numero">${t("tva.lib")}</label><input id="tva-numero" type="text" maxlength="20" autocomplete="off" spellcheck="false" translate="no" placeholder="${M.paysDe(c.pays) === "BE" ? "BE0123456789" : "FR12345678901"}" aria-describedby="tva-aide"><p class="aide" id="tva-aide">${t("tva.aide")}</p></div>
         <div class="actions"><button type="submit" class="bouton second" id="tva-ok">${t("tva.enregistrer")}</button><button type="button" class="lien" id="tva-ignorer">${t("tva.ignorer")}</button></div><p class="msg" id="tva-msg" role="status"></p></form></section>`;
+    const prochaines = await carteProchaines(c, cal_);   // 23/11/2026 : sous les étapes, le calendrier reste à un clic pendant toute la mise en route
     const reseaux = !avecReseaux ? "" : `<li class="carte etape-mer" id="mer-reseaux" data-etat="${e(pts.metricool)}">${etapeTete(4, t("mer2.reseaux.titre"), pts.metricool, "mer-reseaux-titre")}
         <p class="texte2">${t("mer2.reseaux." + (pts.metricool === "fait" ? "fait" : pts.metricool === "declare" ? "declare" : attenteLien ? "attente" : "a_faire"))}</p>
         ${pts.metricool === "a_faire" && !attenteLien ? `<div class="actions"><button type="button" class="bouton second" data-declarer="metricool">${t("mer2.reseaux.fait.bouton")}</button></div>` : ""}</li>`;
@@ -3101,6 +3119,7 @@
         ${reseaux}
       </ol>
       ${carteTva}
+      ${prochaines}
       <section class="carte rappel" id="rappel" aria-labelledby="rappel-titre"><h2 id="rappel-titre" class="vh">${t("rappel.bouton")}</h2>
         <a class="bouton second" id="rappel-whatsapp" href="${e(lienAideMer(c))}" target="_blank" rel="noopener">${t("rappel.bouton")}</a></section>
       <div class="actions pied-mer">${c.demarrage_fini ? `<a class="bouton" href="#/accueil" id="mer-accueil">${t("dem5.accueil")}</a>` : `<button type="button" class="bouton" id="mer-continuer">${t("mer2.continuer")}</button>`}
@@ -3164,6 +3183,7 @@
       dem.i = 5; await demarrage(); const f = vue.querySelector("input[name=rs-instagram]"); if (f) f.focus();
     };
     $("dem-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
+    carteDemarrage(c, "dem-f");
     $("dem-passer").onclick = async () => { await avancer(); };
     if ($("dem-precedent")) $("dem-precedent").onclick = async () => { lire(); dem.i--; await demarrage(); };
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
@@ -3194,6 +3214,7 @@
       try { await D.reglerWhatsapp($("awa-numero").value.trim(), true); } catch (er) { b.disabled = false; ctl.erreur(ph(er.message)); return; }
       try { await finirDemarrage(); } catch (er) { b.disabled = false; msg(ph(er.message)); } };
     $("dem-precedent").onclick = async () => { dem.i = 5; await demarrage(); };
+    carteDemarrage(c, "dem-whatsapp");
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
   // 6e question « Vos réseaux sociaux » (13/11/2026, console v49) : Instagram (compte professionnel ?), Facebook (page ?), TikTok, oui ou non. Facultative :
@@ -3223,6 +3244,7 @@
     $("dem-rs-f").onsubmit = async ev => { ev.preventDefault(); lire(); await avancer(); };
     $("dem-passer").onclick = async () => { await avancer(); };
     $("dem-precedent").onclick = async () => { lire(); dem.i = 4; await demarrage(); };
+    carteDemarrage(c, "dem-reseaux");
     $("dem-plus-tard").onclick = () => { try { localStorage.setItem("renom-demarrage-plus-tard:" + c.id, "1"); } catch (er) {} dem.pour = null; aller("accueil"); };
   }
 
