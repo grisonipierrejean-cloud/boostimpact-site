@@ -1025,6 +1025,7 @@
       ${merVisible || sansAFaire || !actions.length ? "" : `<section class="carte" id="a-faire" aria-labelledby="a-faire-titre"><h2 id="a-faire-titre">${t("acc.afaire.titre")}</h2>
         ${ulActions()}
         ${humains.length && !sensibleEnTete ? ligneSensible() : ""}</section>`}
+      ${carteInstall()}
       ${carteStyle(c, true)}
       ${offreAccueil(c) ? `<div class="entete-accueil offre-sous">${offreAccueil(c)}</div>` : ""}
       ${ligneChgOffre(c, dChg)}
@@ -1051,7 +1052,7 @@
       ${ligneAutorisation(c)}
       ${blocIdeeSemaine(idee, c, tfT)}</div></details></div></div>`;
     // « Valider … » (30/10/2026, fluidité téléphone) : la première carte à valider arrive en haut de l'écran, sans défiler l'en-tête de Contenus.
-    brancherWaManquant(c); brancherTempsForts(vue);
+    brancherWaManquant(c); brancherTempsForts(vue); brancherCarteInstall();
     vue.querySelectorAll('[data-action="contenus"]').forEach(a => a.addEventListener("click", () => { versCarte = true; }));
     vue.querySelectorAll("[data-vers]").forEach(b => b.onclick = () => { const x = $(b.dataset.vers); if (x) { const d_ = x.closest("details"); if (d_) d_.open = true; x.scrollIntoView({ block: "start" }); const f = x.querySelector("button, a"); if (f) f.focus({ preventScroll: true }); } });
     // Petit écran (tour 9, 01/11/2026 : sur iPhone SE, « Tout voir, 2 de plus » tombait sous la barre d'onglets) : tant que le lien passe sous la
@@ -2779,7 +2780,8 @@
   // ---------------- Application sur le téléphone (15/11/2026, étape 1 : une PWA qui se comporte comme une app ; règles dans pwa.js).
   // Écran « Installer l'application » (#/application) : guide selon le téléphone (iPhone dans Safari : Partager puis « Sur l'écran d'accueil » ;
   // Android : bouton du navigateur, sinon le menu ; autre navigateur ou application : ouvrir dans Safari ou Chrome ; ordinateur : code QR).
-  // Montré d'office UNE fois, à la première connexion sur un téléphone (pwa.js, guideAMontrer), puis depuis Réglages. Installé : il le dit.
+  // Ouvert depuis la carte « Ajoutez BoostImpact à votre écran d'accueil » de l'Accueil (une fois, fermable : pwa.js, carteInstallAMontrer) et
+  // depuis Réglages ; jamais d'office (20/11/2026). Première étape toujours : ouvrir la page dans Safari (iPhone) ou Chrome (Android). Installé : il le dit.
   const P = window.RENOM_PWA;
   let invitationInstall = null;
   window.addEventListener("beforeinstallprompt", ev => { ev.preventDefault(); invitationInstall = ev; const b = $("installer-maintenant"); if (b) b.hidden = false; if (ecranCourant === application) rendre(); });
@@ -2788,6 +2790,16 @@
   const installee = () => P.estInstallee(envApp());
   const guideVu = () => { try { return localStorage.getItem(P.CLE_GUIDE_VU) === "1"; } catch (er) { return false; } };
   const noterGuideVu = () => { try { localStorage.setItem(P.CLE_GUIDE_VU, "1"); } catch (er) {} };
+  // Carte discrète de l'Accueil (20/11/2026) : une fois par appareil ; « Fermer » ou « Voir comment faire » la retire pour de bon (clé du guide vu).
+  const carteInstall = () => P.carteInstallAMontrer({ connecte: true, route: "accueil", dejaVu: guideVu(), env: envApp() })
+    ? `<section class="carte carte-install" id="carte-install" aria-labelledby="carte-install-titre"><div class="carte-install-tete"><h2 id="carte-install-titre">${t("ci.titre")}</h2>
+      <button type="button" class="lien carte-install-fermer" id="carte-install-fermer">${t("ci.fermer")}</button></div>
+      <p class="texte2">${t("ci.texte")}</p><p class="pied"><a href="#/application" id="carte-install-voir">${t("ci.voir")}</a></p></section>` : "";
+  function brancherCarteInstall() {
+    const f = $("carte-install-fermer"), v = $("carte-install-voir");
+    if (f) f.onclick = () => { noterGuideVu(); const c_ = $("carte-install"); if (c_) c_.remove(); msg(t("ci.ferme")); };
+    if (v) v.addEventListener("click", noterGuideVu);
+  }
   function blocInstaller() {
     return `<section class="carte" id="installer" aria-labelledby="inst-titre"><h2 id="inst-titre">${t("inst.titre")}</h2>
       ${installee() ? `<p class="texte2">${t("inst.deja")}</p>`
@@ -2810,22 +2822,29 @@
   const etapesApp = l => `<ol class="etapes-app">${l.map(([texte, picto], i) => `<li><span class="app-num" aria-hidden="true">${i + 1}</span><span class="app-texte">${texte}</span>${picto ? `<span class="app-picto">${picto}</span>` : ""}</li>`).join("")}</ol>`;
   const adresseEspace = () => location.href.split("#")[0].split("?")[0];
   const copierLien = `<div class="actions"><button type="button" class="bouton second" id="app-copier">${t("app.copier")}</button></div><p class="note" id="app-lien" hidden><span class="casse" translate="no">${e(adresseEspace())}</span></p>`;
+  // Étape 1 toujours visible (20/11/2026) : ouvrir la page dans Safari (iPhone) ou Chrome (Android) et s'y connecter une fois. Navigateur intégré
+  // reconnu sans ambiguïté (pwa.js, navigateurIntegre) ou autre navigateur : bandeau en tête et bouton « Copier le lien » sous les étapes.
+  const bandeauIntegre = (cle, oui) => oui ? `<div class="encart guide-integre" id="guide-integre" role="note"><p class="fort">${t("app.integre.titre")}</p><p>${t(cle)}</p></div>` : "";
   function corpsGuide(etape) {
-    if (etape === "ios_safari") return `<h2 id="guide-titre">${t("app.ios.titre")}</h2>${etapesApp([[t("app.ios.1"), PICTO_PARTAGER], [t("app.ios.2"), PICTO_AJOUTER], [t("app.ios.3"), ""]])}<p class="note">${t("app.ios.note")}</p>`;
-    if (etape === "ios_autre") return `<h2 id="guide-titre">${t("app.ios.titre")}</h2><p class="texte2">${t("app.ios.autre")}</p>${copierLien}`;
-    if (etape === "android_bouton") return `<h2 id="guide-titre">${t("app.android.titre")}</h2><p class="texte2">${t("app.android.bouton.texte")}</p>
+    const ua = navigator.userAgent, integre = P.navigateurIntegre(ua);
+    if (etape === "ios_safari" || etape === "ios_autre") { const autre = etape === "ios_autre";
+      return `<h2 id="guide-titre">${t("app.ios.titre")}</h2>${bandeauIntegre("app.integre.ios", integre || autre)}
+      ${etapesApp([[t("app.ios.0"), ""], [t("app.ios.1"), PICTO_PARTAGER], [t("app.ios.2"), PICTO_AJOUTER], [t("app.ios.3"), ""]])}${autre ? copierLien : ""}<p class="note">${t("app.ios.note")}</p>`; }
+    if (etape === "android_bouton") return `<h2 id="guide-titre">${t("app.android.titre")}</h2>${bandeauIntegre("app.integre.android", integre)}${etapesApp([[t("app.android.0"), ""]])}
+      <p class="texte2">${t("app.android.bouton.texte")}</p>
       <div class="actions"><button type="button" class="bouton grand" id="installer-maintenant">${PICTO_INSTALLER}<span>${t("app.installer")}</span></button></div><p class="note">${t("app.android.sinon")}</p>`;
-    if (etape === "android_menu") return `<h2 id="guide-titre">${t("app.android.titre")}</h2>${etapesApp([[t("app.android.1"), PICTO_MENU], [t("app.android.2"), PICTO_INSTALLER], [t("app.android.3"), ""]])}`;
-    if (etape === "android_autre") return `<h2 id="guide-titre">${t("app.android.titre")}</h2><p class="texte2">${t("app.android.autre")}</p>${copierLien}`;
+    if (etape === "android_menu" || etape === "android_autre") { const autre = etape === "android_autre";
+      return `<h2 id="guide-titre">${t("app.android.titre")}</h2>${bandeauIntegre("app.integre.android", integre || autre)}
+      ${etapesApp([[t("app.android.0"), ""], [t("app.android.1"), PICTO_MENU], [t("app.android.2"), PICTO_INSTALLER], [t("app.android.3"), ""]])}${autre ? copierLien : ""}`; }
     return `<h2 id="guide-titre">${t("app.ordi.titre")}</h2><div class="app-qr"><div class="app-qr-code" role="img" aria-label="${t("app.ordi.qr")}">${qrSvg(adresseEspace())}</div><p class="texte2">${t("app.ordi")}</p></div>`;
   }
   async function application() {
-    const env = envApp(), etape = P.etapeGuide(env, invitationInstall), premiere = /(^|&)premiere\b/.test(paramRoute), inst = etape === "installee";
+    const env = envApp(), etape = P.etapeGuide(env, invitationInstall), inst = etape === "installee";
+    noterGuideVu();   // guide ouvert (carte de l'Accueil ou Réglages) : la carte de l'Accueil ne revient plus
     const push = await blocPush(true);
-    vue.innerHTML = `${premiere ? "" : retourOrigine()}${entete(premiere ? "" : t("groupe.reglages"), t(inst ? "app.titre.installee" : "ecran.application"), t(inst ? "app.deja" : "app.chapo"))}
+    vue.innerHTML = `${retourOrigine()}${entete(t("groupe.reglages"), t(inst ? "app.titre.installee" : "ecran.application"), t(inst ? "app.deja" : "app.chapo"))}
       ${inst ? "" : `<section class="carte guide-app" id="guide-app" data-etape="${etape}" aria-labelledby="guide-titre">${corpsGuide(etape)}</section>`}
-      ${push}
-      ${premiere ? `<div class="actions guide-suite"><a class="bouton second plein" href="#/accueil" id="guide-plus-tard">${t(inst ? "app.continuer" : "app.plus.tard")}</a></div><p class="note guide-rappel">${t("app.rappel")}</p>` : ""}`;
+      ${push}`;
     const cp = $("app-copier");
     if (cp) cp.onclick = async () => { let fait = false; try { await navigator.clipboard.writeText(adresseEspace()); fait = true; } catch (er) {}
       $("app-lien").hidden = false; toast(t(fait ? "app.copie" : "app.copie.main")); };
@@ -3488,9 +3507,9 @@
     }
     connecte = true; route = ECRANS[r] ? r : "accueil"; dessinerNav();
     if (route === "publications" && derniere !== route) pubDepuis = derniere === "accueil" ? "accueil" : "reglages";
-    // Application sur le téléphone (15/11/2026) : guide d'installation montré d'office une seule fois, à la première connexion sur un téléphone,
-    // sur l'accueil seulement (jamais par-dessus un lien précis). Noté vu tout de suite : « Plus tard » ne le fait pas revenir ; Réglages le rouvre.
-    if (P.guideAMontrer({ connecte: true, route, dejaVu: guideVu(), env: envApp(), demo: D.mode === "demo" })) { noterGuideVu(); history.replaceState(null, "", "#/application?premiere"); return rendre(); }
+    // Application sur le téléphone : le guide d'installation n'est PLUS ouvert d'office à la première visite (20/11/2026, décision du fondateur :
+    // depuis le navigateur intégré d'une application mail, « Sur l'écran d'accueil » n'existe pas et le client restait bloqué). Le client arrive
+    // sur l'Accueil (ou l'étape de démarrage en cours) ; l'Accueil propose une carte fermable (carteInstall), le guide reste dans Réglages.
     if (derniere !== route) noterOrigine(derniere, route, hashPrecedent);
     if (derniere !== route) { filtre = null; window.scrollTo(0, 0); if (route !== "contenus") ideesOuvertes = false; if (route !== "videoavis") vaOuvert = false; if (derniere === "demarrage") { dem.vue = null; if (dem.fini) dem.pour = null; } } derniere = route;
     hashPrecedent = location.hash || "#/" + route; ecranCourant = ROUTES[route];

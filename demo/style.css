@@ -1448,8 +1448,16 @@ details.repliable.mer-reponses>summary h3{margin:0}
 .app-qr-code{width:168px;height:168px;padding:10px;background:#FFFFFF;border:1px solid var(--filet);border-radius:var(--r)}
 .app-qr-code svg{display:block;width:100%;height:100%}
 .app-qr .texte2{flex:1 1 220px}
-.guide-rappel{text-align:center}
-@media (min-width:900px){.guide-app,#push-bloc{max-width:720px}.guide-suite .bouton.plein{width:auto}}
+@media (min-width:900px){.guide-app,#push-bloc{max-width:720px}}
+/* Navigateur intégré d'une application (20/11/2026) : l'étape « Ouvrez cette page dans Safari / Chrome » mise en avant. */
+.guide-integre{margin:4px 0 14px;border:1px solid var(--filet)}
+.guide-integre .fort{color:var(--encre);margin:0 0 2px}
+.guide-integre p{margin:0}
+/* Carte discrète de l'Accueil « Ajoutez BoostImpact à votre écran d'accueil » (20/11/2026), fermable. */
+.carte-install-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.carte-install-tete h2{margin:0}
+.carte-install-fermer{flex:none;min-height:44px;padding:0 4px}
+.carte-install .texte2{margin:8px 0 0}
 
 /* ---------- Lot 3 (15/11/2026, revue design : 63 à 65 % du texte de l'espace en 14 px ou moins, 8 tailles sur Résultats, lignes de 150 caractères
    à 1440 px). Espace client seulement (html[data-espace], index.html ; la console garde son échelle) : CINQ tailles de texte.

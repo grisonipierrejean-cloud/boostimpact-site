@@ -2,7 +2,8 @@
 // avec Capacitor). Règles PURES, sans DOM ni réseau, lues par app.js et par les tests (espace/test/pwa.test.mjs) :
 //   - quel téléphone (iPhone / iPad, Android, autre) et quelle version d'iOS ;
 //   - l'espace est-il déjà installé (ouvert depuis son icône, mode « standalone ») ;
-//   - quel guide d'installation montrer, et QUAND le montrer d'office (une fois, à la première connexion sur un téléphone) ;
+//   - quel guide d'installation montrer, et quand proposer la carte « Ajoutez BoostImpact à votre écran d'accueil » sur l'Accueil (jamais
+//     d'ouverture d'office du guide depuis le 20/11/2026) ; navigateur intégré d'une application reconnu par son agent ;
 //   - quand proposer les notifications : jamais d'office, toujours après un geste du client (bouton), et sur iPhone seulement quand l'espace est
 //     installé sur l'écran d'accueil avec iOS 16.4 ou plus récent (Apple n'envoie les notifications web qu'aux applications installées) ;
 //   - la clé publique VAPID (config.js, vapidPublic) convertie pour PushManager.subscribe.
@@ -24,10 +25,10 @@
   const iosAuMoins = (v, maj, min) => !!v && (v[0] > maj || (v[0] === maj && v[1] >= min));
   // Sur iPhone, le guide parle de Safari : Chrome, Firefox, Edge et les navigateurs intégrés (Instagram, Facebook, Gmail, WhatsApp) n'offrent pas
   // tous « Sur l'écran d'accueil », ou pas au même endroit. Safari le fait toujours.
-  const NAVIGATEURS_IOS_AUTRES = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|MicroMessenger|WhatsApp|Snapchat|TikTok|musical_ly|Pinterest/;
+  const NAVIGATEURS_IOS_AUTRES = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|YaBrowser|DuckDuckGo|FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|Line\/|YahooMobile|MicroMessenger|WhatsApp|Snapchat|TikTok|musical_ly|Pinterest/;
   const safariIos = ua => !NAVIGATEURS_IOS_AUTRES.test(String(ua || "")) && /Safari\//.test(String(ua || ""));
   // Navigateur intégré d'une application Android (Instagram, Facebook… « ; wv) ») : pas d'installation possible, il faut ouvrir Chrome.
-  const integreAndroid = ua => /; wv\)|FBAN|FBAV|Instagram|Line\//.test(String(ua || ""));
+  const integreAndroid = ua => /; wv\)|FBAN|FBAV|Instagram|YahooMobile|Line\//.test(String(ua || ""));
 
   // ---- Installée ?
   // Ouverte depuis l'icône de l'écran d'accueil : display-mode standalone (Android, iOS 16.4+, ordinateur) ou navigator.standalone (Safari iOS).
@@ -62,13 +63,21 @@
     if (p === "android") return invitation ? "android_bouton" : integreAndroid(e.userAgent) ? "android_autre" : "android_menu";
     return invitation ? "android_bouton" : "ordinateur";
   }
-  // Montré d'office une seule fois : sur un téléphone (iPhone ou Android), espace pas encore installé, client connecté, guide jamais vu sur cet
-  // appareil, et seulement sur l'accueil (jamais par-dessus un lien précis : email « À valider », lien d'avis, démarrage en cours).
-  // Jamais en démonstration (19/11/2026) : le prospect qui ouvre /demo/ sur son téléphone arrive sur l'Accueil de l'offre choisie, pas sur
-  // « Installer l'application » (la démonstration ne s'installe pas : ni manifeste ni service worker). L'écran reste ouvert depuis Réglages.
-  function guideAMontrer(o) {
+  // Navigateur intégré d'une application, reconnu SANS AMBIGUÏTÉ par son agent (20/11/2026, cas réel du fondateur sur iPhone : lien de l'email
+  // d'invitation ouvert depuis Yahoo Mail, page dans le navigateur de l'application, croix en haut et boussole « Ouvrir dans Safari » en bas) :
+  // Facebook (FBAN, FBAV), Instagram, Google (GSA), Yahoo Mail (YahooMobile), Line. Là, « Sur l'écran d'accueil » n'existe pas : le guide met
+  // l'étape « Ouvrez cette page dans Safari / Chrome » en avant (bandeau). Gmail sur iPhone ne se signale pas : l'étape reste alors la première.
+  const navigateurIntegre = ua => /FBAN|FBAV|Instagram|GSA\/|YahooMobile|\bLine\//.test(String(ua || ""));
+  // Plus jamais montré d'office (20/11/2026, décision du fondateur) : le guide n'est plus ouvert à la place de l'accueil à la première visite (un
+  // client arrivé depuis son application mail était bloqué dès sa première minute). Gardée pour les appels anciens : répond toujours non.
+  function guideAMontrer() { return false; }
+  // Carte discrète « Ajoutez BoostImpact à votre écran d'accueil » sur l'Accueil (20/11/2026) : sur un téléphone (iPhone ou Android), espace pas
+  // encore installé (jamais en mode autonome), client connecté, sur l'accueil, carte jamais fermée et guide jamais ouvert sur cet appareil
+  // (même clé que l'ancien guide d'office : un client qui l'a déjà vu ne la revoit pas). Jamais sur ordinateur. L'icône est un confort, pas une
+  // étape : WhatsApp et l'email restent les canaux principaux.
+  function carteInstallAMontrer(o) {
     const x = o || {};
-    if (!x.connecte || x.dejaVu || x.demo || x.route !== "accueil") return false;
+    if (!x.connecte || x.dejaVu || x.route !== "accueil") return false;
     const p = plateforme(x.env || {});
     return (p === "ios" || p === "android") && !estInstallee(x.env || {});
   }
@@ -121,7 +130,7 @@
   // ---- Pastille de l'icône (nombre de contenus à valider) : un entier positif, ou 0 pour l'effacer.
   const pastille = n => { const v = Math.floor(Number(n)); return Number.isFinite(v) && v > 0 ? Math.min(v, 99) : 0; };
 
-  const API = { plateforme, versionIos, iosAuMoins, safariIos, integreAndroid, estInstallee, environnement, etapeGuide, guideAMontrer, etatNotifications, peutDemander,
+  const API = { plateforme, versionIos, iosAuMoins, safariIos, integreAndroid, navigateurIntegre, estInstallee, environnement, etapeGuide, guideAMontrer, carteInstallAMontrer, etatNotifications, peutDemander,
     cleVapidValide, cleVapidOctets, abonnementPourBase, pastille, CLE_GUIDE_VU: "renom-guide-app-vu" };
   if (typeof module === "object" && module.exports) module.exports = API;
   else racine.RENOM_PWA = API;
