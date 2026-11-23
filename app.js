@@ -10,6 +10,8 @@ var RENOM_NL=/^nl\b/.test(document.documentElement.lang);
 var BOOST_CONTACT='info@boostimpact.agency';
 // Champs du formulaire en objet ; un nom répété (cases à cocher) devient une liste.
 function boostDonnees(form){var o={};new FormData(form).forEach(function(v,k){o[k]=(k in o)?[].concat(o[k],v):v});return o}
+// Code de langue du site (fr, en, nl) tiré d'un attribut lang ou d'un champ (« fr », « fr-FR », « nl-BE », « EN ») ; autre chose : ''.
+function boostLangue(v){var m=/^\s*([a-z]{2})(?:[-_][a-z0-9]{1,8})*\s*$/i.exec(String(v==null?'':v)),c=m?m[1].toLowerCase():'';return ['fr','en','nl'].indexOf(c)<0?'':c}
 function boostEnvoyer(form,donnees){
   var H={'Content-Type':'application/json'};
   return fetch(form.getAttribute('action'),{method:'POST',headers:H,body:JSON.stringify(donnees)})
@@ -77,6 +79,10 @@ form.addEventListener('submit',function(e){e.preventDefault();err.hidden=true;
   else if(brut&&!GOOGLE.test(m))return erreur(T.maps,form.lien_maps)
   if(!form.consentement.checked)return erreur(T.ok,form.consentement);
   var d=boostDonnees(form);if(s)delete d.lien_maps;else{d.lien_maps=m;delete d.metier}
+  // Langue de la demande (23/11/2026, bug du 22/11 : demande française, email anglais) : celle de la PAGE (<html lang> : fr, en, nl-BE -> fr, en, nl),
+  // pas seulement le champ caché, qu'un cache ou une restauration du navigateur peut laisser périmé. Page sans langue connue : champ caché s'il est
+  // valide, sinon champ vide -> n8n prend l'en-tête de langue envoyé par le navigateur, puis le français (n8n/build_audit.py, « Contrôler la demande »).
+  d.langue=boostLangue(document.documentElement.lang)||boostLangue(d.langue)||'';
   btn.disabled=true;btn.textContent=T.envoi;
   // Page de remerciement seulement si n8n a accepté la demande ; sinon, message d'erreur avec l'adresse de contact.
   // Sans fiche : même page, suite propre à ce cas (#sans-fiche, bloc affiché plus bas dans ce fichier).
