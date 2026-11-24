@@ -103,10 +103,13 @@ if(location.hash==='#sans-fiche'){a.hidden=true;b.hidden=false}
 // Liens écrits dans la page (règle des frais de mise en route, site/legal.json « offerts_paiement » : lien « offerts » à l'année, « factures » au mois ;
 // Essentiel sans frais). Langue de la page de paiement (27/10/2026) : paramètre « locale » de Stripe (docs.stripe.com/payment-links/customize) ; la base
 // en tire la langue des emails du nouveau client (moteur/paiement/stripe.js, client_en_ligne). Sans JavaScript : lien sans langue (français).
+// Boutons repérés par leur lien (BOOST_PAYER), jamais par le bloc qui les entoure : le lot 8 (16/11/2026, 1859bedf) avait retiré
+// <div class="offre-payer"> et plus aucun bouton n'était branché (bug vu le 23/11/2026). Preuve sur les vraies pages : moteur/tests/test_boutons_paiement_site.py.
+var BOOST_PAYER='a[href^="https://buy.stripe.com/"], [data-paiement-option]';
 (function(){
-if(!document.querySelector('.offre-payer'))return;
+if(!document.querySelector(BOOST_PAYER))return;
 var lg=(document.documentElement.lang||'fr').slice(0,2);if(['fr','en','nl'].indexOf(lg)<0)return;
-var b=document.querySelectorAll('.offre-payer .offre-choisir');
+var b=document.querySelectorAll('a[href^="https://buy.stripe.com/"]');
 for(var i=0;i<b.length;i++){var u=b[i].getAttribute('href');if(u&&/^https:\/\/buy\.stripe\.com\/[^?#]+$/.test(u))b[i].setAttribute('href',u+'?locale='+lg)}
 })();
 
@@ -137,10 +140,10 @@ function boostSession(demande){
   return Promise.race([envoi,delai]);
 }
 (function(){
-if(!document.querySelector('.offre-payer, [data-paiement-option]'))return;
+if(!document.querySelector(BOOST_PAYER))return;
 var lg=(document.documentElement.lang||'fr').slice(0,2);if(['fr','en','nl'].indexOf(lg)<0)lg='fr';
 var CHARGEMENT=RENOM_NL?'Laden…':RENOM_EN?'Loading…':'Chargement…';
-var boutons=document.querySelectorAll('.offre-payer .offre-choisir, [data-paiement-option]');
+var boutons=document.querySelectorAll(BOOST_PAYER);
 function demandeDe(a){
   var o=a.getAttribute('data-paiement-option');if(o)return {option:o,langue:lg};
   var t=BOOST_LIENS[String(a.getAttribute('href')||'').split(/[?#]/)[0]];
