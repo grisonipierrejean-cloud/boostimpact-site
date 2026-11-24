@@ -1,5 +1,6 @@
 User-agent: *
 Disallow: /espace/
 Disallow: /audit/
+Disallow: /media/
 
 Sitemap: https://boostimpact.agency/sitemap.xml
