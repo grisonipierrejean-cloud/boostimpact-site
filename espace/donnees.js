@@ -67,7 +67,7 @@
   // Modèle hybride (décision de PJ du 15/11/2026, CGV du 15 novembre 2026, article 3 bis) : la Visibilité IA est COMPRISE dans la mise en route de
   // Croissance (standard) et Premium, mesure refaite tous les 90 jours en Premium (remesure_jours_premium).
   // 15/11/2026, 12 h 29 (décision de PJ) : comprise SEULEMENT en paiement annuel (inclus_annuel) ; au mois, option pour toutes les offres.
-  const OPTIONS = { visibilite_ia: { nom: "Visibilité IA", nom_en: "AI visibility", nom_nl: "Zichtbaarheid in AI", prix_ht: 490, livraison_jours: 7, objectif_heures_ouvrees: 72,
+  const OPTIONS = { visibilite_ia: { nom: "Le test des 10 questions", nom_en: "The 10-question test", nom_nl: "De test met 10 vragen", prix_ht: 490, livraison_jours: 7, objectif_heures_ouvrees: 72,
       mesures_jours: [7, 30, 90], second_test_jours: 90,
       inclus_annuel: ["standard", "premium"], achetable_par: ["essentiel", "standard", "premium"], remesure_jours_premium: 90 },
     site_restaurant: { nom: "Site du restaurant", nom_en: "Restaurant website", nom_nl: "Website van het restaurant", prix_ht: 990, livraison_jours: 14, second_test_jours: null } };
@@ -863,6 +863,8 @@
     // VIDEO_NON_PUBLIEE : erreur de publication au nouvel essai, ou nouvel essai resté sans réponse (la vidéo n'est pas partie sur ce réseau).
     MUSIQUE_INTROUVABLE: "Information : vidéo publiée avec son son d'origine (aucune musique autorisée)",
     VIDEO_NON_PUBLIEE: "Vidéo non publiée sur un réseau : à reprogrammer",
+    // Publication Google par l'API Business Profile (24/11/2026, bloc SQL du même nom) : abandon après 3 essais ou erreur définitive ; envoi coupé, à vérifier.
+    PUBLICATION_GOOGLE_ECHEC: "Post Google non publié : à publier à la main", PUBLICATION_GOOGLE_INCERTAINE: "Post Google peut-être publié : vérifier la fiche",
     // Lot 9d (16/11/2026, relances_whatsapp_photos de schema.sql, CGV version 2 art. 3) : Premium sans photo ni vidéo depuis 7 puis 14 jours ; l'équipe écrit.
     RELANCE_WHATSAPP_PHOTOS: "Premium sans photo ni vidéo : relance WhatsApp à envoyer" };
   // Numéro lisible pour l'équipe : +33 6 12 34 56 78 (France) ; un autre pays reste tel quel.
@@ -914,6 +916,8 @@
       if (a.type === "MUSIQUE_INTROUVABLE" && d.son_origine !== true) return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} n'est pas partie sur ${rs}, faute de musique tendance autorisée (${raisons}). Ancienne règle (avant le 19/11/2026) : reprogrammer la vidéo ; elle partira avec un son tendance, ou avec son son d'origine s'il n'y en a aucun.`;
       if (a.type === "MUSIQUE_INTROUVABLE") return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} est partie sur ${rs} avec son son d'origine, sans son tendance (${raisons}). Information seulement, rien à faire. Si cela revient souvent, vérifier les catalogues musicaux dans Metricool (compte TikTok Business, Instagram relié par Facebook).`;
       return `${d.commerce || "Ce commerce"} : la vidéo prévue le ${dateGeo(d.prevu_le)} n'est pas partie sur ${rs} (${raisons}). Vérifier la marque du commerce dans Metricool, puis reprogrammer la vidéo.`; }
+    if (a.type === "PUBLICATION_GOOGLE_ECHEC") return `${d.commerce || "Ce commerce"} : le post Google prévu le ${dateGeo(d.prevu_le)} n'est pas parti (${d.erreur || "erreur inconnue"}${d.essais ? ", " + d.essais + " essai(s)" : ""}). S'il n'était pas encore parti ailleurs, il est remis dans « À publier » : le publier à la main sur la fiche depuis team@, puis « Marquer comme publiée ». Corriger la cause (légende, fiche, accès) ; rien ne repart tout seul.`;
+    if (a.type === "PUBLICATION_GOOGLE_INCERTAINE") return `${d.commerce || "Ce commerce"} : l'envoi du post Google prévu le ${dateGeo(d.prevu_le)} a été coupé avant la réponse de Google. Regarder la fiche : si le post n'y est pas, le publier à la main ; il n'est jamais renvoyé tout seul (pas de doublon).`;
     if (a.type === "WASENDER_EN_PANNE") return `${d.raison || "Session ou envois en échec"}. Ouvrir WaSender, reconnecter la session (QR code) ; tant que la panne dure, les alertes d'avis ne partent pas et rien n'est publié d'office.`;
     // Lot 11 : la marche à suivre pour signaler l'avis à Google (Profil d'établissement, menu de l'avis, « Signaler comme inapproprié »).
     if (a.type === "AVIS_FAUX_SIGNALE") return `Avis de ${d.note || "?"} étoile(s) : le commerçant dit que ce n'est pas un client (${d.canal === "whatsapp" ? "par WhatsApp" : "dans son espace"}). Rien n'est publié. 1. Vérifier l'avis (date, détails) avec ce que dit le commerçant. 2. Le signaler à Google : Profil d'établissement du commerce (compte qui gère la fiche), Avis, l'avis, les trois points, « Signaler comme inapproprié », choisir le motif qui correspond, Envoyer. 3. Prévenir le commerçant sur WhatsApp : Google examine le signalement, sans délai garanti. L'avis reste bloqué : rien n'est publié, ni seul ni à la main, et ses messages suivants s'ajoutent ici. 4. Pour répondre quand même (Google garde l'avis, ou le commerçant se ravise) : « Débloquer » sur l'avis dans la file, écrire une réponse prudente, puis « Envoyer au commerçant ».${(d.messages || []).length ? " Messages du commerçant : " + d.messages.map(m => "« " + String(m.texte || "") + " »" + (m.le ? " (" + String(m.le).slice(0, 16).replace("T", " ") + " UTC)" : "")).join(" ; ") + "." : ""}`;
